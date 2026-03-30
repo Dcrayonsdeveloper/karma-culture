@@ -1,0 +1,1502 @@
+/* Alpine.js cloak - MUST be first to prevent flash of content */
+[x-cloak] { display: none !important; }
+
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../vendor/livewire/livewire/src/**/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+/* ========================================
+   Custom Design System Theme
+   Based on doc/ui-ux/design-system.md
+   ======================================== */
+
+@theme {
+    /* ============================
+       Font Stack
+       ============================ */
+    --font-sans: 'Poppins', 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-heading: 'Fredoka', 'Poppins', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+    /* ============================
+       Purple Override → Teal (ForeverKids Brand)
+       Remapped to match brand teal #6F9CA2
+       ============================ */
+    --color-purple-50:  #f0f7f8;
+    --color-purple-100: #d9ecee;
+    --color-purple-200: #b3d9de;
+    --color-purple-300: #8dc6cd;
+    --color-purple-400: #6F9CA2;
+    --color-purple-500: #6F9CA2;
+    --color-purple-600: #5B878D;
+    --color-purple-700: #4A7A80;
+    --color-purple-800: #3A6166;
+    --color-purple-900: #2A494D;
+    --color-purple-950: #1A3133;
+
+    /* Primary (Brand Teal for customer-facing) */
+    --color-primary-50:  #f0f7f8;
+    --color-primary-100: #d9ecee;
+    --color-primary-200: #b3d9de;
+    --color-primary-300: #8dc6cd;
+    --color-primary-400: #6F9CA2;
+    --color-primary-500: #6F9CA2;
+    --color-primary-600: #5B878D;
+    --color-primary-700: #4A7A80;
+    --color-primary-800: #3A6166;
+    --color-primary-900: #2A494D;
+    --color-primary-950: #1A3133;
+
+    /* ============================
+       Neutral (Material Design Grey)
+       Matches Purplle's grey scale
+       ============================ */
+    --color-neutral-50:  #fafafa;
+    --color-neutral-100: #f5f5f5;
+    --color-neutral-200: #eeeeee;
+    --color-neutral-300: #e0e0e0;
+    --color-neutral-400: #bdbdbd;
+    --color-neutral-500: #9e9e9e;
+    --color-neutral-600: #757575;
+    --color-neutral-700: #616161;
+    --color-neutral-800: #424242;
+    --color-neutral-900: #212121;
+    --color-neutral-950: #121212;
+
+    /* ============================
+       Success Green (Purplle: #206e4d)
+       ============================ */
+    --color-success-50:  #f0fdf6;
+    --color-success-100: #dcfce8;
+    --color-success-200: #b8f5d2;
+    --color-success-300: #86efb3;
+    --color-success-400: #4de08c;
+    --color-success-500: #298b39;
+    --color-success-600: #206e4d;
+    --color-success-700: #1c6144;
+
+    /* ============================
+       Warning (Purplle: #fec84b)
+       ============================ */
+    --color-warning-50:  #fffceb;
+    --color-warning-100: #fff7c6;
+    --color-warning-200: #ffee88;
+    --color-warning-300: #ffe14a;
+    --color-warning-400: #fec84b;
+    --color-warning-500: #ebb000;
+    --color-warning-600: #cc8800;
+    --color-warning-700: #a36200;
+
+    /* ============================
+       Error Red (Purplle: #b11d15)
+       ============================ */
+    --color-error-50:  #fef3f2;
+    --color-error-100: #fee4e2;
+    --color-error-200: #fececa;
+    --color-error-300: #fcaba5;
+    --color-error-400: #f87971;
+    --color-error-500: #dc362e;
+    --color-error-600: #b11d15;
+    --color-error-700: #9c1a12;
+
+    /* ============================
+       Danger (alias for Error - used in admin forms)
+       ============================ */
+    --color-danger-50:  #fef3f2;
+    --color-danger-100: #fee4e2;
+    --color-danger-200: #fececa;
+    --color-danger-300: #fcaba5;
+    --color-danger-400: #f87971;
+    --color-danger-500: #dc362e;
+    --color-danger-600: #b11d15;
+    --color-danger-700: #9c1a12;
+
+    /* ============================
+       Info Blue (Purplle: #3f51b5)
+       ============================ */
+    --color-info-50:  #eef2ff;
+    --color-info-100: #e0e7ff;
+    --color-info-200: #c7d2fe;
+    --color-info-300: #a5b4fc;
+    --color-info-400: #818cf8;
+    --color-info-500: #6366f1;
+    --color-info-600: #3f51b5;
+    --color-info-700: #1a237e;
+
+    /* ============================
+       Special Colors
+       ============================ */
+    --color-rating: #fec84b;
+    --color-deal: #dc362e;
+    --color-prime: #1a237e;
+
+    /* Social / External Brand */
+    --color-facebook: #39579a;
+    --color-twitter: #00abf0;
+
+    /* ============================
+       Border Radius
+       ============================ */
+    --radius-sm: 0.25rem;
+    --radius-DEFAULT: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
+    --radius-pill: 50rem;
+    --radius-full: 9999px;
+
+    /* ============================
+       Box Shadows (Material-inspired)
+       ============================ */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-DEFAULT: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-card: 0 2px 1px -1px rgb(0 0 0 / 0.08), 0 1px 1px rgb(0 0 0 / 0.06), 0 1px 3px rgb(0 0 0 / 0.05);
+    --shadow-dropdown: 0 4px 12px 0 rgb(0 0 0 / 0.15);
+    --shadow-dialog: 0 11px 15px -7px rgb(0 0 0 / 0.2), 0 24px 38px 3px rgb(0 0 0 / 0.14), 0 9px 46px 8px rgb(0 0 0 / 0.12);
+
+    /* Transition Timing */
+    --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+
+    /* ============================
+       Responsive Breakpoints
+       ============================ */
+    --breakpoint-sm: 640px;
+    --breakpoint-md: 768px;
+    --breakpoint-lg: 1024px;
+    --breakpoint-xl: 1280px;
+    --breakpoint-2xl: 1536px;
+}
+
+/* ========================================
+   Global Heading Typography
+   Fredoka for all headings
+   ======================================== */
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+}
+
+.font-heading {
+    font-family: var(--font-heading);
+}
+
+/* ========================================
+   Custom Animations
+   ======================================== */
+
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+@keyframes slide-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-down {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+/* Animation Utilities */
+.animate-fade-in {
+    animation: fade-in 0.2s ease-out forwards;
+}
+
+.animate-fade-out {
+    animation: fade-out 0.2s ease-out forwards;
+}
+
+.animate-slide-up {
+    animation: slide-up 0.2s ease-out forwards;
+}
+
+.animate-slide-down {
+    animation: slide-down 0.2s ease-out forwards;
+}
+
+.animate-scale-in {
+    animation: scale-in 0.15s ease-out forwards;
+}
+
+.animate-shake {
+    animation: shake 0.3s ease-in-out;
+}
+
+.animate-shimmer {
+    animation: shimmer 2s infinite linear;
+    background: linear-gradient(90deg, #f5f5f5 25%, #e5e5e5 50%, #f5f5f5 75%);
+    background-size: 200% 100%;
+}
+
+/* ========================================
+   Base Styles
+   ======================================== */
+
+html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
+    max-width: 100%;
+}
+
+body {
+    font-family: var(--font-sans);
+    color: var(--color-neutral-900);
+    background-color: white;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    max-width: 100%;
+}
+
+button, [role="button"], a, select, label[for], input[type="checkbox"], input[type="radio"], summary {
+    cursor: pointer;
+}
+
+button:disabled, [disabled] {
+    cursor: not-allowed;
+}
+
+/* ========================================
+   Accessibility Utilities
+   ======================================== */
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+.not-sr-only {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 0;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+}
+
+/* ========================================
+   Global Focus Reset — remove focus rings/outlines everywhere
+   ======================================== */
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus,
+a:focus,
+[tabindex]:focus,
+[contenteditable]:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible,
+[contenteditable]:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* ========================================
+   Form Component Styles (Pure CSS)
+   ======================================== */
+
+/* Input base styles - No outline, no ring, minimal focus indication */
+.form-input {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: var(--color-neutral-900);
+    background-color: white;
+    border: 1px solid var(--color-neutral-200);
+    border-radius: 0.5rem;
+    transition: border-color 150ms ease-in-out;
+}
+
+/* Admin-scoped form input reductions */
+.layout-admin .form-input {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.8125rem;
+    border-radius: 0.375rem;
+}
+
+.form-input::placeholder {
+    color: var(--color-neutral-400);
+}
+
+.form-input:focus {
+    outline: none;
+    box-shadow: none;
+    border-color: var(--color-neutral-400);
+}
+
+.form-input:disabled {
+    background-color: var(--color-neutral-50);
+    color: var(--color-neutral-500);
+    cursor: not-allowed;
+}
+
+.form-input-error {
+    border-color: var(--color-error-500);
+}
+
+.form-input-error:focus {
+    outline: none;
+    box-shadow: none;
+    border-color: var(--color-error-600);
+}
+
+.form-input-success {
+    border-color: var(--color-success-500);
+}
+
+.form-input-success:focus {
+    outline: none;
+    box-shadow: none;
+    border-color: var(--color-success-600);
+}
+
+/* Textarea base styles */
+.form-textarea {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.375rem;
+    color: var(--color-neutral-900);
+    background-color: white;
+    border: 1px solid var(--color-neutral-200);
+    border-radius: 0.5rem;
+    transition: border-color 150ms ease-in-out;
+    resize: vertical;
+}
+
+.layout-admin .form-textarea {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.8125rem;
+    border-radius: 0.375rem;
+}
+
+.form-textarea::placeholder {
+    color: var(--color-neutral-400);
+}
+
+.form-textarea:focus {
+    outline: none;
+    box-shadow: none;
+    border-color: var(--color-neutral-400);
+}
+
+.form-textarea:disabled {
+    background-color: var(--color-neutral-50);
+    color: var(--color-neutral-500);
+    cursor: not-allowed;
+}
+
+/* Select base styles */
+.form-select {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 2.25rem 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: var(--color-neutral-900);
+    background-color: white;
+    border: 1px solid var(--color-neutral-200);
+    border-radius: 0.5rem;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23737373' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+}
+
+.form-select:focus {
+    outline: none;
+    box-shadow: none;
+    border-color: var(--color-neutral-400);
+}
+
+.layout-admin .form-select {
+    padding: 0.375rem 2.25rem 0.375rem 0.625rem;
+    font-size: 0.8125rem;
+    border-radius: 0.375rem;
+}
+
+/* Checkbox base styles */
+.form-checkbox {
+    width: 1rem;
+    height: 1rem;
+    color: var(--color-primary-500);
+    border-color: var(--color-neutral-300);
+    border-radius: 0.25rem;
+}
+
+.form-checkbox:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+/* Radio base styles */
+.form-radio {
+    width: 1rem;
+    height: 1rem;
+    color: var(--color-primary-500);
+    border-color: var(--color-neutral-300);
+}
+
+.form-radio:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+/* Label styles */
+.form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-neutral-700);
+    margin-bottom: 0.25rem;
+}
+
+.layout-admin .form-label {
+    font-size: 0.8125rem;
+}
+
+.form-label-required::after {
+    content: ' *';
+    color: var(--color-error-500);
+}
+
+/* Error message */
+.form-error {
+    font-size: 0.75rem;
+    color: var(--color-error-500);
+    margin-top: 0.25rem;
+}
+
+/* Help text */
+.form-help {
+    font-size: 0.75rem;
+    color: var(--color-neutral-500);
+    margin-top: 0.25rem;
+}
+
+/* ========================================
+   Button Component Styles (Pure CSS)
+   ======================================== */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.25rem;
+    border-radius: 0.5rem;
+    transition: all 150ms ease-in-out;
+    cursor: pointer;
+    border: none;
+}
+
+/* Admin-scoped button size reductions */
+.layout-admin .btn {
+    padding: 0.4375rem 0.875rem;
+    font-size: 0.8125rem;
+    border-radius: 0.375rem;
+}
+
+.btn:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    color: white;
+    background-color: var(--color-primary-600);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: var(--color-primary-700);
+}
+
+.btn-secondary {
+    color: var(--color-neutral-700);
+    background-color: white;
+    border: 1px solid var(--color-neutral-200);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background-color: var(--color-neutral-50);
+}
+
+.btn-outline {
+    color: var(--color-neutral-700);
+    background-color: transparent;
+    border: 1px solid var(--color-neutral-300);
+}
+
+.btn-outline:hover:not(:disabled) {
+    background-color: var(--color-neutral-50);
+    border-color: var(--color-neutral-400);
+}
+
+.btn-ghost {
+    color: var(--color-primary-500);
+    background-color: transparent;
+}
+
+.btn-ghost:hover:not(:disabled) {
+    background-color: var(--color-primary-50);
+}
+
+.btn-danger {
+    color: white;
+    background-color: var(--color-error-500);
+}
+
+.btn-danger:hover:not(:disabled) {
+    background-color: var(--color-error-600);
+}
+
+.btn-danger:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.btn-success {
+    color: white;
+    background-color: var(--color-success-500);
+}
+
+.btn-success:hover:not(:disabled) {
+    background-color: var(--color-success-600);
+}
+
+.btn-success:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.btn-sm {
+    padding: 0.3125rem 0.625rem;
+    font-size: 0.75rem;
+}
+
+.btn-lg {
+    padding: 0.5625rem 1.25rem;
+    font-size: 0.875rem;
+}
+
+.btn-icon {
+    padding: 0.5rem;
+    color: var(--color-neutral-500);
+    background-color: transparent;
+    border-radius: 0.25rem;
+}
+
+.btn-icon:hover:not(:disabled) {
+    background-color: var(--color-neutral-100);
+}
+
+/* ========================================
+   Card Component Styles (Pure CSS)
+   ======================================== */
+
+.card {
+    background-color: white;
+    border: 1px solid var(--color-neutral-100);
+    border-radius: 0.375rem;
+}
+
+.card-hover {
+    background-color: white;
+    border: 1px solid var(--color-neutral-100);
+    border-radius: 0.375rem;
+    overflow: hidden;
+    transition: box-shadow 200ms ease-in-out;
+}
+
+.card-hover:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.card-product {
+    background-color: white;
+    border: 1px solid var(--color-neutral-100);
+    border-radius: 0.375rem;
+    overflow: hidden;
+}
+
+.card-body {
+    padding: 1rem;
+}
+
+.card-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--color-neutral-100);
+}
+
+/* Admin-scoped card size reductions */
+.layout-admin .card-header {
+    padding: 0.625rem 1rem;
+    font-size: 0.8125rem;
+}
+
+.layout-admin .card-header h2 {
+    font-size: 0.9375rem;
+}
+
+.layout-admin .card span {
+    font-size: 0.8125rem;
+}
+
+.card-footer {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--color-neutral-100);
+    background-color: var(--color-neutral-50);
+}
+
+/* ========================================
+   Badge Component Styles (Pure CSS)
+   ======================================== */
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 0.25rem;
+}
+
+.layout-admin .badge {
+    padding: 0.0625rem 0.4375rem;
+    font-size: 0.6875rem;
+}
+
+.badge-primary {
+    background-color: var(--color-primary-100);
+    color: var(--color-primary-700);
+}
+
+.badge-success {
+    background-color: var(--color-success-50);
+    color: var(--color-success-700);
+}
+
+.badge-warning {
+    background-color: var(--color-warning-50);
+    color: var(--color-warning-700);
+}
+
+.badge-error {
+    background-color: var(--color-error-50);
+    color: var(--color-error-700);
+}
+
+.badge-info {
+    background-color: var(--color-info-50);
+    color: var(--color-info-700);
+}
+
+.badge-neutral {
+    background-color: var(--color-neutral-100);
+    color: var(--color-neutral-700);
+}
+
+/* ========================================
+   Typography Utilities
+   ======================================== */
+
+.text-price {
+    font-family: var(--font-mono);
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.text-price-sm {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+}
+
+.line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+}
+
+/* ========================================
+   Loading States
+   ======================================== */
+
+.skeleton {
+    border-radius: 0.25rem;
+    animation: shimmer 2s infinite linear;
+    background: linear-gradient(90deg, #f5f5f5 25%, #e5e5e5 50%, #f5f5f5 75%);
+    background-size: 200% 100%;
+}
+
+.skeleton-text {
+    height: 1rem;
+    width: 100%;
+    border-radius: 0.25rem;
+    animation: shimmer 2s infinite linear;
+    background: linear-gradient(90deg, #f5f5f5 25%, #e5e5e5 50%, #f5f5f5 75%);
+    background-size: 200% 100%;
+}
+
+.skeleton-heading {
+    height: 1.5rem;
+    width: 75%;
+    border-radius: 0.25rem;
+    animation: shimmer 2s infinite linear;
+    background: linear-gradient(90deg, #f5f5f5 25%, #e5e5e5 50%, #f5f5f5 75%);
+    background-size: 200% 100%;
+}
+
+.skeleton-image {
+    aspect-ratio: 1 / 1;
+    width: 100%;
+    border-radius: 0.25rem;
+    animation: shimmer 2s infinite linear;
+    background: linear-gradient(90deg, #f5f5f5 25%, #e5e5e5 50%, #f5f5f5 75%);
+    background-size: 200% 100%;
+}
+
+.skeleton-button {
+    height: 2.5rem;
+    width: 6rem;
+    border-radius: 0.25rem;
+    animation: shimmer 2s infinite linear;
+    background: linear-gradient(90deg, #f5f5f5 25%, #e5e5e5 50%, #f5f5f5 75%);
+    background-size: 200% 100%;
+}
+
+/* ========================================
+   Scrollbar Styles (subtle)
+   ======================================== */
+
+.scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-neutral-300) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--color-neutral-300);
+    border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-neutral-400);
+}
+
+/* Dark scrollbar for dark backgrounds */
+.scrollbar-dark {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.scrollbar-dark::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.scrollbar-dark::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.scrollbar-dark::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.scrollbar-dark::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.35);
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+
+/* ========================================
+   Overlay Utilities
+   ======================================== */
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 40;
+}
+
+.overlay-light {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(4px);
+    z-index: 40;
+}
+
+/* ========================================
+   Container Utilities
+   ======================================== */
+
+.container-narrow {
+    max-width: 48rem;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+.container-default {
+    max-width: 80rem;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+.container-wide {
+    max-width: 1536px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+/* ========================================
+   Aspect Ratio Utilities
+   ======================================== */
+
+.aspect-product {
+    aspect-ratio: 1 / 1;
+}
+
+.aspect-banner {
+    aspect-ratio: 21 / 9;
+}
+
+.aspect-hero {
+    aspect-ratio: 16 / 9;
+}
+
+.aspect-card {
+    aspect-ratio: 4 / 3;
+}
+
+/* ========================================
+   Shopify-style Admin Design System
+   Scoped to .layout-admin body class
+   ======================================== */
+
+/* --- Typography: Inter 13px base --- */
+.layout-admin {
+    font-family: Inter, -apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #303030;
+    -webkit-font-smoothing: antialiased;
+}
+.layout-admin h1 { font-size: 1.25rem; font-weight: 600; color: #303030; line-height: 1.3; }
+.layout-admin h2 { font-size: 0.8125rem; font-weight: 600; color: #303030; line-height: 1.4; }
+.layout-admin h3 { font-size: 0.8125rem; font-weight: 600; color: #303030; }
+.layout-admin p { color: #616161; }
+.layout-admin a:not(.btn):not(.admin-nav-item):not(.badge) { color: #005bd3; }
+.layout-admin a:not(.btn):not(.admin-nav-item):not(.badge):hover { color: #004299; text-decoration: underline; }
+
+/* --- Cards: Shopify rounded with border --- */
+.layout-admin .card,
+.layout-admin .card-hover,
+.layout-admin .card-product {
+    border-radius: 0.75rem;
+    border: 1px solid #e3e3e3;
+    background: white;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+}
+.layout-admin .card-hover:hover {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* --- Buttons --- */
+.layout-admin .btn {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    line-height: 1.4;
+    transition: all 0.1s ease;
+}
+.layout-admin .btn-primary {
+    background: #303030;
+    color: white;
+    border: 1px solid #303030;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+}
+.layout-admin .btn-primary:hover:not(:disabled) {
+    background: #1a1a1a;
+    border-color: #1a1a1a;
+}
+.layout-admin .btn-primary:active:not(:disabled) {
+    background: #0d0d0d;
+}
+.layout-admin .btn-secondary {
+    background: white;
+    color: #303030;
+    border: 1px solid #c9cccf;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+}
+.layout-admin .btn-secondary:hover:not(:disabled) {
+    background: #f7f7f7;
+    border-color: #babfc3;
+}
+.layout-admin .btn-sm {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+.layout-admin .btn-icon {
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    color: #616161;
+    transition: all 0.1s ease;
+}
+.layout-admin .btn-icon:hover {
+    background: #f1f1f1;
+    color: #303030;
+}
+.layout-admin .btn-danger {
+    background: #d72c0d;
+    color: white;
+    border: 1px solid #d72c0d;
+}
+.layout-admin .btn-danger:hover:not(:disabled) {
+    background: #bc2200;
+}
+
+/* --- Forms: Shopify input style --- */
+.layout-admin .form-input,
+.layout-admin .form-select,
+.layout-admin .form-textarea,
+.layout-admin input[type="text"],
+.layout-admin input[type="email"],
+.layout-admin input[type="password"],
+.layout-admin input[type="number"],
+.layout-admin input[type="url"],
+.layout-admin input[type="date"],
+.layout-admin input[type="search"],
+.layout-admin input[type="tel"],
+.layout-admin input[type="file"],
+.layout-admin select,
+.layout-admin textarea {
+    font-size: 0.8125rem;
+    color: #303030;
+    border: 1px solid #c9cccf;
+    border-radius: 0.5rem;
+    padding: 0.4375rem 0.625rem;
+    background: white;
+    transition: border-color 0.1s ease, box-shadow 0.1s ease;
+    line-height: 1.4;
+}
+.layout-admin .form-input:focus,
+.layout-admin .form-select:focus,
+.layout-admin .form-textarea:focus,
+.layout-admin input:focus,
+.layout-admin select:focus,
+.layout-admin textarea:focus {
+    border-color: #005bd3;
+    box-shadow: 0 0 0 1px #005bd3;
+    outline: none;
+}
+.layout-admin .form-input::placeholder,
+.layout-admin input::placeholder,
+.layout-admin textarea::placeholder {
+    color: #999;
+}
+.layout-admin .form-label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #303030;
+    margin-bottom: 0.25rem;
+    display: block;
+}
+.layout-admin .form-help {
+    font-size: 0.75rem;
+    color: #616161;
+    margin-top: 0.25rem;
+}
+.layout-admin .form-checkbox {
+    border-radius: 0.25rem;
+    border-color: #c9cccf;
+}
+.layout-admin .form-checkbox:checked {
+    background-color: #005bd3;
+    border-color: #005bd3;
+}
+
+/* --- Tables: Shopify compact style --- */
+.layout-admin table {
+    font-size: 0.8125rem;
+    width: 100%;
+    border-collapse: collapse;
+}
+.layout-admin table thead th {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #616161;
+    text-transform: none;
+    letter-spacing: normal;
+    text-align: left;
+    padding: 0.75rem 0.75rem;
+    background: #f7f7f7;
+    border-bottom: 1px solid #e3e3e3;
+}
+.layout-admin table tbody td {
+    padding: 0.875rem 0.75rem;
+    color: #303030;
+    border-bottom: 1px solid #e3e3e3;
+}
+.layout-admin table tbody tr {
+    transition: background-color 0.12s ease;
+}
+.layout-admin table tbody tr:hover td {
+    background-color: #ebebec;
+}
+.layout-admin table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* --- Badges: Shopify pill badges with specific colors --- */
+.layout-admin .badge {
+    border-radius: 50rem;
+    padding: 0.0625rem 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    line-height: 1.6;
+}
+.layout-admin .badge-success {
+    background: #cdfee1;
+    color: #1a7a2e;
+}
+.layout-admin .badge-warning {
+    background: #fff3cd;
+    color: #8a6d00;
+}
+.layout-admin .badge-error {
+    background: #ffe0db;
+    color: #b71c00;
+}
+.layout-admin .badge-info {
+    background: #d4edfc;
+    color: #0064a4;
+}
+.layout-admin .badge-primary {
+    background: #e3f4e8;
+    color: #1a7a2e;
+}
+.layout-admin .badge-neutral {
+    background: #ebebeb;
+    color: #616161;
+}
+
+/* --- Page header: Shopify style --- */
+.layout-admin .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+.layout-admin .page-header h1 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #303030;
+    margin: 0;
+}
+
+/* --- Pagination: Shopify style --- */
+.layout-admin nav[role="navigation"] {
+    font-size: 0.8125rem;
+}
+.layout-admin nav[role="navigation"] .relative.inline-flex {
+    border-radius: 0.5rem;
+}
+
+/* --- Modals: Shopify rounded --- */
+.layout-admin [x-show].fixed {
+    z-index: 50;
+}
+
+/* --- Dividers --- */
+.layout-admin .border-neutral-100,
+.layout-admin .border-neutral-200 {
+    border-color: #e3e3e3;
+}
+
+/* --- Status dot indicators --- */
+.layout-admin .status-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    display: inline-block;
+}
+.layout-admin .status-dot-success { background: #2a9d3e; }
+.layout-admin .status-dot-warning { background: #b98900; }
+.layout-admin .status-dot-error { background: #d72c0d; }
+
+/* --- Info bar (table top) --- */
+.layout-admin .info-bar {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    color: #616161;
+    background: #f7f7f7;
+    border-bottom: 1px solid #e3e3e3;
+}
+
+/* --- Shopify tab filters --- */
+.layout-admin .tab-filter {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #616161;
+    border-bottom: 2px solid transparent;
+    transition: all 0.1s ease;
+}
+.layout-admin .tab-filter:hover {
+    color: #303030;
+    text-decoration: none;
+}
+.layout-admin .tab-filter.active {
+    color: #303030;
+    border-bottom-color: #303030;
+}
+
+/* --- Shopify resource list (index page) header --- */
+.layout-admin .resource-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #e3e3e3;
+}
+.layout-admin .resource-search {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid #e3e3e3;
+}
+.layout-admin .resource-search input {
+    border: none;
+    box-shadow: none;
+    padding: 0.25rem 0;
+    flex: 1;
+}
+.layout-admin .resource-search input:focus {
+    border: none;
+    box-shadow: none;
+}
+
+/* --- Tooltip (Shopify dark) --- */
+.layout-admin [title] {
+    position: relative;
+}
+
+/* --- Empty state --- */
+.layout-admin .empty-state {
+    padding: 3rem 1rem;
+    text-align: center;
+}
+.layout-admin .empty-state svg {
+    color: #c9cccf;
+}
+.layout-admin .empty-state h3 {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #303030;
+    margin-bottom: 0.25rem;
+}
+.layout-admin .empty-state p {
+    font-size: 0.8125rem;
+    color: #616161;
+    margin-bottom: 1rem;
+}
+
+/* --- Admin top bar search --- */
+.layout-admin .admin-search-bar {
+    background: #f1f1f1;
+    border: 1px solid transparent;
+    border-radius: 0.5rem;
+    padding: 0.4375rem 0.75rem;
+    font-size: 0.8125rem;
+    color: #616161;
+    transition: all 0.15s ease;
+    cursor: pointer;
+}
+.layout-admin .admin-search-bar:hover {
+    background: #e8e8e8;
+}
+.layout-admin .admin-search-bar:focus-within {
+    background: white;
+    border-color: #005bd3;
+    box-shadow: 0 0 0 1px #005bd3;
+}
+
+/* --- Shopify sidebar nav styles --- */
+.admin-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.375rem 0.5rem;
+    border-radius: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: #b5b5b5;
+    transition: all 0.1s ease;
+}
+.admin-nav-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #e0e0e0;
+    text-decoration: none;
+}
+.admin-nav-item.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    font-weight: 500;
+}
+.admin-nav-section {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #686868;
+    padding: 0 0.5rem;
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* --- Shopify filter bar (inside card) --- */
+.layout-admin .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #e3e3e3;
+}
+.layout-admin .filter-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #303030;
+    background: #f1f1f1;
+    border-radius: 50rem;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+.layout-admin .filter-pill:hover {
+    background: #e8e8e8;
+}
+.layout-admin .filter-pill.active {
+    background: #303030;
+    color: white;
+}
+
+/* --- Metric cards (Shopify style) --- */
+.layout-admin .metric-card {
+    padding: 1rem;
+}
+.layout-admin .metric-card .metric-label {
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: #616161;
+    margin-bottom: 0.25rem;
+}
+.layout-admin .metric-card .metric-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #303030;
+    line-height: 1.2;
+}
+
+/* --- Toggle switch (Shopify style) --- */
+.layout-admin .toggle-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+}
+.layout-admin .toggle-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.layout-admin .toggle-track {
+    width: 2.75rem;
+    height: 1.5rem;
+    background: #babfc3;
+    border-radius: 1rem;
+    position: relative;
+    transition: background 0.15s ease;
+}
+.layout-admin .toggle-track::after {
+    content: '';
+    position: absolute;
+    top: 0.125rem;
+    left: 0.125rem;
+    width: 1.25rem;
+    height: 1.25rem;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+}
+.layout-admin .toggle-switch input:checked + .toggle-track {
+    background: #303030;
+}
+.layout-admin .toggle-switch input:checked + .toggle-track::after {
+    transform: translateX(1.25rem);
+}
+
+/* --- Success/Error toast messages --- */
+.layout-admin .toast-success {
+    padding: 0.625rem 1rem;
+    background: #cdfee1;
+    border: 1px solid #b3d8c0;
+    border-radius: 0.5rem;
+    font-size: 13px;
+    color: #1a7a2e;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+.layout-admin .toast-error {
+    padding: 0.625rem 1rem;
+    background: #ffe0db;
+    border: 1px solid #e8c4c4;
+    border-radius: 0.5rem;
+    font-size: 13px;
+    color: #b71c00;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+/* --- Settings pages: card sections --- */
+.layout-admin .settings-card-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #e3e3e3;
+}
+.layout-admin .settings-card-header h2 {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #303030;
+}
+.layout-admin .settings-card-header p {
+    font-size: 0.75rem;
+    color: #616161;
+    margin-top: 0.125rem;
+}
+.layout-admin .settings-card-body {
+    padding: 1rem;
+}
+
+/* --- Responsive grid for forms --- */
+@media (min-width: 768px) {
+    .layout-admin .grid-2-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+}

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>Printer Settings - ForeverKids POS</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Printer Settings</h1>
+
+    <div class="form-group">
+      <label for="printerType">Printer Type</label>
+      <select id="printerType">
+        <option value="none">No Printer (Browser Print)</option>
+        <option value="usb">USB Thermal Printer</option>
+        <option value="network">Network Thermal Printer (TCP/IP)</option>
+      </select>
+    </div>
+
+    <!-- USB section -->
+    <div id="usb-section" class="section hidden">
+      <div class="form-group">
+        <label>Detected USB Printers</label>
+        <div id="usb-list" class="device-list">
+          <p class="muted">Click "Scan" to find USB printers...</p>
+        </div>
+        <button id="btn-scan" class="btn btn-secondary" type="button">Scan for USB Printers</button>
+      </div>
+    </div>
+
+    <!-- Network section -->
+    <div id="network-section" class="section hidden">
+      <div class="form-group">
+        <label for="printerIp">Printer IP Address</label>
+        <input type="text" id="printerIp" placeholder="192.168.1.100" maxlength="45"
+               pattern="^[\d\.]+$" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label for="printerPort">Port</label>
+        <input type="number" id="printerPort" value="9100" min="1" max="65535">
+      </div>
+    </div>
+
+    <!-- Paper width -->
+    <div class="form-group">
+      <label for="printerWidth">Paper Width (characters)</label>
+      <select id="printerWidth">
+        <option value="32">32 chars (58mm paper)</option>
+        <option value="40">40 chars (76mm paper)</option>
+        <option value="48" selected>48 chars (80mm paper — standard)</option>
+        <option value="56">56 chars (112mm paper)</option>
+      </select>
+    </div>
+
+    <div class="actions">
+      <button id="btn-test" class="btn btn-secondary" type="button" disabled>Test Print</button>
+      <button id="btn-save" class="btn btn-primary" type="button">Save Settings</button>
+    </div>
+
+    <div id="status" class="status hidden"></div>
+  </div>
+
+  <script src="printer-settings.js"></script>
+</body>
+</html>

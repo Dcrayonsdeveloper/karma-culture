@@ -1,0 +1,29 @@
+{
+  "name": "foreverkids-pos",
+  "version": "1.0.0",
+  "description": "ForeverKids POS Desktop Application",
+  "main": "src/main/main.js",
+  "author": "ForeverKids <support@foreverkids.dcrayons.app>",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dev": "cross-env NODE_ENV=development electron .",
+    "build": "electron-builder --win",
+    "build:msi": "electron-builder --win msi",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "electron-log": "^5.1.1",
+    "electron-store": "^8.1.0",
+    "electron-updater": "^6.1.7",
+    "escpos": "^3.0.0-alpha.6",
+    "escpos-network": "^3.0.0-alpha.4",
+    "escpos-usb": "^3.0.0-alpha.4"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "electron": "^33.0.0",
+    "electron-builder": "^24.13.3"
+  }
+}

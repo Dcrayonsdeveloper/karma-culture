@@ -1,0 +1,32 @@
+appId: com.foreverkids.pos
+productName: ForeverKids POS
+copyright: Copyright ForeverKids
+
+directories:
+  output: dist
+  buildResources: assets
+
+files:
+  - src/**/*
+  - assets/**/*
+  - package.json
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: assets/icon.png
+  requestedExecutionLevel: asInvoker
+
+nsis:
+  oneClick: true
+  perMachine: true
+  allowToChangeInstallationDirectory: false
+  shortcutName: ForeverKids POS
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  deleteAppDataOnUninstall: false
+
+publish:
+  provider: generic
+  url: https://foreverkids.dcrayons.app/pos-updates/

@@ -1,0 +1,136 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: #1E293B;
+  color: #E2E8F0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.container {
+  width: 100%;
+  max-width: 440px;
+  padding: 32px;
+  background: #0F172A;
+  border-radius: 16px;
+  border: 1px solid #334155;
+}
+
+h1 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 24px;
+  color: #F1F5F9;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #94A3B8;
+  margin-bottom: 6px;
+}
+
+select, input[type="text"], input[type="number"] {
+  width: 100%;
+  padding: 10px 14px;
+  background: #1E293B;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: #E2E8F0;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+select:focus, input:focus {
+  border-color: #6F9CA2;
+}
+
+.section {
+  padding: 16px;
+  background: #1E293B;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  border: 1px solid #334155;
+}
+
+.hidden { display: none; }
+
+.device-list {
+  margin-bottom: 12px;
+  min-height: 48px;
+}
+
+.device-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #0F172A;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.device-name { font-weight: 500; }
+.device-id { font-size: 11px; color: #64748B; font-family: monospace; }
+
+.muted { font-size: 13px; color: #64748B; font-style: italic; }
+.error { color: #F87171; }
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.btn {
+  flex: 1;
+  padding: 11px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: #6F9CA2;
+  color: #fff;
+}
+.btn-primary:hover:not(:disabled) { background: #5B878D; }
+
+.btn-secondary {
+  background: #334155;
+  color: #CBD5E1;
+}
+.btn-secondary:hover:not(:disabled) { background: #475569; }
+
+.status {
+  margin-top: 16px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.status.success { background: #064E3B; color: #6EE7B7; }
+.status.error { background: #7F1D1D; color: #FCA5A5; }
+.status.info { background: #1E3A5F; color: #93C5FD; }

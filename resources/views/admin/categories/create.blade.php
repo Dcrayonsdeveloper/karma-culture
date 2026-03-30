@@ -1,0 +1,144 @@
+<x-layouts.admin>
+    <x-slot name="title">Add Category</x-slot>
+
+    <div x-data="categoryForm()">
+        <!-- Top bar -->
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.25rem;">
+            <a href="{{ route('admin.categories.index') }}" style="padding: 0.25rem; border-radius: 0.25rem; color: #616161; text-decoration: none;">
+                <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            </a>
+            <h1 style="font-size: 1.125rem; font-weight: 600; color: #303030;">Add category</h1>
+        </div>
+
+        <form action="{{ route('admin.categories.store') }}" method="POST" enctype="multipart/form-data">
+            @csrf
+
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+                <!-- Main content -->
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div class="card" style="padding: 1.25rem;">
+                        <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Category details</h2>
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div>
+                                <label for="name" class="form-label">Title <span style="color: #d72c0d;">*</span></label>
+                                <input type="text" name="name" id="name" value="{{ old('name') }}" required
+                                       class="form-input" placeholder="e.g. Girls Dresses"
+                                       @input="if(!slugManual) slug = toSlug($event.target.value)">
+                                @error('name') <p class="form-error">{{ $message }}</p> @enderror
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div>
+                                    <label for="slug" class="form-label">URL handle</label>
+                                    <input type="text" name="slug" id="slug" x-model="slug"
+                                           class="form-input" placeholder="auto-generated"
+                                           @input="slugManual = ($event.target.value.trim() !== '')">
+                                    @error('slug') <p class="form-error">{{ $message }}</p> @enderror
+                                </div>
+                                <div>
+                                    <label for="sort_order" class="form-label">Sort order</label>
+                                    <input type="number" name="sort_order" id="sort_order" value="{{ old('sort_order', 0) }}" min="0"
+                                           class="form-input">
+                                    @error('sort_order') <p class="form-error">{{ $message }}</p> @enderror
+                                </div>
+                            </div>
+                            <div>
+                                <label for="parent_id" class="form-label">Parent category</label>
+                                <select name="parent_id" id="parent_id" class="form-select">
+                                    <option value="">None (Root Category)</option>
+                                    @foreach($parentCategories as $parent)
+                                        <option value="{{ $parent->id }}" {{ old('parent_id') == $parent->id ? 'selected' : '' }}>{{ $parent->name }}</option>
+                                    @endforeach
+                                </select>
+                                @error('parent_id') <p class="form-error">{{ $message }}</p> @enderror
+                            </div>
+                            <div>
+                                <label for="description" class="form-label">Description</label>
+                                <textarea name="description" id="description" rows="3" class="form-textarea"
+                                          placeholder="Brief category description...">{{ old('description') }}</textarea>
+                                @error('description') <p class="form-error">{{ $message }}</p> @enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Media -->
+                    <div class="card" style="padding: 1.25rem;" x-data="{ preview: null }">
+                        <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Media</h2>
+                        <div style="display: flex; align-items: flex-start; gap: 1rem;">
+                            <div style="width: 5rem; height: 5rem; border-radius: 0.75rem; background: #f6f6f7; border: 2px dashed #c9cccf; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+                                <template x-if="preview">
+                                    <img :src="preview" style="width: 100%; height: 100%; object-fit: cover; border-radius: 0.5rem;">
+                                </template>
+                                <template x-if="!preview">
+                                    <svg width="32" height="32" fill="none" stroke="#c9cccf" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                </template>
+                            </div>
+                            <div style="flex: 1;">
+                                <input type="file" name="image" id="image" accept="image/jpeg,image/png,image/webp"
+                                       style="font-size: 13px; color: #616161;"
+                                       @change="preview = $event.target.files[0] ? URL.createObjectURL($event.target.files[0]) : null">
+                                <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">JPG, PNG or WebP. Max 2MB.</p>
+                                @error('image') <p class="form-error">{{ $message }}</p> @enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SEO -->
+                    <div class="card" style="padding: 1.25rem;">
+                        <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Search engine listing</h2>
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div>
+                                <label for="meta_title" class="form-label">Page title</label>
+                                <input type="text" name="meta_title" id="meta_title" value="{{ old('meta_title') }}"
+                                       class="form-input" placeholder="Defaults to category name">
+                                @error('meta_title') <p class="form-error">{{ $message }}</p> @enderror
+                            </div>
+                            <div>
+                                <label for="meta_description" class="form-label">Meta description</label>
+                                <textarea name="meta_description" id="meta_description" rows="2" class="form-textarea"
+                                          placeholder="SEO description...">{{ old('meta_description') }}</textarea>
+                                @error('meta_description') <p class="form-error">{{ $message }}</p> @enderror
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar -->
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div class="card" style="padding: 1.25rem;">
+                        <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 0.75rem;">Status</h2>
+                        <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
+                            <input type="checkbox" name="is_active" value="1" {{ old('is_active', true) ? 'checked' : '' }}
+                                   style="width: 1rem; height: 1rem; accent-color: #303030;">
+                            <div>
+                                <span style="font-size: 13px; font-weight: 500; color: #303030;">Active</span>
+                                <p style="font-size: 12px; color: #616161;">Visible on the storefront</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Save bar -->
+            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #e3e3e3;">
+                <a href="{{ route('admin.categories.index') }}" class="btn btn-secondary" style="font-size: 13px;">Discard</a>
+                <button type="submit" class="btn btn-primary" style="font-size: 13px;">Save category</button>
+            </div>
+        </form>
+    </div>
+
+    @push('scripts')
+    <script>
+        function categoryForm() {
+            return {
+                slug: '{{ old("slug", "") }}',
+                slugManual: {{ old('slug') ? 'true' : 'false' }},
+                toSlug(text) {
+                    return text.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_]+/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+                }
+            };
+        }
+    </script>
+    @endpush
+</x-layouts.admin>

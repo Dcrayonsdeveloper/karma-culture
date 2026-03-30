@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <rect width="400" height="400" fill="#F8F6F3"/>
+  <!-- T-shirt outline -->
+  <g transform="translate(200,185)" fill="none" stroke="#D4C5B5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Body -->
+    <path d="M-50,-55 L-35,-65 C-20,-72 -10,-75 0,-75 C10,-75 20,-72 35,-65 L50,-55 L70,-35 L55,-20 L40,-35 L40,55 L-40,55 L-40,-35 L-55,-20 L-70,-35 Z" fill="#EDE8E2"/>
+    <!-- Collar -->
+    <path d="M-12,-72 C-5,-62 5,-62 12,-72" fill="none"/>
+    <!-- Hanger hook -->
+    <path d="M0,-75 L0,-90 C0,-100 12,-100 12,-90" fill="none"/>
+  </g>
+  <text x="200" y="275" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" font-weight="500" fill="#B8A99A">Image coming soon</text>
+</svg>

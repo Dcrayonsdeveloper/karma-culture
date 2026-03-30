@@ -1,0 +1,2 @@
+/* Critical CSS - loads first to prevent flash of content */
+[x-cloak] { display: none !important; }
