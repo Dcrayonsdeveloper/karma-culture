@@ -27,10 +27,18 @@
     </div>
 
     <!-- Category Header: mobile orange gradient / desktop banner image -->
-    <div class="relative overflow-hidden h-[150px] sm:h-[224px]" style="background: linear-gradient(135deg, #F8931D 0%, #E07E0A 100%);"
+    <style>
+        .cat-banner { height: 150px; }
+        .cat-banner-inner { padding: 25px; }
+        @media(min-width:640px) {
+            .cat-banner { height: 224px; }
+            .cat-banner-inner { padding: 0 1rem; }
+        }
+    </style>
+    <div class="relative overflow-hidden cat-banner" style="background: linear-gradient(135deg, #F8931D 0%, #E07E0A 100%);">
         <img src="{{ asset('images/Forever.png') }}" alt="{{ $category->name }}" class="absolute inset-0 w-full h-full object-cover hidden sm:block">
         <div class="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent"></div>
-        <div class="relative container mx-auto px-4 h-full flex flex-col justify-center">
+        <div class="relative container mx-auto h-full flex flex-col justify-center cat-banner-inner">
             <h1 class="text-2xl md:text-3xl font-bold text-white mb-1">{{ $category->name }}</h1>
             @if($category->description)
                 <p class="text-sm max-w-lg line-clamp-2" style="color: rgba(255,255,255,0.9);">{{ $category->description }}</p>

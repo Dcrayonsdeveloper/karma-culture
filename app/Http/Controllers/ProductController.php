@@ -107,7 +107,7 @@ class ProductController extends Controller
             );
         }
 
-        // Related products
+        // Related products (prefer products with images)
         $relatedProducts = Product::query()
             ->where('is_active', true)
             ->where('id', '!=', $product->id)
@@ -115,10 +115,26 @@ class ProductController extends Controller
                 $query->where('category_id', $product->category_id)
                       ->orWhere('brand_id', $product->brand_id);
             })
+            ->whereHas('images')
             ->with(['category', 'primaryImage'])
             ->inRandomOrder()
             ->take(8)
             ->get();
+
+        // If not enough with images, fill with any
+        if ($relatedProducts->count() < 4) {
+            $relatedProducts = Product::query()
+                ->where('is_active', true)
+                ->where('id', '!=', $product->id)
+                ->where(function ($query) use ($product) {
+                    $query->where('category_id', $product->category_id)
+                          ->orWhere('brand_id', $product->brand_id);
+                })
+                ->with(['category', 'primaryImage'])
+                ->inRandomOrder()
+                ->take(8)
+                ->get();
+        }
 
         // Breadcrumbs
         $breadcrumbs = [];
@@ -132,25 +148,49 @@ class ProductController extends Controller
         $productSchema = $schemaService->getProductSchema($product);
         $faqSchema = $schemaService->getFaqSchema($product);
 
-        // Frequently bought together (same category, limited to 3)
+        // Frequently bought together (prefer products with images)
         $crossSellProducts = Product::query()
             ->where('is_active', true)
             ->where('id', '!=', $product->id)
             ->where('category_id', $product->category_id)
+            ->whereHas('images')
             ->with(['primaryImage'])
             ->inRandomOrder()
             ->take(3)
             ->get();
 
-        // Compare with similar items (4 products from same category with brand + rating)
+        if ($crossSellProducts->isEmpty()) {
+            $crossSellProducts = Product::query()
+                ->where('is_active', true)
+                ->where('id', '!=', $product->id)
+                ->where('category_id', $product->category_id)
+                ->with(['primaryImage'])
+                ->inRandomOrder()
+                ->take(3)
+                ->get();
+        }
+
+        // Compare with similar items (prefer products with images)
         $compareProducts = Product::query()
             ->where('is_active', true)
             ->where('id', '!=', $product->id)
             ->where('category_id', $product->category_id)
+            ->whereHas('images')
             ->with(['brand', 'primaryImage'])
             ->inRandomOrder()
             ->take(4)
             ->get();
+
+        if ($compareProducts->count() < 2) {
+            $compareProducts = Product::query()
+                ->where('is_active', true)
+                ->where('id', '!=', $product->id)
+                ->where('category_id', $product->category_id)
+                ->with(['brand', 'primaryImage'])
+                ->inRandomOrder()
+                ->take(4)
+                ->get();
+        }
 
         // Active coupons applicable to this product
         $activeCoupons = Coupon::where('is_active', true)

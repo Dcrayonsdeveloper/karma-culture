@@ -24,10 +24,8 @@
                         @php
                             $socialFacebook = \App\Models\Setting::get('social_facebook', '#');
                             $socialInstagram = \App\Models\Setting::get('social_instagram', '#');
-                            $socialTwitter = \App\Models\Setting::get('social_twitter', '#');
                             $socialYoutube = \App\Models\Setting::get('social_youtube', '#');
                             $socialTiktok = \App\Models\Setting::get('social_tiktok', '');
-                            $socialPinterest = \App\Models\Setting::get('social_pinterest', '');
                         @endphp
                         @if($socialFacebook)
                             <a href="{{ $socialFacebook }}" class="w-9 h-9 bg-white/10 hover:bg-[#6F9CA2] text-white/70 hover:text-white rounded-full flex items-center justify-center transition-all" aria-label="Facebook" target="_blank">
@@ -39,11 +37,6 @@
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z"/></svg>
                             </a>
                         @endif
-                        @if($socialTwitter)
-                            <a href="{{ $socialTwitter }}" class="w-9 h-9 bg-white/10 hover:bg-[#6F9CA2] text-white/70 hover:text-white rounded-full flex items-center justify-center transition-all" aria-label="X (Twitter)" target="_blank">
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                            </a>
-                        @endif
                         @if($socialYoutube)
                             <a href="{{ $socialYoutube }}" class="w-9 h-9 bg-white/10 hover:bg-[#6F9CA2] text-white/70 hover:text-white rounded-full flex items-center justify-center transition-all" aria-label="YouTube" target="_blank">
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
@@ -52,11 +45,6 @@
                         @if($socialTiktok)
                             <a href="{{ $socialTiktok }}" class="w-9 h-9 bg-white/10 hover:bg-[#6F9CA2] text-white/70 hover:text-white rounded-full flex items-center justify-center transition-all" aria-label="TikTok" target="_blank">
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
-                            </a>
-                        @endif
-                        @if($socialPinterest)
-                            <a href="{{ $socialPinterest }}" class="w-9 h-9 bg-white/10 hover:bg-[#6F9CA2] text-white/70 hover:text-white rounded-full flex items-center justify-center transition-all" aria-label="Pinterest" target="_blank">
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.162-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 01.083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.631-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12.017 24c6.624 0 11.99-5.367 11.99-11.988C24.007 5.367 18.641 0 12.017 0z"/></svg>
                             </a>
                         @endif
                     </div>
@@ -70,7 +58,7 @@
                         <li><a href="{{ route('contact') }}" class="text-neutral-300 hover:text-[#6F9CA2] transition-colors">Contact Us</a></li>
                         <li><a href="{{ route('faq') }}" class="text-neutral-300 hover:text-[#6F9CA2] transition-colors">FAQs</a></li>
                         <li><a href="{{ route('blog') }}" class="text-neutral-300 hover:text-[#6F9CA2] transition-colors">Blog</a></li>
-                        <li><a href="{{ route('careers') }}" class="text-neutral-300 hover:text-[#6F9CA2] transition-colors">Careers</a></li>
+
                         <li><a href="{{ route('size-guide') }}" class="text-neutral-300 hover:text-[#6F9CA2] transition-colors">Size Guide</a></li>
                     </ul>
                 </div>

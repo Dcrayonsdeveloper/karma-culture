@@ -384,6 +384,7 @@ class CartController extends Controller
         $products = Product::where('is_active', true)
             ->whereNotIn('id', $productIds)
             ->whereIn('category_id', $categoryIds)
+            ->whereHas('images')
             ->with('primaryImage')
             ->inRandomOrder()
             ->take(6)

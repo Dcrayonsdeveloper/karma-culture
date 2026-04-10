@@ -72,11 +72,7 @@
 
             <!-- Save bar -->
             <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #e3e3e3;">
-                <form action="{{ route('admin.customers.destroy', $customer) }}" method="POST"
-                      onsubmit="return confirm('Delete this customer?')" style="display: inline;">
-                    @csrf @method('DELETE')
-                    <button type="submit" style="font-size: 13px; font-weight: 500; color: #d72c0d; background: none; border: none; cursor: pointer;">Delete customer</button>
-                </form>
+                <span></span>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <a href="{{ route('admin.customers.index') }}" class="btn btn-secondary" style="font-size: 13px;">Discard</a>
                     <button type="submit" class="btn btn-primary" style="font-size: 13px;">Save</button>

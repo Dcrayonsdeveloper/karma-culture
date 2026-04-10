@@ -85,9 +85,16 @@ class Banner extends Model
 
     public function getImageAttribute(): string
     {
-        return $this->image_url
-            ? asset('storage/' . $this->image_url)
-            : asset('images/placeholder-banner.jpg');
+        if (!$this->image_url) {
+            return asset('images/placeholder-banner.jpg');
+        }
+        if (str_starts_with($this->image_url, 'http')) {
+            return $this->image_url;
+        }
+        if (str_starts_with($this->image_url, '/')) {
+            return asset(ltrim($this->image_url, '/'));
+        }
+        return asset('storage/' . $this->image_url);
     }
 
     public function getMobileImageAttribute(): string

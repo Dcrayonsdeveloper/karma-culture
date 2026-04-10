@@ -33,7 +33,10 @@
             <div class="aspect-square bg-neutral-50 rounded-[20px] overflow-hidden mb-2">
                 <img src="{{ $product->primary_image_url }}"
                      alt="{{ $product->name }}"
-                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                     class="w-full h-full object-cover transition-transform duration-300"
+                     style="will-change:transform;"
+                     onmouseenter="this.style.transform='scale(1.05)'"
+                     onmouseleave="this.style.transform='scale(1)'"
                      loading="lazy"
                      onerror="this.src='{{ $placeholderImage }}'">
             </div>
@@ -121,7 +124,10 @@
             <a href="{{ route('product.show', $product) }}">
                 <img src="{{ $product->primary_image_url }}"
                      alt="{{ $product->name }}"
-                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                     class="w-full h-full object-cover transition-transform duration-300"
+                     style="will-change:transform;"
+                     onmouseenter="this.style.transform='scale(1.05)'"
+                     onmouseleave="this.style.transform='scale(1)'"
                      loading="lazy"
                      onerror="this.src='{{ $placeholderImage }}'">
             </a>

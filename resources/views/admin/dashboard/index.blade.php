@@ -86,14 +86,14 @@
     </div>
 
     <!-- Two-column: Orders table + Order Status chart -->
-    <div style="display: grid; grid-template-columns: 3fr 2fr; gap: 1rem; margin-bottom: 1.25rem;">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
         <!-- Recent Orders -->
-        <div class="card">
+        <div class="card lg:col-span-2">
             <div style="padding: 0.875rem 1.25rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e3e3e3;">
                 <h2 style="font-size: 13px; font-weight: 600; color: #303030;">Recent orders</h2>
                 <a href="{{ route('admin.orders.index') }}" style="font-size: 12px; font-weight: 500; color: #005bd3; text-decoration: none;">View all orders</a>
             </div>
-            <div style="overflow-x: auto;">
+            <div style="max-height: 400px; overflow-y: auto;">
                 <table style="width: 100%;">
                     <thead>
                         <tr style="border-bottom: 1px solid #e3e3e3;">
@@ -148,9 +148,9 @@
     </div>
 
     <!-- Monthly Revenue + Top Products -->
-    <div style="display: grid; grid-template-columns: 3fr 2fr; gap: 1rem;">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <!-- Monthly Revenue -->
-        <div class="card">
+        <div class="card lg:col-span-2">
             <div style="padding: 0.875rem 1.25rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e3e3e3;">
                 <h2 style="font-size: 13px; font-weight: 600; color: #303030;">Monthly revenue</h2>
                 <span style="font-size: 11px; color: #616161;">{{ $hasDateFilter ? $startDate->format('M d') . ' – ' . $endDate->format('M d, Y') : 'Last 6 months' }}</span>

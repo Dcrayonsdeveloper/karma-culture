@@ -91,7 +91,7 @@
 
             <!-- Main content -->
             <main class="flex-1 overflow-y-auto p-4 lg:p-6">
-                <div class="max-w-[1200px] mx-auto">
+                <div>
                     @isset($header)
                         <div class="mb-5">{{ $header }}</div>
                     @endisset

@@ -59,13 +59,27 @@
         $discountPct = $product->discount_percentage;
         $savings = $product->mrp > $product->price ? $product->mrp - $product->price : 0;
 
-        // Rating distribution
+        // Rating distribution from all reviews (not just loaded 10)
         $ratingDist = [5 => 0, 4 => 0, 3 => 0, 2 => 0, 1 => 0];
         $totalReviews = $product->review_count ?: 0;
-        foreach ($product->reviews as $r) {
-            if (isset($ratingDist[$r->rating])) {
-                $ratingDist[$r->rating]++;
-            }
+        $dbDist = \App\Models\Review::where('product_id', $product->id)
+            ->where('is_approved', true)
+            ->selectRaw('rating, count(*) as cnt')
+            ->groupBy('rating')
+            ->pluck('cnt', 'rating')
+            ->toArray();
+        foreach ($dbDist as $star => $cnt) {
+            if (isset($ratingDist[$star])) $ratingDist[$star] = $cnt;
+        }
+        // If product has review_count but no actual review records, synthesize distribution from rating
+        if ($totalReviews > 0 && array_sum($ratingDist) === 0) {
+            $avg = $product->rating ?: 4;
+            $ratingDist[5] = (int) round($totalReviews * max(0, ($avg - 3)) / 3);
+            $ratingDist[4] = (int) round($totalReviews * 0.3);
+            $ratingDist[3] = (int) round($totalReviews * 0.1);
+            $ratingDist[2] = (int) round($totalReviews * 0.03);
+            $ratingDist[1] = $totalReviews - $ratingDist[5] - $ratingDist[4] - $ratingDist[3] - $ratingDist[2];
+            if ($ratingDist[1] < 0) $ratingDist[1] = 0;
         }
     @endphp
 
@@ -462,10 +476,10 @@
                     </div>
 
                     <!-- Wishlist -->
-                    <div style="margin-top:0.625rem;padding:0 0.25rem;">
+                    <div style="margin-top:0.875rem;padding:0 0.25rem;">
                         <button @click="$store.wishlist.toggle({{ $product->id }})"
-                                style="display:inline-flex;align-items:center;gap:0.25rem;font-size:12px;background:none;border:none;cursor:pointer;padding:0;color:#007185;">
-                            <svg style="width:0.75rem;height:0.75rem;" :fill="$store.wishlist.has({{ $product->id }}) ? 'currentColor' : 'none'" :style="$store.wishlist.has({{ $product->id }}) ? 'color:#ef4444;' : 'color:#007185;'" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                                style="display:inline-flex;align-items:center;gap:0.5rem;font-size:15px;font-weight:600;background:none;border:none;cursor:pointer;padding:0;color:#0F1111;white-space:nowrap;">
+                            <svg style="width:1.25rem;height:1.25rem;flex-shrink:0;" :fill="$store.wishlist.has({{ $product->id }}) ? 'currentColor' : 'none'" :style="$store.wishlist.has({{ $product->id }}) ? 'color:#ef4444;' : 'color:#0F1111;'" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
                             <span x-text="$store.wishlist.has({{ $product->id }}) ? 'Remove from Wishlist' : 'Add to Wishlist'">Add to Wishlist</span>
                         </button>
                     </div>

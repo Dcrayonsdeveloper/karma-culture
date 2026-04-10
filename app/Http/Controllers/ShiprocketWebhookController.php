@@ -15,6 +15,12 @@ class ShiprocketWebhookController extends Controller
      */
     public function handle(Request $request)
     {
+        // Verify webhook token if set
+        $token = $request->header('X-Webhook-Token') ?? $request->input('token');
+        if ($token && $token !== 'foreverkids2026') {
+            return response()->json(['status' => 'unauthorized'], 401);
+        }
+
         $data = $request->all();
 
         Log::info('Shiprocket webhook received', $data);
