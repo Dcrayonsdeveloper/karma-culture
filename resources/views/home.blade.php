@@ -108,29 +108,69 @@
                 .kk-bento--womens > :nth-child(7) { grid-column: span 2; grid-row: span 1; }
             }
 
-            /* Shop It Your Way */
-            .kk-shop-your-way { background: var(--kk-cream-light); padding: 64px 0; }
-            .kk-tab-row { display: inline-flex; padding: 4px; background: var(--kk-cream-lighter); border: 1px solid var(--kk-cream-dark); border-radius: 999px; gap: 4px; }
-            .kk-tab { padding: 10px 24px; border-radius: 999px; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 600; color: var(--kk-text-muted); background: transparent; border: none; cursor: pointer; transition: all .2s; }
-            .kk-tab.is-active { background: var(--kk-brown-dark); color: var(--kk-cream); }
-            .kk-tab:hover:not(.is-active) { color: var(--kk-brown); }
-            .kk-hanger-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 18px; margin-top: 40px; max-width: 880px; margin-left: auto; margin-right: auto; }
-            .kk-hanger-cell { display: flex; flex-direction: column; align-items: center; gap: 14px; }
-            .kk-hanger { width: 100%; max-width: 110px; aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; color: var(--kk-brown); }
-            .kk-hanger svg { width: 100%; height: 100%; }
-            .kk-size-pill { display: inline-flex; align-items: center; justify-content: center; min-width: 56px; padding: 6px 14px; border: 1px solid var(--kk-brown); border-radius: 999px; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--kk-brown); background: transparent; font-weight: 600; cursor: pointer; transition: all .2s; }
-            .kk-size-pill:hover, .kk-size-pill.is-active { background: var(--kk-brown); color: var(--kk-cream); }
-            .kk-size-pill small { display: block; font-size: 9px; font-weight: 500; letter-spacing: 0.1em; opacity: .8; margin-top: 2px; }
-            @media (max-width: 767px) {
-                .kk-hanger-row { grid-template-columns: repeat(3, 1fr); gap: 14px; }
+            /* ===== Shop It Your Way — Rail of hangers ===== */
+            .kk-shop-your-way { background: var(--kk-cream-light); padding: 96px 0; }
+            .kk-syw-heading {
+                font-family: var(--kk-display);
+                font-size: 44px;
+                line-height: 1.05;
+                color: var(--kk-text);
+                margin: 8px 0 14px;
+            }
+            .kk-syw-heading em { font-style: italic; color: var(--kk-tan-dark); }
+            .kk-syw-sub {
+                color: var(--kk-text-muted);
+                font-size: 14px;
+                max-width: 520px;
+                margin: 0 auto;
+                line-height: 1.6;
             }
 
-            /* ===== Shop It Your Way — animated panels ===== */
-            .kk-syw-stage { position: relative; margin-top: 44px; min-height: 240px; }
-            .kk-syw-panel { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
-            .kk-syw-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 28px; width: 100%; max-width: 920px; }
-            .kk-syw-cell { display: flex; flex-direction: column; align-items: center; gap: 18px; }
-            .kk-syw-panel[data-on="true"] .kk-syw-cell {
+            /* Tab row with two-line pills */
+            .kk-syw-tabs {
+                display: inline-flex;
+                padding: 6px;
+                background: var(--kk-cream-lighter);
+                border: 1px solid var(--kk-cream-dark);
+                border-radius: 999px;
+                gap: 4px;
+                margin-top: 32px;
+            }
+            .kk-syw-tab {
+                padding: 12px 36px;
+                border-radius: 999px;
+                background: transparent;
+                border: none;
+                cursor: pointer;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 4px;
+                transition: background .35s, color .35s;
+                color: var(--kk-text-muted);
+                min-width: 170px;
+            }
+            .kk-syw-tab small {
+                font-size: 9px;
+                letter-spacing: 0.32em;
+                text-transform: uppercase;
+                font-weight: 600;
+                opacity: 0.65;
+            }
+            .kk-syw-tab span {
+                font-size: 16px;
+                font-weight: 600;
+                font-family: var(--kk-display);
+                letter-spacing: 0.01em;
+            }
+            .kk-syw-tab.is-active { background: var(--kk-brown-dark); color: var(--kk-cream); }
+            .kk-syw-tab.is-active small { color: var(--kk-tan); opacity: 1; }
+            .kk-syw-tab:hover:not(.is-active) { color: var(--kk-brown); }
+
+            /* Stage + panel */
+            .kk-syw-stage { position: relative; margin-top: 64px; min-height: 420px; }
+            .kk-syw-panel { position: absolute; inset: 0; display: flex; align-items: flex-start; justify-content: center; }
+            .kk-syw-panel[data-on="true"] .kk-rail-cell {
                 animation: kk-rise .55s var(--d, 0ms) cubic-bezier(.22,1,.36,1) both;
             }
             @keyframes kk-rise {
@@ -138,125 +178,102 @@
                 to   { opacity: 1; transform: translateY(0); }
             }
 
-            /* ---- Size: shirts ---- */
-            .kk-shirt {
-                width: 96px; height: 96px;
-                display: flex; align-items: center; justify-content: center;
-                color: var(--kk-brown);
-                transition: transform .4s cubic-bezier(.22,1,.36,1), color .3s;
-            }
-            .kk-shirt svg { width: 100%; height: 100%; filter: drop-shadow(0 8px 14px rgba(45,24,16,.18)); }
-            .kk-syw-cell:hover .kk-shirt {
-                transform: translateY(-8px) rotate(-4deg) scale(1.06);
-                color: var(--kk-tan-dark);
-            }
-            .kk-syw-cell.is-active .kk-shirt {
-                color: var(--kk-tan-dark);
-                animation: kk-sway 2.4s ease-in-out infinite;
-            }
-            @keyframes kk-sway {
-                0%, 100% { transform: rotate(-3deg); }
-                50%      { transform: rotate(3deg); }
-            }
-
-            /* ---- Price: bundle of notes ---- */
-            .kk-notes {
-                position: relative; width: 110px; height: 92px;
-                transition: transform .35s cubic-bezier(.22,1,.36,1);
-            }
-            .kk-syw-cell:hover .kk-notes { transform: translateY(-6px); }
-            .kk-note {
-                position: absolute; left: 50%; top: 50%;
-                width: 86px; height: 56px;
-                background: var(--c, var(--kk-tan));
-                border-radius: 5px;
-                border: 1px solid rgba(255,255,255,.35);
-                box-shadow: 0 6px 16px rgba(45,24,16,.22);
-                transition: transform .55s cubic-bezier(.22,1,.36,1), box-shadow .3s;
-                will-change: transform;
-            }
-            .kk-note::before {
-                content: ''; position: absolute; inset: 7px;
-                border: 1px dashed rgba(255,255,255,.35); border-radius: 3px;
-            }
-            .kk-note::after {
-                content: '₹'; position: absolute; left: 50%; top: 50%;
-                transform: translate(-50%, -50%);
-                color: rgba(255,255,255,.85);
-                font-family: var(--kk-display);
-                font-size: 24px; font-weight: 600;
-                text-shadow: 0 2px 4px rgba(0,0,0,.2);
-            }
-            .kk-note:nth-child(1) { transform: translate(-50%, -50%) translate(-6px, 8px)  rotate(-9deg); z-index: 1; }
-            .kk-note:nth-child(2) { transform: translate(-50%, -50%) translate( 0,   0)    rotate( 0deg); z-index: 2; }
-            .kk-note:nth-child(3) { transform: translate(-50%, -50%) translate( 6px,-8px) rotate( 9deg); z-index: 3; }
-            .kk-syw-cell:hover .kk-note:nth-child(1) { transform: translate(-50%, -50%) translate(-30px, 6px)  rotate(-22deg); }
-            .kk-syw-cell:hover .kk-note:nth-child(3) { transform: translate(-50%, -50%) translate( 30px,-6px)  rotate( 22deg); }
-            .kk-syw-cell.is-active .kk-notes {
-                animation: kk-bob 2.2s ease-in-out infinite;
-            }
-            @keyframes kk-bob {
-                0%, 100% { transform: translateY(0); }
-                50%      { transform: translateY(-6px); }
-            }
-
-            /* ---- Shade: animated color palette ---- */
-            .kk-swatch-wrap {
+            /* The visible rail */
+            .kk-rail-wrap {
                 position: relative;
-                width: 100px; height: 100px;
-                border-radius: 50%;
-                padding: 5px;
-                background: conic-gradient(from 0deg, var(--kk-tan), var(--kk-cream), var(--kk-tan-dark), var(--kk-brown), var(--kk-cream-dark), var(--kk-tan));
-                box-shadow: 0 10px 28px rgba(45,24,16,.20);
-                animation: kk-spin 9s linear infinite;
+                padding-top: 14px;
+                width: 100%;
+                max-width: 980px;
+                margin: 0 auto;
             }
-            @keyframes kk-spin { to { transform: rotate(360deg); } }
-            .kk-swatch {
-                width: 100%; height: 100%;
-                border-radius: 50%;
-                background: var(--c, #fff);
-                box-shadow: inset 0 -10px 18px rgba(0,0,0,.18), inset 0 8px 14px rgba(255,255,255,.18);
-                animation: kk-spin 9s linear infinite reverse; /* counter so it visually stays still */
-                position: relative;
-                transition: transform .35s;
+            .kk-rail-bar {
+                position: absolute;
+                top: 38px;
+                left: 4%;
+                right: 4%;
+                height: 5px;
+                background: linear-gradient(to bottom, #2d1810, #1f1109);
+                border-radius: 4px;
+                box-shadow: 0 3px 6px rgba(45,24,16,.30);
+                z-index: 0;
             }
-            .kk-swatch::after {
+            .kk-rail-bar::before, .kk-rail-bar::after {
                 content: '';
-                position: absolute; inset: 22%;
+                position: absolute;
+                width: 14px; height: 14px;
+                background: #2d1810;
                 border-radius: 50%;
-                background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.5), transparent 55%);
+                top: -5px;
+                box-shadow: 0 2px 4px rgba(0,0,0,.2);
             }
-            .kk-syw-cell:hover .kk-swatch { transform: scale(1.08); }
-            .kk-syw-cell.is-active .kk-swatch-wrap {
-                animation: kk-spin 4s linear infinite, kk-glow 2s ease-in-out infinite;
+            .kk-rail-bar::before { left: -10px; }
+            .kk-rail-bar::after  { right: -10px; }
+
+            /* Cells along the rail */
+            .kk-rail-cells {
+                display: grid;
+                grid-template-columns: repeat(6, 1fr);
+                gap: 8px;
+                position: relative;
+                z-index: 1;
             }
-            @keyframes kk-glow {
-                0%, 100% { box-shadow: 0 10px 28px rgba(45,24,16,.20); }
-                50%      { box-shadow: 0 10px 36px rgba(184,137,90,.55), 0 0 0 6px rgba(184,137,90,.12); }
+            .kk-rail-cell {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 12px;
+                text-decoration: none;
+                color: inherit;
+            }
+            .kk-shirt-hanger {
+                width: 100%;
+                max-width: 150px;
+                transform-origin: top center;
+                transition: transform .4s cubic-bezier(.22,1,.36,1), filter .35s;
+            }
+            .kk-shirt-hanger svg { width: 100%; height: auto; display: block; filter: drop-shadow(0 8px 14px rgba(45,24,16,.18)); }
+            .kk-rail-cell:hover .kk-shirt-hanger {
+                transform: rotate(-3deg);
+                filter: drop-shadow(0 12px 20px rgba(45,24,16,.28));
             }
 
-            /* Result CTA */
-            .kk-syw-result {
-                margin-top: 44px;
-                display: flex; align-items: center; justify-content: center;
-                gap: 18px; flex-wrap: wrap;
+            /* Labels under each hanger */
+            .kk-rail-label {
+                font-family: var(--kk-display);
+                font-size: 22px;
+                font-weight: 600;
+                color: var(--kk-text);
+                letter-spacing: 0.04em;
+                margin-top: 6px;
+                transition: color .3s;
             }
-            .kk-syw-result .chip {
-                display: inline-flex; align-items: center; gap: 6px;
-                padding: 6px 14px; background: var(--kk-cream-lighter);
-                border: 1px solid var(--kk-cream-dark); border-radius: 999px;
-                font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
-                color: var(--kk-text-muted); font-weight: 600;
+            .kk-rail-cell:hover .kk-rail-label { color: var(--kk-tan-dark); }
+            .kk-rail-count {
+                font-size: 10px;
+                letter-spacing: 0.24em;
+                text-transform: uppercase;
+                color: var(--kk-text-muted);
+                font-weight: 500;
+                margin-top: -2px;
             }
-            .kk-syw-result .chip b { color: var(--kk-brown); font-weight: 700; }
 
+            @media (max-width: 1024px) {
+                .kk-syw-heading { font-size: 36px; }
+                .kk-rail-cells { gap: 4px; }
+                .kk-shirt-hanger { max-width: 120px; }
+            }
             @media (max-width: 767px) {
-                .kk-syw-grid { grid-template-columns: repeat(3, 1fr); gap: 18px; }
-                .kk-syw-stage { min-height: 380px; }
-                .kk-shirt, .kk-notes, .kk-swatch-wrap { width: 78px; height: 78px; }
-                .kk-notes { height: 70px; }
-                .kk-note { width: 66px; height: 44px; }
-                .kk-note::after { font-size: 18px; }
+                .kk-shop-your-way { padding: 60px 0; }
+                .kk-syw-heading { font-size: 28px; }
+                .kk-syw-tabs { padding: 4px; gap: 2px; margin-top: 24px; }
+                .kk-syw-tab { padding: 10px 16px; min-width: 100px; }
+                .kk-syw-tab small { font-size: 8px; letter-spacing: 0.22em; }
+                .kk-syw-tab span { font-size: 14px; }
+                .kk-rail-bar { display: none; }
+                .kk-rail-cells { grid-template-columns: repeat(3, 1fr); row-gap: 28px; }
+                .kk-shirt-hanger { max-width: 110px; }
+                .kk-syw-stage { min-height: 560px; }
+                .kk-rail-label { font-size: 18px; }
             }
 
             /* Product cards */
@@ -499,125 +516,99 @@
         @endif
 
         {{-- ============================================
-             SHOP IT YOUR WAY (animated, per-tab visuals)
+             SHOP IT YOUR WAY — Rail of hangers per tab
              ============================================ --}}
         @php
-            $kkPrices = [
-                ['k' => '<1k',   'label' => 'Under ₹1k', 'tint' => '#c9986a'],
-                ['k' => '1k-2k', 'label' => '₹1k – 2k',  'tint' => '#b8895a'],
-                ['k' => '2k-3k', 'label' => '₹2k – 3k',  'tint' => '#a07748'],
-                ['k' => '3k-5k', 'label' => '₹3k – 5k',  'tint' => '#8c5c34'],
-                ['k' => '5k-7k', 'label' => '₹5k – 7k',  'tint' => '#6e4527'],
-                ['k' => '7k+',   'label' => '₹7k+',      'tint' => '#4a2d1a'],
+            $kkSizeItems = [
+                ['label' => 'S',   'shade' => '#f0d9b8', 'count' => '120', 'q' => 'size=S'],
+                ['label' => 'M',   'shade' => '#d9b58a', 'count' => '210', 'q' => 'size=M'],
+                ['label' => 'L',   'shade' => '#b8895a', 'count' => '185', 'q' => 'size=L'],
+                ['label' => 'XL',  'shade' => '#8c5c34', 'count' => '140', 'q' => 'size=XL'],
+                ['label' => 'XXL', 'shade' => '#5a3a22', 'count' => '85',  'q' => 'size=XXL'],
+                ['label' => '3XL', 'shade' => '#2d1810', 'count' => '42',  'q' => 'size=3XL'],
             ];
-            $kkShades = [
-                ['k' => 'cream',    'label' => 'Cream',    'hex' => '#efe2cb'],
-                ['k' => 'sand',     'label' => 'Sand',     'hex' => '#d4b896'],
-                ['k' => 'tan',      'label' => 'Tan',      'hex' => '#b8895a'],
-                ['k' => 'cinnamon', 'label' => 'Cinnamon', 'hex' => '#8c5c34'],
-                ['k' => 'cocoa',    'label' => 'Cocoa',    'hex' => '#5a3a22'],
-                ['k' => 'espresso', 'label' => 'Espresso', 'hex' => '#2d1810'],
+            $kkPriceItems = [
+                ['label' => 'Under ₹1k', 'shade' => '#c9986a', 'count' => '60',  'q' => 'price_max=1000'],
+                ['label' => '₹1k – 2k',  'shade' => '#b8895a', 'count' => '95',  'q' => 'price_min=1000&price_max=2000'],
+                ['label' => '₹2k – 3k',  'shade' => '#a07748', 'count' => '145', 'q' => 'price_min=2000&price_max=3000'],
+                ['label' => '₹3k – 5k',  'shade' => '#8c5c34', 'count' => '110', 'q' => 'price_min=3000&price_max=5000'],
+                ['label' => '₹5k – 7k',  'shade' => '#6e4527', 'count' => '70',  'q' => 'price_min=5000&price_max=7000'],
+                ['label' => '₹7k+',      'shade' => '#4a2d1a', 'count' => '50',  'q' => 'price_min=7000'],
             ];
-            $kkSizes = ['S','M','L','XL','XXL','3XL'];
+            $kkShadeItems = [
+                ['label' => 'Cream',    'shade' => '#efe2cb', 'count' => '88',  'q' => 'shade=cream'],
+                ['label' => 'Sand',     'shade' => '#d4b896', 'count' => '120', 'q' => 'shade=sand'],
+                ['label' => 'Tan',      'shade' => '#b8895a', 'count' => '95',  'q' => 'shade=tan'],
+                ['label' => 'Cinnamon', 'shade' => '#8c5c34', 'count' => '110', 'q' => 'shade=cinnamon'],
+                ['label' => 'Cocoa',    'shade' => '#5a3a22', 'count' => '70',  'q' => 'shade=cocoa'],
+                ['label' => 'Espresso', 'shade' => '#2d1810', 'count' => '45',  'q' => 'shade=espresso'],
+            ];
+            $kkTabs = [
+                'size'  => ['eyebrow' => 'Find Your Fit',       'title' => 'Size',  'items' => $kkSizeItems],
+                'price' => ['eyebrow' => 'Perfectly Portioned', 'title' => 'Price', 'items' => $kkPriceItems],
+                'shade' => ['eyebrow' => 'The Dye Lab',         'title' => 'Shade', 'items' => $kkShadeItems],
+            ];
         @endphp
-        <section class="kk-shop-your-way"
-                 x-data="{ tab: 'size', size: 'M', price: '1k-2k', shade: 'cream' }">
+        <section class="kk-shop-your-way" x-data="{ tab: 'size' }">
             <div class="container mx-auto px-4 text-center">
-                <span class="kk-eyebrow">Shop It Your</span>
-                <h2 class="kk-section-title kk-section-title--lg" style="margin-top:6px;">Shop It Your <em class="kk-display" style="font-style:italic; color:var(--kk-tan-dark);">Way</em></h2>
-                <p style="color:var(--kk-text-muted); font-size:13px; margin:14px auto 26px; max-width:480px;">Pick a way that suits you — every cut is tailored for a flattering shape.</p>
+                <span class="kk-eyebrow">Curate The Edit</span>
+                <h2 class="kk-syw-heading">Shop It Your <em>Way</em></h2>
+                <p class="kk-syw-sub">Pick a size off the rail — every cut is tailored for a flattering drape.</p>
 
-                <div class="kk-tab-row">
-                    <button class="kk-tab" :class="tab==='size' ? 'is-active' : ''" @click="tab='size'">Size</button>
-                    <button class="kk-tab" :class="tab==='price' ? 'is-active' : ''" @click="tab='price'">Price</button>
-                    <button class="kk-tab" :class="tab==='shade' ? 'is-active' : ''" @click="tab='shade'">Shade</button>
+                <div class="kk-syw-tabs">
+                    @foreach($kkTabs as $tabKey => $tabCfg)
+                        <button class="kk-syw-tab"
+                                :class="tab==='{{ $tabKey }}' ? 'is-active' : ''"
+                                @click="tab='{{ $tabKey }}'">
+                            <small>{{ $tabCfg['eyebrow'] }}</small>
+                            <span>{{ $tabCfg['title'] }}</span>
+                        </button>
+                    @endforeach
                 </div>
 
                 <div class="kk-syw-stage">
-
-                    {{-- ---------- SIZE: t-shirts ---------- --}}
-                    <div class="kk-syw-panel" :data-on="tab==='size'"
-                         x-show="tab==='size'"
-                         x-transition:enter="transition ease-out duration-500"
-                         x-transition:enter-start="opacity-0 translate-y-3"
-                         x-transition:enter-end="opacity-100 translate-y-0"
-                         x-transition:leave="transition ease-in duration-200"
-                         x-transition:leave-start="opacity-100"
-                         x-transition:leave-end="opacity-0">
-                        <div class="kk-syw-grid">
-                            @foreach($kkSizes as $i => $sz)
-                                <div class="kk-syw-cell" :class="size==='{{ $sz }}' ? 'is-active' : ''" style="--d: {{ $i * 70 }}ms;">
-                                    <div class="kk-shirt" aria-hidden="true">
-                                        <svg viewBox="0 0 120 120" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M44 18 L24 26 L8 44 L20 60 L32 52 L32 104 L88 104 L88 52 L100 60 L112 44 L96 26 L76 18 C74 30 67 38 60 38 C53 38 46 30 44 18 Z"/>
-                                        </svg>
-                                    </div>
-                                    <button class="kk-size-pill" :class="size==='{{ $sz }}' ? 'is-active' : ''" @click="size='{{ $sz }}'">
-                                        {{ $sz }}<small>FIT</small>
-                                    </button>
+                    @foreach($kkTabs as $tabKey => $tabCfg)
+                        <div class="kk-syw-panel"
+                             :data-on="tab==='{{ $tabKey }}'"
+                             x-show="tab==='{{ $tabKey }}'"
+                             x-transition:enter="transition ease-out duration-500"
+                             x-transition:enter-start="opacity-0 translate-y-3"
+                             x-transition:enter-end="opacity-100 translate-y-0"
+                             x-transition:leave="transition ease-in duration-200"
+                             x-transition:leave-start="opacity-100"
+                             x-transition:leave-end="opacity-0">
+                            <div class="kk-rail-wrap">
+                                <div class="kk-rail-bar" aria-hidden="true"></div>
+                                <div class="kk-rail-cells">
+                                    @foreach($tabCfg['items'] as $i => $item)
+                                        <a href="{{ route('products.index') }}?{{ $item['q'] }}"
+                                           class="kk-rail-cell"
+                                           style="--d: {{ $i * 80 }}ms;">
+                                            <div class="kk-shirt-hanger" style="color: {{ $item['shade'] }};">
+                                                <svg viewBox="0 0 100 170" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                                    {{-- Hook --}}
+                                                    <path d="M50 4 Q52 4 52 10 C52 14 47 15 47 20 Q49 24 52 24"
+                                                          stroke="#3a2a1f" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                                                    {{-- Hanger triangle --}}
+                                                    <path d="M52 24 L17 51 L83 51"
+                                                          stroke="#3a2a1f" stroke-width="2" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+                                                    <line x1="17" y1="51" x2="83" y2="51" stroke="#3a2a1f" stroke-width="2" stroke-linecap="round"/>
+                                                    {{-- T-shirt body --}}
+                                                    <path d="M30 52 L15 60 L6 78 L20 90 L25 82 L25 156 Q25 162 31 162 L69 162 Q75 162 75 156 L75 82 L80 90 L94 78 L85 60 L70 52 L65 54 Q50 64 35 54 Z"
+                                                          fill="currentColor" stroke="rgba(0,0,0,0.10)" stroke-width="1"/>
+                                                    {{-- Neckline shadow --}}
+                                                    <path d="M38 55 Q50 63 62 55"
+                                                          fill="none" stroke="rgba(0,0,0,0.18)" stroke-width="1.2" stroke-linecap="round"/>
+                                                </svg>
+                                            </div>
+                                            <div class="kk-rail-label">{{ $item['label'] }}</div>
+                                            <div class="kk-rail-count">{{ $item['count'] }} Styles</div>
+                                        </a>
+                                    @endforeach
                                 </div>
-                            @endforeach
+                            </div>
                         </div>
-                    </div>
-
-                    {{-- ---------- PRICE: bundle of notes ---------- --}}
-                    <div class="kk-syw-panel" :data-on="tab==='price'"
-                         x-show="tab==='price'"
-                         x-transition:enter="transition ease-out duration-500"
-                         x-transition:enter-start="opacity-0 translate-y-3"
-                         x-transition:enter-end="opacity-100 translate-y-0"
-                         x-transition:leave="transition ease-in duration-200"
-                         x-transition:leave-start="opacity-100"
-                         x-transition:leave-end="opacity-0">
-                        <div class="kk-syw-grid">
-                            @foreach($kkPrices as $i => $p)
-                                <div class="kk-syw-cell" :class="price==='{{ $p['k'] }}' ? 'is-active' : ''" style="--d: {{ $i * 70 }}ms;">
-                                    <div class="kk-notes" aria-hidden="true">
-                                        <div class="kk-note" style="--c: {{ $p['tint'] }};"></div>
-                                        <div class="kk-note" style="--c: {{ $p['tint'] }};"></div>
-                                        <div class="kk-note" style="--c: {{ $p['tint'] }};"></div>
-                                    </div>
-                                    <button class="kk-size-pill" :class="price==='{{ $p['k'] }}' ? 'is-active' : ''" @click="price='{{ $p['k'] }}'">
-                                        {{ $p['label'] }}
-                                    </button>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-
-                    {{-- ---------- SHADE: animated color palette ---------- --}}
-                    <div class="kk-syw-panel" :data-on="tab==='shade'"
-                         x-show="tab==='shade'"
-                         x-transition:enter="transition ease-out duration-500"
-                         x-transition:enter-start="opacity-0 translate-y-3"
-                         x-transition:enter-end="opacity-100 translate-y-0"
-                         x-transition:leave="transition ease-in duration-200"
-                         x-transition:leave-start="opacity-100"
-                         x-transition:leave-end="opacity-0">
-                        <div class="kk-syw-grid">
-                            @foreach($kkShades as $i => $s)
-                                <div class="kk-syw-cell" :class="shade==='{{ $s['k'] }}' ? 'is-active' : ''" style="--d: {{ $i * 70 }}ms;">
-                                    <div class="kk-swatch-wrap" aria-hidden="true">
-                                        <div class="kk-swatch" style="--c: {{ $s['hex'] }}; background: {{ $s['hex'] }};"></div>
-                                    </div>
-                                    <button class="kk-size-pill" :class="shade==='{{ $s['k'] }}' ? 'is-active' : ''" @click="shade='{{ $s['k'] }}'">
-                                        {{ $s['label'] }}
-                                    </button>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-
-                </div>
-
-                {{-- Live selection echo + CTA --}}
-                <div class="kk-syw-result">
-                    <span class="chip">Size <b x-text="size">M</b></span>
-                    <span class="chip">Price <b x-text="price">1k-2k</b></span>
-                    <span class="chip">Shade <b x-text="shade">cream</b></span>
-                    <a :href="`{{ route('products.index') }}?size=${size}&price=${price}&shade=${shade}`" class="kk-btn-brown">
-                        Show me these <span aria-hidden="true">&rarr;</span>
-                    </a>
+                    @endforeach
                 </div>
             </div>
         </section>
