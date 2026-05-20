@@ -1,439 +1,319 @@
 <x-layouts.app>
-    <x-slot name="title">{{ $siteSettings['site_name'] }} - {{ $siteSettings['site_tagline'] }}</x-slot>
+    <x-slot name="title">{{ $siteSettings['site_name'] ?? 'Karmaa Kulture' }} - {{ $siteSettings['site_tagline'] ?? 'Premium tailored essentials' }}</x-slot>
 
     @push('meta')
-        <meta name="description" content="{{ $siteSettings['site_tagline'] }} - Shop kids' clothing, dresses, and accessories online at {{ $siteSettings['site_name'] }}.">
+        <meta name="description" content="{{ $siteSettings['site_tagline'] ?? 'Premium tailored essentials' }} - {{ $siteSettings['site_name'] ?? 'Karmaa Kulture' }}.">
         <link rel="canonical" href="{{ url('/') }}">
-        <meta property="og:title" content="{{ $siteSettings['site_name'] }} - {{ $siteSettings['site_tagline'] }}">
-        <meta property="og:description" content="Shop kids' clothing, dresses, and accessories online at {{ $siteSettings['site_name'] }}.">
+        <meta property="og:title" content="{{ $siteSettings['site_name'] ?? 'Karmaa Kulture' }} - {{ $siteSettings['site_tagline'] ?? '' }}">
         <meta property="og:type" content="website">
         <meta property="og:url" content="{{ url('/') }}">
-        @if($siteSettings['site_logo'])
-        <meta property="og:image" content="{{ asset('images/' . $siteSettings['site_logo']) }}">
-        @endif
-        <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:title" content="{{ $siteSettings['site_name'] }} - {{ $siteSettings['site_tagline'] }}">
-        <meta name="twitter:description" content="Shop kids' clothing, dresses, and accessories online at {{ $siteSettings['site_name'] }}.">
-
-        {{-- Organization + WebSite JSON-LD --}}
-        <script type="application/ld+json">
-        {!! json_encode([
-            '@context' => 'https://schema.org',
-            '@graph' => [
-                [
-                    '@type' => 'Organization',
-                    '@id' => url('/') . '#organization',
-                    'name' => $siteSettings['site_name'],
-                    'url' => url('/'),
-                    'logo' => [
-                        '@type' => 'ImageObject',
-                        'url' => asset('images/colorlogo.png'),
-                    ],
-                    'description' => $siteSettings['site_tagline'] . ' - Shop kids\' clothing, dresses, and accessories online.',
-                    'contactPoint' => [
-                        '@type' => 'ContactPoint',
-                        'contactType' => 'customer service',
-                        'url' => url('/contact'),
-                    ],
-                ],
-                [
-                    '@type' => 'WebSite',
-                    '@id' => url('/') . '#website',
-                    'name' => $siteSettings['site_name'],
-                    'url' => url('/'),
-                    'publisher' => ['@id' => url('/') . '#organization'],
-                    'potentialAction' => [
-                        '@type' => 'SearchAction',
-                        'target' => [
-                            '@type' => 'EntryPoint',
-                            'urlTemplate' => url('/products') . '?search={search_term_string}',
-                        ],
-                        'query-input' => 'required name=search_term_string',
-                    ],
-                ],
-            ],
-        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
-        </script>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     @endpush
 
     <x-slot name="styles">
         <style>
-            /* ===== TiberTaber-inspired Design System ===== */
             :root {
-                --primary: #6f9ca2;
-                --primary-light: rgba(111,156,162,.08);
-                --primary-dark: #5B878D;
-                --accent: #f8931d;
-                --accent-dark: #E07E0A;
-                --text-dark: #222222;
-                --text-muted: #666;
-                --bg-warm: #f8f6f3;
-                --card-radius: 12px;
-                --btn-radius: 30px;
+                --kk-cream:        #efe2cb;
+                --kk-cream-light:  #f7eedb;
+                --kk-cream-lighter:#fbf5e8;
+                --kk-cream-dark:   #e3d2b3;
+                --kk-tan:          #b8895a;
+                --kk-tan-dark:     #8c5c34;
+                --kk-brown:        #4a2d1a;
+                --kk-brown-dark:   #2d1810;
+                --kk-brown-darker: #1f1109;
+                --kk-text:         #2d1810;
+                --kk-text-muted:   #7a6555;
+                --kk-display: 'Playfair Display', Georgia, serif;
+                --kk-body:    'Inter', ui-sans-serif, system-ui, sans-serif;
             }
 
-            /* ===== HERO BANNER SLIDER ===== */
-            .hero-banner { position: relative; width: 100%; overflow: hidden; }
-            .hero-banner img { width: 100%; height: 470px; object-fit: cover; display: block; }
-            .hero-slides { position: relative; height: 470px; }
-            .hero-slide { position: absolute; inset: 0; transition: opacity 0.6s ease; display: flex; align-items: center; justify-content: center; }
-            .hero-arrow {
-                position: absolute; top: 50%; transform: translateY(-50%); z-index: 10;
-                width: 42px; height: 42px; border-radius: 50%; border: none; cursor: pointer;
-                display: flex; align-items: center; justify-content: center;
-                background: var(--primary); color: #fff; transition: all 0.3s;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            }
-            .hero-arrow:hover { background: var(--primary-dark); transform: translateY(-50%) scale(1.08); }
-            .hero-arrow--prev { left: 16px; }
-            .hero-arrow--next { right: 16px; }
-            .hero-dots {
-                position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
-                display: flex; gap: 8px; z-index: 10;
-            }
-            .hero-dot {
-                width: 10px; height: 10px; border-radius: 50%;
-                background: rgba(255,255,255,0.5); border: none; cursor: pointer; transition: all 0.3s;
-            }
-            .hero-dot.active { background: var(--accent); width: 28px; border-radius: 5px; }
+            .kk-home { background: var(--kk-cream); color: var(--kk-text); font-family: var(--kk-body); }
+            .kk-display { font-family: var(--kk-display); font-weight: 500; letter-spacing: -0.01em; }
+            .kk-eyebrow { font-family: var(--kk-body); font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--kk-tan-dark); font-weight: 600; }
+            .kk-section { padding: 56px 0; }
+            .kk-section--tight { padding: 32px 0; }
+            .kk-section-title { font-family: var(--kk-display); font-size: 28px; line-height: 1.1; color: var(--kk-text); margin: 0; }
+            .kk-section-title--lg { font-size: 38px; }
+            .kk-view-all { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--kk-brown); text-decoration: none; font-weight: 600; }
+            .kk-view-all:hover { color: var(--kk-tan-dark); }
+            .kk-btn-brown { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 22px; background: var(--kk-brown); color: var(--kk-cream); border-radius: 999px; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600; border: none; cursor: pointer; transition: background .2s; text-decoration: none; }
+            .kk-btn-brown:hover { background: var(--kk-brown-dark); }
+            .kk-btn-cream { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 22px; background: var(--kk-cream-lighter); color: var(--kk-brown); border: 1px solid var(--kk-brown); border-radius: 999px; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600; cursor: pointer; transition: all .2s; text-decoration: none; }
+            .kk-btn-cream:hover { background: var(--kk-brown); color: var(--kk-cream); }
 
-            /* ===== SECTION HEADER (Title + View All) ===== */
-            .section-header {
-                display: flex; align-items: center; justify-content: space-between;
-                margin-bottom: 24px; gap: 16px;
-            }
-            .section-title {
-                font-family: 'Fredoka', 'Poppins', sans-serif; font-size: 28px; font-weight: 600;
-                color: var(--text-dark); line-height: 1.2; margin: 0;
-            }
-            .view-all-link {
-                display: inline-flex; align-items: center; gap: 6px;
-                font-size: 14px; font-weight: 500; color: var(--primary);
-                text-decoration: none; white-space: nowrap; transition: gap 0.3s;
-            }
-            .view-all-link:hover { gap: 10px; color: var(--primary-dark); }
-            .view-all-link svg { width: 14px; height: 14px; transition: transform 0.3s; }
-            .view-all-link:hover svg { transform: translateX(3px); }
+            /* Hero */
+            .kk-hero { position: relative; width: 100%; overflow: hidden; background: var(--kk-cream); }
+            .kk-hero-slide { position: relative; width: 100%; aspect-ratio: 21 / 9; overflow: hidden; }
+            .kk-hero-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+            @media (max-width: 767px) { .kk-hero-slide { aspect-ratio: 4 / 5; } }
 
-            /* ===== PRODUCT SLIDER (Horizontal Scroll) ===== */
-            .product-slider {
-                display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory;
-                -ms-overflow-style: none; scrollbar-width: none;
-                padding: 0 0 4px;
-            }
-            .product-slider::-webkit-scrollbar { display: none; }
-            .product-slider .slide-item {
-                flex-shrink: 0; scroll-snap-align: start;
-                width: 190px;
-            }
+            /* Tile cards (Category / Aesthetics / Occasions) */
+            .kk-tile { position: relative; display: block; overflow: hidden; border-radius: 4px; color: var(--kk-cream); text-decoration: none; background: var(--kk-cream-dark); aspect-ratio: 4/5; }
+            .kk-tile img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s ease; }
+            .kk-tile:hover img { transform: scale(1.04); }
+            .kk-tile-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(45,24,16,.72) 0%, rgba(45,24,16,.15) 45%, transparent 70%); }
+            .kk-tile-label { position: absolute; left: 0; right: 0; bottom: 18px; text-align: center; }
+            .kk-tile-label .pill { display: inline-block; background: var(--kk-brown-dark); color: var(--kk-cream); padding: 8px 22px; border-radius: 999px; font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase; font-weight: 600; }
+            .kk-tile-banner { aspect-ratio: 16/9; }
 
-            /* ===== "WHY CHOOSE US" FEATURE GRID ===== */
-            .features-section { padding: 60px 0; }
-            .features-header {
-                display: flex; align-items: flex-start; justify-content: space-between;
-                margin-bottom: 32px; gap: 20px;
-            }
-            .features-heading {
-                font-family: 'Fredoka', 'Poppins', sans-serif; font-size: 32px; font-weight: 600;
-                color: var(--text-dark); line-height: 1.2; max-width: 400px;
-            }
-            .features-grid {
-                display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
-            }
-            .feature-card {
-                text-align: center; padding: 24px 16px;
-                background: var(--primary-light); border-radius: var(--card-radius);
-                transition: transform 0.3s, box-shadow 0.3s;
-            }
-            .feature-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.06); }
-            .feature-icon {
-                width: 64px; height: 64px; margin: 0 auto 16px;
-                display: flex; align-items: center; justify-content: center;
-                background: var(--primary); border-radius: 50%; color: #fff;
-            }
-            .feature-card h3 {
-                font-size: 15px; font-weight: 600; color: var(--text-dark);
-                margin: 0 0 4px; text-transform: capitalize;
-            }
-            .feature-card p {
-                font-size: 13px; color: var(--text-muted); margin: 0; line-height: 1.5;
-            }
-            .feature-hero {
-                grid-column: span 3; border-radius: var(--card-radius); overflow: hidden;
-                max-height: 260px;
-            }
-            .feature-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
-
-            /* ===== COLLECTION LIST (Shop For Boys/Girls) ===== */
-            /* ===== COLLAGE COLLECTION ===== */
-            .collage-collection { margin-bottom: 60px; }
-            .collage-collection__top {
-                display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;
-            }
-            .collage-collection__banner {
-                position: relative; border-radius: var(--card-radius); overflow: hidden;
-                display: block; text-decoration: none; color: inherit;
-                min-height: 320px;
-            }
-            .collage-collection__banner img {
-                width: 100%; height: 100%; object-fit: cover; display: block;
-                transition: transform 0.4s;
-            }
-            .collage-collection__banner:hover img { transform: scale(1.03); }
-            .collage-collection__banner-text {
-                position: absolute; bottom: 0; left: 0; right: 0;
-                padding: 24px; background: linear-gradient(transparent, rgba(0,0,0,0.55));
-                color: #fff;
-            }
-            .collage-collection__banner-text span {
-                font-size: 14px; font-weight: 400; opacity: 0.85; display: block;
-            }
-            .collage-collection__banner-text h2 {
-                font-size: 28px; font-weight: 700; margin: 2px 0 0; line-height: 1.1;
-            }
-            .collage-collection__banner-btn {
-                position: absolute; bottom: 20px; right: 20px;
-            }
-            .collage-collection__btn {
-                display: inline-flex; align-items: center; gap: 6px;
-                padding: 8px 20px; background: #fff; color: var(--primary);
-                border-radius: var(--btn-radius); font-size: 13px; font-weight: 600;
-                border: none; cursor: pointer; transition: background 0.2s;
-            }
-            .collage-collection__btn:hover { background: #f0f0f0; }
-            .collage-collection__top-cards {
-                display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
-            }
-            .collage-collection__card {
-                display: block; text-decoration: none; color: inherit;
-                border-radius: var(--card-radius); overflow: hidden;
-                position: relative;
-            }
-            .collage-collection__card img {
-                width: 100%; height: 100%; object-fit: cover; display: block;
-                aspect-ratio: 1/1; transition: transform 0.3s;
-            }
-            .collage-collection__card:hover img { transform: scale(1.05); }
-            .collage-collection__card-overlay {
-                position: absolute; bottom: 0; left: 0; right: 0;
-                height: 50%;
-                background: linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%);
-                border-radius: 0 0 var(--card-radius) var(--card-radius);
-                pointer-events: none;
-            }
-            .collage-collection__label {
-                position: absolute; bottom: 0; left: 0; right: 0;
-                padding: 12px; font-size: 14px; font-weight: 600;
-                color: #fff; text-align: center;
-                text-shadow: 0 1px 3px rgba(0,0,0,0.3);
-                z-index: 1;
-            }
-            .collage-collection__bottom {
-                display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
-            }
-
-            /* ===== DEALS SECTION ===== */
-            .deals-section { padding: 50px 0; }
-
-            /* ===== TESTIMONIAL SECTION ===== */
-            .testimonial-section { padding: 50px 0; }
-            .testimonial-layout { display: flex; gap: 20px; align-items: stretch; }
-            .testimonial-title-card {
-                background: var(--primary); border-radius: var(--card-radius);
-                padding: 32px 28px; display: flex; flex-direction: column;
-                align-items: center; justify-content: center; text-align: center;
-                min-width: 260px; max-width: 260px; flex-shrink: 0;
-            }
-            .testimonial-title-card h2 {
-                font-size: 32px; font-weight: 700; color: #fff; margin: 0 0 8px; line-height: 1.1;
-            }
-            .testimonial-title-card p { font-size: 14px; color: rgba(255,255,255,0.7); margin: 0; }
-            .testimonial-carousel-wrap { flex: 1; overflow: hidden; position: relative; }
-            .testimonial-carousel {
-                display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory;
-                scrollbar-width: none; -ms-overflow-style: none; padding: 4px 0;
-            }
-            .testimonial-carousel::-webkit-scrollbar { display: none; }
-            .testimonial-card {
-                background: var(--primary-light); border-radius: var(--card-radius);
-                padding: 24px 20px; display: flex; flex-direction: column;
-                min-width: 280px; max-width: 300px; flex-shrink: 0; scroll-snap-align: start;
-            }
-            .testimonial-stars { color: var(--accent); font-size: 16px; margin-bottom: 12px; letter-spacing: 2px; }
-            .testimonial-text {
-                font-size: 14px; color: var(--text-dark); line-height: 1.6;
-                flex: 1; margin-bottom: 16px;
-            }
-            .testimonial-author { display: flex; align-items: center; gap: 10px; }
-            .testimonial-avatar {
-                width: 36px; height: 36px; border-radius: 50%;
-                background: var(--primary); color: #fff; display: flex;
-                align-items: center; justify-content: center;
-                font-size: 14px; font-weight: 600; flex-shrink: 0;
-            }
-            .testimonial-name { font-size: 13px; font-weight: 600; color: var(--text-dark); }
-            .testimonial-label { font-size: 11px; color: var(--text-muted); }
-
-            /* ===== NEWSLETTER ===== */
-            .newsletter {
-                background: var(--primary); padding: 50px 0; text-align: center;
-            }
-            .newsletter h2 {
-                color: #fff; font-size: 22px; font-weight: 600;
-                letter-spacing: 0.03em; margin: 0 0 20px;
-            }
-            .newsletter-form {
-                display: flex; gap: 10px; max-width: 460px; margin: 0 auto;
-                justify-content: center; align-items: center;
-            }
-            .newsletter-input {
-                flex: 1; padding: 14px 20px; border: 2px solid rgba(255,255,255,0.3);
-                border-radius: var(--btn-radius); background: transparent; color: #fff;
-                font-size: 14px; outline: none;
-            }
-            .newsletter-input::placeholder { color: rgba(255,255,255,0.5); }
-            .newsletter-input:focus { border-color: #fff; }
-            .newsletter-btn {
-                padding: 14px 28px; background: var(--accent); color: #fff;
-                border-radius: var(--btn-radius); font-weight: 600; font-size: 14px;
-                border: none; cursor: pointer; transition: background 0.2s; white-space: nowrap;
-            }
-            .newsletter-btn:hover { background: var(--accent-dark); }
-
-            /* ===== RESPONSIVE ===== */
-
-            /* Tablet */
-            @media (max-width: 1024px) {
-                .hero-slides, .hero-banner img { height: 350px; }
-                .section-title { font-size: 24px; }
-                .features-heading { font-size: 26px; }
-                .features-grid { grid-template-columns: repeat(3, 1fr); gap: 14px; }
-                .collage-collection__bottom { grid-template-columns: repeat(4, 1fr); }
-                .testimonial-title-card { min-width: 220px; max-width: 220px; padding: 24px 20px; }
-                .testimonial-title-card h2 { font-size: 26px; }
-                .testimonial-card { min-width: 250px; }
-                .product-slider .slide-item { width: 170px; }
-            }
-
-            /* Mobile landscape */
+            /* Shop It Your Way */
+            .kk-shop-your-way { background: var(--kk-cream-light); padding: 64px 0; }
+            .kk-tab-row { display: inline-flex; padding: 4px; background: var(--kk-cream-lighter); border: 1px solid var(--kk-cream-dark); border-radius: 999px; gap: 4px; }
+            .kk-tab { padding: 10px 24px; border-radius: 999px; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 600; color: var(--kk-text-muted); background: transparent; border: none; cursor: pointer; transition: all .2s; }
+            .kk-tab.is-active { background: var(--kk-brown-dark); color: var(--kk-cream); }
+            .kk-tab:hover:not(.is-active) { color: var(--kk-brown); }
+            .kk-hanger-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 18px; margin-top: 40px; max-width: 880px; margin-left: auto; margin-right: auto; }
+            .kk-hanger-cell { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+            .kk-hanger { width: 100%; max-width: 110px; aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; color: var(--kk-brown); }
+            .kk-hanger svg { width: 100%; height: 100%; }
+            .kk-size-pill { display: inline-flex; align-items: center; justify-content: center; min-width: 56px; padding: 6px 14px; border: 1px solid var(--kk-brown); border-radius: 999px; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--kk-brown); background: transparent; font-weight: 600; cursor: pointer; transition: all .2s; }
+            .kk-size-pill:hover, .kk-size-pill.is-active { background: var(--kk-brown); color: var(--kk-cream); }
+            .kk-size-pill small { display: block; font-size: 9px; font-weight: 500; letter-spacing: 0.1em; opacity: .8; margin-top: 2px; }
             @media (max-width: 767px) {
-                .hero-slides { height: auto; aspect-ratio: 16 / 7; }
-                .hero-banner img { height: 100%; object-fit: contain; }
-                .hero-arrow { width: 32px; height: 32px; }
-                .hero-arrow svg { width: 14px; height: 14px; }
-                .hero-arrow--prev { left: 8px; }
-                .hero-arrow--next { right: 8px; }
-                .hero-dots { display: none; }
-
-                .section-header { margin-bottom: 16px; }
-                .section-title { font-size: 20px; }
-                .view-all-link { font-size: 13px; }
-
-                .product-slider { gap: 12px; }
-                .product-slider .slide-item { width: 152px; }
-
-                .features-section { padding: 40px 0; }
-                .features-heading { font-size: 22px; max-width: none; }
-                .features-header { flex-direction: column; gap: 8px; }
-                .features-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-                .feature-hero { grid-column: span 2; max-height: 180px; }
-                .feature-icon { width: 48px; height: 48px; }
-                .feature-card { padding: 16px 12px; }
-                .feature-card h3 { font-size: 13px; }
-                .feature-card p { font-size: 12px; }
-
-                .collage-collection { margin-bottom: 40px; }
-                .collage-collection__top { grid-template-columns: 1fr; }
-                .collage-collection__banner { min-height: 200px; }
-                .collage-collection__banner-text h2 { font-size: 22px; }
-                .collage-collection__bottom { grid-template-columns: repeat(2, 1fr); }
-                .collage-collection__label { font-size: 13px; }
-
-                .deals-section { padding: 30px 0; }
-
-                .testimonial-section { padding: 30px 0; }
-                .testimonial-layout { flex-direction: column; }
-                .testimonial-title-card { min-width: 100%; max-width: 100%; padding: 20px 16px; }
-                .testimonial-title-card h2 { font-size: 24px; }
-                .testimonial-card { min-width: 260px; }
-
-                .newsletter { padding: 36px 0; }
-                .newsletter h2 { font-size: 18px; }
-                .newsletter-form { flex-direction: column; padding: 0 20px; }
-                .newsletter-input { max-width: none; }
+                .kk-hanger-row { grid-template-columns: repeat(3, 1fr); gap: 14px; }
             }
 
-            /* Small mobile */
-            @media (max-width: 480px) {
-                .product-slider { gap: 10px; }
-                .product-slider .slide-item { width: 140px; }
-                .features-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-                .collage-collection__banner { min-height: 160px; }
-                .collage-collection__banner-text h2 { font-size: 18px; }
-                .collage-collection__top-cards { grid-template-columns: 1fr 1fr; gap: 10px; }
+            /* ===== Shop It Your Way — animated panels ===== */
+            .kk-syw-stage { position: relative; margin-top: 44px; min-height: 240px; }
+            .kk-syw-panel { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+            .kk-syw-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 28px; width: 100%; max-width: 920px; }
+            .kk-syw-cell { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+            .kk-syw-panel[data-on="true"] .kk-syw-cell {
+                animation: kk-rise .55s var(--d, 0ms) cubic-bezier(.22,1,.36,1) both;
+            }
+            @keyframes kk-rise {
+                from { opacity: 0; transform: translateY(24px); }
+                to   { opacity: 1; transform: translateY(0); }
             }
 
-            /* Scrollbar hide utility */
-            .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-            .scrollbar-hide::-webkit-scrollbar { display: none; }
+            /* ---- Size: shirts ---- */
+            .kk-shirt {
+                width: 96px; height: 96px;
+                display: flex; align-items: center; justify-content: center;
+                color: var(--kk-brown);
+                transition: transform .4s cubic-bezier(.22,1,.36,1), color .3s;
+            }
+            .kk-shirt svg { width: 100%; height: 100%; filter: drop-shadow(0 8px 14px rgba(45,24,16,.18)); }
+            .kk-syw-cell:hover .kk-shirt {
+                transform: translateY(-8px) rotate(-4deg) scale(1.06);
+                color: var(--kk-tan-dark);
+            }
+            .kk-syw-cell.is-active .kk-shirt {
+                color: var(--kk-tan-dark);
+                animation: kk-sway 2.4s ease-in-out infinite;
+            }
+            @keyframes kk-sway {
+                0%, 100% { transform: rotate(-3deg); }
+                50%      { transform: rotate(3deg); }
+            }
+
+            /* ---- Price: bundle of notes ---- */
+            .kk-notes {
+                position: relative; width: 110px; height: 92px;
+                transition: transform .35s cubic-bezier(.22,1,.36,1);
+            }
+            .kk-syw-cell:hover .kk-notes { transform: translateY(-6px); }
+            .kk-note {
+                position: absolute; left: 50%; top: 50%;
+                width: 86px; height: 56px;
+                background: var(--c, var(--kk-tan));
+                border-radius: 5px;
+                border: 1px solid rgba(255,255,255,.35);
+                box-shadow: 0 6px 16px rgba(45,24,16,.22);
+                transition: transform .55s cubic-bezier(.22,1,.36,1), box-shadow .3s;
+                will-change: transform;
+            }
+            .kk-note::before {
+                content: ''; position: absolute; inset: 7px;
+                border: 1px dashed rgba(255,255,255,.35); border-radius: 3px;
+            }
+            .kk-note::after {
+                content: '₹'; position: absolute; left: 50%; top: 50%;
+                transform: translate(-50%, -50%);
+                color: rgba(255,255,255,.85);
+                font-family: var(--kk-display);
+                font-size: 24px; font-weight: 600;
+                text-shadow: 0 2px 4px rgba(0,0,0,.2);
+            }
+            .kk-note:nth-child(1) { transform: translate(-50%, -50%) translate(-6px, 8px)  rotate(-9deg); z-index: 1; }
+            .kk-note:nth-child(2) { transform: translate(-50%, -50%) translate( 0,   0)    rotate( 0deg); z-index: 2; }
+            .kk-note:nth-child(3) { transform: translate(-50%, -50%) translate( 6px,-8px) rotate( 9deg); z-index: 3; }
+            .kk-syw-cell:hover .kk-note:nth-child(1) { transform: translate(-50%, -50%) translate(-30px, 6px)  rotate(-22deg); }
+            .kk-syw-cell:hover .kk-note:nth-child(3) { transform: translate(-50%, -50%) translate( 30px,-6px)  rotate( 22deg); }
+            .kk-syw-cell.is-active .kk-notes {
+                animation: kk-bob 2.2s ease-in-out infinite;
+            }
+            @keyframes kk-bob {
+                0%, 100% { transform: translateY(0); }
+                50%      { transform: translateY(-6px); }
+            }
+
+            /* ---- Shade: animated color palette ---- */
+            .kk-swatch-wrap {
+                position: relative;
+                width: 100px; height: 100px;
+                border-radius: 50%;
+                padding: 5px;
+                background: conic-gradient(from 0deg, var(--kk-tan), var(--kk-cream), var(--kk-tan-dark), var(--kk-brown), var(--kk-cream-dark), var(--kk-tan));
+                box-shadow: 0 10px 28px rgba(45,24,16,.20);
+                animation: kk-spin 9s linear infinite;
+            }
+            @keyframes kk-spin { to { transform: rotate(360deg); } }
+            .kk-swatch {
+                width: 100%; height: 100%;
+                border-radius: 50%;
+                background: var(--c, #fff);
+                box-shadow: inset 0 -10px 18px rgba(0,0,0,.18), inset 0 8px 14px rgba(255,255,255,.18);
+                animation: kk-spin 9s linear infinite reverse; /* counter so it visually stays still */
+                position: relative;
+                transition: transform .35s;
+            }
+            .kk-swatch::after {
+                content: '';
+                position: absolute; inset: 22%;
+                border-radius: 50%;
+                background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.5), transparent 55%);
+            }
+            .kk-syw-cell:hover .kk-swatch { transform: scale(1.08); }
+            .kk-syw-cell.is-active .kk-swatch-wrap {
+                animation: kk-spin 4s linear infinite, kk-glow 2s ease-in-out infinite;
+            }
+            @keyframes kk-glow {
+                0%, 100% { box-shadow: 0 10px 28px rgba(45,24,16,.20); }
+                50%      { box-shadow: 0 10px 36px rgba(184,137,90,.55), 0 0 0 6px rgba(184,137,90,.12); }
+            }
+
+            /* Result CTA */
+            .kk-syw-result {
+                margin-top: 44px;
+                display: flex; align-items: center; justify-content: center;
+                gap: 18px; flex-wrap: wrap;
+            }
+            .kk-syw-result .chip {
+                display: inline-flex; align-items: center; gap: 6px;
+                padding: 6px 14px; background: var(--kk-cream-lighter);
+                border: 1px solid var(--kk-cream-dark); border-radius: 999px;
+                font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+                color: var(--kk-text-muted); font-weight: 600;
+            }
+            .kk-syw-result .chip b { color: var(--kk-brown); font-weight: 700; }
+
+            @media (max-width: 767px) {
+                .kk-syw-grid { grid-template-columns: repeat(3, 1fr); gap: 18px; }
+                .kk-syw-stage { min-height: 380px; }
+                .kk-shirt, .kk-notes, .kk-swatch-wrap { width: 78px; height: 78px; }
+                .kk-notes { height: 70px; }
+                .kk-note { width: 66px; height: 44px; }
+                .kk-note::after { font-size: 18px; }
+            }
+
+            /* Product cards */
+            .kk-product-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+            @media (max-width: 1024px) { .kk-product-grid { grid-template-columns: repeat(2, 1fr); } }
+            @media (max-width: 640px)  { .kk-product-grid { grid-template-columns: 1fr; } }
+            .kk-product { background: var(--kk-cream-lighter); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; }
+            .kk-product__media { position: relative; aspect-ratio: 4/5; overflow: hidden; background: var(--kk-cream-dark); }
+            .kk-product__media img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s; }
+            .kk-product:hover .kk-product__media img { transform: scale(1.03); }
+            .kk-product__tag { position: absolute; top: 12px; left: 12px; background: var(--kk-brown-dark); color: var(--kk-cream); padding: 4px 10px; border-radius: 999px; font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 700; }
+            .kk-product__discount { position: absolute; top: 12px; right: 12px; background: var(--kk-tan-dark); color: var(--kk-cream); padding: 4px 10px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; }
+            .kk-product__body { padding: 18px 16px 20px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+            .kk-product__label { font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--kk-text-muted); font-weight: 600; }
+            .kk-product__name { font-family: var(--kk-display); font-size: 16px; color: var(--kk-text); line-height: 1.25; margin: 0; }
+            .kk-product__price { font-size: 14px; color: var(--kk-text); font-weight: 600; }
+            .kk-product__price del { color: var(--kk-text-muted); font-weight: 400; margin-right: 6px; }
+            .kk-product__cta { margin-top: 12px; }
+
+            /* About Us */
+            .kk-about { background: var(--kk-cream); padding: 80px 0; text-align: center; }
+            .kk-about p.intro { max-width: 620px; margin: 18px auto 0; color: var(--kk-text-muted); font-size: 14px; line-height: 1.75; }
+            .kk-about-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 48px; }
+            @media (max-width: 1024px) { .kk-about-grid { grid-template-columns: repeat(2, 1fr); } }
+            @media (max-width: 640px)  { .kk-about-grid { grid-template-columns: 1fr; } }
+            .kk-about-card { background: var(--kk-cream-lighter); border: 1px solid var(--kk-cream-dark); border-radius: 6px; padding: 26px 20px; text-align: center; }
+            .kk-about-card .icon { width: 42px; height: 42px; margin: 0 auto 14px; color: var(--kk-brown); display: flex; align-items: center; justify-content: center; }
+            .kk-about-card h4 { font-family: var(--kk-display); font-size: 16px; color: var(--kk-text); margin: 0 0 6px; }
+            .kk-about-card p { font-size: 12px; color: var(--kk-text-muted); margin: 0; line-height: 1.5; }
+
+            /* Qualities (dark) */
+            .kk-qualities { background: var(--kk-brown-dark); color: var(--kk-cream); padding: 80px 0; text-align: center; }
+            .kk-qualities h2 { font-family: var(--kk-display); font-size: 38px; color: var(--kk-cream); margin: 12px 0 8px; }
+            .kk-qualities p.sub { color: rgba(239,226,203,.7); font-size: 13px; max-width: 520px; margin: 0 auto; }
+            .kk-qualities-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin-top: 56px; border-top: 1px solid rgba(239,226,203,.12); border-left: 1px solid rgba(239,226,203,.12); }
+            @media (max-width: 1024px) { .kk-qualities-grid { grid-template-columns: repeat(2, 1fr); } }
+            @media (max-width: 640px)  { .kk-qualities-grid { grid-template-columns: 1fr; } }
+            .kk-quality { padding: 32px 26px; border-right: 1px solid rgba(239,226,203,.12); border-bottom: 1px solid rgba(239,226,203,.12); text-align: left; }
+            .kk-quality .icon { width: 28px; height: 28px; color: var(--kk-cream); margin-bottom: 14px; }
+            .kk-quality h4 { font-family: var(--kk-display); font-size: 17px; color: var(--kk-cream); margin: 0 0 8px; }
+            .kk-quality p { font-size: 12px; color: rgba(239,226,203,.65); margin: 0; line-height: 1.6; }
+
+            /* Newsletter */
+            .kk-newsletter { background: var(--kk-brown-darker); color: var(--kk-cream); padding: 72px 0; text-align: center; }
+            .kk-newsletter h2 { font-family: var(--kk-display); font-size: 32px; color: var(--kk-cream); margin: 8px 0 8px; }
+            .kk-newsletter p { color: rgba(239,226,203,.65); font-size: 13px; margin-bottom: 28px; }
+            .kk-newsletter-form { display: flex; max-width: 480px; margin: 0 auto; background: var(--kk-cream-lighter); border-radius: 999px; padding: 4px; }
+            .kk-newsletter-form input { flex: 1; background: transparent; border: none; padding: 12px 20px; font-size: 14px; color: var(--kk-text); outline: none; }
+            .kk-newsletter-form input::placeholder { color: var(--kk-text-muted); }
+            .kk-newsletter-form button { background: var(--kk-brown-dark); color: var(--kk-cream); padding: 10px 24px; border-radius: 999px; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 700; border: none; cursor: pointer; }
+            .kk-newsletter-form button:hover { background: var(--kk-brown); }
+
+            /* Section header (title + view all) shared */
+            .kk-section-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 28px; gap: 16px; }
+            .kk-section-header .left { display: flex; flex-direction: column; gap: 6px; }
+            @media (max-width: 640px) {
+                .kk-section { padding: 40px 0; }
+                .kk-section-title { font-size: 22px; }
+                .kk-section-title--lg { font-size: 28px; }
+                .kk-about, .kk-qualities { padding: 48px 0; }
+                .kk-qualities h2, .kk-newsletter h2 { font-size: 26px; }
+            }
         </style>
     </x-slot>
 
-    {{-- Flash Sale Popup --}}
-    @if($flashSale)
+    {{-- Flash Sale Popup (preserved from original) --}}
+    @if($flashSale ?? false)
         <div x-data="flashSalePopup({{ $flashSale->remaining_time }}, '{{ $flashSale->slug }}')"
              x-show="open" x-cloak
              @keydown.escape.window="dismiss()"
              class="fixed inset-0 z-60 flex items-center justify-center p-4">
-            <div x-show="open"
-                 x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-                 x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-                 @click="dismiss()" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
-            <div x-show="open"
-                 x-transition:enter="transition ease-out duration-300 delay-100" x-transition:enter-start="opacity-0 scale-90 translate-y-4" x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-                 x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-90"
-                 class="relative w-full max-w-md overflow-hidden rounded-2xl shadow-2xl" @click.stop>
-                <button @click="dismiss()" class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-white/80 hover:text-white rounded-full hover:bg-white/10 transition-colors z-10">
+            <div x-show="open" @click="dismiss()" class="absolute inset-0 bg-kk-brown-darker/70 backdrop-blur-sm"></div>
+            <div x-show="open" class="relative w-full max-w-md overflow-hidden rounded-2xl shadow-2xl" @click.stop>
+                <button @click="dismiss()" class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-kk-cream/80 hover:text-kk-cream rounded-full hover:bg-kk-cream/10 z-10">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
-                <div class="relative bg-gradient-to-br from-[#F8931D] via-[#E07E0A] to-[#D47200] px-6 pt-8 pb-6 text-center overflow-hidden">
-                    <div class="absolute -top-10 -left-10 w-40 h-40 bg-white/5 rounded-full"></div>
-                    <div class="absolute -bottom-8 -right-8 w-32 h-32 bg-white/5 rounded-full"></div>
-                    <div class="relative inline-flex items-center justify-center w-14 h-14 bg-white/15 rounded-full mb-4 ring-4 ring-white/10">
-                        <svg class="w-7 h-7 text-yellow-200" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                    </div>
-                    <p class="text-white/80 text-xs font-semibold tracking-widest uppercase mb-1">Limited Time Offer</p>
-                    <h2 class="text-2xl sm:text-3xl font-extrabold text-white leading-tight mb-2">{{ $flashSale->name }}</h2>
+                <div class="relative bg-kk-brown-dark px-6 pt-8 pb-6 text-center text-kk-cream">
+                    <p class="text-kk-cream/70 text-[10px] font-semibold tracking-[0.28em] uppercase mb-2">Limited Time Offer</p>
+                    <h2 class="kk-display text-2xl mb-2">{{ $flashSale->name }}</h2>
                     @if($flashSale->description)
-                        <p class="text-white/80 text-sm leading-relaxed max-w-xs mx-auto mb-4">{{ Str::limit($flashSale->description, 100) }}</p>
+                        <p class="text-kk-cream/75 text-sm leading-relaxed max-w-xs mx-auto mb-4">{{ Str::limit($flashSale->description, 100) }}</p>
                     @endif
                     <div class="flex items-center justify-center gap-2 sm:gap-3">
-                        <div class="bg-white/15 backdrop-blur-sm rounded-xl px-3 py-2 min-w-[60px]">
-                            <span class="block text-2xl font-bold text-white tabular-nums" x-text="hours">00</span>
-                            <span class="block text-[10px] text-white/70 uppercase tracking-wide">Hours</span>
+                        <div class="bg-kk-cream/10 rounded-xl px-3 py-2 min-w-[60px]">
+                            <span class="block text-2xl font-bold text-kk-cream tabular-nums" x-text="hours">00</span>
+                            <span class="block text-[10px] text-kk-cream/60 uppercase tracking-wide">Hours</span>
                         </div>
-                        <span class="text-2xl font-bold text-white/50">:</span>
-                        <div class="bg-white/15 backdrop-blur-sm rounded-xl px-3 py-2 min-w-[60px]">
-                            <span class="block text-2xl font-bold text-white tabular-nums" x-text="minutes">00</span>
-                            <span class="block text-[10px] text-white/70 uppercase tracking-wide">Mins</span>
+                        <span class="text-2xl font-bold text-kk-cream/40">:</span>
+                        <div class="bg-kk-cream/10 rounded-xl px-3 py-2 min-w-[60px]">
+                            <span class="block text-2xl font-bold text-kk-cream tabular-nums" x-text="minutes">00</span>
+                            <span class="block text-[10px] text-kk-cream/60 uppercase tracking-wide">Mins</span>
                         </div>
-                        <span class="text-2xl font-bold text-white/50">:</span>
-                        <div class="bg-white/15 backdrop-blur-sm rounded-xl px-3 py-2 min-w-[60px]">
-                            <span class="block text-2xl font-bold text-white tabular-nums" x-text="seconds">00</span>
-                            <span class="block text-[10px] text-white/70 uppercase tracking-wide">Secs</span>
+                        <span class="text-2xl font-bold text-kk-cream/40">:</span>
+                        <div class="bg-kk-cream/10 rounded-xl px-3 py-2 min-w-[60px]">
+                            <span class="block text-2xl font-bold text-kk-cream tabular-nums" x-text="seconds">00</span>
+                            <span class="block text-[10px] text-kk-cream/60 uppercase tracking-wide">Secs</span>
                         </div>
                     </div>
                 </div>
-                <div class="bg-white px-6 py-5 text-center">
-                    <p class="text-xs text-neutral-600 mb-3">
-                        <span class="font-semibold text-neutral-700">{{ $flashSale->products_count }} {{ Str::plural('product', $flashSale->products_count) }}</span> on sale
+                <div class="bg-kk-cream-lighter px-6 py-5 text-center">
+                    <p class="text-xs text-kk-text-muted mb-3">
+                        <span class="font-semibold text-kk-brown">{{ $flashSale->products_count }} {{ Str::plural('product', $flashSale->products_count) }}</span> on sale
                     </p>
-                    <a href="{{ route('products.index') }}?flash_sale={{ $flashSale->slug }}" @click="dismiss()"
-                       class="inline-flex items-center justify-center gap-2 w-full py-3 bg-[#F8931D] hover:bg-[#E07E0A] text-white text-sm font-bold rounded-xl shadow-lg transition-all hover:-translate-y-0.5">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                    <a href="{{ route('products.index') }}?flash_sale={{ $flashSale->slug }}" @click="dismiss()" class="kk-btn-brown w-full">
                         Shop the Sale Now
                     </a>
-                    <button @click="dismiss()" class="mt-2 text-xs text-neutral-600 hover:text-neutral-600 transition-colors">No thanks, maybe later</button>
                 </div>
             </div>
         </div>
@@ -462,345 +342,389 @@
         </script>
     @endif
 
-    <!-- ==========================================
-         HERO BANNER SLIDER
-         ========================================== -->
-    @if($banners->count())
-    <section class="hero-banner"
-             x-data="{
-                current: 0,
-                slides: [
-                    @foreach($banners as $banner)
-                    { img: '{{ $banner->image }}', link: '{{ $banner->link ?? route('products.index') }}' }{{ $loop->last ? '' : ',' }}
-                    @endforeach
-                ],
-                timer: null,
-                init() { this.startTimer(); },
-                startTimer() { this.timer = setInterval(() => this.next(), 5000); },
-                next() { this.current = (this.current + 1) % this.slides.length; },
-                prev() { this.current = (this.current - 1 + this.slides.length) % this.slides.length; },
-                goTo(i) { this.current = i; clearInterval(this.timer); this.startTimer(); }
-             }">
-        <div class="hero-slides">
-            <template x-for="(slide, index) in slides" :key="index">
-                <a :href="slide.link"
-                   x-show="current === index"
-                   x-transition:enter="transition-opacity ease-out duration-500"
-                   x-transition:enter-start="opacity-0"
-                   x-transition:enter-end="opacity-100"
-                   x-transition:leave="transition-opacity ease-in duration-300"
-                   x-transition:leave-start="opacity-100"
-                   x-transition:leave-end="opacity-0"
-                   class="hero-slide block">
-                    <img :src="slide.img" :alt="'{{ $siteSettings['site_name'] }}'">
-                </a>
-            </template>
+    <div class="kk-home">
 
-            <!-- Dots -->
-            <div class="hero-dots">
-                <template x-for="(slide, index) in slides" :key="'dot-'+index">
-                    <button @click="goTo(index)" class="hero-dot" :class="current === index ? 'active' : ''"></button>
-                </template>
-            </div>
-        </div>
-    </section>
-    @endif
-
-
-    <!-- ==========================================
-         FEATURED PRODUCTS - Horizontal Slider
-         ========================================== -->
-    @if($featuredProducts->count() && (!isset($sections['featured']) || $sections['featured']->is_active))
-        <section class="py-8 lg:py-12 bg-white">
-            <div class="container mx-auto px-4">
-                <div class="section-header">
-                    <h2 class="section-title">{{ $sections['featured']->title ?? 'New Arrivals' }}</h2>
-                    <a href="{{ route('products.index') }}" class="view-all-link">
-                        View All
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
-                    </a>
-                </div>
-                <div class="product-slider">
-                    @foreach($featuredProducts->take(10) as $product)
-                        <div class="slide-item">
-                            <x-product-card :product="$product" :compact="true" />
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        </section>
-    @endif
-
-    <!-- ==========================================
-         CATEGORY COLLECTIONS (Collage Style)
-         ========================================== -->
-    @if($categories->count() && (!isset($sections['categories']) || $sections['categories']->is_active))
-        @php
-            $subcatGradients = [
-                'linear-gradient(135deg, #6F9CA2 0%, #5B878D 100%)',
-                'linear-gradient(135deg, #F8931D 0%, #E07E0A 100%)',
-                'linear-gradient(135deg, #C1539C 0%, #A04080 100%)',
-                'linear-gradient(135deg, #6FC2A2 0%, #4DAA85 100%)',
-                'linear-gradient(135deg, #7B8CDE 0%, #5A6BC7 100%)',
-                'linear-gradient(135deg, #E86F6F 0%, #D04545 100%)',
-            ];
-        @endphp
-        @foreach($categories->take(3) as $rootCategory)
-            @php
-                $childCats = $rootCategory->children->where('is_active', true)->sortBy('position');
-                if ($childCats->count() < 2) continue;
-                $topCards = $childCats->take(2);
-                $bottomCards = $childCats->slice(2)->take(4);
-            @endphp
-
-            <section class="py-6 lg:py-10 bg-white">
-                <div class="container mx-auto px-4">
-                    <div class="section-header">
-                        <h2 class="section-title">{{ $rootCategory->name }}</h2>
-                        <a href="{{ route('category.show', $rootCategory) }}" class="view-all-link">
-                            View All
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+        {{-- ============================================
+             HERO BANNER
+             ============================================ --}}
+        <section class="kk-hero">
+            @if(($banners ?? collect())->count())
+                <div x-data="{
+                        current: 0,
+                        slides: [
+                            @foreach($banners as $banner)
+                            { img: '{{ $banner->image }}', link: '{{ $banner->link ?? route('products.index') }}' }{{ $loop->last ? '' : ',' }}
+                            @endforeach
+                        ],
+                        timer: null,
+                        init() { if (this.slides.length > 1) this.timer = setInterval(() => this.next(), 5500); },
+                        next() { this.current = (this.current + 1) % this.slides.length; },
+                     }" class="relative">
+                    <template x-for="(slide, index) in slides" :key="index">
+                        <a :href="slide.link" x-show="current === index"
+                           x-transition:enter="transition-opacity duration-700"
+                           x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                           class="kk-hero-slide">
+                            <img :src="slide.img" alt="{{ $siteSettings['site_name'] ?? 'Karmaa Kulture' }}">
                         </a>
-                    </div>
-                    <div class="collage-collection">
-                        {{-- TOP ROW: Banner + 2 Cards --}}
-                        <div class="collage-collection__top">
-                            <a href="{{ route('category.show', $rootCategory) }}" class="collage-collection__banner">
-                                @if($rootCategory->image_url)
-                                    <img src="{{ asset('storage/' . $rootCategory->image_url) }}" alt="{{ $rootCategory->name }}" loading="lazy">
-                                @else
-                                    <div class="w-full h-full min-h-[320px] bg-gradient-to-br from-[#6F9CA2]/20 to-[#6F9CA2]/5"></div>
-                                @endif
-                                <div class="collage-collection__banner-text">
-                                    <span>Shop For</span>
-                                    <h2>{{ $rootCategory->name }}</h2>
-                                </div>
-                                <div class="collage-collection__banner-btn">
-                                    <button class="collage-collection__btn">View all &rarr;</button>
-                                </div>
-                            </a>
-
-                            <div class="collage-collection__top-cards">
-                                @foreach($topCards as $child)
-                                    <a href="{{ route('category.show', $child) }}" class="collage-collection__card">
-                                        @if($child->image_url)
-                                            <img src="{{ asset('storage/' . $child->image_url) }}" alt="{{ $child->name }}" loading="lazy">
-                                        @else
-                                            <div style="background: {{ $subcatGradients[$loop->index % count($subcatGradients)] }}; width: 100%; aspect-ratio: 1/1; border-radius: var(--card-radius);"></div>
-                                        @endif
-                                        <div class="collage-collection__card-overlay"></div>
-                                        <p class="collage-collection__label">{{ $child->name }}</p>
-                                    </a>
-                                @endforeach
-                            </div>
-                        </div>
-
-                        {{-- BOTTOM ROW: Up to 4 Cards --}}
-                        @if($bottomCards->count())
-                            <div class="collage-collection__bottom">
-                                @foreach($bottomCards as $child)
-                                    <a href="{{ route('category.show', $child) }}" class="collage-collection__card">
-                                        @if($child->image_url)
-                                            <img src="{{ asset('storage/' . $child->image_url) }}" alt="{{ $child->name }}" loading="lazy">
-                                        @else
-                                            <div style="background: {{ $subcatGradients[($loop->index + 2) % count($subcatGradients)] }}; width: 100%; aspect-ratio: 1/1; border-radius: var(--card-radius);"></div>
-                                        @endif
-                                        <div class="collage-collection__card-overlay"></div>
-                                        <p class="collage-collection__label">{{ $child->name }}</p>
-                                    </a>
-                                @endforeach
-                            </div>
-                        @endif
-                    </div>
+                    </template>
                 </div>
-            </section>
-        @endforeach
-    @endif
-
-    <!-- ==========================================
-         BESTSELLERS - Horizontal Slider
-         ========================================== -->
-    @if($bestsellers->count() && (!isset($sections['bestsellers']) || $sections['bestsellers']->is_active))
-        <section class="py-8 lg:py-12 bg-[#f8f6f3]">
-            <div class="container mx-auto px-4">
-                <div class="section-header">
-                    <h2 class="section-title">{{ $sections['bestsellers']->title ?? 'Bestsellers' }}</h2>
-                    <a href="{{ route('bestsellers') }}" class="view-all-link">
-                        View All
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
-                    </a>
-                </div>
-                <div class="product-slider">
-                    @foreach($bestsellers->take(10) as $product)
-                        <div class="slide-item">
-                            <x-product-card :product="$product" :compact="true" />
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        </section>
-    @endif
-
-    <!-- ==========================================
-         WHY CHOOSE US - Feature Grid
-         ========================================== -->
-    @if(isset($sections['benefits']) && $sections['benefits']->is_active && is_array($sections['benefits']->content))
-    @php $benefitsSection = $sections['benefits']; @endphp
-    <section class="features-section bg-white">
-        <div class="container mx-auto px-4">
-            <div class="features-header">
-                <h2 class="features-heading">{{ $benefitsSection->title }}</h2>
-                @if($benefitsSection->button_text)
-                    <a href="{{ $benefitsSection->button_link ?? route('products.index') }}" class="view-all-link">
-                        {{ $benefitsSection->button_text }}
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
-                    </a>
-                @endif
-            </div>
-            <div class="features-grid">
-                @foreach($benefitsSection->content as $benefit)
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            @include('partials.benefit-icon', ['icon' => $benefit['icon'] ?? 'default'])
-                        </div>
-                        <h3>{{ $benefit['title'] }}</h3>
-                        <p>{{ $benefit['description'] }}</p>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-    </section>
-    @endif
-
-    <!-- ==========================================
-         TODAY'S DEALS
-         ========================================== -->
-    @if($deals->count() && (!isset($sections['deals']) || $sections['deals']->is_active))
-        <section class="deals-section bg-[#f8f6f3]">
-            <div class="container mx-auto px-4">
-                <div class="section-header">
-                    <h2 class="section-title">{{ $sections['deals']->title ?? "Steal Deals" }}</h2>
-                    <a href="{{ route('products.index') }}?on_sale=1" class="view-all-link">
-                        View All
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
-                    </a>
-                </div>
-                <div class="product-slider">
-                    @foreach($deals->take(12) as $product)
-                        <div class="slide-item">
-                            <x-product-card :product="$product" :compact="true" />
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        </section>
-    @endif
-
-    <!-- ==========================================
-         PROMO BANNER (CTA)
-         ========================================== -->
-    @if(isset($sections['promo_banner']) && $sections['promo_banner']->is_active)
-        @php $promo = $sections['promo_banner']; @endphp
-        <section class="relative overflow-hidden" style="background-color: {{ $promo->background_color ?? '#6F9CA2' }};">
-            @if($promo->image_url)
-                <img src="{{ asset('storage/' . $promo->image_url) }}" alt="{{ $promo->title }}" class="absolute inset-0 w-full h-full object-cover">
-                <div class="absolute inset-0 bg-black/40"></div>
+            @else
+                <a href="{{ route('new-arrivals') }}" class="kk-hero-slide block">
+                    @if(file_exists(public_path('images/Web_banner_1920_x_766.webp')))
+                        <img src="{{ asset('images/Web_banner_1920_x_766.webp') }}" alt="{{ $siteSettings['site_name'] ?? 'Karmaa Kulture' }}">
+                    @else
+                        <div class="w-full h-full" style="background: linear-gradient(135deg, var(--kk-cream-dark) 0%, var(--kk-tan) 100%);"></div>
+                    @endif
+                </a>
             @endif
-            <div class="container mx-auto px-4 relative z-10 py-14 lg:py-20 text-center">
-                <h2 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3" style="color: {{ $promo->text_color ?? '#ffffff' }};">{{ $promo->title }}</h2>
-                @if($promo->subtitle)
-                    <p class="text-base sm:text-lg mb-6 max-w-xl mx-auto" style="color: {{ $promo->text_color ?? '#ffffff' }}; opacity: 0.85;">{{ $promo->subtitle }}</p>
-                @endif
-                @if($promo->button_text)
-                    <a href="{{ $promo->button_link ?? route('products.index') }}" class="inline-flex items-center gap-2 px-8 py-3 bg-white text-[#6F9CA2] rounded-full font-semibold text-sm hover:bg-neutral-100 transition-colors shadow-lg">
-                        {{ $promo->button_text }}
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                    </a>
-                @endif
+        </section>
+
+        {{-- ============================================
+             SHOP BY CATEGORY
+             ============================================ --}}
+        @php $catTiles = ($categories ?? collect())->take(3); @endphp
+        @if($catTiles->count())
+        <section class="kk-section">
+            <div class="container mx-auto px-4">
+                <div class="kk-section-header">
+                    <div class="left">
+                        <h2 class="kk-section-title">Shop By Category</h2>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
+                    @foreach($catTiles as $cat)
+                        <a href="{{ route('category.show', $cat) }}" class="kk-tile">
+                            @if($cat->image_url)
+                                <img src="{{ asset('storage/' . $cat->image_url) }}" alt="{{ $cat->name }}" loading="lazy">
+                            @else
+                                <div class="w-full h-full" style="background: linear-gradient(160deg, var(--kk-tan) 0%, var(--kk-brown) 100%);"></div>
+                            @endif
+                            <div class="kk-tile-overlay"></div>
+                            <div class="kk-tile-label"><span class="pill">{{ Str::upper($cat->name) }}</span></div>
+                        </a>
+                    @endforeach
+                </div>
             </div>
         </section>
-    @endif
+        @endif
 
-    <!-- ==========================================
-         HAPPY CUSTOMERS / TESTIMONIALS
-         ========================================== -->
-    @if($testimonials->count() && (!isset($sections['testimonials']) || $sections['testimonials']->is_active))
-        <section class="testimonial-section bg-white">
-            <div class="container mx-auto px-4">
-                <div class="testimonial-layout">
-                    {{-- Static Title Card --}}
-                    <div class="testimonial-title-card">
-                        <h2>{{ $sections['testimonials']->title ?? 'Happy Parents' }}</h2>
-                        <p>{{ $sections['testimonials']->subtitle ?? ($testimonials->count() . '+ reviews from happy families') }}</p>
-                    </div>
+        {{-- ============================================
+             SHOP IT YOUR WAY (animated, per-tab visuals)
+             ============================================ --}}
+        @php
+            $kkPrices = [
+                ['k' => '<1k',   'label' => 'Under ₹1k', 'tint' => '#c9986a'],
+                ['k' => '1k-2k', 'label' => '₹1k – 2k',  'tint' => '#b8895a'],
+                ['k' => '2k-3k', 'label' => '₹2k – 3k',  'tint' => '#a07748'],
+                ['k' => '3k-5k', 'label' => '₹3k – 5k',  'tint' => '#8c5c34'],
+                ['k' => '5k-7k', 'label' => '₹5k – 7k',  'tint' => '#6e4527'],
+                ['k' => '7k+',   'label' => '₹7k+',      'tint' => '#4a2d1a'],
+            ];
+            $kkShades = [
+                ['k' => 'cream',    'label' => 'Cream',    'hex' => '#efe2cb'],
+                ['k' => 'sand',     'label' => 'Sand',     'hex' => '#d4b896'],
+                ['k' => 'tan',      'label' => 'Tan',      'hex' => '#b8895a'],
+                ['k' => 'cinnamon', 'label' => 'Cinnamon', 'hex' => '#8c5c34'],
+                ['k' => 'cocoa',    'label' => 'Cocoa',    'hex' => '#5a3a22'],
+                ['k' => 'espresso', 'label' => 'Espresso', 'hex' => '#2d1810'],
+            ];
+            $kkSizes = ['S','M','L','XL','XXL','3XL'];
+        @endphp
+        <section class="kk-shop-your-way"
+                 x-data="{ tab: 'size', size: 'M', price: '1k-2k', shade: 'cream' }">
+            <div class="container mx-auto px-4 text-center">
+                <span class="kk-eyebrow">Shop It Your</span>
+                <h2 class="kk-section-title kk-section-title--lg" style="margin-top:6px;">Shop It Your <em class="kk-display" style="font-style:italic; color:var(--kk-tan-dark);">Way</em></h2>
+                <p style="color:var(--kk-text-muted); font-size:13px; margin:14px auto 26px; max-width:480px;">Pick a way that suits you — every cut is tailored for a flattering shape.</p>
 
-                    {{-- Scrollable Testimonial Carousel --}}
-                    <div class="testimonial-carousel-wrap">
-                        <div class="testimonial-carousel">
-                            @foreach($testimonials as $testimonial)
-                                <div class="testimonial-card">
-                                    <div class="testimonial-stars">★★★★★</div>
-                                    <p class="testimonial-text">"{{ Str::limit($testimonial->content, 120) }}"</p>
-                                    <div class="testimonial-author">
-                                        @if($testimonial->avatar_url)
-                                            <img src="{{ asset('storage/' . $testimonial->avatar_url) }}" alt="{{ $testimonial->name }}" class="w-9 h-9 rounded-full object-cover">
-                                        @else
-                                            <div class="testimonial-avatar">{{ strtoupper(substr($testimonial->name, 0, 1)) }}</div>
-                                        @endif
-                                        <div>
-                                            <div class="testimonial-name">{{ $testimonial->name }}</div>
-                                            <div class="testimonial-label">Verified Buyer</div>
-                                        </div>
+                <div class="kk-tab-row">
+                    <button class="kk-tab" :class="tab==='size' ? 'is-active' : ''" @click="tab='size'">Size</button>
+                    <button class="kk-tab" :class="tab==='price' ? 'is-active' : ''" @click="tab='price'">Price</button>
+                    <button class="kk-tab" :class="tab==='shade' ? 'is-active' : ''" @click="tab='shade'">Shade</button>
+                </div>
+
+                <div class="kk-syw-stage">
+
+                    {{-- ---------- SIZE: t-shirts ---------- --}}
+                    <div class="kk-syw-panel" :data-on="tab==='size'"
+                         x-show="tab==='size'"
+                         x-transition:enter="transition ease-out duration-500"
+                         x-transition:enter-start="opacity-0 translate-y-3"
+                         x-transition:enter-end="opacity-100 translate-y-0"
+                         x-transition:leave="transition ease-in duration-200"
+                         x-transition:leave-start="opacity-100"
+                         x-transition:leave-end="opacity-0">
+                        <div class="kk-syw-grid">
+                            @foreach($kkSizes as $i => $sz)
+                                <div class="kk-syw-cell" :class="size==='{{ $sz }}' ? 'is-active' : ''" style="--d: {{ $i * 70 }}ms;">
+                                    <div class="kk-shirt" aria-hidden="true">
+                                        <svg viewBox="0 0 120 120" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M44 18 L24 26 L8 44 L20 60 L32 52 L32 104 L88 104 L88 52 L100 60 L112 44 L96 26 L76 18 C74 30 67 38 60 38 C53 38 46 30 44 18 Z"/>
+                                        </svg>
                                     </div>
+                                    <button class="kk-size-pill" :class="size==='{{ $sz }}' ? 'is-active' : ''" @click="size='{{ $sz }}'">
+                                        {{ $sz }}<small>FIT</small>
+                                    </button>
                                 </div>
                             @endforeach
                         </div>
                     </div>
+
+                    {{-- ---------- PRICE: bundle of notes ---------- --}}
+                    <div class="kk-syw-panel" :data-on="tab==='price'"
+                         x-show="tab==='price'"
+                         x-transition:enter="transition ease-out duration-500"
+                         x-transition:enter-start="opacity-0 translate-y-3"
+                         x-transition:enter-end="opacity-100 translate-y-0"
+                         x-transition:leave="transition ease-in duration-200"
+                         x-transition:leave-start="opacity-100"
+                         x-transition:leave-end="opacity-0">
+                        <div class="kk-syw-grid">
+                            @foreach($kkPrices as $i => $p)
+                                <div class="kk-syw-cell" :class="price==='{{ $p['k'] }}' ? 'is-active' : ''" style="--d: {{ $i * 70 }}ms;">
+                                    <div class="kk-notes" aria-hidden="true">
+                                        <div class="kk-note" style="--c: {{ $p['tint'] }};"></div>
+                                        <div class="kk-note" style="--c: {{ $p['tint'] }};"></div>
+                                        <div class="kk-note" style="--c: {{ $p['tint'] }};"></div>
+                                    </div>
+                                    <button class="kk-size-pill" :class="price==='{{ $p['k'] }}' ? 'is-active' : ''" @click="price='{{ $p['k'] }}'">
+                                        {{ $p['label'] }}
+                                    </button>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    {{-- ---------- SHADE: animated color palette ---------- --}}
+                    <div class="kk-syw-panel" :data-on="tab==='shade'"
+                         x-show="tab==='shade'"
+                         x-transition:enter="transition ease-out duration-500"
+                         x-transition:enter-start="opacity-0 translate-y-3"
+                         x-transition:enter-end="opacity-100 translate-y-0"
+                         x-transition:leave="transition ease-in duration-200"
+                         x-transition:leave-start="opacity-100"
+                         x-transition:leave-end="opacity-0">
+                        <div class="kk-syw-grid">
+                            @foreach($kkShades as $i => $s)
+                                <div class="kk-syw-cell" :class="shade==='{{ $s['k'] }}' ? 'is-active' : ''" style="--d: {{ $i * 70 }}ms;">
+                                    <div class="kk-swatch-wrap" aria-hidden="true">
+                                        <div class="kk-swatch" style="--c: {{ $s['hex'] }}; background: {{ $s['hex'] }};"></div>
+                                    </div>
+                                    <button class="kk-size-pill" :class="shade==='{{ $s['k'] }}' ? 'is-active' : ''" @click="shade='{{ $s['k'] }}'">
+                                        {{ $s['label'] }}
+                                    </button>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                </div>
+
+                {{-- Live selection echo + CTA --}}
+                <div class="kk-syw-result">
+                    <span class="chip">Size <b x-text="size">M</b></span>
+                    <span class="chip">Price <b x-text="price">1k-2k</b></span>
+                    <span class="chip">Shade <b x-text="shade">cream</b></span>
+                    <a :href="`{{ route('products.index') }}?size=${size}&price=${price}&shade=${shade}`" class="kk-btn-brown">
+                        Show me these <span aria-hidden="true">&rarr;</span>
+                    </a>
                 </div>
             </div>
         </section>
-    @endif
 
-    <!-- ==========================================
-         NEW ARRIVALS GRID
-         ========================================== -->
-    @if($newArrivals->count() && (!isset($sections['new_arrivals']) || $sections['new_arrivals']->is_active))
-        <section class="py-8 lg:py-12 bg-[#f8f6f3]">
+        {{-- ============================================
+             NEW ARRIVALS
+             ============================================ --}}
+        @php $arrivals = ($newArrivals ?? collect())->merge($featuredProducts ?? collect())->unique('id')->take(3); @endphp
+        @if($arrivals->count())
+        <section class="kk-section">
             <div class="container mx-auto px-4">
-                <div class="section-header">
-                    <h2 class="section-title">{{ $sections['new_arrivals']->title ?? 'New Arrivals' }}</h2>
-                    <a href="{{ route('new-arrivals') }}" class="view-all-link">
-                        View All
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
-                    </a>
+                <div class="kk-section-header">
+                    <h2 class="kk-section-title">New Arrivals</h2>
+                    <a href="{{ route('new-arrivals') }}" class="kk-view-all">View All <span aria-hidden="true">&rarr;</span></a>
                 </div>
-                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    @foreach($newArrivals->take(10) as $product)
-                        <x-product-card :product="$product" />
+                <div class="kk-product-grid">
+                    @foreach($arrivals as $product)
+                        @include('partials.kk-product-card', ['product' => $product, 'tag' => 'Premium'])
                     @endforeach
                 </div>
-                <div class="text-center mt-8">
-                    <a href="{{ route('new-arrivals') }}" class="inline-flex items-center gap-2 px-8 py-3 bg-white text-[#6F9CA2] border border-[#6F9CA2] rounded-full font-medium text-sm hover:bg-[#6F9CA2] hover:text-white transition-colors">
-                        View All New Arrivals
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                    </a>
+            </div>
+        </section>
+        @endif
+
+        {{-- ============================================
+             BESTSELLERS
+             ============================================ --}}
+        @php $bs = ($bestsellers ?? collect())->take(3); @endphp
+        @if($bs->count())
+        <section class="kk-section" style="background: var(--kk-cream-light);">
+            <div class="container mx-auto px-4">
+                <div class="kk-section-header">
+                    <h2 class="kk-section-title">Bestsellers</h2>
+                    <a href="{{ route('bestsellers') }}" class="kk-view-all">View All <span aria-hidden="true">&rarr;</span></a>
+                </div>
+                <div class="kk-product-grid">
+                    @foreach($bs as $product)
+                        @include('partials.kk-product-card', ['product' => $product, 'tag' => 'Bestseller'])
+                    @endforeach
                 </div>
             </div>
         </section>
-    @endif
+        @endif
 
-    <!-- ==========================================
-         NEWSLETTER
-         ========================================== -->
-    @if(!isset($sections['newsletter']) || $sections['newsletter']->is_active)
-    <section class="newsletter">
-        <div class="container mx-auto px-4">
-            <div class="max-w-2xl mx-auto text-center">
-                <h2>{{ $sections['newsletter']->title ?? 'Join the ForeverKids Family' }}</h2>
-                @if(isset($sections['newsletter']) && $sections['newsletter']->subtitle)
-                    <p class="text-white/80 text-sm mb-4">{{ $sections['newsletter']->subtitle }}</p>
-                @endif
-                <form class="newsletter-form"
+        {{-- ============================================
+             SHOP BY AESTHETICS
+             ============================================ --}}
+        <section class="kk-section">
+            <div class="container mx-auto px-4">
+                <div class="kk-section-header">
+                    <h2 class="kk-section-title">Shop By Aesthetics</h2>
+                </div>
+                @php
+                    $aesthetics = [
+                        ['label' => 'Classics',      'slug' => 'classics',      'shade' => '#5a4a3c'],
+                        ['label' => 'Old Money',     'slug' => 'old-money',     'shade' => '#7a6347'],
+                        ['label' => 'Street Wear',   'slug' => 'street-wear',   'shade' => '#3a2a1f'],
+                        ['label' => 'Smart Casuals', 'slug' => 'smart-casuals', 'shade' => '#8a6f52'],
+                        ['label' => 'Print Play',    'slug' => 'print-play',    'shade' => '#6e5238'],
+                        ['label' => 'Workwear',      'slug' => 'workwear',      'shade' => '#4a3320'],
+                    ];
+                @endphp
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    @foreach($aesthetics as $a)
+                        <a href="{{ route('products.index') }}?aesthetic={{ $a['slug'] }}" class="kk-tile kk-tile-banner">
+                            <div class="w-full h-full" style="background: linear-gradient(135deg, {{ $a['shade'] }} 0%, var(--kk-brown-dark) 100%);"></div>
+                            <div class="kk-tile-overlay"></div>
+                            <div class="kk-tile-label"><span class="pill">{{ Str::upper($a['label']) }}</span></div>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        </section>
+
+        {{-- ============================================
+             SHOP BY OCCASIONS
+             ============================================ --}}
+        <section class="kk-section" style="background: var(--kk-cream-light);">
+            <div class="container mx-auto px-4">
+                <div class="kk-section-header">
+                    <h2 class="kk-section-title">Shop By Occasions</h2>
+                </div>
+                @php
+                    $occasions = [
+                        ['label' => 'Desk to Dinner',    'slug' => 'desk-to-dinner',    'shade' => '#5a4a3c'],
+                        ['label' => 'Relaxed Evenings', 'slug' => 'relaxed-evenings', 'shade' => '#3a2a1f'],
+                        ['label' => 'Casual Outings',    'slug' => 'casual-outings',    'shade' => '#7a6347'],
+                        ['label' => 'Date Night',        'slug' => 'date-night',        'shade' => '#2d1810'],
+                        ['label' => 'After Hours',       'slug' => 'after-hours',       'shade' => '#4a3320'],
+                        ['label' => 'Travel Days',       'slug' => 'travel-days',       'shade' => '#8a6f52'],
+                        ['label' => 'Urban Layers',      'slug' => 'urban-layers',      'shade' => '#6e5238'],
+                    ];
+                @endphp
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    @foreach($occasions as $o)
+                        <a href="{{ route('products.index') }}?occasion={{ $o['slug'] }}" class="kk-tile kk-tile-banner">
+                            <div class="w-full h-full" style="background: linear-gradient(135deg, {{ $o['shade'] }} 0%, var(--kk-brown-dark) 100%);"></div>
+                            <div class="kk-tile-overlay"></div>
+                            <div class="kk-tile-label"><span class="pill">{{ Str::upper($o['label']) }}</span></div>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        </section>
+
+        {{-- ============================================
+             ABOUT US
+             ============================================ --}}
+        @php
+            $aboutTitle = ($sections['about_us']->title ?? null) ?: 'About Us';
+            $aboutText = ($sections['about_us']->content ?? null) ?: 'Trusted by 10k+ consumers across India, we\'ve curated clothing that blends modern tailoring, premium fabrics, and thoughtful detail. Every piece is designed to move with you — from desk to dinner, travel to weekend downtime.';
+            $aboutLink = ($sections['about_us']->button_link ?? null) ?: route('about');
+        @endphp
+        <section class="kk-about">
+            <div class="container mx-auto px-4">
+                <span class="kk-eyebrow">About Us</span>
+                <h2 class="kk-section-title kk-section-title--lg" style="margin-top:8px;">{{ $aboutTitle }}</h2>
+                <p class="intro">{{ is_string($aboutText) ? $aboutText : '' }}</p>
+                <div style="margin-top:26px;">
+                    <a href="{{ $aboutLink }}" class="kk-btn-brown">Read More</a>
+                </div>
+
+                @php
+                    $aboutCards = [
+                        ['t' => 'Precision Tailored Fits', 'd' => 'EU-certified cottons, broad blends and long-staple linens — sourced from mills we know by name.', 'i' => 'fit'],
+                        ['t' => 'Functional Detailing',    'd' => 'Seams, buttonholes, and hems hand-inspected. If it doesn\'t pass our table, it doesn\'t ship.', 'i' => 'star'],
+                        ['t' => 'Breathable Fabrics',      'd' => 'Pattern grades across six sizes so the drape holds true — from the shoulder line to the hem break.', 'i' => 'leaf'],
+                        ['t' => 'Durable Construction',    'd' => 'Pull-resistant garment, regular audits, and transparency reports published twice a year.', 'i' => 'shield'],
+                    ];
+                @endphp
+                <div class="kk-about-grid">
+                    @foreach($aboutCards as $c)
+                        <div class="kk-about-card">
+                            <div class="icon">
+                                @switch($c['i'])
+                                    @case('fit')
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6l9-3 9 3v4l-4 1v10H7V11L3 10V6z"/></svg>
+                                        @break
+                                    @case('star')
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l2.6 6 6.4.6-5 4.6 1.4 6.4L12 17l-5.4 3.6L8 14.2 3 9.6l6.4-.6L12 3z"/></svg>
+                                        @break
+                                    @case('leaf')
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 19c0-8 5-13 14-13 0 9-5 14-13 14-1 0-1 0-1-1z"/><path d="M5 19l8-8"/></svg>
+                                        @break
+                                    @default
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"/></svg>
+                                @endswitch
+                            </div>
+                            <h4>{{ $c['t'] }}</h4>
+                            <p>{{ $c['d'] }}</p>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </section>
+
+        {{-- ============================================
+             OUR QUALITIES (dark)
+             ============================================ --}}
+        <section class="kk-qualities">
+            <div class="container mx-auto px-4">
+                <span class="kk-eyebrow" style="color: var(--kk-tan);">What Sets Us Apart</span>
+                <h2>Our Qualities</h2>
+                <p class="sub">Six pillars every piece is measured against — no shortcuts, no exceptions.</p>
+
+                @php
+                    $qualities = [
+                        ['t' => 'Premium Fabrics',     'd' => 'BCI-certified cottons, tencel blends and long-staple linens — sourced from mills we know by name.'],
+                        ['t' => 'Hand-Finished Detailing','d' => 'Seams, buttonholes and hems hand-inspected. If it doesn\'t pass our table, it doesn\'t ship.'],
+                        ['t' => 'Precision Tailoring', 'd' => 'Pattern graded across six sizes so the drape holds true — from the shoulder line to the hem break.'],
+                        ['t' => 'Ethical Production',  'd' => 'Fair-wage partners, regular audits, and transparency reports published twice a year.'],
+                        ['t' => 'Wash-Tested For Life','d' => 'Every fabric survives 50+ wash cycles in our lab before it makes the cut — colour-fast, shape-true.'],
+                        ['t' => 'Lifetime Mend Promise','d' => 'Broken stitch? Lost button? We\'ll fix it on us. Because good clothes deserve long lives.'],
+                    ];
+                @endphp
+                <div class="kk-qualities-grid">
+                    @foreach($qualities as $q)
+                        <div class="kk-quality">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 7L9 18l-5-5"/></svg>
+                            <h4>{{ $q['t'] }}</h4>
+                            <p>{{ $q['d'] }}</p>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </section>
+
+        {{-- ============================================
+             JOIN THE FAMILY (newsletter)
+             ============================================ --}}
+        <section class="kk-newsletter">
+            <div class="container mx-auto px-4">
+                <span class="kk-eyebrow" style="color: var(--kk-tan);">Join The Family</span>
+                <h2>Join The Family</h2>
+                <p>Sign up for 10% off your first order + early access to drops.</p>
+                <form class="kk-newsletter-form"
                       x-data="{ email: '', loading: false, message: '', success: false }"
                       @submit.prevent="
                           loading = true; message = '';
@@ -811,21 +735,23 @@
                           }).then(r => r.json()).then(data => {
                               success = data.success; message = data.message; loading = false;
                               if (data.success) email = '';
-                          }).catch(() => { message = 'Something went wrong. Please try again.'; loading = false; })
+                          }).catch(() => { message = 'Something went wrong.'; loading = false; })
                       ">
-                    <template x-if="message">
-                        <p class="w-full text-sm text-center py-2 rounded" :class="success ? 'text-white' : 'text-red-200'" x-text="message"></p>
-                    </template>
-                    <template x-if="!message">
-                        <input type="email" x-model="email" required placeholder="Email Address" class="newsletter-input">
-                    </template>
-                    <button type="submit" :disabled="loading" x-show="!message" class="newsletter-btn">
-                        <span x-text="loading ? 'Subscribing...' : 'Subscribe'">Subscribe</span>
+                    <input type="email" x-model="email" required placeholder="Enter your email">
+                    <button type="submit" :disabled="loading">
+                        <span x-text="loading ? 'Submitting...' : 'Sign Up Now'">Sign Up Now</span>
                     </button>
                 </form>
+                <template x-if="false"></template>
             </div>
+        </section>
+
+        {{-- Free shipping strip above footer --}}
+        <div style="background: var(--kk-cream); border-top: 1px solid var(--kk-cream-dark); padding: 14px 0; text-align: center;">
+            <p style="font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--kk-brown); font-weight: 600; margin: 0;">
+                Free Shipping On Orders Above Rs. 1499 &nbsp;|&nbsp; Easy Returns
+            </p>
         </div>
-    </section>
-    @endif
+    </div>
 
 </x-layouts.app>

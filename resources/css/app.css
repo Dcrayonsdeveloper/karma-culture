@@ -139,6 +139,27 @@
     --color-twitter: #00abf0;
 
     /* ============================
+       Karmaa Kulture — beige/brown palette (storefront only)
+       Scoped via `kk-` prefix so admin layout is unaffected.
+       ============================ */
+    --color-kk-cream:        #efe2cb;  /* page background */
+    --color-kk-cream-light:  #f7eedb;  /* subtle card / row stripe */
+    --color-kk-cream-lighter:#fbf5e8;  /* highest-contrast tile background */
+    --color-kk-cream-dark:   #e3d2b3;  /* borders, dividers */
+    --color-kk-tan:          #b8895a;  /* mid tan accent */
+    --color-kk-tan-dark:     #8c5c34;  /* darker tan */
+    --color-kk-brown:        #4a2d1a;  /* primary CTA / pill */
+    --color-kk-brown-dark:   #2d1810;  /* dark section bg */
+    --color-kk-brown-darker: #1f1109;  /* deepest, footer accents */
+    --color-kk-text:         #2d1810;  /* body text on cream */
+    --color-kk-text-muted:   #7a6555;  /* secondary text on cream */
+    --color-kk-text-on-dark: #efe2cb;  /* cream text on dark brown */
+    --color-kk-text-on-dark-muted: #c9b393; /* muted text on dark brown */
+
+    --font-kk-display: 'Playfair Display', 'Fredoka', Georgia, serif;
+    --font-kk-body:    'Inter', 'Poppins', ui-sans-serif, system-ui, sans-serif;
+
+    /* ============================
        Border Radius
        ============================ */
     --radius-sm: 0.25rem;
