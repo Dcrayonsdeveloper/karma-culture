@@ -20,7 +20,7 @@
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=manrope:400,500,600,700,800|poppins:300,400,500,600,700|inter:300,400,500,600,700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.bunny.net/css?family=cormorant-garamond:300,400,500,600,700|manrope:400,500,600,700,800|poppins:300,400,500,600,700|inter:300,400,500,600,700&display=swap" rel="stylesheet" />
 
     <!-- Critical CSS first to prevent flash -->
     @vite(['resources/css/critical.css'])
@@ -30,7 +30,7 @@
 
     @stack('styles')
 </head>
-<body class="font-sans antialiased bg-white text-[#222222]" style="font-family: 'Poppins', sans-serif;" x-data>
+<body class="font-sans antialiased bg-white text-[#222222]" style="font-family: 'Cormorant Garamond', Georgia, serif;" x-data>
     <!-- Toast Notifications -->
     <div class="fixed top-4 right-4 z-50 flex flex-col gap-2">
         <template x-for="toast in $store.toast.items" :key="toast.id">

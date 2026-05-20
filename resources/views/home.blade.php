@@ -32,12 +32,12 @@
 
             .kk-home { background: var(--kk-cream); color: var(--kk-text); font-family: var(--kk-body); }
             .kk-display { font-family: var(--kk-display); font-weight: 500; letter-spacing: -0.01em; }
-            .kk-eyebrow { font-family: var(--kk-body); font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--kk-tan-dark); font-weight: 600; }
+            .kk-eyebrow { font-family: var(--kk-body); font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--kk-tan-dark); font-weight: 700; }
             .kk-section { padding: 56px 0; }
             .kk-section--tight { padding: 32px 0; }
-            .kk-section-title { font-family: var(--kk-display); font-size: 28px; line-height: 1.1; color: var(--kk-text); margin: 0; }
+            .kk-section-title { font-family: var(--kk-display); font-size: 28px; line-height: 1.1; color: var(--kk-text); margin: 0; font-weight: 700; }
             .kk-section-title--lg { font-size: 38px; }
-            .kk-view-all { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--kk-brown); text-decoration: none; font-weight: 600; }
+            .kk-view-all { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--kk-brown); text-decoration: none; font-weight: 700; }
             .kk-view-all:hover { color: var(--kk-tan-dark); }
             .kk-btn-brown { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 22px; background: var(--kk-brown); color: var(--kk-cream); border-radius: 999px; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600; border: none; cursor: pointer; transition: background .2s; text-decoration: none; }
             .kk-btn-brown:hover { background: var(--kk-brown-dark); }
@@ -317,10 +317,10 @@
             .kk-quality p { font-size: 12px; color: rgba(239,226,203,.65); margin: 0; line-height: 1.6; }
 
             /* Newsletter */
-            .kk-newsletter { background: var(--kk-brown-darker); color: var(--kk-cream); padding: 72px 0; text-align: center; }
-            .kk-newsletter h2 { font-family: var(--kk-display); font-size: 32px; color: var(--kk-cream); margin: 8px 0 8px; }
-            .kk-newsletter p { color: rgba(239,226,203,.65); font-size: 13px; margin-bottom: 28px; }
-            .kk-newsletter-form { display: flex; max-width: 480px; margin: 0 auto; background: var(--kk-cream-lighter); border-radius: 999px; padding: 4px; }
+            .kk-newsletter { background: var(--kk-cream-light); color: var(--kk-text); padding: 72px 0; text-align: center; }
+            .kk-newsletter h2 { font-family: var(--kk-display); font-size: 32px; color: var(--kk-text); margin: 8px 0 8px; }
+            .kk-newsletter p { color: var(--kk-text-muted); font-size: 13px; margin-bottom: 28px; }
+            .kk-newsletter-form { display: flex; max-width: 480px; margin: 0 auto; background: #fff; border: 1px solid var(--kk-cream-dark); border-radius: 999px; padding: 4px; }
             .kk-newsletter-form input { flex: 1; background: transparent; border: none; padding: 12px 20px; font-size: 14px; color: var(--kk-text); outline: none; }
             .kk-newsletter-form input::placeholder { color: var(--kk-text-muted); }
             .kk-newsletter-form button { background: var(--kk-brown-dark); color: var(--kk-cream); padding: 10px 24px; border-radius: 999px; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 700; border: none; cursor: pointer; }
@@ -735,42 +735,6 @@
             </div>
         </section>
 
-        {{-- ============================================
-             JOIN THE FAMILY (newsletter)
-             ============================================ --}}
-        <section class="kk-newsletter">
-            <div class="container mx-auto px-4">
-                <span class="kk-eyebrow" style="color: var(--kk-tan);">Join The Family</span>
-                <h2>Join The Family</h2>
-                <p>Sign up for 10% off your first order + early access to drops.</p>
-                <form class="kk-newsletter-form"
-                      x-data="{ email: '', loading: false, message: '', success: false }"
-                      @submit.prevent="
-                          loading = true; message = '';
-                          fetch('/newsletter/subscribe', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                              body: JSON.stringify({ email, source: 'homepage' })
-                          }).then(r => r.json()).then(data => {
-                              success = data.success; message = data.message; loading = false;
-                              if (data.success) email = '';
-                          }).catch(() => { message = 'Something went wrong.'; loading = false; })
-                      ">
-                    <input type="email" x-model="email" required placeholder="Enter your email">
-                    <button type="submit" :disabled="loading">
-                        <span x-text="loading ? 'Submitting...' : 'Sign Up Now'">Sign Up Now</span>
-                    </button>
-                </form>
-                <template x-if="false"></template>
-            </div>
-        </section>
-
-        {{-- Free shipping strip above footer --}}
-        <div style="background: var(--kk-cream); border-top: 1px solid var(--kk-cream-dark); padding: 14px 0; text-align: center;">
-            <p style="font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--kk-brown); font-weight: 600; margin: 0;">
-                Free Shipping On Orders Above Rs. 1499 &nbsp;|&nbsp; Easy Returns
-            </p>
-        </div>
     </div>
 
 </x-layouts.app>

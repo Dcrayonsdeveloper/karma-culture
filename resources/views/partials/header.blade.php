@@ -16,7 +16,7 @@
         {{ $announcement }}
     </div>
     @endif
-    <div class="container mx-auto px-4">
+    <div class="w-full px-4 lg:px-6">
         <div class="flex items-center justify-between h-20 lg:h-28">
 
             <!-- Left: Mobile menu + Desktop Nav -->
@@ -41,12 +41,12 @@
             <a href="{{ url('/') }}" class="flex items-center shrink-0">
                 @php $siteLogo = \App\Models\Setting::get('site_logo', ''); @endphp
                 @if($siteLogo)
-                    <img id="site-logo" src="{{ asset('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-16 lg:h-24 object-contain">
+                    <img id="site-logo" src="{{ asset('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-20 lg:h-28 object-contain">
                 @else
-                    <img id="site-logo" src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-16 lg:h-24 object-contain">
+                    <img id="site-logo" src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-20 lg:h-28 object-contain">
                 @endif
             </a>
-            <style>@media (max-width: 767px) { #site-logo { height: 60px; } }</style>
+            <style>@media (max-width: 767px) { #site-logo { height: 72px; } }</style>
 
             <!-- Right: Nav links + Icons -->
             <div class="flex items-center gap-1 lg:gap-0 flex-1 justify-end">

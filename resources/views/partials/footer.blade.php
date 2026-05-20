@@ -11,9 +11,9 @@
                             $footerAbout = \App\Models\Setting::get('footer_about', 'Curated fashion for the modern individual. Discover timeless pieces crafted with care and devotion to our culture.');
                         @endphp
                         @if($footerLogo)
-                            <img src="{{ asset('storage/' . $footerLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-12 object-contain">
+                            <img src="{{ asset('storage/' . $footerLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-24 object-contain">
                         @else
-                            <img src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-12 object-contain">
+                            <img src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-24 object-contain">
                         @endif
                     </a>
                     <p class="text-kk-text-muted text-sm mb-5 leading-relaxed max-w-sm">
@@ -93,9 +93,6 @@
             <div class="flex flex-col md:flex-row justify-between items-center gap-4">
                 <p class="text-xs text-kk-text-muted">
                     &copy; {{ date('Y') }} {{ \App\Models\Setting::get('site_name', 'Karmaa Kulture') }}. All rights reserved.
-                </p>
-                <p class="text-sm font-semibold tracking-[0.18em] uppercase text-kk-brown" style="font-family: 'Playfair Display', Georgia, serif; letter-spacing: 0.12em;">
-                    {{ \App\Models\Setting::get('site_name', 'Karmaa Kulture') }}
                 </p>
                 <div class="flex items-center gap-3">
                     {{-- Visa --}}

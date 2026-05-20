@@ -209,6 +209,28 @@ h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
 }
 
+/* Storefront: Cormorant Garamond everywhere. Scoped to non-admin bodies so
+   the admin dashboard keeps its Inter typography. !important is needed
+   because some storefront pages set inline font-family on body/sections. */
+body:not(.layout-admin),
+body:not(.layout-admin) h1,
+body:not(.layout-admin) h2,
+body:not(.layout-admin) h3,
+body:not(.layout-admin) h4,
+body:not(.layout-admin) h5,
+body:not(.layout-admin) h6,
+body:not(.layout-admin) p,
+body:not(.layout-admin) a,
+body:not(.layout-admin) span,
+body:not(.layout-admin) li,
+body:not(.layout-admin) button,
+body:not(.layout-admin) input,
+body:not(.layout-admin) textarea,
+body:not(.layout-admin) select,
+body:not(.layout-admin) label {
+    font-family: 'Cormorant Garamond', Georgia, 'Times New Roman', serif !important;
+}
+
 /* ========================================
    Custom Animations
    ======================================== */
@@ -289,6 +311,12 @@ html {
     -webkit-tap-highlight-color: transparent;
     overflow-x: hidden;
     max-width: 100%;
+}
+
+/* Storefront: scale rem-based typography up ~12.5% (16px → 18px).
+   Admin layout overrides this back below so its calibrated 13px stays. */
+html:has(body:not(.layout-admin)) {
+    font-size: 18px;
 }
 
 body {
