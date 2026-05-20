@@ -491,11 +491,11 @@
             .kk-rev__bar-stars { display: inline-flex; gap: 1px; flex-shrink: 0; width: 80px; }
             .kk-rev__bar-stars svg { width: 12px; height: 12px; }
             .kk-rev__bar-track { flex: 1; height: 10px; background: #e5e5e5; border-radius: 2px; overflow: hidden; }
-            .kk-rev__bar-fill { height: 100%; background: #0d1929; }
+            .kk-rev__bar-fill { height: 100%; background: #2D1810; }
             .kk-rev__bar-count { width: 24px; text-align: right; font-size: 12px; color: #2d1810; }
 
             .kk-rev__write {
-                background: #0d1929; color: #fff;
+                background: #2D1810; color: #fff;
                 padding: 14px 28px; border: none; border-radius: 2px;
                 font-size: 14px; font-weight: 600; cursor: pointer;
                 transition: background 0.15s ease; white-space: nowrap;
@@ -531,7 +531,7 @@
             }
             .kk-rev__item-name { font-size: 14px; font-weight: 500; color: #2d1810; }
             .kk-rev__item-verified {
-                background: #0d1929; color: #fff;
+                background: #2D1810; color: #fff;
                 font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
                 padding: 2px 7px; border-radius: 2px;
             }
@@ -551,7 +551,7 @@
                 <div class="kk-rev__overall">
                     <span class="kk-rev__stars">
                         @for($s = 1; $s <= 5; $s++)
-                            <svg fill="{{ $s <= $avgRounded ? '#0d1929' : '#c9b393' }}" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                            <svg fill="{{ $s <= $avgRounded ? '#2D1810' : '#c9b393' }}" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
                         @endfor
                     </span>
                     <span class="kk-rev__avg">{{ number_format($avg, 2) }} out of 5</span>
@@ -572,7 +572,7 @@
                     <div class="kk-rev__bar-row">
                         <span class="kk-rev__bar-stars">
                             @for($s = 1; $s <= 5; $s++)
-                                <svg fill="{{ $s <= $star ? '#0d1929' : '#c9b393' }}" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                <svg fill="{{ $s <= $star ? '#2D1810' : '#c9b393' }}" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
                             @endfor
                         </span>
                         <div class="kk-rev__bar-track">
@@ -602,7 +602,7 @@
                         <div class="kk-rev__item-head">
                             <span class="kk-rev__item-stars">
                                 @for($s = 1; $s <= 5; $s++)
-                                    <svg fill="{{ $s <= $review->rating ? '#0d1929' : '#c9b393' }}" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                    <svg fill="{{ $s <= $review->rating ? '#2D1810' : '#c9b393' }}" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
                                 @endfor
                             </span>
                             <span class="kk-rev__item-date">{{ $review->created_at->format('m/d/Y') }}</span>
@@ -654,7 +654,7 @@
         <!-- ===== RELATED PRODUCTS ===== -->
         @if($relatedProducts->count() > 0)
         <style>
-            .kk-related { margin-top: 64px; padding-top: 32px; }
+            .kk-related { margin-top: 64px; padding-top: 32px; padding-bottom: 80px; }
             .kk-related__title {
                 text-align: center;
                 font-size: 18px;
@@ -692,18 +692,16 @@
             }
             .kk-related__card:hover .kk-related__img { transform: scale(1.03); }
             .kk-related__add {
-                position: absolute;
-                right: 12px; bottom: 12px;
+                display: block;
+                width: 100%;
+                margin-top: 10px;
                 background: #2d1810; color: #efe2cb;
                 border: none; border-radius: 4px;
-                padding: 9px 14px; font-size: 11px; font-weight: 700;
-                letter-spacing: 0.12em; text-transform: uppercase;
-                cursor: pointer;
-                opacity: 0; transform: translateY(4px);
-                transition: opacity .2s ease, transform .2s ease, background .15s ease;
+                padding: 10px 14px; font-size: 11px; font-weight: 700;
+                letter-spacing: 0.14em; text-transform: uppercase;
+                cursor: pointer; text-align: center;
+                transition: background .15s ease;
             }
-            .kk-related__card:hover .kk-related__add,
-            .kk-related__card:focus-within .kk-related__add { opacity: 1; transform: translateY(0); }
             .kk-related__add:hover { background: #1f1109; }
             .kk-related__name {
                 font-size: 14px;
@@ -734,24 +732,25 @@
             <h2 class="kk-related__title">Related Products</h2>
             <div class="kk-related__grid">
                 @foreach($relatedProducts as $rp)
-                <a href="{{ route('product.show', $rp) }}" class="kk-related__card">
-                    <div class="kk-related__imgwrap">
-                        <img class="kk-related__img" src="{{ $rp->primary_image_url }}" alt="{{ $rp->name }}" loading="lazy">
-                        @if($rp->isInStock())
-                        <button type="button" class="kk-related__add"
-                                @click.prevent.stop="$store.cart.add({{ $rp->id }})">
-                            Add to Cart
-                        </button>
-                        @endif
-                    </div>
-                    <p class="kk-related__name">{{ $rp->name }}</p>
-                    <div>
-                        <span class="kk-related__price">₹{{ number_format($rp->price) }}</span>
-                        @if($rp->mrp > $rp->price)
-                        <span class="kk-related__price-mrp">₹{{ number_format($rp->mrp) }}</span>
-                        @endif
-                    </div>
-                </a>
+                <div class="kk-related__card">
+                    <a href="{{ route('product.show', $rp) }}" style="display:block;text-decoration:none;color:inherit;">
+                        <div class="kk-related__imgwrap">
+                            <img class="kk-related__img" src="{{ $rp->primary_image_url }}" alt="{{ $rp->name }}" loading="lazy">
+                        </div>
+                        <p class="kk-related__name">{{ $rp->name }}</p>
+                        <div>
+                            <span class="kk-related__price">₹{{ number_format($rp->price) }}</span>
+                            @if($rp->mrp > $rp->price)
+                            <span class="kk-related__price-mrp">₹{{ number_format($rp->mrp) }}</span>
+                            @endif
+                        </div>
+                    </a>
+                    @if($rp->isInStock())
+                    <button type="button" class="kk-related__add" @click="$store.cart.add({{ $rp->id }})">
+                        Add to Cart
+                    </button>
+                    @endif
+                </div>
                 @endforeach
             </div>
         </div>

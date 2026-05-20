@@ -60,7 +60,12 @@
                 <!-- Logo -->
                 <div class="mb-6">
                     <a href="{{ url('/') }}" class="inline-block">
-                        <img src="{{ asset('images/colorlogo.png') }}" alt="{{ config('app.name') }}" class="h-12 lg:h-14 object-contain">
+                        @php $siteLogo = \App\Models\Setting::get('site_logo', ''); @endphp
+                        @if($siteLogo)
+                            <img src="{{ asset('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-16 lg:h-20 object-contain">
+                        @else
+                            <img src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-16 lg:h-20 object-contain">
+                        @endif
                     </a>
                 </div>
 

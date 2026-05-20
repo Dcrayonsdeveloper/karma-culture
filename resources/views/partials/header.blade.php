@@ -317,6 +317,16 @@
                 </a>
 
                 <!-- User account - desktop -->
+                @guest
+                    <button type="button"
+                            class="hidden lg:block p-2 text-kk-brown hover:text-kk-tan-dark transition-colors"
+                            aria-label="Login"
+                            @click="$dispatch('open-login-modal')">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                        </svg>
+                    </button>
+                @else
                 <div class="relative hidden lg:block" x-data="dropdown()">
                     <button @click="toggle()" class="p-2 text-kk-brown hover:text-kk-tan-dark transition-colors" aria-label="Account">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -325,7 +335,7 @@
                     </button>
 
                     <div x-cloak x-show="open" x-transition @click.outside="close()" class="absolute right-0 mt-1 w-48 bg-kk-cream-lighter border border-kk-cream-dark rounded-lg shadow-dropdown z-50 overflow-hidden">
-                        @guest
+                        @if(false)
                             <a href="{{ route('login') }}" class="block px-4 py-2 text-sm text-kk-brown hover:bg-kk-cream hover:text-kk-tan-dark">Login</a>
                             <a href="{{ route('register') }}" class="block px-4 py-2 text-sm text-kk-brown hover:bg-kk-cream hover:text-kk-tan-dark">Register</a>
                         @else
@@ -345,9 +355,10 @@
                                 @csrf
                                 <button type="submit" class="w-full text-left px-4 py-2 text-sm text-kk-brown hover:bg-kk-cream hover:text-kk-tan-dark">Logout</button>
                             </form>
-                        @endguest
+                        @endif
                     </div>
                 </div>
+                @endguest
 
                 <!-- Cart -->
                 <a href="{{ route('cart.index') }}" class="relative p-2 text-kk-brown hover:text-kk-tan-dark transition-colors" aria-label="Cart">
@@ -379,3 +390,175 @@
         window.addEventListener('resize', syncSpacer);
     })();
 </script>
+
+@guest
+{{-- ====================================================
+     LOGIN MODAL — opens via $dispatch('open-login-modal')
+     ==================================================== --}}
+<div x-data="{ open: false, phone: '', notify: false }"
+     @open-login-modal.window="open = true; $nextTick(() => $refs.phoneInput?.focus())"
+     @keydown.escape.window="open = false"
+     x-show="open"
+     x-cloak
+     class="kk-loginmodal">
+    <div class="kk-loginmodal__overlay" @click="open = false"></div>
+    <div class="kk-loginmodal__shell"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 scale-95"
+         x-transition:enter-end="opacity-100 scale-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 scale-100"
+         x-transition:leave-end="opacity-0 scale-95">
+
+        <button type="button" class="kk-loginmodal__close" @click="open = false" aria-label="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
+
+        {{-- LEFT (dark) --}}
+        <div class="kk-loginmodal__left">
+            <div class="kk-loginmodal__brand">
+                <img src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="kk-loginmodal__logo">
+            </div>
+            <h3 class="kk-loginmodal__welcome">Welcome to {{ config('app.name', 'Karmaa Kulture') }}!</h3>
+            <p class="kk-loginmodal__subtitle">Login now to avail best offers</p>
+        </div>
+
+        {{-- RIGHT (form) --}}
+        <div class="kk-loginmodal__right">
+            <form method="POST" action="{{ route('login') }}" @submit="open = false">
+                @csrf
+                <div class="kk-loginmodal__phone">
+                    <span class="kk-loginmodal__phone-prefix">
+                        <span style="font-size:18px;">🇮🇳</span>
+                        <span>+91</span>
+                    </span>
+                    <input type="tel" name="phone" x-ref="phoneInput" x-model="phone"
+                           inputmode="numeric" maxlength="10" autocomplete="tel"
+                           placeholder="Enter Mobile Number"
+                           class="kk-loginmodal__phone-input">
+                </div>
+
+                <label class="kk-loginmodal__notify">
+                    <input type="checkbox" x-model="notify" name="notify_updates">
+                    <span>Notify me with offers &amp; updates</span>
+                </label>
+
+                <button type="submit" class="kk-loginmodal__submit"
+                        :disabled="phone.length < 10"
+                        :class="phone.length < 10 ? 'is-disabled' : ''">
+                    Submit
+                </button>
+
+                <p class="kk-loginmodal__legal">
+                    I accept that I have read &amp; understood your<br>
+                    <a href="#" class="kk-loginmodal__legal-link">Privacy Policy</a>
+                    <span> and </span>
+                    <a href="#" class="kk-loginmodal__legal-link">T&amp;Cs.</a>
+                </p>
+
+                <div class="kk-loginmodal__fallback">
+                    <a href="{{ route('login') }}">Login with email instead</a>
+                    <span class="kk-loginmodal__dot">&bull;</span>
+                    <a href="{{ route('register') }}">Create account</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .kk-loginmodal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .kk-loginmodal__overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.55); }
+    .kk-loginmodal__shell {
+        position: relative;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        width: 100%;
+        max-width: 720px;
+        background: #2d1810;
+        border-radius: 6px;
+        overflow: hidden;
+        box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+    }
+    @media (max-width: 720px) {
+        .kk-loginmodal__shell { grid-template-columns: 1fr; max-width: 420px; }
+    }
+    .kk-loginmodal__close {
+        position: absolute; top: 10px; right: 10px;
+        width: 32px; height: 32px;
+        background: #2d1810; color: #efe2cb;
+        border: 1px solid rgba(239, 226, 203, 0.4); border-radius: 50%;
+        display: inline-flex; align-items: center; justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        z-index: 3;
+        transition: background 0.15s ease, transform 0.15s ease;
+    }
+    .kk-loginmodal__close:hover { background: #1f1109; transform: rotate(90deg); }
+    .kk-loginmodal__close svg { width: 18px; height: 18px; display: block; }
+    .kk-loginmodal__left {
+        background: #2d1810; color: #efe2cb;
+        padding: 48px 32px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+    }
+    .kk-loginmodal__brand { margin-bottom: 16px; }
+    .kk-loginmodal__logo { height: 110px; filter: brightness(0) invert(1); }
+    .kk-loginmodal__welcome { font-size: 18px; font-weight: 700; margin: 8px 0 4px; color: #efe2cb; }
+    .kk-loginmodal__subtitle { font-size: 16px; font-weight: 600; margin: 0; color: #efe2cb; }
+    .kk-loginmodal__right {
+        background: #fff;
+        padding: 36px 30px;
+        display: flex; flex-direction: column; justify-content: center;
+    }
+    .kk-loginmodal__phone {
+        display: flex; align-items: stretch;
+        border: 1px solid #d4d4d4; border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 12px;
+    }
+    .kk-loginmodal__phone-prefix {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 10px 12px;
+        background: #fff; color: #2d1810;
+        font-size: 14px; font-weight: 500;
+        border-right: 1px solid #d4d4d4;
+        white-space: nowrap;
+    }
+    .kk-loginmodal__phone-input {
+        flex: 1; border: none; outline: none;
+        padding: 10px 12px;
+        font-size: 14px; color: #2d1810;
+        background: #fff;
+    }
+    .kk-loginmodal__phone-input::placeholder { color: #9ca3af; }
+    .kk-loginmodal__notify {
+        display: flex; align-items: center; gap: 8px;
+        font-size: 12px; color: #6b6b6b;
+        margin-bottom: 16px; cursor: pointer;
+    }
+    .kk-loginmodal__notify input { width: 14px; height: 14px; accent-color: #2d1810; cursor: pointer; }
+    .kk-loginmodal__submit {
+        width: 100%; padding: 12px; border: none; border-radius: 4px;
+        background: #1a1a1a; color: #fff;
+        font-size: 14px; font-weight: 600;
+        cursor: pointer; transition: background 0.15s ease;
+        margin-bottom: 16px;
+    }
+    .kk-loginmodal__submit:hover:not(.is-disabled) { background: #2d1810; }
+    .kk-loginmodal__submit.is-disabled { background: #6b6b6b; cursor: not-allowed; }
+    .kk-loginmodal__legal {
+        text-align: center; font-size: 11px; color: #6b6b6b; margin: 0 0 14px; line-height: 1.6;
+    }
+    .kk-loginmodal__legal-link { color: #2d1810; text-decoration: underline; font-weight: 500; }
+    .kk-loginmodal__fallback {
+        text-align: center; font-size: 12px; color: #6b6b6b;
+        padding-top: 12px; border-top: 1px solid #efefef;
+        display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;
+    }
+    .kk-loginmodal__fallback a { color: #2d1810; text-decoration: none; font-weight: 600; }
+    .kk-loginmodal__fallback a:hover { text-decoration: underline; }
+    .kk-loginmodal__dot { color: #d4d4d4; }
+</style>
+@endguest

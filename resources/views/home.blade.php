@@ -436,40 +436,35 @@
     <div class="kk-home">
 
         {{-- ============================================
-             HERO BANNER
+             HERO BACKGROUND VIDEO
              ============================================ --}}
         <section class="kk-hero">
-            @if(($banners ?? collect())->count())
-                <div x-data="{
-                        current: 0,
-                        slides: [
-                            @foreach($banners as $banner)
-                            { img: '{{ $banner->image }}', link: '{{ $banner->link ?? route('products.index') }}' }{{ $loop->last ? '' : ',' }}
-                            @endforeach
-                        ],
-                        timer: null,
-                        init() { if (this.slides.length > 1) this.timer = setInterval(() => this.next(), 5500); },
-                        next() { this.current = (this.current + 1) % this.slides.length; },
-                     }" class="relative">
-                    <template x-for="(slide, index) in slides" :key="index">
-                        <a :href="slide.link" x-show="current === index"
-                           x-transition:enter="transition-opacity duration-700"
-                           x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-                           class="kk-hero-slide">
-                            <img :src="slide.img" alt="{{ $siteSettings['site_name'] ?? 'Karmaa Kulture' }}">
-                        </a>
-                    </template>
-                </div>
-            @else
-                <a href="{{ route('new-arrivals') }}" class="kk-hero-slide block">
-                    @if(file_exists(public_path('images/Web_banner_1920_x_766.webp')))
-                        <img src="{{ asset('images/Web_banner_1920_x_766.webp') }}" alt="{{ $siteSettings['site_name'] ?? 'Karmaa Kulture' }}">
-                    @else
-                        <div class="w-full h-full" style="background: linear-gradient(135deg, var(--kk-cream-dark) 0%, var(--kk-tan) 100%);"></div>
-                    @endif
-                </a>
-            @endif
+            <div class="kk-hero-slide kk-hero-slide--video">
+                <video class="kk-hero-video"
+                       src="{{ asset('images/web banner v2.mp4') }}"
+                       autoplay
+                       muted
+                       loop
+                       playsinline
+                       preload="auto"
+                       aria-label="{{ $siteSettings['site_name'] ?? 'Karmaa Kulture' }} hero video">
+                </video>
+            </div>
         </section>
+
+        <style>
+            /* Override the 21:9 / 4:5 crop so the full video frame (including the
+               "Karmaa Kulture" branding in it) is visible. */
+            .kk-hero-slide--video {
+                aspect-ratio: auto;
+                background: var(--kk-cream);
+            }
+            .kk-hero-video {
+                width: 100%;
+                height: auto;
+                display: block;
+            }
+        </style>
 
         {{-- ============================================
              SHOP BY CATEGORY — bento mosaics per gender
