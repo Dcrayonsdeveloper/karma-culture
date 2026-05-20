@@ -1,4 +1,4 @@
-<x-layouts.app>
+﻿<x-layouts.app>
     <x-slot name="title">{{ $product->name }} - {{ config('app.name') }}</x-slot>
 
     @push('meta')
@@ -83,700 +83,544 @@
         }
     @endphp
 
-    <!-- Breadcrumb -->
-    <div style="background:#f8f8f8;border-bottom:1px solid #e5e5e5;">
-        <div class="container mx-auto px-4" style="padding-top:0.5rem;padding-bottom:0.5rem;">
-            <x-breadcrumb :items="$breadcrumbs" />
-        </div>
-    </div>
-
     <style>
+    .pdp-wrapper { background: #EFE2CB; }
+    .kk-pdp { display: grid; gap: 28px; padding: 16px 0 48px; }
     @media (min-width: 1024px) {
-        .product-page-grid { grid-template-columns: 1fr 1fr 300px; }
+        .kk-pdp { grid-template-columns: 1.1fr 1fr; gap: 56px; align-items: start; }
+    }
+    .kk-pdp__gallery { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .kk-pdp__img { aspect-ratio: 3/4; overflow: hidden; background: #fff; cursor: zoom-in; }
+    .kk-pdp__img img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .4s ease; }
+    .kk-pdp__img:hover img { transform: scale(1.02); }
+    @media (max-width: 640px) { .kk-pdp__gallery { grid-template-columns: 1fr; } }
+    .kk-pdp__info { padding-top: 4px; }
+    .kk-pdp__title {
+        font-size: 1.5rem; line-height: 1.3; font-weight: 700;
+        text-transform: uppercase; color: #2d1810; margin: 0 0 14px;
+        letter-spacing: 0.01em;
+    }
+    .kk-pdp__rating { display: flex; align-items: center; gap: 8px; margin: 0 0 20px; }
+    .kk-pdp__rating-stars { display: inline-flex; gap: 1px; }
+    .kk-pdp__rating-stars svg { width: 16px; height: 16px; }
+    .kk-pdp__rating-count { font-size: 13px; color: #2d1810; }
+    .kk-pdp__price {
+        font-size: 1.875rem; font-weight: 400; color: #2d1810;
+        margin: 0 0 4px; letter-spacing: 0.02em;
+    }
+    .kk-pdp__tax { font-size: 13px; color: #7a6555; margin: 0 0 24px; }
+    .kk-pdp__emi {
+        position: relative; background: #f7eedb; border: 1px solid #e3d2b3;
+        border-radius: 8px; padding: 16px 14px; display: flex;
+        align-items: center; gap: 12px; margin: 0 0 28px;
+    }
+    .kk-pdp__emi-tag {
+        position: absolute; top: -8px; left: 10px;
+        background: #2a9d3e; color: #fff; font-size: 10px; font-weight: 700;
+        letter-spacing: 0.1em; padding: 3px 9px 4px; border-radius: 2px;
+    }
+    .kk-pdp__emi-tag::after {
+        content: ''; position: absolute; left: 0; bottom: -5px;
+        border-style: solid; border-width: 5px 0 0 5px;
+        border-color: #1c6428 transparent transparent transparent;
+    }
+    .kk-pdp__emi-text { flex: 1; font-size: 13px; line-height: 1.55; color: #2d1810; }
+    .kk-pdp__emi-text strong { color: #2a9d3e; font-weight: 700; }
+    .kk-pdp__emi-btn {
+        background: #1a1a1a; color: #fff; border: none; border-radius: 4px;
+        padding: 9px 14px; font-size: 12px; font-weight: 700; line-height: 1.1;
+        cursor: pointer; display: flex; flex-direction: column; align-items: center;
+        gap: 2px; white-space: nowrap;
+    }
+    .kk-pdp__emi-btn small { font-size: 8px; font-weight: 400; opacity: 0.7; letter-spacing: 0.04em; }
+    .kk-pdp__tier-title {
+        font-size: 14px; font-weight: 700; color: #2d1810;
+        letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 16px;
+    }
+    .kk-pdp__tier-accent {
+        background-image: linear-gradient(transparent 60%, #ffb84a 60%, #ffb84a 92%, transparent 92%);
+        padding: 0 3px;
+    }
+    .kk-pdp__tiers { list-style: none; padding: 0; margin: 0 0 28px; display: flex; flex-direction: column; gap: 14px; }
+    .kk-pdp__tier { display: flex; align-items: center; gap: 12px; font-size: 14px; color: #2d1810; }
+    .kk-pdp__tier-icon {
+        width: 26px; height: 26px; border-radius: 50%; border: 1px solid #2d1810;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0; font-size: 13px; font-weight: 600;
+    }
+    .kk-pdp__tier strong { font-weight: 700; }
+    .kk-pdp__variant-group { margin: 0 0 18px; }
+    .kk-pdp__variant-label { font-size: 13px; font-weight: 600; color: #2d1810; margin: 0 0 8px; }
+    .kk-pdp__variant-label .kk-pdp__variant-sel { font-weight: 400; color: #7a6555; }
+    .kk-pdp__variant-btn {
+        min-width: 44px; padding: 8px 14px; background: #fff; color: #2d1810;
+        border: 1px solid #c9b393; border-radius: 4px;
+        font-size: 13px; font-weight: 600; cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .kk-pdp__variant-btn.is-active { background: #2d1810; color: #efe2cb; border-color: #2d1810; }
+    .kk-pdp__variant-btn:hover:not(.is-active) { border-color: #2d1810; }
+    .kk-pdp__cta-row { display: flex; gap: 12px; margin: 24px 0 18px; }
+    .kk-pdp__cta {
+        flex: 1; padding: 14px 18px; font-size: 13px; font-weight: 700;
+        letter-spacing: 0.08em; text-transform: uppercase;
+        border-radius: 4px; cursor: pointer; border: none;
+        transition: background 0.15s ease;
+    }
+    .kk-pdp__cta--cart { background: #4a2d1a; color: #efe2cb; border: 1px solid #4a2d1a; }
+    .kk-pdp__cta--cart:hover:not(:disabled) { background: #2d1810; }
+    .kk-pdp__cta--buy { background: #2d1810; color: #efe2cb; border: 1px solid #2d1810; }
+    .kk-pdp__cta--buy:hover:not(:disabled) { background: #1f1109; }
+    .kk-pdp__cta:disabled { opacity: 0.5; cursor: not-allowed; }
+    .kk-pdp__meta { font-size: 13px; color: #7a6555; line-height: 1.7; margin-top: 8px; }
+    .kk-pdp__meta strong { color: #2d1810; font-weight: 600; }
+    .kk-pdp__qty {
+        padding: 8px 32px 8px 12px; border: 1px solid #c9b393; border-radius: 4px;
+        font-size: 13px; background: #fff; color: #2d1810; cursor: pointer; min-height: 40px;
+    }
+    .kk-pdp__wish {
+        margin-top: 16px; display: inline-flex; align-items: center; gap: 8px;
+        background: none; border: none; cursor: pointer; font-size: 13px; color: #2d1810; padding: 4px 0;
     }
     </style>
-    <div class="container mx-auto px-4 py-4 lg:py-6" x-data="productPage()">
+    <div class="pdp-wrapper">
+    <div class="container mx-auto px-4" x-data="productPage()">
 
-        <!-- ===== MAIN 3-COLUMN LAYOUT ===== -->
-        <div class="grid grid-cols-1 gap-6 lg:gap-8 product-page-grid">
+        <!-- ===== TWO-COLUMN LAYOUT ===== -->
+        <div class="kk-pdp">
 
-            <!-- ===== LEFT: IMAGE GALLERY ===== -->
-            <div>
-                <div class="lg:flex lg:gap-3 lg:sticky lg:top-4">
-                    <!-- Vertical Thumbnails (desktop) -->
-                    @if(count($images) > 1)
-                    <div class="hidden lg:flex lg:flex-col gap-2 shrink-0" style="width:64px;">
-                        @foreach($images as $i => $img)
-                        <button @mouseenter="currentImage = {{ $i }}" @click="currentImage = {{ $i }}"
-                                class="rounded overflow-hidden transition-all"
-                                style="width:64px;height:64px;padding:2px;"
-                                :style="currentImage === {{ $i }} ? 'border:2px solid #6F9CA2;' : 'border:2px solid #e5e5e5;'">
-                            <img src="{{ $img }}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:2px;">
-                        </button>
-                        @endforeach
+            <!-- LEFT: Image grid -->
+            <div class="kk-pdp__gallery">
+                @foreach($images as $i => $img)
+                    <div class="kk-pdp__img" @click="currentImage = {{ $i }}; showZoom = true">
+                        <img src="{{ $img }}" alt="{{ $product->name }}" loading="{{ $i > 1 ? 'lazy' : 'eager' }}">
                     </div>
-                    @endif
-
-                    <!-- Main Image -->
-                    <div style="flex:1;position:relative;">
-                        <div @click="showZoom = true"
-                             style="background:#fff;border:1px solid #e5e5e5;border-radius:0.75rem;overflow:hidden;cursor:zoom-in;aspect-ratio:1/1;">
-                            @foreach($images as $i => $img)
-                            <img x-show="currentImage === {{ $i }}"
-                                 x-transition:enter="transition ease-out duration-200"
-                                 x-transition:enter-start="opacity-0"
-                                 x-transition:enter-end="opacity-100"
-                                 src="{{ $img }}"
-                                 alt="{{ $product->name }}"
-                                 style="width:100%;height:100%;object-fit:contain;padding:0.5rem;">
-                            @endforeach
-                        </div>
-
-                        <!-- Discount Badge -->
-                        @if($discountPct > 0)
-                        <div style="position:absolute;top:0.75rem;left:0.75rem;background:#cc0c39;color:#fff;padding:0.125rem 0.5rem;border-radius:0.25rem;font-size:12px;font-weight:700;">
-                            -{{ $discountPct }}%
-                        </div>
-                        @endif
-
-                        <!-- Wishlist -->
-                        <button @click="$store.wishlist.toggle({{ $product->id }})"
-                                style="position:absolute;top:0.75rem;right:0.75rem;width:2.5rem;height:2.5rem;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.12);display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;"
-                                :style="$store.wishlist.has({{ $product->id }}) ? 'color:#ef4444;' : 'color:#9ca3af;'"
-                                aria-label="Toggle wishlist">
-                            <svg style="width:1.25rem;height:1.25rem;" :fill="$store.wishlist.has({{ $product->id }}) ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
-                        </button>
-
-                        <!-- Mobile Nav Arrows -->
-                        @if(count($images) > 1)
-                        <button @click="currentImage = currentImage > 0 ? currentImage - 1 : {{ count($images) - 1 }}"
-                                class="lg:hidden"
-                                style="position:absolute;left:0.5rem;top:50%;transform:translateY(-50%);width:2rem;height:2rem;border-radius:50%;background:rgba(255,255,255,0.9);box-shadow:0 1px 3px rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;">
-                            <svg style="width:1rem;height:1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-                        </button>
-                        <button @click="currentImage = currentImage < {{ count($images) - 1 }} ? currentImage + 1 : 0"
-                                class="lg:hidden"
-                                style="position:absolute;right:3.5rem;top:50%;transform:translateY(-50%);width:2rem;height:2rem;border-radius:50%;background:rgba(255,255,255,0.9);box-shadow:0 1px 3px rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;">
-                            <svg style="width:1rem;height:1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                        </button>
-                        @endif
-
-                        <!-- Mobile Dots -->
-                        @if(count($images) > 1)
-                        <div class="flex lg:hidden" style="justify-content:center;gap:0.375rem;margin-top:0.75rem;">
-                            @foreach($images as $i => $img)
-                            <button @click="currentImage = {{ $i }}"
-                                    style="height:0.5rem;border-radius:9999px;border:none;cursor:pointer;transition:all 0.2s;"
-                                    :style="currentImage === {{ $i }} ? 'background:#6F9CA2;width:20px;' : 'background:#d1d5db;width:8px;'"></button>
-                            @endforeach
-                        </div>
-                        @endif
-
-                        <!-- Image Counter -->
-                        @if(count($images) > 1)
-                        <div class="hidden lg:flex" style="position:absolute;bottom:0.75rem;right:0.75rem;background:rgba(0,0,0,0.6);color:#fff;padding:0.25rem 0.5rem;border-radius:0.25rem;font-size:12px;font-weight:500;align-items:center;gap:0.25rem;">
-                            <svg style="width:0.75rem;height:0.75rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                            <span x-text="(currentImage + 1) + '/{{ count($images) }}'"></span>
-                        </div>
-                        @endif
-                    </div>
-                </div>
+                @endforeach
             </div>
 
-            <!-- ===== MIDDLE: PRODUCT INFO ===== -->
-            <div>
-                <!-- Brand -->
-                @if($product->brand)
-                <a href="{{ route('products.index', ['brand' => $product->brand->slug ?? '']) }}"
-                   style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6F9CA2;text-decoration:none;display:inline-block;margin-bottom:0.25rem;">
-                    {{ $product->brand->name }}
-                </a>
-                @endif
+            <!-- RIGHT: Product info -->
+            <div class="kk-pdp__info" x-ref="buyBox">
+                <h1 class="kk-pdp__title">{{ $product->name }}</h1>
 
-                <!-- Title -->
-                <h1 style="font-size:1.375rem;font-weight:600;line-height:1.3;color:#0F1111;margin-bottom:0.5rem;">
-                    {{ $product->name }}
-                </h1>
-
-                <!-- Rating -->
-                @if($product->rating > 0)
-                <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap;">
-                    <div style="display:flex;align-items:center;gap:0.25rem;">
-                        <span style="font-size:14px;font-weight:600;color:#007185;">{{ number_format($product->rating, 1) }}</span>
-                        <div style="display:flex;">
-                            @for($s = 1; $s <= 5; $s++)
-                            <svg style="width:1rem;height:1rem;color:{{ $s <= round($product->rating) ? '#FFA41C' : '#ddd' }};" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                            @endfor
-                        </div>
-                        <a href="#customer-reviews" @click.prevent="document.getElementById('customer-reviews')?.scrollIntoView({behavior:'smooth'})"
-                           style="font-size:14px;color:#007185;text-decoration:none;">{{ $product->review_count }} {{ Str::plural('rating', $product->review_count) }}</a>
-                    </div>
-                    @if($product->sales_count > 0)
-                    <span style="font-size:12px;color:#565959;">{{ number_format($product->sales_count) }}+ bought</span>
-                    @endif
+                @if($product->review_count > 0)
+                <div class="kk-pdp__rating">
+                    <span class="kk-pdp__rating-stars">
+                        @for($s = 1; $s <= 5; $s++)
+                            <svg fill="{{ $s <= round($product->rating ?: 5) ? '#1f1109' : '#c9b393' }}" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                        @endfor
+                    </span>
+                    <a href="#customer-reviews" @click.prevent="document.getElementById('customer-reviews')?.scrollIntoView({behavior:'smooth'})"
+                       class="kk-pdp__rating-count" style="text-decoration:none;">{{ $product->review_count }} {{ Str::plural('review', $product->review_count) }}</a>
                 </div>
                 @endif
 
-                <div style="border-top:1px solid #e5e5e5;margin:0.5rem 0;"></div>
+                <div class="kk-pdp__price" x-text="'₹' + currentPrice.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})">
+                    ₹{{ number_format($product->price, 2) }}
+                </div>
+                <p class="kk-pdp__tax">Tax Included.</p>
 
-                <!-- Price Block -->
-                <div style="margin-bottom:1rem;">
-                    @if($discountPct > 0)
-                    <div style="display:inline-block;background:#cc0c39;color:#fff;padding:0.125rem 0.5rem;border-radius:0.25rem;font-size:12px;font-weight:700;margin-bottom:0.375rem;">Limited Time Deal</div>
-                    <div style="display:flex;align-items:baseline;gap:0.5rem;">
-                        <span style="font-size:14px;color:#cc0c39;font-weight:500;">-{{ $discountPct }}%</span>
-                        <span style="font-size:1.75rem;font-weight:500;color:#0F1111;" x-text="'₹' + currentPrice.toLocaleString('en-IN')">₹{{ number_format($product->price) }}</span>
+                @php $emiNow = max(1, round($product->price / 3)); @endphp
+                <div class="kk-pdp__emi">
+                    <span class="kk-pdp__emi-tag">NEW</span>
+                    <div class="kk-pdp__emi-text">
+                        or Pay <strong>₹{{ number_format($emiNow) }} now</strong> &amp; rest later at<br>
+                        0% EMI on UPI via {{ config('app.name', 'Karmaa Kulture') }} Pay Later
                     </div>
-                    <div style="margin-top:0.125rem;">
-                        <span style="font-size:13px;color:#565959;">M.R.P.: </span>
-                        <span style="font-size:13px;color:#565959;text-decoration:line-through;" x-text="'₹' + currentMrp.toLocaleString('en-IN')">₹{{ number_format($product->mrp) }}</span>
-                    </div>
-                    @else
-                    <span style="font-size:1.75rem;font-weight:500;color:#0F1111;" x-text="'₹' + currentPrice.toLocaleString('en-IN')">₹{{ number_format($product->price) }}</span>
-                    @endif
-                    <p style="font-size:12px;color:#565959;margin-top:0.25rem;">Inclusive of all taxes</p>
+                    <button type="button" class="kk-pdp__emi-btn">
+                        BUY ON EMI
+                        <small>By snapmint</small>
+                    </button>
                 </div>
 
-                <!-- Stock Status -->
-                <div style="margin-bottom:0.75rem;">
-                    @if($product->isInStock())
-                    <span style="font-size:15px;font-weight:500;color:#007600;">&#10003; In Stock</span>
-                    @if($product->stock_quantity <= 5 && $product->stock_quantity > 0)
-                    <span style="font-size:12px;color:#cc0c39;margin-left:0.5rem;">Only {{ $product->stock_quantity }} left - order soon!</span>
-                    @endif
-                    @if($product->sales_count >= 10)
-                    <p style="font-size:12px;color:#565959;margin-top:0.125rem;">{{ number_format($product->sales_count) }}+ bought this month</p>
-                    @endif
-                    @else
-                    <span style="font-size:15px;font-weight:500;color:#cc0c39;">Currently Unavailable</span>
-                    @endif
-                </div>
+                @php
+                    $tier1 = max(1, round($product->price * 0.85));
+                    $tier2 = max(1, round($product->price * 0.82));
+                    $tier3 = max(1, round($product->price * 0.77));
+                @endphp
+                <h3 class="kk-pdp__tier-title">Beginning of the End <span class="kk-pdp__tier-accent">Sale</span></h3>
+                <ul class="kk-pdp__tiers">
+                    <li class="kk-pdp__tier"><span class="kk-pdp__tier-icon">₹</span><span>Buy any 1 and get this at <strong>₹{{ number_format($tier1) }}</strong> at checkout</span></li>
+                    <li class="kk-pdp__tier"><span class="kk-pdp__tier-icon">₹</span><span>Buy any 2 and get this at <strong>₹{{ number_format($tier2) }}</strong> at checkout</span></li>
+                    <li class="kk-pdp__tier"><span class="kk-pdp__tier-icon">₹</span><span>Buy any 3 and get this at <strong>₹{{ number_format($tier3) }}</strong> at checkout</span></li>
+                </ul>
 
-                <!-- Coupon Offers -->
-                @if(isset($activeCoupons) && $activeCoupons->count() > 0)
-                <div style="margin-bottom:1rem;" x-data="{ copiedCode: '' }">
-                    <h3 style="font-size:14px;font-weight:700;color:#0F1111;margin-bottom:0.5rem;">Offers</h3>
-                    <div style="display:flex;flex-direction:column;gap:0.5rem;">
-                        @foreach($activeCoupons as $coupon)
-                        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.625rem 0.75rem;border:1px dashed #6F9CA2;border-radius:0.5rem;background:#f8fcfc;">
-                            <div style="display:flex;align-items:center;gap:0.5rem;">
-                                <span style="display:inline-flex;align-items:center;justify-content:center;width:1.25rem;height:1.25rem;border-radius:0.25rem;background:#CC0C39;color:#fff;flex-shrink:0;">
-                                    <svg style="width:0.75rem;height:0.75rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-                                </span>
-                                <div>
-                                    <span style="font-size:13px;font-weight:600;color:#0F1111;">{{ $coupon->code }}</span>
-                                    <span style="font-size:12px;color:#565959;margin-left:0.25rem;">
-                                        @if($coupon->type === 'percentage')
-                                            {{ number_format($coupon->value) }}% off
-                                        @elseif($coupon->type === 'fixed')
-                                            ₹{{ number_format($coupon->value) }} off
-                                        @elseif($coupon->type === 'free_shipping')
-                                            Free shipping
-                                        @endif
-                                        @if($coupon->min_order_amount > 0)
-                                            on orders above ₹{{ number_format($coupon->min_order_amount) }}
-                                        @endif
-                                    </span>
-                                </div>
-                            </div>
-                            <button @click="navigator.clipboard.writeText('{{ $coupon->code }}'); copiedCode = '{{ $coupon->code }}'; setTimeout(() => copiedCode = '', 2000)"
-                                    style="font-size:12px;font-weight:600;color:#6F9CA2;background:none;border:1px solid #6F9CA2;border-radius:0.25rem;padding:0.25rem 0.625rem;cursor:pointer;white-space:nowrap;"
-                                    x-text="copiedCode === '{{ $coupon->code }}' ? 'Copied!' : 'Copy'">Copy</button>
-                        </div>
-                        @endforeach
-                    </div>
-                </div>
-                @endif
-
-                <!-- Offers (static trust offers) -->
-                <div style="margin-bottom:1rem;">
-                    @if(!isset($activeCoupons) || $activeCoupons->count() === 0)
-                    <h3 style="font-size:14px;font-weight:700;color:#0F1111;margin-bottom:0.5rem;">Offers</h3>
-                    @endif
-                    <div style="display:flex;flex-direction:column;gap:0.5rem;">
-                        <div style="display:flex;align-items:flex-start;gap:0.5rem;font-size:13px;">
-                            <span style="flex-shrink:0;margin-top:0.125rem;width:1.25rem;height:1.25rem;border-radius:0.25rem;display:flex;align-items:center;justify-content:center;background:#CC0C39;color:#fff;">
-                                <svg style="width:0.75rem;height:0.75rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
-                            </span>
-                            <div><span style="font-weight:500;color:#0F1111;">Free Delivery</span> <span style="color:#565959;">on orders above ₹499</span></div>
-                        </div>
-                        <div style="display:flex;align-items:flex-start;gap:0.5rem;font-size:13px;">
-                            <span style="flex-shrink:0;margin-top:0.125rem;width:1.25rem;height:1.25rem;border-radius:0.25rem;display:flex;align-items:center;justify-content:center;background:#CC0C39;color:#fff;">
-                                <svg style="width:0.75rem;height:0.75rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                            </span>
-                            <div><span style="font-weight:500;color:#0F1111;">Easy Returns</span> <span style="color:#565959;">7 day return & exchange policy</span></div>
-                        </div>
-                        @if($savings > 0)
-                        <div style="display:flex;align-items:flex-start;gap:0.5rem;font-size:13px;">
-                            <span style="flex-shrink:0;margin-top:0.125rem;width:1.25rem;height:1.25rem;border-radius:0.25rem;display:flex;align-items:center;justify-content:center;background:#CC0C39;color:#fff;">
-                                <svg style="width:0.75rem;height:0.75rem;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 2a2 2 0 00-2 2v14l3.5-2 3.5 2 3.5-2 3.5 2V4a2 2 0 00-2-2H5zm4.707 3.707a1 1 0 00-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L8.414 9H10a3 3 0 013 3v1a1 1 0 102 0v-1a5 5 0 00-5-5H8.414l1.293-1.293z" clip-rule="evenodd"/></svg>
-                            </span>
-                            <div><span style="font-weight:500;color:#0F1111;">You Save</span> <span style="color:#CC0C39;">₹{{ number_format($savings) }} ({{ $discountPct }}% off)</span></div>
-                        </div>
-                        @endif
-                    </div>
-                </div>
-
-                <div style="border-top:1px solid #e5e5e5;margin:0.75rem 0;"></div>
-
-                <!-- Variant Selectors -->
                 @if(!empty($variantGroups))
-                <div style="margin-bottom:1rem;">
                     @foreach($variantGroups as $attrName => $values)
-                    <div style="margin-bottom:1rem;">
-                        <h3 style="font-size:14px;font-weight:700;color:#0F1111;margin-bottom:0.5rem;">
-                            {{ $attrName }}: <span style="font-weight:400;color:#565959;" x-text="selectedAttributes['{{ $attrName }}'] || ''"></span>
-                        </h3>
-                        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+                    <div class="kk-pdp__variant-group">
+                        <h3 class="kk-pdp__variant-label">{{ $attrName }}: <span class="kk-pdp__variant-sel" x-text="selectedAttributes['{{ $attrName }}'] || ''"></span></h3>
+                        <div style="display:flex;flex-wrap:wrap;gap:8px;">
                             @foreach($values as $val)
-                            <button @click="selectAttribute('{{ $attrName }}', '{{ $val }}')"
-                                    style="border-radius:0.5rem;font-size:13px;font-weight:500;padding:0.375rem 1rem;cursor:pointer;transition:all 0.15s;background:#fff;color:#0F1111;"
-                                    :style="selectedAttributes['{{ $attrName }}'] === '{{ $val }}'
-                                        ? 'border:2px solid #6F9CA2;background:#f0f7f8;'
-                                        : 'border:2px solid #e5e5e5;'">{{ $val }}</button>
+                                <button type="button" class="kk-pdp__variant-btn"
+                                        :class="selectedAttributes['{{ $attrName }}'] === '{{ $val }}' ? 'is-active' : ''"
+                                        @click="selectAttribute('{{ $attrName }}', '{{ $val }}')">{{ $val }}</button>
                             @endforeach
                         </div>
                     </div>
                     @endforeach
-                    <div style="border-top:1px solid #e5e5e5;margin:0.75rem 0;"></div>
-                </div>
                 @endif
-            </div>
 
-            <!-- ===== RIGHT: BUY BOX ===== -->
-            <div x-ref="buyBox">
-                <div class="lg:sticky lg:top-4">
-                    <div style="border:1px solid #e5e5e5;border-radius:0.75rem;padding:1.25rem;background:#fff;">
-                        <!-- Price (desktop only - already shown in info column) -->
-                        <div class="hidden lg:block" style="margin-bottom:0.25rem;">
-                            <span style="font-size:1.75rem;font-weight:500;color:#0F1111;" x-text="'₹' + currentPrice.toLocaleString('en-IN')">₹{{ number_format($product->price) }}</span>
-                        </div>
-                        @if($discountPct > 0)
-                        <div class="hidden lg:block" style="margin-bottom:0.25rem;">
-                            <span style="font-size:13px;color:#565959;">M.R.P.: </span>
-                            <span style="font-size:13px;color:#565959;text-decoration:line-through;" x-text="'₹' + currentMrp.toLocaleString('en-IN')">₹{{ number_format($product->mrp) }}</span>
-                        </div>
-                        @endif
-                        <!-- Stock -->
-                        <div style="margin-bottom:0.75rem;">
-                            @if($product->isInStock())
-                            <span style="font-size:14px;color:#007600;font-weight:500;">In stock</span>
-                            @else
-                            <span style="font-size:14px;color:#cc0c39;font-weight:500;">Currently Unavailable</span>
-                            @endif
-                        </div>
+                <div class="kk-pdp__variant-group">
+                    <h3 class="kk-pdp__variant-label">Quantity</h3>
+                    <select x-model.number="quantity" class="kk-pdp__qty">
+                        @for($q = 1; $q <= 10; $q++)
+                        <option value="{{ $q }}">{{ $q }}</option>
+                        @endfor
+                    </select>
+                </div>
 
-                        @if(!$product->isInStock())
-                        <!-- Back in Stock Notification -->
-                        <div x-data="{ bisEmail: '{{ auth()->user()->email ?? '' }}', bisSubmitted: false, bisError: '' }" style="margin-bottom:0.75rem;">
-                            <div x-show="!bisSubmitted" style="padding:0.75rem;border:1px solid #fcd5ce;border-radius:0.5rem;background:#fff5f5;">
-                                <p style="font-size:13px;font-weight:600;color:#0F1111;margin-bottom:0.5rem;">Get notified when back in stock</p>
-                                <div style="display:flex;gap:0.375rem;">
-                                    <input type="email" x-model="bisEmail" placeholder="Enter your email"
-                                           style="flex:1;padding:0.375rem 0.5rem;border:1px solid #d5d9d9;border-radius:0.375rem;font-size:13px;outline:none;">
-                                    <button @click="
-                                        bisError = '';
-                                        if (!bisEmail || !bisEmail.includes('@')) { bisError = 'Enter a valid email'; return; }
-                                        fetch('{{ route('product.notify-back-in-stock', $product) }}', {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                                            body: JSON.stringify({ email: bisEmail })
-                                        }).then(r => r.json()).then(d => { bisSubmitted = true; }).catch(() => { bisError = 'Something went wrong'; });
-                                    " style="padding:0.375rem 0.75rem;border-radius:0.375rem;font-size:13px;font-weight:500;background:#6F9CA2;color:#fff;border:none;cursor:pointer;white-space:nowrap;">
-                                        Notify Me
-                                    </button>
-                                </div>
-                                <p x-show="bisError" x-text="bisError" style="font-size:11px;color:#cc0c39;margin-top:0.25rem;" x-cloak></p>
-                            </div>
-                            <div x-show="bisSubmitted" x-cloak style="padding:0.75rem;border:1px solid #c6f0c6;border-radius:0.5rem;background:#f0fdf4;">
-                                <div style="display:flex;align-items:center;gap:0.375rem;">
-                                    <svg style="width:1rem;height:1rem;color:#16a34a;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                    <span style="font-size:13px;color:#16a34a;font-weight:500;">We'll notify you when it's back!</span>
-                                </div>
-                            </div>
-                        </div>
-                        @endif
-
-                        @if($product->isInStock())
-                        <!-- Estimated Delivery -->
-                        @php
-                            $deliveryMin = now()->addDays(3);
-                            $deliveryMax = now()->addDays(7);
-                            // Skip weekends for min date
-                            while ($deliveryMin->isWeekend()) $deliveryMin->addDay();
-                            while ($deliveryMax->isWeekend()) $deliveryMax->addDay();
-                        @endphp
-                        <div style="margin-bottom:0.75rem;padding:0.5rem 0.625rem;border:1px solid #e5e5e5;border-radius:0.5rem;background:#f7fafa;">
-                            <div style="display:flex;align-items:flex-start;gap:0.5rem;">
-                                <svg style="width:1.125rem;height:1.125rem;color:#6F9CA2;flex-shrink:0;margin-top:1px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
-                                <div>
-                                    <span style="font-size:13px;color:#0F1111;font-weight:500;">FREE Delivery: </span>
-                                    <span style="font-size:13px;color:#0F1111;font-weight:700;">{{ $deliveryMin->format('D, d M') }} - {{ $deliveryMax->format('D, d M') }}</span>
-                                    <div style="font-size:11px;color:#565959;margin-top:2px;">Order within <span style="color:#007600;font-weight:500;">{{ 24 - now()->hour }}h {{ 60 - now()->minute }}m</span></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Quantity -->
-                        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
-                            <label style="font-size:14px;color:#0F1111;">Qty:</label>
-                            <select x-model.number="quantity" style="padding:0.5rem 1.5rem 0.5rem 0.5rem;border:1px solid #d5d9d9;border-radius:0.5rem;font-size:14px;background:#f0f2f2;color:#0F1111;cursor:pointer;outline:none;min-height:44px;">
-                                @for($q = 1; $q <= 10; $q++)
-                                <option value="{{ $q }}">{{ $q }}</option>
-                                @endfor
-                            </select>
-                        </div>
-
-                        <!-- Add to Cart -->
-                        <button @click="addToCart()"
-                                :disabled="$store.cart.isLoading || (!inStock)"
-                                style="width:100%;padding:0.75rem;border-radius:9999px;font-size:14px;font-weight:500;cursor:pointer;background:#FFA41C;color:#0F1111;border:1px solid #FF8F00;transition:background 0.15s;margin-bottom:0.5rem;"
-                                onmouseenter="this.style.background='#FA8900'" onmouseleave="this.style.background='#FFA41C'"
-                                :class="{ 'opacity-60 cursor-wait': $store.cart.isLoading }">
+                @if($product->isInStock())
+                    <div class="kk-pdp__cta-row">
+                        <button class="kk-pdp__cta kk-pdp__cta--cart"
+                                @click="addToCart()"
+                                :disabled="$store.cart.isLoading || !inStock">
                             <span x-show="!$store.cart.isLoading">Add to Cart</span>
                             <span x-show="$store.cart.isLoading" x-cloak>Adding...</span>
                         </button>
-
-                        <!-- Buy Now -->
-                        <button @click="buyNow()"
-                                :disabled="$store.cart.isLoading || (!inStock)"
-                                style="width:100%;padding:0.75rem;border-radius:9999px;font-size:14px;font-weight:500;cursor:pointer;background:#FFD814;color:#0F1111;border:1px solid #FCD200;transition:background 0.15s;"
-                                onmouseenter="this.style.background='#F7CA00'" onmouseleave="this.style.background='#FFD814'">
+                        <button class="kk-pdp__cta kk-pdp__cta--buy"
+                                @click="buyNow()"
+                                :disabled="$store.cart.isLoading || !inStock">
                             Buy Now
                         </button>
+                    </div>
+                @else
+                    <div style="padding:14px 0;font-size:14px;color:#b71c00;font-weight:600;">Currently Unavailable</div>
+                @endif
+
+                @php
+                    $deliveryMin = now()->addDays(3);
+                    $deliveryMax = now()->addDays(7);
+                    while ($deliveryMin->isWeekend()) $deliveryMin->addDay();
+                    while ($deliveryMax->isWeekend()) $deliveryMax->addDay();
+                @endphp
+                <div class="kk-pdp__meta">
+                    <strong>Free Delivery:</strong> {{ $deliveryMin->format('D, d M') }} &ndash; {{ $deliveryMax->format('D, d M') }}<br>
+                    <strong>Easy Returns:</strong> 7-day return &amp; exchange policy
+                </div>
+
+                <button type="button" class="kk-pdp__wish" @click="$store.wishlist.toggle({{ $product->id }})">
+                    <svg style="width:18px;height:18px;" :fill="$store.wishlist.has({{ $product->id }}) ? '#dc362e' : 'none'" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                    <span x-text="$store.wishlist.has({{ $product->id }}) ? 'Saved to Wishlist' : 'Save to Wishlist'">Save to Wishlist</span>
+                </button>
+            </div>
+
+        </div>
+
+        <!-- ===== SHARE + PRODUCT INFO ACCORDION ===== -->
+        <style>
+            .kk-pi { max-width: 640px; margin: 48px auto 0; }
+            .kk-pi__share {
+                display: flex; align-items: center; justify-content: center;
+                gap: 20px; padding: 20px 0 32px;
+            }
+            .kk-pi__share-label {
+                font-size: 11px; font-weight: 600; letter-spacing: 0.22em;
+                color: #2d1810; text-transform: uppercase; margin-right: 4px;
+            }
+            .kk-pi__share a {
+                color: #2d1810; opacity: 0.85;
+                display: inline-flex; align-items: center; justify-content: center;
+                transition: opacity 0.15s ease;
+            }
+            .kk-pi__share a:hover { opacity: 1; }
+            .kk-pi__share a svg { width: 18px; height: 18px; }
+
+            .kk-pi__item { border-top: 1px solid #c9b393; }
+            .kk-pi__item:last-of-type { border-bottom: 1px solid #c9b393; }
+            .kk-pi__btn {
+                width: 100%; display: flex; align-items: center; justify-content: space-between;
+                padding: 22px 4px; background: none; border: none; cursor: pointer;
+                font-family: inherit; text-align: left;
+            }
+            .kk-pi__btn-label {
+                font-size: 13px; font-weight: 600; letter-spacing: 0.22em;
+                color: #2d1810; text-transform: uppercase;
+            }
+            .kk-pi__btn-icon {
+                position: relative; width: 14px; height: 14px; flex-shrink: 0;
+            }
+            .kk-pi__btn-icon::before,
+            .kk-pi__btn-icon::after {
+                content: ''; position: absolute;
+                background: #2d1810; transition: transform 0.25s ease;
+            }
+            .kk-pi__btn-icon::before {
+                left: 0; top: 50%; width: 100%; height: 1.5px;
+                transform: translateY(-50%);
+            }
+            .kk-pi__btn-icon::after {
+                top: 0; left: 50%; width: 1.5px; height: 100%;
+                transform: translateX(-50%) scaleY(1);
+            }
+            .kk-pi__btn[aria-expanded="true"] .kk-pi__btn-icon::after { transform: translateX(-50%) scaleY(0); }
+
+            .kk-pi__panel { padding: 0 4px 22px; font-size: 14px; line-height: 1.7; color: #2d1810; }
+            .kk-pi__panel p { margin: 0 0 10px; }
+            .kk-pi__panel p:last-child { margin: 0; }
+            .kk-pi__panel ul { margin: 0 0 10px; padding-left: 20px; }
+            .kk-pi__panel dl { display: grid; grid-template-columns: 1fr 2fr; gap: 6px 16px; margin: 0; }
+            .kk-pi__panel dt { font-weight: 600; color: #7a6555; }
+            .kk-pi__panel dd { margin: 0; color: #2d1810; }
+        </style>
+
+        @php
+            $shareUrl = urlencode(route('product.show', $product));
+            $shareText = urlencode($product->name);
+        @endphp
+
+        <div class="kk-pi">
+            <!-- SHARE row -->
+            <div class="kk-pi__share">
+                <span class="kk-pi__share-label">Share</span>
+                <a href="https://www.facebook.com/sharer/sharer.php?u={{ $shareUrl }}" target="_blank" rel="noopener" aria-label="Share on Facebook">
+                    <svg fill="currentColor" viewBox="0 0 24 24"><path d="M22.675 0h-21.35C.593 0 0 .593 0 1.325v21.351C0 23.407.593 24 1.325 24H12.82V14.706h-3.13v-3.622h3.13V8.413c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.464.099 2.795.143v3.24h-1.917c-1.504 0-1.795.715-1.795 1.764v2.313h3.587l-.467 3.622h-3.12V24h6.116c.73 0 1.323-.593 1.323-1.324V1.325C24 .593 23.407 0 22.675 0z"/></svg>
+                </a>
+                <a href="https://twitter.com/intent/tweet?url={{ $shareUrl }}&text={{ $shareText }}" target="_blank" rel="noopener" aria-label="Share on Twitter">
+                    <svg fill="currentColor" viewBox="0 0 24 24"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723 10.054 10.054 0 01-3.127 1.184 4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.937 4.937 0 004.604 3.417 9.868 9.868 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.054 0 13.999-7.496 13.999-13.985 0-.21 0-.42-.015-.63A9.936 9.936 0 0024 4.59z"/></svg>
+                </a>
+                <a href="https://wa.me/?text={{ $shareText }}%20{{ $shareUrl }}" target="_blank" rel="noopener" aria-label="Share on WhatsApp">
+                    <svg fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                </a>
+                <a href="mailto:?subject={{ $shareText }}&body={{ $shareText }}%20{{ $shareUrl }}" aria-label="Share by Email">
+                    <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                </a>
+            </div>
+
+            {{-- PRODUCT INFO --}}
+            <div class="kk-pi__item" x-data="{ open: false }">
+                <button class="kk-pi__btn" @click="open = !open" :aria-expanded="open ? 'true' : 'false'">
+                    <span class="kk-pi__btn-label">Product Info</span>
+                    <span class="kk-pi__btn-icon" aria-hidden="true"></span>
+                </button>
+                <div class="kk-pi__panel" x-show="open" x-collapse>
+                    <dl>
+                        @if($product->brand)<dt>Brand</dt><dd>{{ $product->brand->name }}</dd>@endif
+                        @if($product->sku)<dt>SKU</dt><dd>{{ $product->sku }}</dd>@endif
+                        @if($product->category)<dt>Category</dt><dd>{{ $product->category->name }}</dd>@endif
+                        @if($product->attributes && count($product->attributes) > 0)
+                            @foreach($product->attributes as $key => $value)
+                                <dt>{{ $key }}</dt><dd>{{ is_array($value) ? implode(', ', $value) : $value }}</dd>
+                            @endforeach
                         @endif
-
-                        <!-- Secure Transaction -->
-                        <div style="margin-top:1rem;display:flex;align-items:center;gap:0.375rem;">
-                            <svg style="width:0.875rem;height:0.875rem;color:#6F9CA2;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                            <span style="font-size:12px;font-weight:500;color:#6F9CA2;">Secure transaction</span>
-                        </div>
-
-                        <!-- Payment Badges -->
-                        <div style="display:flex;align-items:center;gap:0.375rem;flex-wrap:wrap;margin-top:0.5rem;">
-                            <span style="font-size:10px;font-weight:600;color:#1A1F71;background:#f0f0f0;padding:0.125rem 0.375rem;border-radius:0.125rem;">VISA</span>
-                            <span style="font-size:10px;font-weight:600;color:#EB001B;background:#f0f0f0;padding:0.125rem 0.375rem;border-radius:0.125rem;">MC</span>
-                            <span style="font-size:10px;font-weight:600;color:#6F9CA2;background:#f0f0f0;padding:0.125rem 0.375rem;border-radius:0.125rem;">UPI</span>
-                            <span style="font-size:10px;font-weight:600;color:#005BAC;background:#f0f0f0;padding:0.125rem 0.375rem;border-radius:0.125rem;">RuPay</span>
-                            <span style="font-size:10px;font-weight:600;color:#333;background:#f0f0f0;padding:0.125rem 0.375rem;border-radius:0.125rem;">Net Banking</span>
-                        </div>
-
-                        <!-- Pay on Delivery -->
-                        <div style="margin-top:0.5rem;">
-                            <span style="font-size:10px;font-weight:600;color:#fff;background:#6F9CA2;padding:0.125rem 0.5rem;border-radius:0.125rem;">Pay on Delivery</span>
-                        </div>
-                    </div>
-
-                    <!-- Seller Info -->
-                    <div style="margin-top:0.75rem;font-size:13px;color:#565959;padding:0 0.25rem;">
-                        Ships from <span style="font-weight:500;color:#0F1111;">{{ config('app.name') }}</span>
-                        @if($product->seller)
-                        <br>Sold by <span style="font-weight:500;color:#007185;">{{ $product->seller->business_name ?? $product->seller->name ?? config('app.name') }}</span>
+                        @if($product->specifications && count($product->specifications) > 0)
+                            @foreach($product->specifications as $key => $value)
+                                <dt>{{ $key }}</dt><dd>{{ is_array($value) ? implode(', ', $value) : $value }}</dd>
+                            @endforeach
                         @endif
-                    </div>
+                    </dl>
+                </div>
+            </div>
 
-                    <!-- Wishlist -->
-                    <div style="margin-top:0.875rem;padding:0 0.25rem;">
-                        <button @click="$store.wishlist.toggle({{ $product->id }})"
-                                style="display:inline-flex;align-items:center;gap:0.5rem;font-size:15px;font-weight:600;background:none;border:none;cursor:pointer;padding:0;color:#0F1111;white-space:nowrap;">
-                            <svg style="width:1.25rem;height:1.25rem;flex-shrink:0;" :fill="$store.wishlist.has({{ $product->id }}) ? 'currentColor' : 'none'" :style="$store.wishlist.has({{ $product->id }}) ? 'color:#ef4444;' : 'color:#0F1111;'" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
-                            <span x-text="$store.wishlist.has({{ $product->id }}) ? 'Remove from Wishlist' : 'Add to Wishlist'">Add to Wishlist</span>
-                        </button>
-                    </div>
+            {{-- DESCRIPTION --}}
+            <div class="kk-pi__item" x-data="{ open: false }">
+                <button class="kk-pi__btn" @click="open = !open" :aria-expanded="open ? 'true' : 'false'">
+                    <span class="kk-pi__btn-label">Description</span>
+                    <span class="kk-pi__btn-icon" aria-hidden="true"></span>
+                </button>
+                <div class="kk-pi__panel" x-show="open" x-collapse>
+                    @if($product->short_description)
+                        <p>{!! nl2br(e($product->short_description)) !!}</p>
+                    @endif
+                    @if($product->description)
+                        <div>{!! $product->description !!}</div>
+                    @endif
+                    @if(!$product->short_description && !$product->description)
+                        <p>{{ $product->name }} &mdash; thoughtfully designed and crafted for the modern wardrobe.</p>
+                    @endif
+                </div>
+            </div>
 
-                    <!-- Share -->
-                    <div style="margin-top:0.5rem;padding:0 0.25rem;display:flex;align-items:center;gap:1rem;">
-                        <button @click="shareViaWhatsApp()" style="display:flex;align-items:center;gap:0.25rem;font-size:12px;font-weight:500;color:#565959;background:none;border:none;cursor:pointer;" aria-label="Share on WhatsApp">
-                            <svg style="width:0.875rem;height:0.875rem;color:#25D366;" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                            Share
-                        </button>
-                        <button @click="copyLink()" style="display:flex;align-items:center;gap:0.25rem;font-size:12px;font-weight:500;color:#565959;background:none;border:none;cursor:pointer;">
-                            <svg style="width:0.875rem;height:0.875rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                            <span x-text="linkCopied ? 'Copied!' : 'Copy link'"></span>
-                        </button>
-                    </div>
+            {{-- SHIPPING, RETURNS & EXCHANGE --}}
+            <div class="kk-pi__item" x-data="{ open: false }">
+                <button class="kk-pi__btn" @click="open = !open" :aria-expanded="open ? 'true' : 'false'">
+                    <span class="kk-pi__btn-label">Shipping, Returns &amp; Exchange</span>
+                    <span class="kk-pi__btn-icon" aria-hidden="true"></span>
+                </button>
+                <div class="kk-pi__panel" x-show="open" x-collapse>
+                    <p><strong>Shipping:</strong> Free delivery on orders above &#8377;499. Standard delivery in 3&ndash;7 business days across India.</p>
+                    <p><strong>Returns:</strong> Easy 7-day return &amp; exchange policy. Items must be unworn, unwashed and with original tags attached.</p>
+                    <p><strong>Exchange:</strong> One free size or colour exchange per order. Reach out via WhatsApp or email to initiate.</p>
+                </div>
+            </div>
+
+            {{-- MANUFACTURED AND PACKAGED BY --}}
+            <div class="kk-pi__item" x-data="{ open: false }">
+                <button class="kk-pi__btn" @click="open = !open" :aria-expanded="open ? 'true' : 'false'">
+                    <span class="kk-pi__btn-label">Manufactured and Packaged by</span>
+                    <span class="kk-pi__btn-icon" aria-hidden="true"></span>
+                </button>
+                <div class="kk-pi__panel" x-show="open" x-collapse>
+                    <p><strong>{{ $product->brand?->name ?? config('app.name', 'Karmaa Kulture') }}</strong></p>
+                    <p>Made in India. Crafted at our partner mills with fair-wage labour and ethical sourcing standards. Country of origin: India.</p>
+                    @if($product->seller)
+                        <p><strong>Sold by:</strong> {{ $product->seller->business_name ?? $product->seller->name ?? config('app.name') }}</p>
+                    @endif
                 </div>
             </div>
         </div>
 
-        <!-- ===== ABOUT THIS ITEM ===== -->
-        @if($product->short_description)
-        <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid #e5e5e5;">
-            <h2 style="font-size:18px;font-weight:700;color:#0F1111;margin-bottom:0.75rem;">About this item</h2>
-            <div style="font-size:14px;color:#333;line-height:1.7;">
-                {!! nl2br(e($product->short_description)) !!}
-            </div>
-        </div>
-        @endif
 
-        <!-- ===== PRODUCT DESCRIPTION ===== -->
-        @if($product->description)
-        <div style="margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid #e5e5e5;">
-            <h2 style="font-size:18px;font-weight:700;color:#0F1111;margin-bottom:0.75rem;">Product Description</h2>
-            <div style="font-size:14px;color:#333;line-height:1.7;">
-                {!! $product->description !!}
-            </div>
-        </div>
-        @endif
 
-        <!-- ===== PRODUCT SPECIFICATIONS ===== -->
-        @if(($product->specifications && count($product->specifications) > 0) || ($product->attributes && count($product->attributes) > 0))
-        <div style="margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid #e5e5e5;">
-            <h2 style="font-size:18px;font-weight:700;color:#0F1111;margin-bottom:0.75rem;">Product Specifications</h2>
-            <div style="max-width:40rem;">
-                <table style="width:100%;font-size:14px;border-collapse:collapse;">
-                    @if($product->brand)
-                    <tr>
-                        <td style="padding:0.625rem 0.75rem;font-weight:500;color:#565959;width:40%;border-bottom:1px solid #e5e5e5;background:#fafafa;">Brand</td>
-                        <td style="padding:0.625rem 0.75rem;color:#0F1111;border-bottom:1px solid #e5e5e5;">{{ $product->brand->name }}</td>
-                    </tr>
-                    @endif
-                    @if($product->sku)
-                    <tr>
-                        <td style="padding:0.625rem 0.75rem;font-weight:500;color:#565959;width:40%;border-bottom:1px solid #e5e5e5;">SKU</td>
-                        <td style="padding:0.625rem 0.75rem;color:#0F1111;border-bottom:1px solid #e5e5e5;">{{ $product->sku }}</td>
-                    </tr>
-                    @endif
-                    @if($product->category)
-                    <tr>
-                        <td style="padding:0.625rem 0.75rem;font-weight:500;color:#565959;width:40%;border-bottom:1px solid #e5e5e5;background:#fafafa;">Category</td>
-                        <td style="padding:0.625rem 0.75rem;color:#0F1111;border-bottom:1px solid #e5e5e5;">{{ $product->category->name }}</td>
-                    </tr>
-                    @endif
-                    @if($product->attributes && count($product->attributes) > 0)
-                        @foreach($product->attributes as $key => $value)
-                        <tr>
-                            <td style="padding:0.625rem 0.75rem;font-weight:500;color:#565959;width:40%;border-bottom:1px solid #e5e5e5;{{ $loop->even ? 'background:#fafafa;' : '' }}">{{ $key }}</td>
-                            <td style="padding:0.625rem 0.75rem;color:#0F1111;border-bottom:1px solid #e5e5e5;">{{ is_array($value) ? implode(', ', $value) : $value }}</td>
-                        </tr>
-                        @endforeach
-                    @endif
-                    @if($product->specifications && count($product->specifications) > 0)
-                        @foreach($product->specifications as $key => $value)
-                        <tr>
-                            <td style="padding:0.625rem 0.75rem;font-weight:500;color:#565959;width:40%;border-bottom:1px solid #e5e5e5;{{ $loop->even ? 'background:#fafafa;' : '' }}">{{ $key }}</td>
-                            <td style="padding:0.625rem 0.75rem;color:#0F1111;border-bottom:1px solid #e5e5e5;">{{ is_array($value) ? implode(', ', $value) : $value }}</td>
-                        </tr>
-                        @endforeach
-                    @endif
-                </table>
-            </div>
-        </div>
-        @endif
+        <!-- ===== CUSTOMER REVIEWS (Judge.me-style) ===== -->
+        <style>
+            .kk-rev { margin-top: 56px; padding-top: 32px; }
+            .kk-rev__title { text-align: center; font-size: 22px; font-weight: 600; color: #2d1810; margin: 0 0 28px; }
+            .kk-rev__summary {
+                display: grid;
+                grid-template-columns: 1fr 1fr auto;
+                align-items: center;
+                gap: 32px;
+                padding: 8px 0 24px;
+            }
+            @media (max-width: 768px) {
+                .kk-rev__summary { grid-template-columns: 1fr; text-align: center; gap: 20px; }
+            }
+            .kk-rev__overall { text-align: center; }
+            .kk-rev__stars { display: inline-flex; gap: 1px; vertical-align: middle; }
+            .kk-rev__stars svg { width: 16px; height: 16px; }
+            .kk-rev__avg { font-size: 14px; font-weight: 500; color: #2d1810; margin-left: 6px; vertical-align: middle; }
+            .kk-rev__based { font-size: 13px; color: #2d1810; margin: 8px 0 0; display: inline-flex; align-items: center; gap: 6px; justify-content: center; }
+            .kk-rev__verified-icon {
+                width: 16px; height: 16px; border-radius: 50%;
+                background: #2a9d3e; color: #fff;
+                display: inline-flex; align-items: center; justify-content: center;
+            }
+            .kk-rev__verified-icon svg { width: 11px; height: 11px; }
 
-        <!-- ===== FREQUENTLY BOUGHT TOGETHER ===== -->
-        @if(isset($crossSellProducts) && $crossSellProducts->count() > 0)
-        <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid #e5e5e5;" x-data="{
-            items: [
-                { id: {{ $product->id }}, name: '{{ addslashes($product->name) }}', price: {{ (float)$product->price }}, image: '{{ $product->primary_image_url }}', checked: true, url: '{{ route('product.show', $product) }}' },
-                @foreach($crossSellProducts as $cs)
-                { id: {{ $cs->id }}, name: '{{ addslashes($cs->name) }}', price: {{ (float)$cs->price }}, image: '{{ $cs->primary_image_url }}', checked: true, url: '{{ route('product.show', $cs) }}' },
-                @endforeach
-            ],
-            get total() { return this.items.filter(i => i.checked).reduce((s, i) => s + i.price, 0); },
-            get checkedIds() { return this.items.filter(i => i.checked).map(i => i.id); }
-        }">
-            <h2 style="font-size:18px;font-weight:700;color:#0F1111;margin-bottom:1rem;">Frequently Bought Together</h2>
-            <div class="flex flex-wrap items-center gap-3">
-                <template x-for="(item, idx) in items" :key="item.id">
-                    <div style="display:flex;align-items:center;gap:0.75rem;">
-                        <span x-show="idx > 0" style="font-size:1.5rem;font-weight:300;color:#ccc;">+</span>
-                        <div style="position:relative;">
-                            <a :href="item.url" style="display:block;width:90px;height:90px;border-radius:0.5rem;overflow:hidden;border:1px solid #e5e5e5;background:#fff;" class="sm:!w-[120px] sm:!h-[120px]">
-                                <img :src="item.image" :alt="item.name" style="width:100%;height:100%;object-fit:contain;padding:0.25rem;">
-                            </a>
-                            <label style="position:absolute;top:-0.25rem;right:-0.25rem;background:#fff;border-radius:0.25rem;box-shadow:0 1px 3px rgba(0,0,0,0.15);cursor:pointer;">
-                                <input type="checkbox" x-model="item.checked" :disabled="idx === 0"
-                                       style="width:1.125rem;height:1.125rem;accent-color:#6F9CA2;cursor:pointer;">
-                            </label>
-                        </div>
-                    </div>
-                </template>
+            .kk-rev__bars { display: flex; flex-direction: column; gap: 6px; }
+            .kk-rev__bar-row { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+            .kk-rev__bar-stars { display: inline-flex; gap: 1px; flex-shrink: 0; width: 80px; }
+            .kk-rev__bar-stars svg { width: 12px; height: 12px; }
+            .kk-rev__bar-track { flex: 1; height: 10px; background: #e5e5e5; border-radius: 2px; overflow: hidden; }
+            .kk-rev__bar-fill { height: 100%; background: #0d1929; }
+            .kk-rev__bar-count { width: 24px; text-align: right; font-size: 12px; color: #2d1810; }
 
-                <div style="margin-left:1rem;">
-                    <p style="font-size:14px;color:#565959;margin-bottom:0.375rem;">
-                        Total: <span style="font-weight:700;color:#0F1111;" x-text="'₹' + total.toLocaleString('en-IN')"></span>
-                    </p>
-                    <button @click="addAllToCart(checkedIds)"
-                            style="padding:0.5rem 1.25rem;border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer;background:#FFD814;color:#0F1111;border:1px solid #FCD200;transition:background 0.15s;white-space:nowrap;"
-                            onmouseenter="this.style.background='#F7CA00'" onmouseleave="this.style.background='#FFD814'">
-                        Add all to Cart
-                    </button>
-                </div>
-            </div>
+            .kk-rev__write {
+                background: #0d1929; color: #fff;
+                padding: 14px 28px; border: none; border-radius: 2px;
+                font-size: 14px; font-weight: 600; cursor: pointer;
+                transition: background 0.15s ease; white-space: nowrap;
+            }
+            .kk-rev__write:hover { background: #1f2937; }
 
-            <!-- Item names & prices -->
-            <div style="margin-top:0.75rem;">
-                <template x-for="item in items" :key="item.id">
-                    <div style="display:flex;align-items:center;gap:0.5rem;font-size:13px;padding:0.25rem 0;">
-                        <input type="checkbox" x-model="item.checked" style="width:0.875rem;height:0.875rem;accent-color:#6F9CA2;cursor:pointer;">
-                        <a :href="item.url" style="color:#007185;font-weight:500;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:20rem;" x-text="item.name"></a>
-                        <span style="font-weight:700;color:#0F1111;flex-shrink:0;" x-text="'₹' + item.price.toLocaleString('en-IN')"></span>
-                    </div>
-                </template>
-            </div>
-        </div>
-        @endif
+            .kk-rev__divider { border-top: 1px solid #e3d2b3; margin: 8px 0; }
 
-        <!-- ===== COMPARE WITH SIMILAR ITEMS ===== -->
-        @if(isset($compareProducts) && $compareProducts->count() >= 2)
-        <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid #e5e5e5;">
-            <h2 style="font-size:18px;font-weight:700;color:#0F1111;margin-bottom:1rem;">Compare with similar items</h2>
-            <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-                <table style="width:100%;min-width:480px;border-collapse:collapse;font-size:13px;">
-                    <!-- Product Images -->
-                    <tr>
-                        <td style="padding:0.75rem;width:100px;font-weight:600;color:#565959;vertical-align:top;border-bottom:1px solid #e5e5e5;"></td>
-                        <td style="padding:0.75rem;text-align:center;border-bottom:1px solid #e5e5e5;background:#f8fcfc;">
-                            <div style="width:120px;height:120px;margin:0 auto;border:1px solid #e5e5e5;border-radius:0.5rem;overflow:hidden;background:#fff;">
-                                <img src="{{ $product->primary_image_url }}" alt="{{ $product->name }}" style="width:100%;height:100%;object-fit:contain;padding:0.25rem;">
-                            </div>
-                            <p style="font-size:12px;font-weight:600;color:#0F1111;margin-top:0.5rem;line-height:1.3;">{{ Str::limit($product->name, 40) }}</p>
-                        </td>
-                        @foreach($compareProducts->take(3) as $cp)
-                        <td style="padding:0.75rem;text-align:center;border-bottom:1px solid #e5e5e5;">
-                            <a href="{{ route('product.show', $cp) }}" style="text-decoration:none;">
-                                <div style="width:120px;height:120px;margin:0 auto;border:1px solid #e5e5e5;border-radius:0.5rem;overflow:hidden;background:#fff;">
-                                    <img src="{{ $cp->primary_image_url }}" alt="{{ $cp->name }}" style="width:100%;height:100%;object-fit:contain;padding:0.25rem;">
-                                </div>
-                                <p style="font-size:12px;font-weight:500;color:#007185;margin-top:0.5rem;line-height:1.3;">{{ Str::limit($cp->name, 40) }}</p>
-                            </a>
-                        </td>
-                        @endforeach
-                    </tr>
-                    <!-- Price -->
-                    <tr>
-                        <td style="padding:0.5rem 0.75rem;font-weight:600;color:#565959;border-bottom:1px solid #e5e5e5;">Price</td>
-                        <td style="padding:0.5rem 0.75rem;text-align:center;font-weight:700;color:#0F1111;border-bottom:1px solid #e5e5e5;background:#f8fcfc;">₹{{ number_format($product->price) }}</td>
-                        @foreach($compareProducts->take(3) as $cp)
-                        <td style="padding:0.5rem 0.75rem;text-align:center;font-weight:700;color:#0F1111;border-bottom:1px solid #e5e5e5;">₹{{ number_format($cp->price) }}</td>
-                        @endforeach
-                    </tr>
-                    <!-- Rating -->
-                    <tr>
-                        <td style="padding:0.5rem 0.75rem;font-weight:600;color:#565959;border-bottom:1px solid #e5e5e5;">Rating</td>
-                        <td style="padding:0.5rem 0.75rem;text-align:center;border-bottom:1px solid #e5e5e5;background:#f8fcfc;">
-                            @if($product->rating > 0)
-                            <div style="display:flex;align-items:center;justify-content:center;gap:0.25rem;">
-                                <span style="font-weight:600;color:#0F1111;">{{ number_format($product->rating, 1) }}</span>
-                                <svg style="width:0.875rem;height:0.875rem;color:#FFA41C;" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                            </div>
-                            @else
-                            <span style="color:#565959;">-</span>
-                            @endif
-                        </td>
-                        @foreach($compareProducts->take(3) as $cp)
-                        <td style="padding:0.5rem 0.75rem;text-align:center;border-bottom:1px solid #e5e5e5;">
-                            @if($cp->rating > 0)
-                            <div style="display:flex;align-items:center;justify-content:center;gap:0.25rem;">
-                                <span style="font-weight:600;color:#0F1111;">{{ number_format($cp->rating, 1) }}</span>
-                                <svg style="width:0.875rem;height:0.875rem;color:#FFA41C;" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                            </div>
-                            @else
-                            <span style="color:#565959;">-</span>
-                            @endif
-                        </td>
-                        @endforeach
-                    </tr>
-                    <!-- Brand -->
-                    <tr>
-                        <td style="padding:0.5rem 0.75rem;font-weight:600;color:#565959;border-bottom:1px solid #e5e5e5;">Brand</td>
-                        <td style="padding:0.5rem 0.75rem;text-align:center;color:#0F1111;border-bottom:1px solid #e5e5e5;background:#f8fcfc;">{{ $product->brand?->name ?? '-' }}</td>
-                        @foreach($compareProducts->take(3) as $cp)
-                        <td style="padding:0.5rem 0.75rem;text-align:center;color:#0F1111;border-bottom:1px solid #e5e5e5;">{{ $cp->brand?->name ?? '-' }}</td>
-                        @endforeach
-                    </tr>
-                    <!-- Availability -->
-                    <tr>
-                        <td style="padding:0.5rem 0.75rem;font-weight:600;color:#565959;border-bottom:1px solid #e5e5e5;">Availability</td>
-                        <td style="padding:0.5rem 0.75rem;text-align:center;border-bottom:1px solid #e5e5e5;background:#f8fcfc;">
-                            <span style="color:{{ $product->isInStock() ? '#007600' : '#cc0c39' }};">{{ $product->isInStock() ? 'In Stock' : 'Out of Stock' }}</span>
-                        </td>
-                        @foreach($compareProducts->take(3) as $cp)
-                        <td style="padding:0.5rem 0.75rem;text-align:center;border-bottom:1px solid #e5e5e5;">
-                            <span style="color:{{ $cp->isInStock() ? '#007600' : '#cc0c39' }};">{{ $cp->isInStock() ? 'In Stock' : 'Out of Stock' }}</span>
-                        </td>
-                        @endforeach
-                    </tr>
-                    <!-- Add to Cart row -->
-                    <tr>
-                        <td style="padding:0.75rem;"></td>
-                        <td style="padding:0.75rem;text-align:center;background:#f8fcfc;">
-                            <button @click="addToCart()" style="padding:0.375rem 1rem;border-radius:9999px;font-size:12px;font-weight:600;cursor:pointer;background:#FFD814;color:#0F1111;border:1px solid #FCD200;">Add to Cart</button>
-                        </td>
-                        @foreach($compareProducts->take(3) as $cp)
-                        <td style="padding:0.75rem;text-align:center;">
-                            @if($cp->isInStock())
-                            <button @click="$store.cart.add({{ $cp->id }})" style="padding:0.375rem 1rem;border-radius:9999px;font-size:12px;font-weight:600;cursor:pointer;background:#FFD814;color:#0F1111;border:1px solid #FCD200;">Add to Cart</button>
-                            @endif
-                        </td>
-                        @endforeach
-                    </tr>
-                </table>
-            </div>
-        </div>
-        @endif
+            .kk-rev__sort-row { display: flex; align-items: center; padding: 16px 0; }
+            .kk-rev__sort {
+                font-size: 13px; color: #2d1810;
+                background: none; border: none;
+                display: inline-flex; align-items: center; gap: 6px;
+                cursor: pointer; padding: 4px 0;
+            }
+            .kk-rev__sort svg { width: 14px; height: 14px; }
 
-        <!-- ===== CUSTOMER REVIEWS ===== -->
-        <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid #e5e5e5;" id="customer-reviews">
-            <h2 style="font-size:18px;font-weight:700;color:#0F1111;margin-bottom:1rem;">Customer Reviews</h2>
+            .kk-rev__list { border-top: 1px solid #e3d2b3; }
+            .kk-rev__item { padding: 20px 0; border-bottom: 1px solid #e3d2b3; }
+            .kk-rev__item-head {
+                display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+                margin-bottom: 10px;
+            }
+            .kk-rev__item-stars { display: inline-flex; gap: 1px; }
+            .kk-rev__item-stars svg { width: 14px; height: 14px; }
+            .kk-rev__item-date { font-size: 13px; color: #7a6555; flex-shrink: 0; }
+            .kk-rev__item-user { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+            .kk-rev__item-avatar {
+                width: 28px; height: 28px; border-radius: 50%;
+                background: #efe2cb; color: #2d1810;
+                display: flex; align-items: center; justify-content: center;
+                font-size: 12px; font-weight: 600;
+            }
+            .kk-rev__item-name { font-size: 14px; font-weight: 500; color: #2d1810; }
+            .kk-rev__item-verified {
+                background: #0d1929; color: #fff;
+                font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+                padding: 2px 7px; border-radius: 2px;
+            }
+            .kk-rev__item-title { font-size: 14px; font-weight: 600; color: #2d1810; margin: 4px 0; }
+            .kk-rev__item-body { font-size: 14px; color: #2d1810; line-height: 1.6; margin: 4px 0 0; }
+            .kk-rev__empty { text-align: center; padding: 32px 0; font-size: 14px; color: #7a6555; }
+        </style>
+        <div class="kk-rev" id="customer-reviews">
+            <h2 class="kk-rev__title">Customer Reviews</h2>
 
-            @if($product->review_count > 0)
-            <!-- Rating Summary with Distribution -->
-            <div class="flex flex-col sm:flex-row gap-6" style="margin-bottom:1.5rem;">
-                <!-- Overall Rating -->
-                <div style="text-align:center;min-width:120px;">
-                    <div style="font-size:3rem;font-weight:700;color:#0F1111;line-height:1;">{{ number_format($product->rating, 1) }}</div>
-                    <div style="display:flex;align-items:center;gap:0.125rem;justify-content:center;margin-top:0.25rem;">
+            @php
+                $avg = $product->review_count > 0 ? $product->rating : 0;
+                $avgRounded = round($avg);
+            @endphp
+
+            <div class="kk-rev__summary">
+                <div class="kk-rev__overall">
+                    <span class="kk-rev__stars">
                         @for($s = 1; $s <= 5; $s++)
-                        <svg style="width:1.125rem;height:1.125rem;color:{{ $s <= round($product->rating) ? '#FFA41C' : '#ddd' }};" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                            <svg fill="{{ $s <= $avgRounded ? '#0d1929' : '#c9b393' }}" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
                         @endfor
-                    </div>
-                    <p style="font-size:13px;color:#565959;margin-top:0.25rem;">{{ $totalReviews }} {{ Str::plural('review', $totalReviews) }}</p>
+                    </span>
+                    <span class="kk-rev__avg">{{ number_format($avg, 2) }} out of 5</span>
+                    <p class="kk-rev__based">
+                        Based on {{ $totalReviews }} {{ Str::plural('review', $totalReviews) }}
+                        <span class="kk-rev__verified-icon" title="Verified reviews">
+                            <svg fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        </span>
+                    </p>
                 </div>
 
-                <!-- Rating Distribution Bars -->
-                <div style="flex:1;max-width:20rem;">
+                <div class="kk-rev__bars">
                     @for($star = 5; $star >= 1; $star--)
-                    @php $pct = $totalReviews > 0 ? round(($ratingDist[$star] / $totalReviews) * 100) : 0; @endphp
-                    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.375rem;">
-                        <span style="font-size:13px;color:#007185;white-space:nowrap;width:3rem;">{{ $star }} star</span>
-                        <div style="flex:1;height:1.125rem;background:#e5e5e5;border-radius:0.25rem;overflow:hidden;">
-                            <div style="height:100%;background:#FFA41C;border-radius:0.25rem;width:{{ $pct }}%;transition:width 0.3s;"></div>
+                    @php
+                        $count = $ratingDist[$star] ?? 0;
+                        $pct = $totalReviews > 0 ? ($count / $totalReviews) * 100 : 0;
+                    @endphp
+                    <div class="kk-rev__bar-row">
+                        <span class="kk-rev__bar-stars">
+                            @for($s = 1; $s <= 5; $s++)
+                                <svg fill="{{ $s <= $star ? '#0d1929' : '#c9b393' }}" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                            @endfor
+                        </span>
+                        <div class="kk-rev__bar-track">
+                            <div class="kk-rev__bar-fill" style="width: {{ $pct }}%;"></div>
                         </div>
-                        <span style="font-size:12px;color:#565959;width:2.5rem;text-align:right;">{{ $pct }}%</span>
+                        <span class="kk-rev__bar-count">{{ $count }}</span>
                     </div>
                     @endfor
                 </div>
+
+                <button type="button" class="kk-rev__write" @click="document.getElementById('write-review-form')?.scrollIntoView({behavior:'smooth'})">
+                    Write a review
+                </button>
             </div>
 
-            <!-- Individual Reviews -->
-            <div>
-                @foreach($product->reviews as $review)
-                <div style="padding-bottom:1rem;margin-bottom:1rem;border-bottom:1px solid #e5e5e5;">
-                    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">
-                        <div style="width:1.75rem;height:1.75rem;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:#6F9CA2;color:#fff;">
-                            {{ strtoupper(substr($review->user?->first_name ?? 'A', 0, 1)) }}
-                        </div>
-                        <span style="font-size:13px;font-weight:500;color:#0F1111;">{{ $review->user?->first_name ?? 'Anonymous' }}</span>
-                    </div>
-                    <div style="display:flex;align-items:center;gap:0.25rem;margin-bottom:0.25rem;">
-                        @for($s = 1; $s <= 5; $s++)
-                        <svg style="width:0.875rem;height:0.875rem;color:{{ $s <= $review->rating ? '#FFA41C' : '#ddd' }};" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                        @endfor
-                        @if($review->title)
-                        <span style="font-size:14px;font-weight:700;color:#0F1111;margin-left:0.25rem;">{{ $review->title }}</span>
-                        @endif
-                    </div>
-                    <p style="font-size:12px;color:#565959;margin-bottom:0.375rem;">Reviewed on {{ $review->created_at->format('d M Y') }}</p>
-                    <p style="font-size:14px;color:#333;">{{ $review->review }}</p>
+            @if($product->review_count > 0)
+                <div class="kk-rev__sort-row" x-data="{ open: false }">
+                    <button class="kk-rev__sort" @click="open = !open">
+                        Most Recent
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
                 </div>
-                @endforeach
-            </div>
+
+                <div class="kk-rev__list">
+                    @foreach($product->reviews as $review)
+                    <div class="kk-rev__item">
+                        <div class="kk-rev__item-head">
+                            <span class="kk-rev__item-stars">
+                                @for($s = 1; $s <= 5; $s++)
+                                    <svg fill="{{ $s <= $review->rating ? '#0d1929' : '#c9b393' }}" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                @endfor
+                            </span>
+                            <span class="kk-rev__item-date">{{ $review->created_at->format('m/d/Y') }}</span>
+                        </div>
+                        <div class="kk-rev__item-user">
+                            <div class="kk-rev__item-avatar">{{ strtoupper(substr($review->user?->first_name ?? 'A', 0, 1)) }}</div>
+                            <span class="kk-rev__item-name">{{ trim(($review->user?->first_name ?? 'Anonymous') . ' ' . ($review->user?->last_name ?? '')) }}</span>
+                            <span class="kk-rev__item-verified">Verified</span>
+                        </div>
+                        @if($review->title)
+                        <p class="kk-rev__item-title">{{ $review->title }}</p>
+                        @endif
+                        <p class="kk-rev__item-body">{{ $review->review }}</p>
+                    </div>
+                    @endforeach
+                </div>
             @else
-            <div style="text-align:center;padding:2.5rem 0;">
-                <p style="font-size:14px;color:#565959;">No reviews yet. Be the first to review this product!</p>
-            </div>
+                <p class="kk-rev__empty">No reviews yet. Be the first to review this product!</p>
             @endif
         </div>
 
@@ -809,30 +653,102 @@
 
         <!-- ===== RELATED PRODUCTS ===== -->
         @if($relatedProducts->count() > 0)
-        <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid #e5e5e5;">
-            <h2 style="font-size:18px;font-weight:700;color:#0F1111;margin-bottom:1rem;">Products related to this item</h2>
-            <div style="display:flex;gap:1rem;overflow-x:auto;padding-bottom:1rem;-webkit-overflow-scrolling:touch;">
+        <style>
+            .kk-related { margin-top: 64px; padding-top: 32px; }
+            .kk-related__title {
+                text-align: center;
+                font-size: 18px;
+                font-weight: 600;
+                letter-spacing: 0.32em;
+                text-transform: uppercase;
+                color: #2d1810;
+                margin: 0 0 32px;
+            }
+            .kk-related__grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 24px;
+            }
+            @media (max-width: 1024px) { .kk-related__grid { grid-template-columns: repeat(3, 1fr); gap: 16px; } }
+            @media (max-width: 640px)  { .kk-related__grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+
+            .kk-related__card {
+                position: relative;
+                display: block;
+                text-decoration: none;
+                color: #2d1810;
+            }
+            .kk-related__imgwrap {
+                position: relative;
+                aspect-ratio: 3/4;
+                overflow: hidden;
+                background: #fff;
+                margin-bottom: 12px;
+            }
+            .kk-related__img {
+                width: 100%; height: 100%;
+                object-fit: cover; display: block;
+                transition: transform .5s ease;
+            }
+            .kk-related__card:hover .kk-related__img { transform: scale(1.03); }
+            .kk-related__add {
+                position: absolute;
+                right: 12px; bottom: 12px;
+                background: #2d1810; color: #efe2cb;
+                border: none; border-radius: 4px;
+                padding: 9px 14px; font-size: 11px; font-weight: 700;
+                letter-spacing: 0.12em; text-transform: uppercase;
+                cursor: pointer;
+                opacity: 0; transform: translateY(4px);
+                transition: opacity .2s ease, transform .2s ease, background .15s ease;
+            }
+            .kk-related__card:hover .kk-related__add,
+            .kk-related__card:focus-within .kk-related__add { opacity: 1; transform: translateY(0); }
+            .kk-related__add:hover { background: #1f1109; }
+            .kk-related__name {
+                font-size: 14px;
+                font-weight: 500;
+                line-height: 1.4;
+                color: #2d1810;
+                margin: 0 0 4px;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+                min-height: 2.8em;
+            }
+            .kk-related__price {
+                font-size: 14px;
+                font-weight: 600;
+                color: #2d1810;
+            }
+            .kk-related__price-mrp {
+                font-size: 12px;
+                font-weight: 400;
+                color: #7a6555;
+                text-decoration: line-through;
+                margin-left: 6px;
+            }
+        </style>
+        <div class="kk-related">
+            <h2 class="kk-related__title">Related Products</h2>
+            <div class="kk-related__grid">
                 @foreach($relatedProducts as $rp)
-                <a href="{{ route('product.show', $rp) }}"
-                   style="flex-shrink:0;width:180px;border:1px solid #e5e5e5;border-radius:0.5rem;padding:0.75rem;background:#fff;text-decoration:none;transition:box-shadow 0.15s;"
-                   onmouseenter="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'" onmouseleave="this.style.boxShadow='none'">
-                    <div style="background:#fafafa;border-radius:0.375rem;overflow:hidden;aspect-ratio:1/1;margin-bottom:0.5rem;">
-                        <img src="{{ $rp->primary_image_url }}" alt="{{ $rp->name }}" style="width:100%;height:100%;object-fit:contain;padding:0.25rem;">
+                <a href="{{ route('product.show', $rp) }}" class="kk-related__card">
+                    <div class="kk-related__imgwrap">
+                        <img class="kk-related__img" src="{{ $rp->primary_image_url }}" alt="{{ $rp->name }}" loading="lazy">
+                        @if($rp->isInStock())
+                        <button type="button" class="kk-related__add"
+                                @click.prevent.stop="$store.cart.add({{ $rp->id }})">
+                            Add to Cart
+                        </button>
+                        @endif
                     </div>
-                    <p style="font-size:13px;font-weight:500;color:#0F1111;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:0.25rem;line-height:1.3;">{{ $rp->name }}</p>
-                    @if($rp->rating > 0)
-                    <div style="display:flex;align-items:center;gap:0.25rem;margin-bottom:0.25rem;">
-                        @for($s = 1; $s <= 5; $s++)
-                        <svg style="width:0.75rem;height:0.75rem;color:{{ $s <= round($rp->rating) ? '#FFA41C' : '#ddd' }};" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                        @endfor
-                        <span style="font-size:10px;color:#565959;">{{ $rp->review_count }}</span>
-                    </div>
-                    @endif
-                    <div style="display:flex;align-items:baseline;gap:0.375rem;">
-                        <span style="font-size:14px;font-weight:700;color:#0F1111;">₹{{ number_format($rp->price) }}</span>
+                    <p class="kk-related__name">{{ $rp->name }}</p>
+                    <div>
+                        <span class="kk-related__price">₹{{ number_format($rp->price) }}</span>
                         @if($rp->mrp > $rp->price)
-                        <span style="font-size:10px;color:#999;text-decoration:line-through;">₹{{ number_format($rp->mrp) }}</span>
-                        <span style="font-size:10px;font-weight:500;color:#CC0C39;">{{ $rp->discount_percentage }}% off</span>
+                        <span class="kk-related__price-mrp">₹{{ number_format($rp->mrp) }}</span>
                         @endif
                     </div>
                 </a>
@@ -884,6 +800,7 @@
         </div>
 
     </div>
+    </div>{{-- /.pdp-wrapper --}}
 
     <!-- ===== MOBILE STICKY BOTTOM BAR ===== -->
     @if($product->isInStock())
@@ -910,7 +827,7 @@
             @endif
         </div>
         <button @click="$dispatch('mobile-add-to-cart')"
-                style="padding:0.625rem 1.25rem;border-radius:0.5rem;font-size:13px;font-weight:600;background:#6F9CA2;color:#fff;border:none;cursor:pointer;">
+                style="padding:0.625rem 1.25rem;border-radius:0.5rem;font-size:13px;font-weight:600;background:#8c5c34;color:#fff;border:none;cursor:pointer;">
             Add to Cart
         </button>
         <button @click="$dispatch('mobile-buy-now')"

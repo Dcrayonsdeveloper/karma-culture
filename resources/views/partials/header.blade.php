@@ -10,11 +10,38 @@
        "
        class="bg-kk-cream border-b border-kk-cream-dark fixed left-0 right-0 z-40"
        :style="'top:0; transition: transform 0.3s ease; transform: translateY(' + (visible ? '0' : '-100%') + ')'">
-    <!-- Announcement Bar -->
+    <!-- Announcement Bar (marquee) -->
     @if($announcement)
-    <div style="background:#2d1810;" class="text-kk-text-on-dark text-center py-1.5 text-[11px] sm:text-xs font-medium tracking-[0.18em] uppercase">
-        {{ $announcement }}
+    <div style="background:#2d1810;" class="kk-marquee text-kk-text-on-dark py-1.5 text-[11px] sm:text-xs font-medium tracking-[0.18em] uppercase">
+        <div class="kk-marquee__track" aria-hidden="true">
+            @for ($i = 0; $i < 8; $i++)
+                <span class="kk-marquee__item">{{ $announcement }}</span>
+                <span class="kk-marquee__sep">&bull;</span>
+            @endfor
+        </div>
+        <span class="sr-only">{{ $announcement }}</span>
     </div>
+    <style>
+        .kk-marquee { overflow: hidden; position: relative; }
+        .kk-marquee__track {
+            display: inline-flex;
+            white-space: nowrap;
+            animation: kk-marquee-scroll 35s linear infinite;
+            will-change: transform;
+        }
+        .kk-marquee__item,
+        .kk-marquee__sep { padding: 0 22px; }
+        .kk-marquee__sep { opacity: 0.5; }
+        .kk-marquee:hover .kk-marquee__track { animation-play-state: paused; }
+        @keyframes kk-marquee-scroll {
+            from { transform: translateX(0); }
+            to   { transform: translateX(-50%); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .kk-marquee__track { animation: none; justify-content: center; width: 100%; }
+            .kk-marquee__track > :nth-child(n+3) { display: none; }
+        }
+    </style>
     @endif
     <div class="w-full px-4 lg:px-6">
         <div class="relative flex items-center justify-between h-20 lg:h-28">
@@ -33,9 +60,11 @@
                     <a href="{{ route('new-arrivals') }}" class="px-3 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.18em] uppercase">New In</a>
 
                     {{-- Categories: hover-triggered mega menu --}}
-                    <div class="kk-mega" x-data="{ open: false, closeT: null }"
-                         @mouseenter="clearTimeout(closeT); open = true"
-                         @mouseleave="closeT = setTimeout(() => open = false, 120)">
+                    <div class="kk-mega"
+                         x-data="{ open: false, closeT: null, menuTop: 0 }"
+                         @mouseenter="clearTimeout(closeT); menuTop = $el.closest('header').getBoundingClientRect().bottom; open = true"
+                         @mouseleave="closeT = setTimeout(() => open = false, 120)"
+                         @resize.window="if (open) menuTop = $el.closest('header').getBoundingClientRect().bottom">
                         <a href="{{ route('categories.index') }}"
                            class="px-3 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.18em] uppercase inline-flex items-center gap-1">
                             Categories
@@ -48,69 +77,58 @@
                              x-transition:leave="transition ease-in duration-150"
                              x-transition:leave-start="opacity-100"
                              x-transition:leave-end="opacity-0"
+                             :style="`top: ${menuTop - 1}px`"
                              class="kk-mega__panel">
                             <div class="kk-mega__grid">
-                                {{-- Men's column --}}
+                                {{-- Men's section --}}
                                 <div class="kk-mega__col">
                                     <h3 class="kk-mega__heading">Men's</h3>
+                                    <div class="kk-mega__cats kk-mega__cats--4">
+                                        <div class="kk-mega__group">
+                                            <a href="{{ route('categories.index') }}?gender=mens&type=tshirts" class="kk-mega__cat">T-Shirts</a>
+                                            <ul class="kk-mega__subs">
+                                                <li><a href="{{ route('categories.index') }}?type=polo">Polo</a></li>
+                                                <li><a href="{{ route('categories.index') }}?type=round-neck">Round Neck</a></li>
+                                                <li><a href="{{ route('categories.index') }}?type=henley">Henley / Wide Neck</a></li>
+                                                <li><a href="{{ route('categories.index') }}?type=mandarin">Mandarin</a></li>
+                                                <li><a href="{{ route('categories.index') }}?type=oversized">Oversized</a></li>
+                                            </ul>
+                                        </div>
 
-                                    <div class="kk-mega__group">
-                                        <a href="{{ route('categories.index') }}?gender=mens&type=tshirts" class="kk-mega__cat">T-Shirts</a>
-                                        <ul class="kk-mega__subs">
-                                            <li><a href="{{ route('categories.index') }}?type=polo">Polo</a></li>
-                                            <li><a href="{{ route('categories.index') }}?type=round-neck">Round Neck</a></li>
-                                            <li><a href="{{ route('categories.index') }}?type=henley">Henley / Wide Neck</a></li>
-                                            <li><a href="{{ route('categories.index') }}?type=mandarin">Mandarin</a></li>
-                                            <li><a href="{{ route('categories.index') }}?type=oversized">Oversized</a></li>
-                                        </ul>
-                                    </div>
+                                        <div class="kk-mega__group">
+                                            <a href="{{ route('categories.index') }}?gender=mens&type=shirts" class="kk-mega__cat">Shirts</a>
+                                            <ul class="kk-mega__subs">
+                                                <li><a href="{{ route('categories.index') }}?fit=slim">Slim Fit</a></li>
+                                                <li><a href="{{ route('categories.index') }}?fit=regular">Regular</a></li>
+                                                <li><a href="{{ route('categories.index') }}?type=denim">Denims</a></li>
+                                            </ul>
+                                        </div>
 
-                                    <div class="kk-mega__group">
-                                        <a href="{{ route('categories.index') }}?gender=mens&type=shirts" class="kk-mega__cat">Shirts</a>
-                                        <ul class="kk-mega__subs">
-                                            <li><a href="{{ route('categories.index') }}?fit=slim">Slim Fit</a></li>
-                                            <li><a href="{{ route('categories.index') }}?fit=regular">Regular</a></li>
-                                            <li><a href="{{ route('categories.index') }}?type=denim">Denims</a></li>
-                                        </ul>
-                                    </div>
+                                        <div class="kk-mega__group">
+                                            <a href="{{ route('categories.index') }}?gender=mens&type=kurtas" class="kk-mega__cat">Kurtas</a>
+                                            <ul class="kk-mega__subs">
+                                                <li><a href="{{ route('categories.index') }}?length=short">Short</a></li>
+                                                <li><a href="{{ route('categories.index') }}?length=knee">Knee Length</a></li>
+                                            </ul>
+                                        </div>
 
-                                    <div class="kk-mega__group">
-                                        <a href="{{ route('categories.index') }}?gender=mens&type=kurtas" class="kk-mega__cat">Kurtas</a>
-                                        <ul class="kk-mega__subs">
-                                            <li><a href="{{ route('categories.index') }}?length=short">Short</a></li>
-                                            <li><a href="{{ route('categories.index') }}?length=knee">Knee Length</a></li>
-                                        </ul>
-                                    </div>
-
-                                    <div class="kk-mega__group">
-                                        <a href="{{ route('categories.index') }}?gender=mens&type=trousers" class="kk-mega__cat">Trousers</a>
+                                        <div class="kk-mega__group">
+                                            <a href="{{ route('categories.index') }}?gender=mens&type=trousers" class="kk-mega__cat">Trousers</a>
+                                        </div>
                                     </div>
                                 </div>
 
-                                {{-- Women's column --}}
+                                {{-- Women's section --}}
                                 <div class="kk-mega__col">
                                     <h3 class="kk-mega__heading">Women's</h3>
-
-                                    <div class="kk-mega__group">
-                                        <a href="{{ route('categories.index') }}?gender=womens&type=tops" class="kk-mega__cat">Tops</a>
-                                    </div>
-                                    <div class="kk-mega__group">
-                                        <a href="{{ route('categories.index') }}?gender=womens&type=tshirts" class="kk-mega__cat">T-Shirts</a>
-                                    </div>
-                                    <div class="kk-mega__group">
-                                        <a href="{{ route('categories.index') }}?gender=womens&type=jumpsuit" class="kk-mega__cat">Jumpsuit</a>
-                                    </div>
-                                    <div class="kk-mega__group">
-                                        <a href="{{ route('categories.index') }}?gender=womens&type=co-ord" class="kk-mega__cat">Co-ord Sets</a>
-                                    </div>
-                                    <div class="kk-mega__group">
-                                        <a href="{{ route('categories.index') }}?gender=womens&type=kurtas" class="kk-mega__cat">Kurtas</a>
-                                    </div>
-                                    <div class="kk-mega__group">
-                                        <a href="{{ route('categories.index') }}?gender=womens&type=one-piece" class="kk-mega__cat">One Piece</a>
-                                    </div>
-                                    <div class="kk-mega__group">
-                                        <a href="{{ route('categories.index') }}?gender=womens&type=trousers" class="kk-mega__cat">Trousers</a>
+                                    <div class="kk-mega__cats kk-mega__cats--2">
+                                        <div class="kk-mega__group"><a href="{{ route('categories.index') }}?gender=womens&type=tops" class="kk-mega__cat">Tops</a></div>
+                                        <div class="kk-mega__group"><a href="{{ route('categories.index') }}?gender=womens&type=tshirts" class="kk-mega__cat">T-Shirts</a></div>
+                                        <div class="kk-mega__group"><a href="{{ route('categories.index') }}?gender=womens&type=jumpsuit" class="kk-mega__cat">Jumpsuit</a></div>
+                                        <div class="kk-mega__group"><a href="{{ route('categories.index') }}?gender=womens&type=co-ord" class="kk-mega__cat">Co-ord Sets</a></div>
+                                        <div class="kk-mega__group"><a href="{{ route('categories.index') }}?gender=womens&type=kurtas" class="kk-mega__cat">Kurtas</a></div>
+                                        <div class="kk-mega__group"><a href="{{ route('categories.index') }}?gender=womens&type=one-piece" class="kk-mega__cat">One Piece</a></div>
+                                        <div class="kk-mega__group"><a href="{{ route('categories.index') }}?gender=womens&type=trousers" class="kk-mega__cat">Trousers</a></div>
                                     </div>
                                 </div>
                             </div>
@@ -124,34 +142,35 @@
                 <style>
                     .kk-mega { position: relative; }
                     .kk-mega__panel {
-                        position: absolute;
-                        top: 100%;
+                        position: fixed;
                         left: 0;
-                        margin-top: 6px;
-                        min-width: 640px;
-                        background: var(--color-kk-cream-lighter, #fbf5e8);
-                        border: 1px solid var(--color-kk-cream-dark, #e3d2b3);
-                        border-radius: 10px;
-                        box-shadow: 0 14px 40px rgba(45, 24, 16, 0.12);
-                        padding: 28px 32px;
+                        right: 0;
+                        width: 100vw;
+                        background: #EFE2CB;
+                        border-top: none;
+                        border-bottom: 1px solid var(--color-kk-cream-dark, #e3d2b3);
+                        box-shadow: none;
+                        padding: 32px 48px;
                         z-index: 60;
                     }
                     .kk-mega__grid {
                         display: grid;
-                        grid-template-columns: 1fr 1fr;
-                        gap: 40px;
+                        grid-template-columns: 1.6fr 1fr;
+                        gap: 64px;
+                        max-width: 1400px;
+                        margin: 0 auto;
                     }
                     .kk-mega__heading {
                         font-family: 'Cormorant Garamond', Georgia, serif;
                         font-size: 20px;
                         font-weight: 700;
                         color: var(--color-kk-brown, #4a2d1a);
-                        margin: 0 0 14px;
-                        padding-bottom: 8px;
-                        border-bottom: 1px solid var(--color-kk-cream-dark, #e3d2b3);
+                        margin: 0 0 16px;
                     }
-                    .kk-mega__group { margin-bottom: 14px; }
-                    .kk-mega__group:last-child { margin-bottom: 0; }
+                    .kk-mega__cats { display: grid; gap: 24px 28px; }
+                    .kk-mega__cats--4 { grid-template-columns: repeat(4, 1fr); }
+                    .kk-mega__cats--2 { grid-template-columns: repeat(2, 1fr); }
+                    .kk-mega__group { margin: 0; }
                     .kk-mega__cat {
                         display: inline-block;
                         font-family: 'Cormorant Garamond', Georgia, serif;
@@ -183,7 +202,7 @@
             </div>
 
             <!-- Center: Logo (absolute-centered so it stays in the geometric middle regardless of left/right widths) -->
-            <a href="{{ url('/') }}" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center shrink-0 pointer-events-auto">
+            <a href="{{ url('/') }}" class="absolute left-[44%] top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center shrink-0 pointer-events-auto">
                 @php $siteLogo = \App\Models\Setting::get('site_logo', ''); @endphp
                 @if($siteLogo)
                     <img id="site-logo" src="{{ asset('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-20 lg:h-28 object-contain">
