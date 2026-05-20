@@ -66,8 +66,8 @@
             .kk-bento {
                 display: grid;
                 grid-template-columns: repeat(6, 1fr);
-                grid-auto-rows: 170px;
-                gap: 14px;
+                grid-auto-rows: 240px;
+                gap: 16px;
             }
             .kk-bento-tile { aspect-ratio: auto !important; height: 100%; width: 100%; }
 
@@ -88,7 +88,7 @@
 
             /* Tablet collapse */
             @media (max-width: 1024px) {
-                .kk-bento { grid-auto-rows: 140px; }
+                .kk-bento { grid-auto-rows: 190px; }
             }
 
             /* Mobile collapse — keep some asymmetry but readable */
@@ -109,7 +109,7 @@
             }
 
             /* ===== Shop It Your Way — Rail of hangers ===== */
-            .kk-shop-your-way { background: var(--kk-cream-light); padding: 96px 0; }
+            .kk-shop-your-way { background: var(--kk-cream-light); padding: 32px 0 64px; }
             .kk-syw-heading {
                 font-family: var(--kk-display);
                 font-size: 44px;
@@ -263,7 +263,7 @@
                 .kk-shirt-hanger { max-width: 120px; }
             }
             @media (max-width: 767px) {
-                .kk-shop-your-way { padding: 60px 0; }
+                .kk-shop-your-way { padding: 24px 0 40px; }
                 .kk-syw-heading { font-size: 28px; }
                 .kk-syw-tabs { padding: 4px; gap: 2px; margin-top: 24px; }
                 .kk-syw-tab { padding: 10px 16px; min-width: 100px; }
@@ -311,7 +311,32 @@
             .kk-qualities-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin-top: 56px; border-top: 1px solid rgba(239,226,203,.12); border-left: 1px solid rgba(239,226,203,.12); }
             @media (max-width: 1024px) { .kk-qualities-grid { grid-template-columns: repeat(2, 1fr); } }
             @media (max-width: 640px)  { .kk-qualities-grid { grid-template-columns: 1fr; } }
-            .kk-quality { padding: 32px 26px; border-right: 1px solid rgba(239,226,203,.12); border-bottom: 1px solid rgba(239,226,203,.12); text-align: left; }
+            .kk-quality {
+                padding: 32px 26px;
+                border-right: 1px solid rgba(239,226,203,.12);
+                border-bottom: 1px solid rgba(239,226,203,.12);
+                text-align: left;
+                opacity: 0;
+                transform: translateY(24px);
+                transition: opacity 600ms ease-out, transform 600ms cubic-bezier(0.19, 1, 0.22, 1);
+                transition-delay: var(--reveal-delay, 0ms);
+            }
+            .kk-qualities-grid.is-revealed .kk-quality {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            .kk-qualities-grid.is-revealed .kk-quality .icon {
+                animation: kk-quality-check 700ms ease-out var(--reveal-delay, 0ms) both;
+            }
+            @keyframes kk-quality-check {
+                0%   { transform: scale(0.6) rotate(-12deg); opacity: 0; }
+                60%  { transform: scale(1.15) rotate(2deg);  opacity: 1; }
+                100% { transform: scale(1)   rotate(0);     opacity: 1; }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .kk-quality { opacity: 1; transform: none; transition: none; }
+                .kk-qualities-grid.is-revealed .kk-quality .icon { animation: none; }
+            }
             .kk-quality .icon { width: 28px; height: 28px; color: var(--kk-cream); margin-bottom: 14px; }
             .kk-quality h4 { font-family: var(--kk-display); font-size: 17px; color: var(--kk-cream); margin: 0 0 8px; }
             .kk-quality p { font-size: 12px; color: rgba(239,226,203,.65); margin: 0; line-height: 1.6; }
@@ -723,9 +748,12 @@
                         ['t' => 'Lifetime Mend Promise','d' => 'Broken stitch? Lost button? We\'ll fix it on us. Because good clothes deserve long lives.'],
                     ];
                 @endphp
-                <div class="kk-qualities-grid">
+                <div class="kk-qualities-grid"
+                     x-data="{ revealed: false }"
+                     x-intersect.once="revealed = true"
+                     :class="revealed && 'is-revealed'">
                     @foreach($qualities as $q)
-                        <div class="kk-quality">
+                        <div class="kk-quality" style="--reveal-delay: {{ $loop->index * 90 }}ms">
                             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 7L9 18l-5-5"/></svg>
                             <h4>{{ $q['t'] }}</h4>
                             <p>{{ $q['d'] }}</p>
