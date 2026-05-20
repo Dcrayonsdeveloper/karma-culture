@@ -62,6 +62,52 @@
             .kk-tile-gender { aspect-ratio: 3/4; }
             @media (min-width: 768px) { .kk-tile-gender { aspect-ratio: 4/5; } }
 
+            /* ===== Bento (uneven mosaic grid) ===== */
+            .kk-bento {
+                display: grid;
+                grid-template-columns: repeat(6, 1fr);
+                grid-auto-rows: 170px;
+                gap: 14px;
+            }
+            .kk-bento-tile { aspect-ratio: auto !important; height: 100%; width: 100%; }
+
+            /* Men's: 4 items — 1 big + 2 medium + 1 wide */
+            .kk-bento--mens > :nth-child(1) { grid-column: span 4; grid-row: span 2; }
+            .kk-bento--mens > :nth-child(2) { grid-column: span 2; grid-row: span 1; }
+            .kk-bento--mens > :nth-child(3) { grid-column: span 2; grid-row: span 1; }
+            .kk-bento--mens > :nth-child(4) { grid-column: span 6; grid-row: span 1; }
+
+            /* Women's: 7 items — 1 hero + 2 medium + 3 small + 1 wide */
+            .kk-bento--womens > :nth-child(1) { grid-column: span 3; grid-row: span 2; }
+            .kk-bento--womens > :nth-child(2) { grid-column: span 3; grid-row: span 1; }
+            .kk-bento--womens > :nth-child(3) { grid-column: span 3; grid-row: span 1; }
+            .kk-bento--womens > :nth-child(4) { grid-column: span 2; grid-row: span 1; }
+            .kk-bento--womens > :nth-child(5) { grid-column: span 2; grid-row: span 1; }
+            .kk-bento--womens > :nth-child(6) { grid-column: span 2; grid-row: span 1; }
+            .kk-bento--womens > :nth-child(7) { grid-column: span 6; grid-row: span 1; }
+
+            /* Tablet collapse */
+            @media (max-width: 1024px) {
+                .kk-bento { grid-auto-rows: 140px; }
+            }
+
+            /* Mobile collapse — keep some asymmetry but readable */
+            @media (max-width: 767px) {
+                .kk-bento { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 130px; gap: 10px; }
+                .kk-bento--mens > :nth-child(1)   { grid-column: span 2; grid-row: span 2; }
+                .kk-bento--mens > :nth-child(2)   { grid-column: span 1; grid-row: span 1; }
+                .kk-bento--mens > :nth-child(3)   { grid-column: span 1; grid-row: span 1; }
+                .kk-bento--mens > :nth-child(4)   { grid-column: span 2; grid-row: span 1; }
+
+                .kk-bento--womens > :nth-child(1) { grid-column: span 2; grid-row: span 2; }
+                .kk-bento--womens > :nth-child(2),
+                .kk-bento--womens > :nth-child(3),
+                .kk-bento--womens > :nth-child(4),
+                .kk-bento--womens > :nth-child(5),
+                .kk-bento--womens > :nth-child(6) { grid-column: span 1; grid-row: span 1; }
+                .kk-bento--womens > :nth-child(7) { grid-column: span 2; grid-row: span 1; }
+            }
+
             /* Shop It Your Way */
             .kk-shop-your-way { background: var(--kk-cream-light); padding: 64px 0; }
             .kk-tab-row { display: inline-flex; padding: 4px; background: var(--kk-cream-lighter); border: 1px solid var(--kk-cream-dark); border-radius: 999px; gap: 4px; }
@@ -384,40 +430,67 @@
         </section>
 
         {{-- ============================================
-             SHOP BY CATEGORY (Men's / Women's)
+             SHOP BY CATEGORY — bento mosaics per gender
              ============================================ --}}
         @php
-            $genderTiles = ($categories ?? collect())
-                ->filter(fn($c) => in_array(strtolower($c->slug ?? ''), ['mens', 'womens', 'men', 'women']))
-                ->sortBy(fn($c) => str_contains(strtolower($c->slug ?? ''), 'men') && !str_contains(strtolower($c->slug ?? ''), 'women') ? 0 : 1)
-                ->values()
-                ->take(2);
-            // Fallback: if filter found nothing (e.g. categories not seeded yet) take the first 2 roots.
-            if ($genderTiles->isEmpty()) {
-                $genderTiles = ($categories ?? collect())->take(2);
-            }
+            $allCats = ($categories ?? collect());
+            $mensRoot   = $allCats->first(fn($c) => str_contains(strtolower($c->slug ?? ''), 'men') && !str_contains(strtolower($c->slug ?? ''), 'women'));
+            $womensRoot = $allCats->first(fn($c) => str_contains(strtolower($c->slug ?? ''), 'women'));
+
+            $mensKids   = $mensRoot   ? $mensRoot->children->where('is_active', true)->sortBy('position')->values()->take(4) : collect();
+            $womensKids = $womensRoot ? $womensRoot->children->where('is_active', true)->sortBy('position')->values()->take(7) : collect();
+
+            $mensTints   = ['#7a6347', '#5a4a3c', '#3a2a1f', '#8a6f52'];
+            $womensTints = ['#947254', '#7a6347', '#6e5238', '#5a4a3c', '#8a6f52', '#3a2a1f', '#4a3320'];
         @endphp
-        @if($genderTiles->count())
+
+        @if($mensKids->count())
         <section class="kk-section">
             <div class="container mx-auto px-4">
                 <div class="kk-section-header">
                     <div class="left">
-                        <h2 class="kk-section-title">Shop By Category</h2>
+                        <span class="kk-eyebrow">Shop</span>
+                        <h2 class="kk-section-title">Men's</h2>
                     </div>
+                    <a href="{{ route('category.show', $mensRoot) }}" class="kk-view-all">View All <span aria-hidden="true">&rarr;</span></a>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                    @foreach($genderTiles as $cat)
-                        <a href="{{ route('category.show', $cat) }}" class="kk-tile kk-tile-gender">
-                            @if($cat->image_url)
-                                <img src="{{ asset('storage/' . $cat->image_url) }}" alt="{{ $cat->name }}" loading="lazy">
+                <div class="kk-bento kk-bento--mens">
+                    @foreach($mensKids as $i => $child)
+                        <a href="{{ route('category.show', $child) }}" class="kk-tile kk-bento-tile">
+                            @if($child->image_url)
+                                <img src="{{ asset('storage/' . $child->image_url) }}" alt="{{ $child->name }}" loading="lazy">
                             @else
-                                <div class="w-full h-full" style="background: linear-gradient(160deg, var(--kk-tan) 0%, var(--kk-brown-dark) 100%);"></div>
+                                <div class="w-full h-full" style="background: linear-gradient(135deg, {{ $mensTints[$i % count($mensTints)] }} 0%, var(--kk-brown-dark) 100%);"></div>
                             @endif
                             <div class="kk-tile-overlay"></div>
-                            <div class="kk-tile-label">
-                                <span class="kk-eyebrow" style="color: var(--kk-cream); opacity: .85; display: block; margin-bottom: 8px;">Shop</span>
-                                <span class="pill kk-tile-pill-lg">{{ Str::upper($cat->name) }}</span>
-                            </div>
+                            <div class="kk-tile-label"><span class="pill">{{ Str::upper($child->name) }}</span></div>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        </section>
+        @endif
+
+        @if($womensKids->count())
+        <section class="kk-section" style="background: var(--kk-cream-light);">
+            <div class="container mx-auto px-4">
+                <div class="kk-section-header">
+                    <div class="left">
+                        <span class="kk-eyebrow">Shop</span>
+                        <h2 class="kk-section-title">Women's</h2>
+                    </div>
+                    <a href="{{ route('category.show', $womensRoot) }}" class="kk-view-all">View All <span aria-hidden="true">&rarr;</span></a>
+                </div>
+                <div class="kk-bento kk-bento--womens">
+                    @foreach($womensKids as $i => $child)
+                        <a href="{{ route('category.show', $child) }}" class="kk-tile kk-bento-tile">
+                            @if($child->image_url)
+                                <img src="{{ asset('storage/' . $child->image_url) }}" alt="{{ $child->name }}" loading="lazy">
+                            @else
+                                <div class="w-full h-full" style="background: linear-gradient(135deg, {{ $womensTints[$i % count($womensTints)] }} 0%, var(--kk-brown-dark) 100%);"></div>
+                            @endif
+                            <div class="kk-tile-overlay"></div>
+                            <div class="kk-tile-label"><span class="pill">{{ Str::upper($child->name) }}</span></div>
                         </a>
                     @endforeach
                 </div>
