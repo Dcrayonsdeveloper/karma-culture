@@ -663,67 +663,6 @@
         @endif
 
         {{-- ============================================
-             SHOP BY AESTHETICS
-             ============================================ --}}
-        <section class="kk-section">
-            <div class="container mx-auto px-4">
-                <div class="kk-section-header">
-                    <h2 class="kk-section-title">Shop By Aesthetics</h2>
-                </div>
-                @php
-                    $aesthetics = [
-                        ['label' => 'Classics',      'slug' => 'classics',      'shade' => '#5a4a3c'],
-                        ['label' => 'Old Money',     'slug' => 'old-money',     'shade' => '#7a6347'],
-                        ['label' => 'Street Wear',   'slug' => 'street-wear',   'shade' => '#3a2a1f'],
-                        ['label' => 'Smart Casuals', 'slug' => 'smart-casuals', 'shade' => '#8a6f52'],
-                        ['label' => 'Print Play',    'slug' => 'print-play',    'shade' => '#6e5238'],
-                        ['label' => 'Workwear',      'slug' => 'workwear',      'shade' => '#4a3320'],
-                    ];
-                @endphp
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    @foreach($aesthetics as $a)
-                        <a href="{{ route('products.index') }}?aesthetic={{ $a['slug'] }}" class="kk-tile kk-tile-banner">
-                            <div class="w-full h-full" style="background: linear-gradient(135deg, {{ $a['shade'] }} 0%, var(--kk-brown-dark) 100%);"></div>
-                            <div class="kk-tile-overlay"></div>
-                            <div class="kk-tile-label"><span class="pill">{{ Str::upper($a['label']) }}</span></div>
-                        </a>
-                    @endforeach
-                </div>
-            </div>
-        </section>
-
-        {{-- ============================================
-             SHOP BY OCCASIONS
-             ============================================ --}}
-        <section class="kk-section" style="background: var(--kk-cream-light);">
-            <div class="container mx-auto px-4">
-                <div class="kk-section-header">
-                    <h2 class="kk-section-title">Shop By Occasions</h2>
-                </div>
-                @php
-                    $occasions = [
-                        ['label' => 'Desk to Dinner',    'slug' => 'desk-to-dinner',    'shade' => '#5a4a3c'],
-                        ['label' => 'Relaxed Evenings', 'slug' => 'relaxed-evenings', 'shade' => '#3a2a1f'],
-                        ['label' => 'Casual Outings',    'slug' => 'casual-outings',    'shade' => '#7a6347'],
-                        ['label' => 'Date Night',        'slug' => 'date-night',        'shade' => '#2d1810'],
-                        ['label' => 'After Hours',       'slug' => 'after-hours',       'shade' => '#4a3320'],
-                        ['label' => 'Travel Days',       'slug' => 'travel-days',       'shade' => '#8a6f52'],
-                        ['label' => 'Urban Layers',      'slug' => 'urban-layers',      'shade' => '#6e5238'],
-                    ];
-                @endphp
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    @foreach($occasions as $o)
-                        <a href="{{ route('products.index') }}?occasion={{ $o['slug'] }}" class="kk-tile kk-tile-banner">
-                            <div class="w-full h-full" style="background: linear-gradient(135deg, {{ $o['shade'] }} 0%, var(--kk-brown-dark) 100%);"></div>
-                            <div class="kk-tile-overlay"></div>
-                            <div class="kk-tile-label"><span class="pill">{{ Str::upper($o['label']) }}</span></div>
-                        </a>
-                    @endforeach
-                </div>
-            </div>
-        </section>
-
-        {{-- ============================================
              ABOUT US
              ============================================ --}}
         @php
