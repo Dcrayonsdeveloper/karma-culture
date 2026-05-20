@@ -57,7 +57,10 @@
             .kk-tile-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(45,24,16,.72) 0%, rgba(45,24,16,.15) 45%, transparent 70%); }
             .kk-tile-label { position: absolute; left: 0; right: 0; bottom: 18px; text-align: center; }
             .kk-tile-label .pill { display: inline-block; background: var(--kk-brown-dark); color: var(--kk-cream); padding: 8px 22px; border-radius: 999px; font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase; font-weight: 600; }
+            .kk-tile-label .kk-tile-pill-lg { padding: 12px 36px; font-size: 13px; letter-spacing: 0.32em; }
             .kk-tile-banner { aspect-ratio: 16/9; }
+            .kk-tile-gender { aspect-ratio: 3/4; }
+            @media (min-width: 768px) { .kk-tile-gender { aspect-ratio: 4/5; } }
 
             /* Shop It Your Way */
             .kk-shop-your-way { background: var(--kk-cream-light); padding: 64px 0; }
@@ -381,10 +384,20 @@
         </section>
 
         {{-- ============================================
-             SHOP BY CATEGORY
+             SHOP BY CATEGORY (Men's / Women's)
              ============================================ --}}
-        @php $catTiles = ($categories ?? collect())->take(3); @endphp
-        @if($catTiles->count())
+        @php
+            $genderTiles = ($categories ?? collect())
+                ->filter(fn($c) => in_array(strtolower($c->slug ?? ''), ['mens', 'womens', 'men', 'women']))
+                ->sortBy(fn($c) => str_contains(strtolower($c->slug ?? ''), 'men') && !str_contains(strtolower($c->slug ?? ''), 'women') ? 0 : 1)
+                ->values()
+                ->take(2);
+            // Fallback: if filter found nothing (e.g. categories not seeded yet) take the first 2 roots.
+            if ($genderTiles->isEmpty()) {
+                $genderTiles = ($categories ?? collect())->take(2);
+            }
+        @endphp
+        @if($genderTiles->count())
         <section class="kk-section">
             <div class="container mx-auto px-4">
                 <div class="kk-section-header">
@@ -392,16 +405,19 @@
                         <h2 class="kk-section-title">Shop By Category</h2>
                     </div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
-                    @foreach($catTiles as $cat)
-                        <a href="{{ route('category.show', $cat) }}" class="kk-tile">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                    @foreach($genderTiles as $cat)
+                        <a href="{{ route('category.show', $cat) }}" class="kk-tile kk-tile-gender">
                             @if($cat->image_url)
                                 <img src="{{ asset('storage/' . $cat->image_url) }}" alt="{{ $cat->name }}" loading="lazy">
                             @else
-                                <div class="w-full h-full" style="background: linear-gradient(160deg, var(--kk-tan) 0%, var(--kk-brown) 100%);"></div>
+                                <div class="w-full h-full" style="background: linear-gradient(160deg, var(--kk-tan) 0%, var(--kk-brown-dark) 100%);"></div>
                             @endif
                             <div class="kk-tile-overlay"></div>
-                            <div class="kk-tile-label"><span class="pill">{{ Str::upper($cat->name) }}</span></div>
+                            <div class="kk-tile-label">
+                                <span class="kk-eyebrow" style="color: var(--kk-cream); opacity: .85; display: block; margin-bottom: 8px;">Shop</span>
+                                <span class="pill kk-tile-pill-lg">{{ Str::upper($cat->name) }}</span>
+                            </div>
                         </a>
                     @endforeach
                 </div>
