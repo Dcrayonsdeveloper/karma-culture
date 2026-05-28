@@ -109,6 +109,25 @@
                                 @endif
                             </div>
                         </div>
+
+                        {{-- Video --}}
+                        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e3e3e3;">
+                            <label class="form-label">Video (optional)</label>
+                            @if($category->video_url)
+                                <video src="{{ str_starts_with($category->video_url, 'http') ? $category->video_url : asset($category->video_url) }}"
+                                       controls muted style="max-width: 220px; max-height: 140px; border-radius: 6px; margin: 0.5rem 0;"></video>
+                            @endif
+                            <input type="text" name="video_url_text" value="{{ old('video_url_text', $category->video_url) }}" class="form-input" placeholder="https://… or storage/categories/videos/file.mp4">
+                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Paste a URL above OR upload an mp4/webm below. Used in the home page bento tile when shown.</p>
+                            <input type="file" name="video_file" accept="video/mp4,video/webm,video/quicktime" class="form-input" style="margin-top: 0.5rem;">
+                            @error('video_file') <p class="form-error">{{ $message }}</p> @enderror
+                            @if($category->video_url)
+                                <label style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; cursor: pointer;">
+                                    <input type="checkbox" name="remove_video" value="1" style="width: 1rem; height: 1rem; accent-color: #d72c0d;">
+                                    <span style="font-size: 13px; color: #d72c0d;">Remove current video</span>
+                                </label>
+                            @endif
+                        </div>
                     </div>
 
                     <!-- SEO -->

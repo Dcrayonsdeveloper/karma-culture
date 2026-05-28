@@ -18,6 +18,7 @@ class Category extends Model
         'slug',
         'description',
         'image_url',
+        'video_url',
         'icon',
         'position',
         'level',

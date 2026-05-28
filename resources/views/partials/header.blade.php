@@ -59,7 +59,23 @@
                 <nav class="hidden lg:flex items-center gap-1">
                     <a href="{{ route('new-arrivals') }}" class="px-3 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.18em] uppercase">New In</a>
 
-                    {{-- Categories: hover-triggered mega menu --}}
+                    {{-- Categories: hover-triggered mega menu — clean text layout, data from admin --}}
+                    @php
+                        [$kkMegaMens, $kkMegaWomens] = \Illuminate\Support\Facades\Cache::remember('kk_mega_menu_v3', 300, function () {
+                            $loader = fn($q) => $q->where('is_active', true)->orderBy('position')
+                                ->with(['children' => fn($qq) => $qq->where('is_active', true)->orderBy('position')]);
+                            $mens = \App\Models\Category::whereNull('parent_id')->where('is_active', true)
+                                ->where(function ($q) { $q->where('slug', 'mens')->orWhere('slug', 'men')->orWhere('name', "Men's")->orWhere('name', 'Men'); })
+                                ->with(['children' => $loader])->first();
+                            $womens = \App\Models\Category::whereNull('parent_id')->where('is_active', true)
+                                ->where(function ($q) { $q->where('slug', 'womens')->orWhere('slug', 'women')->orWhere('name', "Women's")->orWhere('name', 'Women'); })
+                                ->with(['children' => $loader])->first();
+                            return [
+                                $mens   ? $mens->children->take(4)   : collect(),
+                                $womens ? $womens->children->take(7) : collect(),
+                            ];
+                        });
+                    @endphp
                     <div class="kk-mega"
                          x-data="{ open: false, closeT: null, menuTop: 0 }"
                          @mouseenter="clearTimeout(closeT); menuTop = $el.closest('header').getBoundingClientRect().bottom; open = true"
@@ -80,57 +96,45 @@
                              :style="`top: ${menuTop - 1}px`"
                              class="kk-mega__panel">
                             <div class="kk-mega__grid">
-                                {{-- Men's section --}}
+                                @if($kkMegaMens->count())
                                 <div class="kk-mega__col">
                                     <h3 class="kk-mega__heading">Men's</h3>
                                     <div class="kk-mega__cats kk-mega__cats--4">
-                                        <div class="kk-mega__group">
-                                            <a href="{{ route('categories.index') }}?gender=mens&type=tshirts" class="kk-mega__cat">T-Shirts</a>
-                                            <ul class="kk-mega__subs">
-                                                <li><a href="{{ route('categories.index') }}?type=polo">Polo</a></li>
-                                                <li><a href="{{ route('categories.index') }}?type=round-neck">Round Neck</a></li>
-                                                <li><a href="{{ route('categories.index') }}?type=henley">Henley / Wide Neck</a></li>
-                                                <li><a href="{{ route('categories.index') }}?type=mandarin">Mandarin</a></li>
-                                                <li><a href="{{ route('categories.index') }}?type=oversized">Oversized</a></li>
-                                            </ul>
-                                        </div>
-
-                                        <div class="kk-mega__group">
-                                            <a href="{{ route('categories.index') }}?gender=mens&type=shirts" class="kk-mega__cat">Shirts</a>
-                                            <ul class="kk-mega__subs">
-                                                <li><a href="{{ route('categories.index') }}?fit=slim">Slim Fit</a></li>
-                                                <li><a href="{{ route('categories.index') }}?fit=regular">Regular</a></li>
-                                                <li><a href="{{ route('categories.index') }}?type=denim">Denims</a></li>
-                                            </ul>
-                                        </div>
-
-                                        <div class="kk-mega__group">
-                                            <a href="{{ route('categories.index') }}?gender=mens&type=kurtas" class="kk-mega__cat">Kurtas</a>
-                                            <ul class="kk-mega__subs">
-                                                <li><a href="{{ route('categories.index') }}?length=short">Short</a></li>
-                                                <li><a href="{{ route('categories.index') }}?length=knee">Knee Length</a></li>
-                                            </ul>
-                                        </div>
-
-                                        <div class="kk-mega__group">
-                                            <a href="{{ route('categories.index') }}?gender=mens&type=trousers" class="kk-mega__cat">Trousers</a>
-                                        </div>
+                                        @foreach($kkMegaMens as $cat)
+                                            <div class="kk-mega__group">
+                                                <a href="{{ route('category.show', $cat) }}" class="kk-mega__cat">{{ $cat->name }}</a>
+                                                @if($cat->children->count())
+                                                    <ul class="kk-mega__subs">
+                                                        @foreach($cat->children as $sub)
+                                                            <li><a href="{{ route('category.show', $sub) }}">{{ $sub->name }}</a></li>
+                                                        @endforeach
+                                                    </ul>
+                                                @endif
+                                            </div>
+                                        @endforeach
                                     </div>
                                 </div>
+                                @endif
 
-                                {{-- Women's section --}}
+                                @if($kkMegaWomens->count())
                                 <div class="kk-mega__col">
                                     <h3 class="kk-mega__heading">Women's</h3>
                                     <div class="kk-mega__cats kk-mega__cats--2">
-                                        <div class="kk-mega__group"><a href="{{ route('categories.index') }}?gender=womens&type=tops" class="kk-mega__cat">Tops</a></div>
-                                        <div class="kk-mega__group"><a href="{{ route('categories.index') }}?gender=womens&type=tshirts" class="kk-mega__cat">T-Shirts</a></div>
-                                        <div class="kk-mega__group"><a href="{{ route('categories.index') }}?gender=womens&type=jumpsuit" class="kk-mega__cat">Jumpsuit</a></div>
-                                        <div class="kk-mega__group"><a href="{{ route('categories.index') }}?gender=womens&type=co-ord" class="kk-mega__cat">Co-ord Sets</a></div>
-                                        <div class="kk-mega__group"><a href="{{ route('categories.index') }}?gender=womens&type=kurtas" class="kk-mega__cat">Kurtas</a></div>
-                                        <div class="kk-mega__group"><a href="{{ route('categories.index') }}?gender=womens&type=one-piece" class="kk-mega__cat">One Piece</a></div>
-                                        <div class="kk-mega__group"><a href="{{ route('categories.index') }}?gender=womens&type=trousers" class="kk-mega__cat">Trousers</a></div>
+                                        @foreach($kkMegaWomens as $cat)
+                                            <div class="kk-mega__group">
+                                                <a href="{{ route('category.show', $cat) }}" class="kk-mega__cat">{{ $cat->name }}</a>
+                                                @if($cat->children->count())
+                                                    <ul class="kk-mega__subs">
+                                                        @foreach($cat->children as $sub)
+                                                            <li><a href="{{ route('category.show', $sub) }}">{{ $sub->name }}</a></li>
+                                                        @endforeach
+                                                    </ul>
+                                                @endif
+                                            </div>
+                                        @endforeach
                                     </div>
                                 </div>
+                                @endif
                             </div>
                         </div>
                     </div>

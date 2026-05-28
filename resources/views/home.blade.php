@@ -103,8 +103,9 @@
                 .kk-bento--womens > :nth-child(2),
                 .kk-bento--womens > :nth-child(3),
                 .kk-bento--womens > :nth-child(4),
-                .kk-bento--womens > :nth-child(5),
-                .kk-bento--womens > :nth-child(6) { grid-column: span 1; grid-row: span 1; }
+                .kk-bento--womens > :nth-child(5) { grid-column: span 1; grid-row: span 1; }
+                /* One Piece (6) goes full-width and centered on mobile */
+                .kk-bento--womens > :nth-child(6) { grid-column: span 2; grid-row: span 1; }
                 .kk-bento--womens > :nth-child(7) { grid-column: span 2; grid-row: span 1; }
             }
 
@@ -539,12 +540,29 @@
              SHOP BY CATEGORY — bento mosaics per gender
              ============================================ --}}
         @php
-            $allCats = ($categories ?? collect());
-            $mensRoot   = $allCats->first(fn($c) => str_contains(strtolower($c->slug ?? ''), 'men') && !str_contains(strtolower($c->slug ?? ''), 'women'));
-            $womensRoot = $allCats->first(fn($c) => str_contains(strtolower($c->slug ?? ''), 'women'));
+            // Pull Men's and Women's roots directly from the DB so the section
+            // is independent of the controller's $categories pagination/limit
+            // and survives admins adding new top-level categories.
+            $mensRoot = \App\Models\Category::whereNull('parent_id')
+                ->where('is_active', true)
+                ->where(function ($q) {
+                    $q->where('slug', 'mens')->orWhere('slug', 'men')
+                      ->orWhere('name', "Men's")->orWhere('name', 'Men');
+                })
+                ->with(['children' => fn($q) => $q->where('is_active', true)->orderBy('position')])
+                ->first();
 
-            $mensKids   = $mensRoot   ? $mensRoot->children->where('is_active', true)->sortBy('position')->values()->take(4) : collect();
-            $womensKids = $womensRoot ? $womensRoot->children->where('is_active', true)->sortBy('position')->values()->take(7) : collect();
+            $womensRoot = \App\Models\Category::whereNull('parent_id')
+                ->where('is_active', true)
+                ->where(function ($q) {
+                    $q->where('slug', 'womens')->orWhere('slug', 'women')
+                      ->orWhere('name', "Women's")->orWhere('name', 'Women');
+                })
+                ->with(['children' => fn($q) => $q->where('is_active', true)->orderBy('position')])
+                ->first();
+
+            $mensKids   = $mensRoot   ? $mensRoot->children->take(4)   : collect();
+            $womensKids = $womensRoot ? $womensRoot->children->take(7) : collect();
 
             $mensTints   = ['#7a6347', '#5a4a3c', '#3a2a1f', '#8a6f52'];
             $womensTints = ['#947254', '#7a6347', '#6e5238', '#5a4a3c', '#8a6f52', '#3a2a1f', '#4a3320'];
@@ -563,7 +581,11 @@
                 <div class="kk-bento kk-bento--mens">
                     @foreach($mensKids as $i => $child)
                         <a href="{{ route('category.show', $child) }}" class="kk-tile kk-bento-tile">
-                            @if($child->image_url)
+                            @if($child->video_url)
+                                <video autoplay muted loop playsinline preload="metadata"
+                                       src="{{ str_starts_with($child->video_url, 'http') ? $child->video_url : asset($child->video_url) }}"
+                                       style="width:100%; height:100%; object-fit:cover; display:block;"></video>
+                            @elseif($child->image_url)
                                 <img src="{{ asset('storage/' . $child->image_url) }}" alt="{{ $child->name }}" loading="lazy">
                             @else
                                 <div class="w-full h-full" style="background: linear-gradient(135deg, {{ $mensTints[$i % count($mensTints)] }} 0%, var(--kk-brown-dark) 100%);"></div>
@@ -590,7 +612,11 @@
                 <div class="kk-bento kk-bento--womens">
                     @foreach($womensKids as $i => $child)
                         <a href="{{ route('category.show', $child) }}" class="kk-tile kk-bento-tile">
-                            @if($child->image_url)
+                            @if($child->video_url)
+                                <video autoplay muted loop playsinline preload="metadata"
+                                       src="{{ str_starts_with($child->video_url, 'http') ? $child->video_url : asset($child->video_url) }}"
+                                       style="width:100%; height:100%; object-fit:cover; display:block;"></video>
+                            @elseif($child->image_url)
                                 <img src="{{ asset('storage/' . $child->image_url) }}" alt="{{ $child->name }}" loading="lazy">
                             @else
                                 <div class="w-full h-full" style="background: linear-gradient(135deg, {{ $womensTints[$i % count($womensTints)] }} 0%, var(--kk-brown-dark) 100%);"></div>

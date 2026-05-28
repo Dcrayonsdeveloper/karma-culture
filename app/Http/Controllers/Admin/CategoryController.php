@@ -70,6 +70,8 @@ class CategoryController extends Controller
             'position' => 'nullable|integer|min:0',
             'is_active' => 'boolean',
             'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'video_url_text' => 'nullable|string|max:500',
+            'video_file' => 'nullable|file|mimetypes:video/mp4,video/webm,video/quicktime|max:51200',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string|max:500',
         ]);
@@ -82,7 +84,14 @@ class CategoryController extends Controller
             $validated['image_url'] = $request->file('image')->store('categories', 'public');
         }
 
-        unset($validated['image']);
+        // Video: uploaded file takes precedence over pasted URL.
+        if ($request->hasFile('video_file')) {
+            $validated['video_url'] = 'storage/' . $request->file('video_file')->store('categories/videos', 'public');
+        } elseif (!empty($validated['video_url_text'])) {
+            $validated['video_url'] = $validated['video_url_text'];
+        }
+
+        unset($validated['image'], $validated['video_url_text'], $validated['video_file']);
 
         Category::create($validated);
 
@@ -125,6 +134,9 @@ class CategoryController extends Controller
             'is_active' => 'boolean',
             'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'remove_image' => 'nullable|boolean',
+            'video_url_text' => 'nullable|string|max:500',
+            'video_file' => 'nullable|file|mimetypes:video/mp4,video/webm,video/quicktime|max:51200',
+            'remove_video' => 'nullable|boolean',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string|max:500',
         ]);
@@ -149,7 +161,23 @@ class CategoryController extends Controller
             $validated['image_url'] = null;
         }
 
-        unset($validated['image'], $validated['remove_image']);
+        // Video: file upload wins; otherwise URL field; or remove.
+        if ($request->hasFile('video_file')) {
+            if ($category->video_url && str_starts_with($category->video_url, 'storage/')) {
+                Storage::disk('public')->delete(substr($category->video_url, 8));
+            }
+            $validated['video_url'] = 'storage/' . $request->file('video_file')->store('categories/videos', 'public');
+        } elseif ($request->boolean('remove_video')) {
+            if ($category->video_url && str_starts_with($category->video_url, 'storage/')) {
+                Storage::disk('public')->delete(substr($category->video_url, 8));
+            }
+            $validated['video_url'] = null;
+        } elseif (array_key_exists('video_url_text', $validated)) {
+            $validated['video_url'] = $validated['video_url_text'] ?: $category->video_url;
+        }
+
+        unset($validated['image'], $validated['remove_image'],
+              $validated['video_url_text'], $validated['video_file'], $validated['remove_video']);
 
         $category->update($validated);
 

@@ -40,7 +40,8 @@
                         </div>
                         <div>
                             <label for="description" class="form-label form-label-required">Description</label>
-                            <textarea name="description" id="description" rows="6" required
+                            {{-- `required` removed: CKEditor 5 hides this textarea, and HTML5 validation on a hidden field silently blocks submit. Server validates instead. --}}
+                            <textarea name="description" id="description" rows="6"
                                       class="form-input w-full @error('description') form-input-error @enderror">{{ old('description') }}</textarea>
                             @error('description') <p class="form-error">{{ $message }}</p> @enderror
                         </div>

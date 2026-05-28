@@ -82,6 +82,15 @@
                                 @error('image') <p class="form-error">{{ $message }}</p> @enderror
                             </div>
                         </div>
+
+                        {{-- Video --}}
+                        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e3e3e3;">
+                            <label class="form-label">Video (optional)</label>
+                            <input type="text" name="video_url_text" value="{{ old('video_url_text') }}" class="form-input" placeholder="https://… or storage/categories/videos/file.mp4">
+                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Paste a URL above OR upload an mp4/webm below. Used in the home page bento tile when shown.</p>
+                            <input type="file" name="video_file" accept="video/mp4,video/webm,video/quicktime" class="form-input" style="margin-top: 0.5rem;">
+                            @error('video_file') <p class="form-error">{{ $message }}</p> @enderror
+                        </div>
                     </div>
 
                     <!-- SEO -->
