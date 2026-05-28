@@ -26,3 +26,45 @@ Thumbs.db
 /_nul
 /backups
 .claude/settings.local.json
+
+# ===== Secrets & credentials =====
+# Env files (any variant — but keep the example)
+.env.*
+!.env.example
+
+# Certificates, private keys, keystores
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.crt
+*.cer
+*.csr
+
+# Generic secret/credential file patterns
+secrets.*
+credentials.*
+*.secrets.json
+*-credentials.json
+google-services.json
+service-account*.json
+firebase-adminsdk*.json
+
+# Database dumps / local sqlite (may contain real data)
+*.sqlite
+*.sqlite3
+*.db
+*.sql
+*.sql.gz
+*.dump
+
+# Editor swap / backup files
+*.swp
+*.swo
+*~
+*.bak
+*.tmp
+*.orig
+
+.claude/

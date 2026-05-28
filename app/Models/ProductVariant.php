@@ -59,4 +59,21 @@ class ProductVariant extends Model
     {
         return $this->stock_quantity > 0;
     }
+
+    /**
+     * Virtual collection built from the JSON `attributes` column so views can
+     * iterate `$variant->attributeValues` and read `$av->attribute->name` / `$av->value`.
+     */
+    public function getAttributeValuesAttribute()
+    {
+        $attrs = $this->getAttribute('attributes');
+        if (!is_array($attrs)) {
+            return collect();
+        }
+
+        return collect($attrs)->map(fn ($value, $name) => (object) [
+            'attribute' => (object) ['name' => $name],
+            'value' => $value,
+        ])->values();
+    }
 }

@@ -35,9 +35,9 @@
             <a href="{{ url('/') }}" class="flex items-center">
                 @php $navLogo = \App\Models\Setting::get('site_logo', ''); @endphp
                 @if($navLogo)
-                    <img src="{{ asset('storage/' . $navLogo) }}" alt="{{ config('app.name') }}" class="h-8 object-contain">
+                    <img src="{{ asset('storage/' . $navLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-12 object-contain">
                 @else
-                    <img src="{{ asset('images/colorlogo.png') }}" alt="{{ config('app.name') }}" class="h-8 object-contain">
+                    <img src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-12 object-contain">
                 @endif
             </a>
             <button @click="open = false" class="p-2.5 text-neutral-600 hover:text-neutral-600 rounded-full hover:bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]" aria-label="Close menu">
@@ -51,7 +51,7 @@
         <div class="px-4 py-3 border-b border-neutral-100 shrink-0">
             @guest
                 <div class="flex gap-2">
-                    <a href="{{ route('login') }}" class="flex-1 py-3 text-center text-sm font-semibold text-white bg-[#F8931D] hover:bg-[#E07E0A] rounded-lg transition-colors">Login</a>
+                    <a href="{{ route('login') }}" class="flex-1 py-3 text-center text-sm font-semibold text-white bg-[#2D1810] hover:bg-[#1f1109] rounded-lg transition-colors">Login</a>
                     <a href="{{ route('register') }}" class="flex-1 py-3 text-center text-sm font-medium text-neutral-700 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">Register</a>
                 </div>
             @else

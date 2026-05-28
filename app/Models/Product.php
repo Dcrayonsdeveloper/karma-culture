@@ -36,6 +36,8 @@ class Product extends Model
         'length',
         'width',
         'height',
+        'model_glb_path',
+        'model_usdz_path',
         'weight_unit',
         'dimension_unit',
         'is_active',
@@ -238,6 +240,42 @@ class Product extends Model
         }
 
         return asset('images/no-product-image.svg');
+    }
+
+    /**
+     * Public URL for the .glb 3D model (used by <model-viewer> and Android Scene Viewer).
+     * Accepts: full http URL, absolute path ("/foo.glb"), or storage-relative path ("models/foo.glb").
+     */
+    public function getModelGlbUrlAttribute(): ?string
+    {
+        return $this->resolveModelUrl($this->model_glb_path);
+    }
+
+    /**
+     * Public URL for the .usdz 3D model (used by iOS AR QuickLook).
+     */
+    public function getModelUsdzUrlAttribute(): ?string
+    {
+        return $this->resolveModelUrl($this->model_usdz_path);
+    }
+
+    public function hasArModel(): bool
+    {
+        return !empty($this->model_glb_path);
+    }
+
+    protected function resolveModelUrl(?string $path): ?string
+    {
+        if (!$path) {
+            return null;
+        }
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+        if (str_starts_with($path, '/')) {
+            return asset(ltrim($path, '/'));
+        }
+        return asset('storage/' . $path);
     }
 
     // Helper methods

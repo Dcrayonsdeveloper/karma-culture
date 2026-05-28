@@ -330,6 +330,20 @@ body {
     max-width: 100%;
 }
 
+/* Storefront paragraph baseline — bumps all <p> to 20px.
+   Scoped with :not(.layout-admin) so admin keeps its 13px compact base.
+   !important wins over the many inline/component font-size overrides. */
+body:not(.layout-admin) p {
+    font-size: 18px !important;
+    line-height: 1.6;
+}
+
+/* Storefront sits on cream — keep the fixed-header spacer and any
+   layout gaps from flashing white. Admin keeps its own background. */
+body:not(.layout-admin) {
+    background-color: #efe2cb;
+}
+
 button, [role="button"], a, select, label[for], input[type="checkbox"], input[type="radio"], summary {
     cursor: pointer;
 }

@@ -1,11 +1,11 @@
 {
-    "name": "ForeverKids",
-    "short_name": "ForeverKids",
-    "description": "Kids' clothing store offering fashionable and comfortable outfits for children",
+    "name": "Karmaculture",
+    "short_name": "Karmaculture",
+    "description": "Curated fashion for the modern individual",
     "start_url": "/",
     "display": "browser",
-    "background_color": "#ffffff",
-    "theme_color": "#6F9CA2",
+    "background_color": "#fcfbf9",
+    "theme_color": "#ab8c52",
     "icons": [
         {
             "src": "/android-chrome-192x192.png",

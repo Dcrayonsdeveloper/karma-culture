@@ -70,7 +70,7 @@
                         </div>
                     @endguest
 
-                    <button type="submit" class="w-full px-5 py-2.5 text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors">
+                    <button type="submit" class="w-full px-5 py-2.5 text-sm font-semibold text-white rounded-lg transition-colors" style="background:#2D1810;" onmouseover="this.style.background='#1f1109'" onmouseout="this.style.background='#2D1810'">
                         Track Order
                     </button>
                 </form>

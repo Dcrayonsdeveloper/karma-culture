@@ -44,7 +44,7 @@
     </style>
     @endif
     <div class="w-full px-4 lg:px-6">
-        <div class="relative flex items-center justify-between h-20 lg:h-28">
+        <div class="relative flex items-center justify-between h-16 lg:h-24">
 
             <!-- Left: Mobile menu + Desktop Nav -->
             <div class="flex items-center gap-3 lg:gap-0 flex-1">
@@ -205,12 +205,12 @@
             <a href="{{ url('/') }}" class="absolute left-[44%] top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center shrink-0 pointer-events-auto">
                 @php $siteLogo = \App\Models\Setting::get('site_logo', ''); @endphp
                 @if($siteLogo)
-                    <img id="site-logo" src="{{ asset('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-20 lg:h-28 object-contain">
+                    <img id="site-logo" src="{{ asset('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-14 lg:h-20 object-contain">
                 @else
-                    <img id="site-logo" src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-20 lg:h-28 object-contain">
+                    <img id="site-logo" src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-14 lg:h-20 object-contain">
                 @endif
             </a>
-            <style>@media (max-width: 767px) { #site-logo { height: 72px; } }</style>
+            <style>@media (max-width: 767px) { #site-logo { height: 52px; } }</style>
 
             <!-- Right: Nav links + Icons -->
             <div class="flex items-center gap-1 lg:gap-0 flex-1 justify-end">
@@ -377,7 +377,7 @@
 </header>
 <!-- Spacer for fixed header + announcement bar -->
 <div id="header-spacer"
-     class="{{ $announcement ? 'h-28 lg:h-36' : 'h-20 lg:h-28' }}"
+     class="{{ $announcement ? 'h-24 lg:h-32' : 'h-16 lg:h-24' }}"
      aria-hidden="true"></div>
 <script>
     (function () {
@@ -393,10 +393,11 @@
 
 @guest
 {{-- ====================================================
-     LOGIN MODAL — opens via $dispatch('open-login-modal')
+     LOGIN / SIGNUP MODAL — opens via $dispatch('open-login-modal')
+     AJAX-wired to LoginController@login and RegisterController@register
      ==================================================== --}}
-<div x-data="{ open: false, phone: '', notify: false }"
-     @open-login-modal.window="open = true; $nextTick(() => $refs.phoneInput?.focus())"
+<div x-data="kkAuthModal()"
+     @open-login-modal.window="openModal()"
      @keydown.escape.window="open = false"
      x-show="open"
      x-cloak
@@ -427,46 +428,116 @@
 
         {{-- RIGHT (form) --}}
         <div class="kk-loginmodal__right">
-            <form method="POST" action="{{ route('login') }}" @submit="open = false">
-                @csrf
-                <div class="kk-loginmodal__phone">
-                    <span class="kk-loginmodal__phone-prefix">
-                        <span style="font-size:18px;">🇮🇳</span>
-                        <span>+91</span>
-                    </span>
-                    <input type="tel" name="phone" x-ref="phoneInput" x-model="phone"
-                           inputmode="numeric" maxlength="10" autocomplete="tel"
-                           placeholder="Enter Mobile Number"
-                           class="kk-loginmodal__phone-input">
-                </div>
+            <div class="kk-loginmodal__tabs">
+                <button type="button" :class="mode === 'login' ? 'is-active' : ''" @click="switchMode('login')">Login</button>
+                <button type="button" :class="mode === 'signup' ? 'is-active' : ''" @click="switchMode('signup')">Sign Up</button>
+            </div>
 
-                <label class="kk-loginmodal__notify">
-                    <input type="checkbox" x-model="notify" name="notify_updates">
-                    <span>Notify me with offers &amp; updates</span>
+            <p class="kk-loginmodal__notice" x-show="notice" x-text="notice" x-cloak></p>
+            <p class="kk-loginmodal__error" x-show="error" x-text="error" x-cloak></p>
+
+            <form @submit.prevent="submit()">
+                {{-- Signup-only: full name --}}
+                <input type="text" class="kk-loginmodal__field" x-show="mode === 'signup'"
+                       x-model="form.full_name" placeholder="Full Name" autocomplete="name">
+
+                <input type="email" class="kk-loginmodal__field"
+                       x-model="form.email" placeholder="Email Address" autocomplete="email" required>
+
+                {{-- Signup-only: phone --}}
+                <input type="tel" class="kk-loginmodal__field" x-show="mode === 'signup'"
+                       x-model="form.phone" placeholder="Phone Number (optional)" autocomplete="tel"
+                       inputmode="numeric" maxlength="15">
+
+                <input type="password" class="kk-loginmodal__field"
+                       x-model="form.password" placeholder="Password" autocomplete="current-password" required>
+
+                {{-- Signup-only: confirm password --}}
+                <input type="password" class="kk-loginmodal__field" x-show="mode === 'signup'"
+                       x-model="form.password_confirmation" placeholder="Confirm Password" autocomplete="new-password">
+
+                <label class="kk-loginmodal__notify" x-show="mode === 'login'">
+                    <input type="checkbox" x-model="form.remember">
+                    <span>Remember me</span>
                 </label>
 
-                <button type="submit" class="kk-loginmodal__submit"
-                        :disabled="phone.length < 10"
-                        :class="phone.length < 10 ? 'is-disabled' : ''">
-                    Submit
+                <button type="submit" class="kk-loginmodal__submit" :disabled="loading">
+                    <span x-show="!loading" x-text="mode === 'login' ? 'Login' : 'Create Account'">Login</span>
+                    <span x-show="loading" x-cloak>Please wait...</span>
                 </button>
-
-                <p class="kk-loginmodal__legal">
-                    I accept that I have read &amp; understood your<br>
-                    <a href="#" class="kk-loginmodal__legal-link">Privacy Policy</a>
-                    <span> and </span>
-                    <a href="#" class="kk-loginmodal__legal-link">T&amp;Cs.</a>
-                </p>
-
-                <div class="kk-loginmodal__fallback">
-                    <a href="{{ route('login') }}">Login with email instead</a>
-                    <span class="kk-loginmodal__dot">&bull;</span>
-                    <a href="{{ route('register') }}">Create account</a>
-                </div>
             </form>
+
+            <p class="kk-loginmodal__legal">
+                By continuing you agree to our
+                <a href="#" class="kk-loginmodal__legal-link">Privacy Policy</a>
+                <span> &amp; </span>
+                <a href="#" class="kk-loginmodal__legal-link">T&amp;Cs.</a>
+            </p>
+
+            <div class="kk-loginmodal__fallback">
+                <span x-show="mode === 'login'">New here? <a href="#" @click.prevent="switchMode('signup')">Create an account</a></span>
+                <span x-show="mode === 'signup'" x-cloak>Already have an account? <a href="#" @click.prevent="switchMode('login')">Login</a></span>
+            </div>
         </div>
     </div>
 </div>
+
+<script>
+    function kkAuthModal() {
+        return {
+            open: false,
+            mode: 'login',
+            loading: false,
+            error: '',
+            notice: '',
+            form: { full_name: '', email: '', phone: '', password: '', password_confirmation: '', remember: false },
+            csrf: '{{ csrf_token() }}',
+            openModal() { this.open = true; this.error = ''; this.notice = ''; },
+            switchMode(m) { this.mode = m; this.error = ''; this.notice = ''; },
+            async submit() {
+                this.error = '';
+                if (this.mode === 'signup' && this.form.password !== this.form.password_confirmation) {
+                    this.error = 'Passwords do not match.';
+                    return;
+                }
+                this.loading = true;
+                const url = this.mode === 'login' ? '{{ route('login') }}' : '{{ route('register') }}';
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': this.csrf,
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify(this.form)
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (res.ok && data.success) {
+                        if (this.mode === 'signup') {
+                            this.notice = 'Account created! Please log in.';
+                            this.mode = 'login';
+                            this.form.full_name = '';
+                            this.form.phone = '';
+                            this.form.password = '';
+                            this.form.password_confirmation = '';
+                        } else {
+                            window.location.reload();
+                        }
+                    } else if (data.errors) {
+                        this.error = Object.values(data.errors)[0][0];
+                    } else {
+                        this.error = data.message || 'Something went wrong. Please try again.';
+                    }
+                } catch (e) {
+                    this.error = 'Network error. Please try again.';
+                }
+                this.loading = false;
+            }
+        };
+    }
+</script>
 
 <style>
     .kk-loginmodal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px; }
@@ -512,27 +583,26 @@
         padding: 36px 30px;
         display: flex; flex-direction: column; justify-content: center;
     }
-    .kk-loginmodal__phone {
-        display: flex; align-items: stretch;
+    .kk-loginmodal__tabs {
+        display: flex; gap: 4px; margin-bottom: 18px;
+        border-bottom: 1px solid #ececec;
+    }
+    .kk-loginmodal__tabs button {
+        flex: 1; padding: 10px 4px; background: none; border: none;
+        font-size: 14px; font-weight: 600; color: #9ca3af; cursor: pointer;
+        border-bottom: 2px solid transparent; margin-bottom: -1px;
+        transition: color 0.15s ease, border-color 0.15s ease;
+    }
+    .kk-loginmodal__tabs button.is-active { color: #2d1810; border-bottom-color: #2d1810; }
+    .kk-loginmodal__field {
+        width: 100%; box-sizing: border-box;
+        padding: 11px 12px; margin-bottom: 12px;
         border: 1px solid #d4d4d4; border-radius: 4px;
-        overflow: hidden;
-        margin-bottom: 12px;
+        font-size: 14px; color: #2d1810; background: #fff;
+        outline: none; transition: border-color 0.15s ease;
     }
-    .kk-loginmodal__phone-prefix {
-        display: inline-flex; align-items: center; gap: 6px;
-        padding: 10px 12px;
-        background: #fff; color: #2d1810;
-        font-size: 14px; font-weight: 500;
-        border-right: 1px solid #d4d4d4;
-        white-space: nowrap;
-    }
-    .kk-loginmodal__phone-input {
-        flex: 1; border: none; outline: none;
-        padding: 10px 12px;
-        font-size: 14px; color: #2d1810;
-        background: #fff;
-    }
-    .kk-loginmodal__phone-input::placeholder { color: #9ca3af; }
+    .kk-loginmodal__field:focus { border-color: #2d1810; }
+    .kk-loginmodal__field::placeholder { color: #9ca3af; }
     .kk-loginmodal__notify {
         display: flex; align-items: center; gap: 8px;
         font-size: 12px; color: #6b6b6b;
@@ -541,24 +611,30 @@
     .kk-loginmodal__notify input { width: 14px; height: 14px; accent-color: #2d1810; cursor: pointer; }
     .kk-loginmodal__submit {
         width: 100%; padding: 12px; border: none; border-radius: 4px;
-        background: #1a1a1a; color: #fff;
+        background: #2d1810; color: #fff;
         font-size: 14px; font-weight: 600;
         cursor: pointer; transition: background 0.15s ease;
-        margin-bottom: 16px;
+        margin-bottom: 14px;
     }
-    .kk-loginmodal__submit:hover:not(.is-disabled) { background: #2d1810; }
-    .kk-loginmodal__submit.is-disabled { background: #6b6b6b; cursor: not-allowed; }
+    .kk-loginmodal__submit:hover:not(:disabled) { background: #1f1109; }
+    .kk-loginmodal__submit:disabled { background: #6b6b6b; cursor: not-allowed; }
+    .kk-loginmodal__error {
+        background: #fdeceb; border: 1px solid #f3c9c5; color: #b71c00;
+        font-size: 12px; padding: 8px 10px; border-radius: 4px; margin: 0 0 12px;
+    }
+    .kk-loginmodal__notice {
+        background: #e8f6ec; border: 1px solid #bfe5c7; color: #1a7a2e;
+        font-size: 12px; padding: 8px 10px; border-radius: 4px; margin: 0 0 12px;
+    }
     .kk-loginmodal__legal {
-        text-align: center; font-size: 11px; color: #6b6b6b; margin: 0 0 14px; line-height: 1.6;
+        text-align: center; font-size: 11px; color: #6b6b6b; margin: 0 0 12px; line-height: 1.6;
     }
     .kk-loginmodal__legal-link { color: #2d1810; text-decoration: underline; font-weight: 500; }
     .kk-loginmodal__fallback {
         text-align: center; font-size: 12px; color: #6b6b6b;
         padding-top: 12px; border-top: 1px solid #efefef;
-        display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;
     }
     .kk-loginmodal__fallback a { color: #2d1810; text-decoration: none; font-weight: 600; }
     .kk-loginmodal__fallback a:hover { text-decoration: underline; }
-    .kk-loginmodal__dot { color: #d4d4d4; }
 </style>
 @endguest

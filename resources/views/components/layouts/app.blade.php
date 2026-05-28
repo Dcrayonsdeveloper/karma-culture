@@ -144,7 +144,7 @@
 
             {{-- Logo --}}
             <div class="pt-6 pb-2 px-6 text-center">
-                <img src="{{ asset('images/colorlogo.png') }}" alt="ForeverKids" class="h-10 mx-auto mb-3 object-contain">
+                <img src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-14 mx-auto mb-3 object-contain">
                 <h2 class="text-2xl font-bold text-neutral-900"
                     x-text="$store.authModal.mode === 'login' ? 'Login or Signup' : 'Create Account'"></h2>
             </div>

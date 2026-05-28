@@ -48,7 +48,7 @@ class PayoutController extends Controller
 
         // Check minimum payout
         if ($validated['amount'] < 10) {
-            return back()->withErrors(['amount' => 'Minimum payout amount is $10.']);
+            return back()->withErrors(['amount' => 'Minimum payout amount is ₹10.']);
         }
 
         // Check available balance

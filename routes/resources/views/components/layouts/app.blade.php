@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-smooth overflow-x-clip">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    <title>{{ $title ?? config('app.name', 'Laravel') }}</title>
+
+    <!-- SEO Meta Tags -->
+    @hasSection('meta')
+        @yield('meta')
+    @else
+        {{ $meta ?? '' }}
+    @endif
+    @stack('meta')
+
+    @php
+        // Global SEO defaults from DB settings (injected unless individual pages override)
+        $seoMetaDesc = \App\Models\Setting::get('meta_description');
+        $seoKeywords = \App\Models\Setting::get('meta_keywords');
+        $seoOgImage  = \App\Models\Setting::get('og_image');
+        $twitterSite = \App\Models\Setting::get('twitter_site');
+        $gscCode     = preg_replace('/[^A-Za-z0-9_=\-]/', '', (string) \App\Models\Setting::get('google_search_console_verification'));
+    @endphp
+    @if($seoMetaDesc && !$__env->hasSection('meta'))
+    <meta name="description" content="{{ $seoMetaDesc }}">
+    @endif
+    @if($seoKeywords)
+    <meta name="keywords" content="{{ $seoKeywords }}">
+    @endif
+    @if($seoOgImage)
+    <meta property="og:image" content="{{ $seoOgImage }}">
+    <meta name="twitter:image" content="{{ $seoOgImage }}">
+    @endif
+    @if($twitterSite)
+    <meta name="twitter:site" content="{{ $twitterSite }}">
+    @endif
+    @if($gscCode)
+    <meta name="google-site-verification" content="{{ $gscCode }}">
+    @endif
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
+    <link rel="manifest" href="{{ asset('site.webmanifest') }}">
+    <meta name="theme-color" content="#3E2A1F">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=bricolage-grotesque:300,400,500,600,700,800|dm-sans:300,400,500,600,700|rye&display=swap" rel="stylesheet" />
+
+    <!-- Critical CSS first to prevent flash -->
+    @vite(['resources/css/critical.css'])
+
+    <!-- Main Styles -->
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    {{ $styles ?? '' }}
+
+    {{-- AAA Accessibility: prefers-reduced-motion + focus rings --}}
+    <style>
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+        :focus-visible {
+            outline: 2px solid #3E2A1F;
+            outline-offset: 2px;
+        }
+    </style>
+
+    {{-- Analytics are loaded after cookie consent (see cookie-consent component) --}}
+
+    {{-- Google <model-viewer> — powers the 3D product viewer and mobile AR "View in AR" button. --}}
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+</head>
+<body class="font-sans antialiased bg-[#FAF5EF] text-[#212121] overflow-x-clip" style="font-family: 'Bricolage Grotesque', 'DM Sans', sans-serif;" x-data data-authenticated="{{ auth()->check() ? 'true' : 'false' }}">
+    <!-- Toast Notifications -->
+    <div class="fixed top-4 right-4 z-50 flex flex-col gap-2" aria-live="polite">
+        <template x-for="toast in $store.toast.items" :key="toast.id">
+            <div x-show="true" role="alert"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-x-8"
+                 x-transition:enter-end="opacity-100 translate-x-0"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-x-0"
+                 x-transition:leave-end="opacity-0 translate-x-8"
+                 class="card px-4 py-3 flex items-center gap-3 shadow-lg border"
+                 :class="{
+                     'bg-success-50 border-success-200 text-success-800': toast.type === 'success',
+                     'bg-error-50 border-error-200 text-error-800': toast.type === 'error',
+                     'bg-warning-50 border-warning-200 text-warning-800': toast.type === 'warning',
+                     'bg-info-50 border-info-200 text-info-800': toast.type === 'info'
+                 }">
+                <span x-text="toast.message"></span>
+                <button @click="$store.toast.remove(toast.id)" class="text-current opacity-60 hover:opacity-100" aria-label="Dismiss notification">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </template>
+    </div>
+
+    <!-- Auth Login/Signup Modal -->
+    @guest
+    <div x-show="$store.authModal.isOpen" x-cloak
+         class="fixed inset-0 z-60 flex items-center justify-center p-4"
+         @keydown.escape.window="$store.authModal.close()">
+
+        {{-- Backdrop --}}
+        <div x-show="$store.authModal.isOpen"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             @click="$store.authModal.close()"
+             class="absolute inset-0 bg-black/50"></div>
+
+        {{-- Modal --}}
+        <div x-show="$store.authModal.isOpen"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-95"
+             class="relative bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden"
+             @click.stop>
+
+            {{-- Close button --}}
+            <button @click="$store.authModal.close()" aria-label="Close dialog"
+                    class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-neutral-600 hover:text-neutral-800 rounded-full hover:bg-neutral-100 transition-colors z-10">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+
+            {{-- Logo --}}
+            <div class="pt-6 pb-2 px-6 text-center">
+                <img src="{{ asset('images/update-logo.png') }}" alt="Karmaculture" class="h-10 mx-auto mb-3 object-contain">
+                <h2 class="text-2xl font-bold text-neutral-900"
+                    x-text="$store.authModal.mode === 'login' ? 'Login or Signup' : 'Create Account'"></h2>
+            </div>
+
+            {{-- Error message --}}
+            <template x-if="$store.authModal.message">
+                <div class="mx-6 mt-2 px-3 py-2 bg-error-50 border border-error-200 rounded text-sm text-error-700" x-text="$store.authModal.message"></div>
+            </template>
+
+            {{-- LOGIN FORM --}}
+            <div x-show="$store.authModal.mode === 'login'"
+                 x-data="{ email: '', password: '', remember: false }"
+                 class="px-6 py-4">
+                <form @submit.prevent="$store.authModal.login(email, password, remember)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-neutral-700 mb-1.5">Email Address</label>
+                        <input type="email" x-model="email" required autofocus
+                               class="w-full px-3 py-2.5 bg-neutral-50 border border-neutral-300 rounded-lg text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#3E2A1F] focus:ring-0 transition-colors"
+                               placeholder="you@example.com">
+                        <template x-if="$store.authModal.errors.email">
+                            <p class="mt-1 text-xs text-error-600" x-text="$store.authModal.errors.email[0]"></p>
+                        </template>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="text-sm font-medium text-neutral-700">Password</label>
+                            <a href="{{ route('password.request') }}" class="text-xs text-[#3E2A1F] hover:text-[#5E3A26]">Forgot password?</a>
+                        </div>
+                        <div class="relative" x-data="{ show: false }">
+                            <input :type="show ? 'text' : 'password'" x-model="password" required
+                                   class="w-full px-3 py-2.5 pr-10 bg-neutral-50 border border-neutral-300 rounded-lg text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#3E2A1F] focus:ring-0 transition-colors"
+                                   placeholder="Enter your password">
+                            <button type="button" @click="show = !show" class="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-600 hover:text-neutral-600">
+                                <svg x-show="!show" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                <svg x-show="show" x-cloak class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+                            </button>
+                        </div>
+                        <template x-if="$store.authModal.errors.password">
+                            <p class="mt-1 text-xs text-error-600" x-text="$store.authModal.errors.password[0]"></p>
+                        </template>
+                    </div>
+
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" x-model="remember" class="w-4 h-4 rounded border-neutral-300 text-[#3E2A1F] focus:ring-0">
+                        <span class="text-sm text-neutral-600">Keep me signed in</span>
+                    </label>
+
+                    <button type="submit"
+                            :disabled="$store.authModal.isLoading"
+                            class="w-full py-2.5 bg-[#F8931D] hover:bg-[#E07E0A] text-white font-semibold rounded-lg text-sm transition-colors disabled:opacity-50">
+                        <span x-show="!$store.authModal.isLoading">CONTINUE</span>
+                        <span x-show="$store.authModal.isLoading" x-cloak class="flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                            Signing in...
+                        </span>
+                    </button>
+                </form>
+
+                <p class="mt-4 text-center text-sm text-neutral-600">
+                    New to Karmaculture?
+                    <button @click="$store.authModal.switchMode('register')" class="font-semibold text-[#3E2A1F] hover:text-[#5E3A26]">Create an account</button>
+                </p>
+            </div>
+
+            {{-- REGISTER FORM --}}
+            <div x-show="$store.authModal.mode === 'register'" x-cloak
+                 x-data="{ name: '', email: '', password: '', password_confirmation: '' }"
+                 class="px-6 py-4">
+                <form @submit.prevent="$store.authModal.register(name, email, password, password_confirmation)" class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-neutral-700 mb-1.5">Full Name</label>
+                        <input type="text" x-model="name" required
+                               class="w-full px-3 py-2.5 bg-neutral-50 border border-neutral-300 rounded-lg text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#3E2A1F] focus:ring-0 transition-colors"
+                               placeholder="Enter your full name">
+                        <template x-if="$store.authModal.errors.full_name">
+                            <p class="mt-1 text-xs text-error-600" x-text="$store.authModal.errors.full_name[0]"></p>
+                        </template>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-neutral-700 mb-1.5">Email Address</label>
+                        <input type="email" x-model="email" required
+                               class="w-full px-3 py-2.5 bg-neutral-50 border border-neutral-300 rounded-lg text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#3E2A1F] focus:ring-0 transition-colors"
+                               placeholder="you@example.com">
+                        <template x-if="$store.authModal.errors.email">
+                            <p class="mt-1 text-xs text-error-600" x-text="$store.authModal.errors.email[0]"></p>
+                        </template>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-neutral-700 mb-1.5">Password</label>
+                        <input type="password" x-model="password" required
+                               class="w-full px-3 py-2.5 bg-neutral-50 border border-neutral-300 rounded-lg text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#3E2A1F] focus:ring-0 transition-colors"
+                               placeholder="Min 8 characters">
+                        <template x-if="$store.authModal.errors.password">
+                            <p class="mt-1 text-xs text-error-600" x-text="$store.authModal.errors.password[0]"></p>
+                        </template>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-neutral-700 mb-1.5">Confirm Password</label>
+                        <input type="password" x-model="password_confirmation" required
+                               class="w-full px-3 py-2.5 bg-neutral-50 border border-neutral-300 rounded-lg text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#3E2A1F] focus:ring-0 transition-colors"
+                               placeholder="Repeat password">
+                    </div>
+
+                    <button type="submit"
+                            :disabled="$store.authModal.isLoading"
+                            class="w-full py-2.5 bg-[#F8931D] hover:bg-[#E07E0A] text-white font-semibold rounded-lg text-sm transition-colors disabled:opacity-50">
+                        <span x-show="!$store.authModal.isLoading">CREATE ACCOUNT</span>
+                        <span x-show="$store.authModal.isLoading" x-cloak class="flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                            Creating account...
+                        </span>
+                    </button>
+                </form>
+
+                <p class="mt-4 text-center text-sm text-neutral-600">
+                    Already have an account?
+                    <button @click="$store.authModal.switchMode('login')" class="font-semibold text-[#3E2A1F] hover:text-[#5E3A26]">Sign in</button>
+                </p>
+            </div>
+
+            {{-- Footer --}}
+            <div class="px-6 pb-5 pt-2 text-center">
+                <p class="text-[11px] text-neutral-600 leading-relaxed">
+                    By continuing, I agree to Karmaculture'
+                    <a href="{{ route('terms') }}" class="text-neutral-600 underline">T&C</a>,
+                    <a href="{{ route('privacy') }}" class="text-neutral-600 underline">Privacy Policy</a>
+                </p>
+            </div>
+        </div>
+    </div>
+    @endguest
+
+    <!-- Skip to main content -->
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary-500 text-white px-4 py-2 rounded-md z-50">
+        Skip to main content
+    </a>
+
+    <!-- Header -->
+    @include('partials.header')
+
+    <!-- Mobile Navigation -->
+    @include('partials.mobile-nav')
+
+    <!-- Notify Stock Listener -->
+    <div x-data @notify-stock.window="$store.toast.success('We\'ll notify you when this item is back in stock!')"></div>
+
+    <!-- Main Content -->
+    <main id="main-content" class="min-h-screen">
+        {{ $slot }}
+    </main>
+
+    <!-- Back to Top Button -->
+    <div x-data="{ show: false }"
+         x-init="window.addEventListener('scroll', () => { show = window.scrollY > 400 })"
+         x-cloak>
+        <button x-show="show"
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0 translate-y-4"
+                x-transition:enter-end="opacity-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100 translate-y-0"
+                x-transition:leave-end="opacity-0 translate-y-4"
+                @click="window.scrollTo({ top: 0, behavior: 'smooth' })"
+                class="fixed bottom-20 lg:bottom-6 right-4 z-40 w-10 h-10 bg-[#3E2A1F] hover:bg-[#5E3A26] text-white rounded-full shadow-lg flex items-center justify-center transition-colors"
+                aria-label="Back to top">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+        </button>
+    </div>
+
+    <!-- Cart Drawer -->
+    <div x-show="$store.cart.isOpen" x-cloak
+         class="fixed inset-0 z-50"
+         @keydown.escape.window="$store.cart.isOpen && $store.cart.close()">
+
+        {{-- Backdrop --}}
+        <div x-show="$store.cart.isOpen"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             @click="$store.cart.close()"
+             class="absolute inset-0"
+             style="background:rgba(0,0,0,0.5);"></div>
+
+        {{-- Drawer Panel --}}
+        <div x-show="$store.cart.isOpen"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="translate-x-full"
+             x-transition:enter-end="translate-x-0"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="translate-x-0"
+             x-transition:leave-end="translate-x-full"
+             class="absolute right-0 top-0 bottom-0 w-full max-w-md flex flex-col"
+             style="background:#fff;box-shadow:-4px 0 24px rgba(0,0,0,0.12);"
+             @click.stop>
+
+            {{-- Header --}}
+            <div class="flex items-center justify-between px-4 py-3 shrink-0" style="border-bottom:1px solid #e5e5e5;">
+                <h2 class="text-lg font-bold" style="color:#222;">
+                    Shopping Cart
+                    <span class="text-sm font-normal" style="color:#595959;" x-text="'(' + $store.cart.itemCount + ')'"></span>
+                </h2>
+                <button @click="$store.cart.close()" class="w-8 h-8 flex items-center justify-center rounded-full transition-colors" style="color:#595959;" onmouseenter="this.style.background='#f5f5f5'" onmouseleave="this.style.background='transparent'" aria-label="Close cart">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            {{-- Cart Items --}}
+            <div class="flex-1 overflow-y-auto">
+                {{-- Empty state --}}
+                <template x-if="$store.cart.items.length === 0">
+                    <div class="flex flex-col items-center justify-center py-16 px-6">
+                        <svg class="w-16 h-16 mb-4" style="color:#ccc;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                        <p class="text-sm" style="color:#595959;">Your cart is empty</p>
+                    </div>
+                </template>
+
+                {{-- Items list --}}
+                <div class="px-4 py-2">
+                    <template x-for="item in $store.cart.items" :key="item.id">
+                        <div class="flex gap-3 py-3" style="border-bottom:1px solid #f0f0f0;">
+                            <a :href="'/product/' + item.slug" class="shrink-0">
+                                <img :src="item.image" :alt="item.product_name" class="rounded" style="width:64px;height:64px;object-fit:cover;background:#f8f8f8;">
+                            </a>
+                            <div class="flex-1 min-w-0">
+                                <a :href="'/product/' + item.slug" class="text-sm font-medium line-clamp-2 block" style="color:#222;" x-text="item.product_name"></a>
+                                <p class="text-sm font-bold mt-1" style="color:#222;" x-text="formatCurrency(item.price)"></p>
+                                <div class="flex items-center gap-2 mt-1.5">
+                                    <div class="flex items-center rounded overflow-hidden" style="border:1px solid #ddd;">
+                                        <button @click="item.quantity > 1 ? $store.cart.update(item.id, item.quantity - 1) : $store.cart.remove(item.id)"
+                                                class="w-7 h-7 flex items-center justify-center text-sm transition-colors" style="color:#555;" onmouseenter="this.style.background='#f5f5f5'" onmouseleave="this.style.background='transparent'">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+                                        </button>
+                                        <span class="w-8 h-7 flex items-center justify-center text-xs font-semibold" style="border-left:1px solid #ddd;border-right:1px solid #ddd;background:#fafafa;" x-text="item.quantity"></span>
+                                        <button @click="$store.cart.update(item.id, item.quantity + 1)"
+                                                class="w-7 h-7 flex items-center justify-center text-sm transition-colors" style="color:#555;" onmouseenter="this.style.background='#f5f5f5'" onmouseleave="this.style.background='transparent'">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                        </button>
+                                    </div>
+                                    <button @click="$store.cart.remove(item.id)" class="text-xs transition-colors" style="color:#767676;" onmouseenter="this.style.color='#ef4444'" onmouseleave="this.style.color='#999'">Remove</button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                {{-- Recommendations --}}
+                <template x-if="$store.cart.recommendations.length > 0">
+                    <div class="px-4 py-4" style="border-top:1px solid #e5e5e5;background:#fafafa;">
+                        <h3 class="text-sm font-bold mb-3" style="color:#222;">You Might Also Like</h3>
+                        <div class="flex gap-3 overflow-x-auto pb-2" style="-webkit-overflow-scrolling:touch;">
+                            <template x-for="rec in $store.cart.recommendations" :key="rec.id">
+                                <div class="shrink-0" style="width:130px;">
+                                    <a :href="rec.url" class="block">
+                                        <img :src="rec.image" :alt="rec.name" class="rounded" style="width:130px;height:130px;object-fit:cover;background:#f0f0f0;">
+                                    </a>
+                                    <a :href="rec.url" class="text-xs font-medium line-clamp-2 mt-1.5 block" style="color:#222;" x-text="rec.name"></a>
+                                    <div class="flex items-center gap-1.5 mt-0.5">
+                                        <span class="text-xs font-bold" style="color:#222;" x-text="formatCurrency(rec.price)"></span>
+                                        <template x-if="rec.mrp > rec.price">
+                                            <span class="text-[10px] line-through" style="color:#767676;" x-text="formatCurrency(rec.mrp)"></span>
+                                        </template>
+                                    </div>
+                                    <button @click="$store.cart.add(rec.id)"
+                                            class="w-full mt-1.5 text-xs font-semibold py-1.5 rounded transition-colors"
+                                            style="background:#F8931D;color:#fff;"
+                                            onmouseenter="this.style.background='#E07E0A'" onmouseleave="this.style.background='#F8931D'">
+                                        Add to Cart
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            {{-- Footer --}}
+            <div class="shrink-0 px-4 py-4" style="border-top:1px solid #e5e5e5;background:#fff;">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-sm font-medium" style="color:#595959;">Subtotal</span>
+                    <span class="text-lg font-bold" style="color:#222;" x-text="formatCurrency($store.cart.subtotal)"></span>
+                </div>
+                <p class="text-xs mb-3" style="color:#595959;">Shipping & taxes calculated at checkout</p>
+                <a href="{{ route('cart.index') }}"
+                   class="block w-full text-center py-2.5 text-sm font-semibold rounded-lg mb-2 transition-colors"
+                   style="background:#3E2A1F;color:#fff;"
+                   onmouseenter="this.style.background='#5E3A26'" onmouseleave="this.style.background='#3E2A1F'">
+                    VIEW CART & CHECKOUT
+                </a>
+                <button @click="$store.cart.close()"
+                        class="block w-full text-center py-2 text-sm font-medium rounded-lg transition-colors"
+                        style="color:#3E2A1F;"
+                        onmouseenter="this.style.background='#f0f7f8'" onmouseleave="this.style.background='transparent'">
+                    Continue Shopping
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    @include('partials.footer')
+
+    <!-- Mobile Bottom Navigation -->
+    @include('partials.mobile-bottom-nav')
+
+    <!-- Quick View Modal -->
+    <div x-data="quickViewModal()"
+         x-show="open" x-cloak
+         @quick-view.window="show($event.detail.productId)"
+         @keydown.escape.window="close()"
+         class="fixed inset-0 z-60 flex items-center justify-center p-4">
+
+        {{-- Backdrop --}}
+        <div x-show="open"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             @click="close()"
+             class="absolute inset-0 bg-black/50"></div>
+
+        {{-- Modal Content --}}
+        <div x-show="open"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-95"
+             class="relative bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-hidden"
+             @click.stop>
+
+            {{-- Close --}}
+            <button @click="close()" aria-label="Close quick view"
+                    class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-neutral-600 hover:text-neutral-800 rounded-full hover:bg-neutral-100 transition-colors z-10">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+
+            {{-- Loading State --}}
+            <div x-show="loading" class="flex items-center justify-center py-20">
+                <svg class="w-8 h-8 animate-spin text-[#3E2A1F]" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+            </div>
+
+            {{-- Product Content --}}
+            <div x-show="!loading && product" class="overflow-y-auto max-h-[85vh]">
+                <div class="grid grid-cols-1 sm:grid-cols-2">
+                    {{-- Image Gallery --}}
+                    <div class="relative bg-neutral-50 aspect-square sm:aspect-auto sm:min-h-[400px]">
+                        <img :src="activeImage" :alt="product?.name" class="w-full h-full object-cover">
+
+                        {{-- Image thumbnails --}}
+                        <template x-if="product?.images?.length > 1">
+                            <div class="absolute bottom-3 left-3 right-3 flex gap-1.5 justify-center">
+                                <template x-for="(img, i) in product.images.slice(0, 5)" :key="i">
+                                    <button @click="activeImageIndex = i"
+                                            class="w-10 h-10 rounded border-2 overflow-hidden bg-white transition-colors"
+                                            :class="activeImageIndex === i ? 'border-[#3E2A1F]' : 'border-white/80'">
+                                        <img :src="img" class="w-full h-full object-cover">
+                                    </button>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+
+                    {{-- Details --}}
+                    <div class="p-5 flex flex-col">
+                        {{-- Brand --}}
+                        <p x-show="product?.brand" x-text="product?.brand"
+                           class="text-[11px] text-neutral-600 uppercase tracking-wide mb-1"></p>
+
+                        {{-- Name --}}
+                        <h2 x-text="product?.name"
+                            class="text-lg font-semibold text-neutral-900 leading-snug mb-2"></h2>
+
+                        {{-- Rating --}}
+                        <template x-if="product?.rating > 0">
+                            <div class="flex items-center gap-1.5 mb-3">
+                                <span class="inline-flex items-center gap-0.5 bg-success-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-sm">
+                                    <span x-text="product?.rating?.toFixed(1)"></span>
+                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                </span>
+                                <span class="text-xs text-neutral-600" x-text="'(' + product?.review_count + ' reviews)'"></span>
+                            </div>
+                        </template>
+
+                        {{-- Price --}}
+                        <div class="flex items-baseline gap-2 mb-3">
+                            <span class="text-xl font-bold text-neutral-900" x-text="formatCurrency(product?.price)"></span>
+                            <template x-if="product?.price < product?.mrp">
+                                <span class="text-sm text-neutral-600 line-through" x-text="formatCurrency(product?.mrp)"></span>
+                            </template>
+                            <template x-if="product?.discount_percentage > 0">
+                                <span class="text-sm font-semibold text-success-600" x-text="Math.round(product?.discount_percentage) + '% off'"></span>
+                            </template>
+                        </div>
+
+                        {{-- Description --}}
+                        <p x-show="product?.short_description" x-text="product?.short_description"
+                           class="text-sm text-neutral-600 leading-relaxed mb-4 line-clamp-3"></p>
+
+                        {{-- Stock Status --}}
+                        <div class="mb-4">
+                            <span x-show="product?.in_stock"
+                                  class="inline-flex items-center gap-1 text-xs font-medium text-success-700 bg-success-50 px-2 py-1 rounded-full">
+                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                In Stock
+                            </span>
+                            <span x-show="!product?.in_stock"
+                                  class="inline-flex items-center text-xs font-medium text-error-700 bg-error-50 px-2 py-1 rounded-full">
+                                Out of Stock
+                            </span>
+                        </div>
+
+                        {{-- Actions --}}
+                        <div class="mt-auto space-y-2">
+                            <template x-if="product?.in_stock">
+                                <button @click="$store.cart.add(product.id); close()"
+                                        class="w-full py-2.5 bg-[#F8931D] hover:bg-[#E07E0A] text-white font-semibold rounded-lg text-sm transition-colors">
+                                    Add to Bag
+                                </button>
+                            </template>
+                            <a :href="product?.url"
+                               class="block w-full py-2.5 text-center text-sm font-medium text-[#3E2A1F] border border-[#3E2A1F]/30 rounded-lg hover:bg-[#3E2A1F]/5 transition-colors">
+                                View Full Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function searchBar() {
+            return {
+                query: '',
+                results: [],
+                loading: false,
+                showResults: false,
+                listening: false,
+                recognition: null,
+                currentPlaceholder: '',
+                placeholders: [
+                    'Search for Frocks...',
+                    'Search for Shirts...',
+                    'Search for T-Shirts...',
+                    'Search for Sharara Set...',
+                    'Search for Bib...',
+                    'Search for Kurta Pajama...',
+                    'Search for Party Wear...',
+                    'Search for Lehenga Choli...',
+                ],
+                placeholderIndex: 0,
+                charIndex: 0,
+                isDeleting: false,
+                typewriterTimer: null,
+                typewriterActive: true,
+
+                init() {
+                    this.startTypewriter();
+                    // Setup Speech Recognition
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    if (SpeechRecognition) {
+                        this.recognition = new SpeechRecognition();
+                        this.recognition.lang = 'en-IN';
+                        this.recognition.continuous = false;
+                        this.recognition.interimResults = false;
+                        this.recognition.onresult = (event) => {
+                            const transcript = event.results[0][0].transcript;
+                            this.query = transcript;
+                            this.listening = false;
+                            this.fetchSuggestions();
+                            // Auto-submit after voice input
+                            this.$nextTick(() => {
+                                this.$refs.searchInput.closest('form').submit();
+                            });
+                        };
+                        this.recognition.onerror = (event) => {
+                            this.listening = false;
+                            if (event.error === 'not-allowed') {
+                                alert('Microphone access denied. Please allow microphone permission in your browser settings.');
+                            } else if (event.error === 'network') {
+                                alert('Voice search needs an internet connection.');
+                            } else if (event.error !== 'aborted' && event.error !== 'no-speech') {
+                                alert('Voice search error: ' + event.error);
+                            }
+                        };
+                        this.recognition.onend = () => {
+                            this.listening = false;
+                        };
+                    }
+                },
+
+                startTypewriter() {
+                    this.typewriterActive = true;
+                    this.charIndex = 0;
+                    this.isDeleting = false;
+                    this.currentPlaceholder = '';
+                    this.typewrite();
+                },
+
+                stopTypewriter() {
+                    this.typewriterActive = false;
+                    if (this.typewriterTimer) {
+                        clearTimeout(this.typewriterTimer);
+                        this.typewriterTimer = null;
+                    }
+                    this.currentPlaceholder = 'Search products...';
+                },
+
+                typewrite() {
+                    if (!this.typewriterActive) return;
+                    const current = this.placeholders[this.placeholderIndex];
+
+                    if (!this.isDeleting) {
+                        this.currentPlaceholder = current.substring(0, this.charIndex + 1);
+                        this.charIndex++;
+                        if (this.charIndex >= current.length) {
+                            // Pause at full text, then start deleting
+                            this.typewriterTimer = setTimeout(() => {
+                                this.isDeleting = true;
+                                this.typewrite();
+                            }, 2000);
+                            return;
+                        }
+                        this.typewriterTimer = setTimeout(() => this.typewrite(), 80);
+                    } else {
+                        this.currentPlaceholder = current.substring(0, this.charIndex - 1);
+                        this.charIndex--;
+                        if (this.charIndex <= 0) {
+                            this.isDeleting = false;
+                            this.placeholderIndex = (this.placeholderIndex + 1) % this.placeholders.length;
+                            this.typewriterTimer = setTimeout(() => this.typewrite(), 400);
+                            return;
+                        }
+                        this.typewriterTimer = setTimeout(() => this.typewrite(), 40);
+                    }
+                },
+
+                async fetchSuggestions() {
+                    if (this.query.length < 2) {
+                        this.results = [];
+                        return;
+                    }
+                    this.loading = true;
+                    this.showResults = true;
+                    try {
+                        const response = await axios.get('/search/suggestions', { params: { q: this.query } });
+                        this.results = response.data.results || response.data || [];
+                    } catch (e) {
+                        this.results = [];
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                toggleMic() {
+                    if (!this.recognition) {
+                        alert('Voice search is not supported in your browser. Please use Chrome or Edge.');
+                        return;
+                    }
+                    if (this.listening) {
+                        this.recognition.stop();
+                        this.listening = false;
+                    } else {
+                        this.stopTypewriter();
+                        this.query = '';
+                        try {
+                            this.recognition.start();
+                            this.listening = true;
+                        } catch (e) {
+                            this.listening = false;
+                            if (e.message && e.message.includes('already started')) {
+                                this.recognition.stop();
+                            } else {
+                                alert('Could not start voice search. Please check microphone permissions.');
+                            }
+                        }
+                    }
+                },
+
+                destroy() {
+                    this.stopTypewriter();
+                    if (this.recognition && this.listening) {
+                        this.recognition.stop();
+                    }
+                }
+            };
+        }
+
+        function quickViewModal() {
+            return {
+                open: false,
+                loading: false,
+                product: null,
+                activeImageIndex: 0,
+
+                get activeImage() {
+                    if (!this.product?.images?.length) return this.product?.primary_image || '';
+                    return this.product.images[this.activeImageIndex] || this.product.primary_image;
+                },
+
+                async show(productId) {
+                    this.open = true;
+                    this.loading = true;
+                    this.product = null;
+                    this.activeImageIndex = 0;
+                    document.body.style.overflow = 'hidden';
+
+                    try {
+                        const response = await axios.get(`/product/${productId}/quick-view`);
+                        this.product = response.data;
+                    } catch (error) {
+                        console.error('Quick view failed:', error);
+                        Alpine.store('toast').error('Could not load product details');
+                        this.close();
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                close() {
+                    this.open = false;
+                    document.body.style.overflow = '';
+                }
+            };
+        }
+    </script>
+
+    {{ $scripts ?? '' }}
+
+    <!-- WhatsApp Chat Button -->
+    @php $waNumber = \App\Models\Setting::get('whatsapp_number', ''); @endphp
+    @if($waNumber)
+    <a href="https://wa.me/{{ preg_replace('/\D/', '', $waNumber) }}?text={{ urlencode('Hi! I need help with my order.') }}"
+       target="_blank" rel="noopener"
+       title="Chat on WhatsApp"
+       style="position:fixed;bottom:84px;right:16px;z-index:45;width:48px;height:48px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.2);transition:transform 0.2s;"
+       onmouseenter="this.style.transform='scale(1.1)'" onmouseleave="this.style.transform='scale(1)'">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+    </a>
+    @endif
+
+    <!-- Cookie Consent -->
+    <x-cookie-consent />
+
+</body>
+</html>

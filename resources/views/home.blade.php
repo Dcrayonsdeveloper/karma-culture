@@ -1,4 +1,4 @@
-<x-layouts.app>
+﻿<x-layouts.app>
     <x-slot name="title">{{ $siteSettings['site_name'] ?? 'Karmaa Kulture' }} - {{ $siteSettings['site_tagline'] ?? 'Premium tailored essentials' }}</x-slot>
 
     @push('meta')
@@ -293,53 +293,112 @@
             .kk-product__price del { color: var(--kk-text-muted); font-weight: 400; margin-right: 6px; }
             .kk-product__cta { margin-top: 12px; }
 
-            /* About Us */
-            .kk-about { background: var(--kk-cream); padding: 80px 0; text-align: center; }
-            .kk-about p.intro { max-width: 620px; margin: 18px auto 0; color: var(--kk-text-muted); font-size: 14px; line-height: 1.75; }
-            .kk-about-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 48px; }
-            @media (max-width: 1024px) { .kk-about-grid { grid-template-columns: repeat(2, 1fr); } }
-            @media (max-width: 640px)  { .kk-about-grid { grid-template-columns: 1fr; } }
-            .kk-about-card { background: var(--kk-cream-lighter); border: 1px solid var(--kk-cream-dark); border-radius: 6px; padding: 26px 20px; text-align: center; }
-            .kk-about-card .icon { width: 42px; height: 42px; margin: 0 auto 14px; color: var(--kk-brown); display: flex; align-items: center; justify-content: center; }
-            .kk-about-card h4 { font-family: var(--kk-display); font-size: 16px; color: var(--kk-text); margin: 0 0 6px; }
-            .kk-about-card p { font-size: 12px; color: var(--kk-text-muted); margin: 0; line-height: 1.5; }
+            /* About Us — video-led, minimal copy */
+            .kk-about { background: var(--kk-cream); padding: 88px 0; text-align: center; }
+            .kk-about p.intro { max-width: 480px; margin: 14px auto 0; color: var(--kk-text-muted); font-size: 15px; line-height: 1.65; }
+            .kk-about-video {
+                position: relative;
+                margin: 40px auto 0;
+                width: 100%;
+                max-width: 1100px;
+                aspect-ratio: 16 / 9;
+                border-radius: 10px;
+                overflow: hidden;
+                background: var(--kk-brown-darker);
+                box-shadow: 0 24px 60px rgba(45, 24, 16, 0.20);
+            }
+            .kk-about-video video,
+            .kk-about-video img {
+                width: 100%; height: 100%;
+                object-fit: cover;
+                display: block;
+            }
+            .kk-about-video::after {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(180deg, rgba(0,0,0,0) 60%, rgba(45,24,16,0.25) 100%);
+                pointer-events: none;
+            }
+            .kk-about-cta { margin-top: 36px; }
+            @media (max-width: 640px) {
+                .kk-about { padding: 56px 0; }
+                .kk-about-video { margin-top: 28px; border-radius: 6px; }
+            }
 
-            /* Qualities (dark) */
+            /* Qualities (dark) — video-background cards */
             .kk-qualities { background: var(--kk-brown-dark); color: var(--kk-cream); padding: 80px 0; text-align: center; }
             .kk-qualities h2 { font-family: var(--kk-display); font-size: 38px; color: var(--kk-cream); margin: 12px 0 8px; }
             .kk-qualities p.sub { color: rgba(239,226,203,.7); font-size: 13px; max-width: 520px; margin: 0 auto; }
-            .kk-qualities-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin-top: 56px; border-top: 1px solid rgba(239,226,203,.12); border-left: 1px solid rgba(239,226,203,.12); }
+            .kk-qualities-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 18px;
+                margin-top: 56px;
+            }
             @media (max-width: 1024px) { .kk-qualities-grid { grid-template-columns: repeat(2, 1fr); } }
             @media (max-width: 640px)  { .kk-qualities-grid { grid-template-columns: 1fr; } }
+
             .kk-quality {
-                padding: 32px 26px;
-                border-right: 1px solid rgba(239,226,203,.12);
-                border-bottom: 1px solid rgba(239,226,203,.12);
+                position: relative;
+                aspect-ratio: 3 / 4;
+                border-radius: 10px;
+                overflow: hidden;
+                background: var(--kk-brown-darker);
                 text-align: left;
+                display: block;
+                text-decoration: none;
                 opacity: 0;
-                transform: translateY(24px);
-                transition: opacity 600ms ease-out, transform 600ms cubic-bezier(0.19, 1, 0.22, 1);
+                transform: translateY(28px);
+                transition: opacity 650ms ease-out, transform 650ms cubic-bezier(0.19, 1, 0.22, 1);
                 transition-delay: var(--reveal-delay, 0ms);
             }
-            .kk-qualities-grid.is-revealed .kk-quality {
-                opacity: 1;
-                transform: translateY(0);
+            .kk-qualities-grid.is-revealed .kk-quality { opacity: 1; transform: translateY(0); }
+
+            .kk-quality__video {
+                position: absolute; inset: 0;
+                width: 100%; height: 100%;
+                object-fit: cover;
+                z-index: 0;
+                transition: transform 0.6s ease;
             }
-            .kk-qualities-grid.is-revealed .kk-quality .icon {
-                animation: kk-quality-check 700ms ease-out var(--reveal-delay, 0ms) both;
+            .kk-quality:hover .kk-quality__video { transform: scale(1.06); }
+
+            .kk-quality__overlay {
+                position: absolute; inset: 0; z-index: 1;
+                background: linear-gradient(to top,
+                    rgba(31,17,9,0.94) 0%,
+                    rgba(45,24,16,0.58) 45%,
+                    rgba(45,24,16,0.22) 100%);
+                transition: background 0.35s ease;
             }
-            @keyframes kk-quality-check {
-                0%   { transform: scale(0.6) rotate(-12deg); opacity: 0; }
-                60%  { transform: scale(1.15) rotate(2deg);  opacity: 1; }
-                100% { transform: scale(1)   rotate(0);     opacity: 1; }
+            .kk-quality:hover .kk-quality__overlay {
+                background: linear-gradient(to top,
+                    rgba(31,17,9,0.86) 0%,
+                    rgba(45,24,16,0.40) 45%,
+                    rgba(45,24,16,0.08) 100%);
             }
+
+            .kk-quality__content {
+                position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+                padding: 26px 24px;
+            }
+            .kk-quality__icon {
+                width: 36px; height: 36px;
+                border-radius: 50%;
+                background: rgba(239,226,203,0.15);
+                border: 1px solid rgba(239,226,203,0.45);
+                display: flex; align-items: center; justify-content: center;
+                margin-bottom: 14px;
+            }
+            .kk-quality__icon svg { width: 18px; height: 18px; color: var(--kk-cream); }
+            .kk-quality__content h4 { font-family: var(--kk-display); font-size: 19px; color: var(--kk-cream); margin: 0 0 8px; }
+            .kk-quality__content p { font-size: 12.5px; color: rgba(239,226,203,0.82); margin: 0; line-height: 1.65; }
+
             @media (prefers-reduced-motion: reduce) {
                 .kk-quality { opacity: 1; transform: none; transition: none; }
-                .kk-qualities-grid.is-revealed .kk-quality .icon { animation: none; }
+                .kk-quality__video { display: none; }
             }
-            .kk-quality .icon { width: 28px; height: 28px; color: var(--kk-cream); margin-bottom: 14px; }
-            .kk-quality h4 { font-family: var(--kk-display); font-size: 17px; color: var(--kk-cream); margin: 0 0 8px; }
-            .kk-quality p { font-size: 12px; color: rgba(239,226,203,.65); margin: 0; line-height: 1.6; }
 
             /* Newsletter */
             .kk-newsletter { background: var(--kk-cream-light); color: var(--kk-text); padding: 72px 0; text-align: center; }
@@ -441,7 +500,7 @@
         <section class="kk-hero">
             <div class="kk-hero-slide kk-hero-slide--video">
                 <video class="kk-hero-video"
-                       src="{{ asset('images/web banner v2.mp4') }}"
+                       src="{{ asset('images/web banner v3.mp4') }}"
                        autoplay
                        muted
                        loop
@@ -453,16 +512,26 @@
         </section>
 
         <style>
-            /* Override the 21:9 / 4:5 crop so the full video frame (including the
-               "Karmaa Kulture" branding in it) is visible. */
+            /* Full-bleed hero — span the entire viewport width regardless of
+               any parent container, and clip any margin baked into the video. */
+            .kk-hero {
+                width: 100vw;
+                max-width: 100vw;
+                margin-left: calc(50% - 50vw);
+                margin-right: calc(50% - 50vw);
+                overflow: hidden;
+            }
             .kk-hero-slide--video {
                 aspect-ratio: auto;
-                background: var(--kk-cream);
+                background: var(--kk-brown-dark);
+                overflow: hidden;
             }
             .kk-hero-video {
                 width: 100%;
                 height: auto;
                 display: block;
+                transform: scale(1.045);
+                transform-origin: center center;
             }
         </style>
 
@@ -674,52 +743,28 @@
         @endif
 
         {{-- ============================================
-             ABOUT US
+             ABOUT US — video-led, minimal text
              ============================================ --}}
         @php
-            $aboutTitle = ($sections['about_us']->title ?? null) ?: 'About Us';
-            $aboutText = ($sections['about_us']->content ?? null) ?: 'Trusted by 10k+ consumers across India, we\'ve curated clothing that blends modern tailoring, premium fabrics, and thoughtful detail. Every piece is designed to move with you — from desk to dinner, travel to weekend downtime.';
-            $aboutLink = ($sections['about_us']->button_link ?? null) ?: route('about');
+            $aboutTitle = ($sections['about_us']->title ?? null) ?: 'Crafted to Last';
+            $aboutText  = ($sections['about_us']->content ?? null) ?: 'A closer look at the cloth, cut and craft.';
+            $aboutLink  = ($sections['about_us']->button_link ?? null) ?: route('about');
+            $aboutVideo = asset('videos/karmaa-about.mp4');
         @endphp
         <section class="kk-about">
             <div class="container mx-auto px-4">
                 <span class="kk-eyebrow">About Us</span>
                 <h2 class="kk-section-title kk-section-title--lg" style="margin-top:8px;">{{ $aboutTitle }}</h2>
                 <p class="intro">{{ is_string($aboutText) ? $aboutText : '' }}</p>
-                <div style="margin-top:26px;">
-                    <a href="{{ $aboutLink }}" class="kk-btn-brown">Read More</a>
+
+                <div class="kk-about-video">
+                    <video autoplay muted loop playsinline preload="metadata">
+                        <source src="{{ $aboutVideo }}" type="video/mp4">
+                    </video>
                 </div>
 
-                @php
-                    $aboutCards = [
-                        ['t' => 'Precision Tailored Fits', 'd' => 'EU-certified cottons, broad blends and long-staple linens — sourced from mills we know by name.', 'i' => 'fit'],
-                        ['t' => 'Functional Detailing',    'd' => 'Seams, buttonholes, and hems hand-inspected. If it doesn\'t pass our table, it doesn\'t ship.', 'i' => 'star'],
-                        ['t' => 'Breathable Fabrics',      'd' => 'Pattern grades across six sizes so the drape holds true — from the shoulder line to the hem break.', 'i' => 'leaf'],
-                        ['t' => 'Durable Construction',    'd' => 'Pull-resistant garment, regular audits, and transparency reports published twice a year.', 'i' => 'shield'],
-                    ];
-                @endphp
-                <div class="kk-about-grid">
-                    @foreach($aboutCards as $c)
-                        <div class="kk-about-card">
-                            <div class="icon">
-                                @switch($c['i'])
-                                    @case('fit')
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6l9-3 9 3v4l-4 1v10H7V11L3 10V6z"/></svg>
-                                        @break
-                                    @case('star')
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l2.6 6 6.4.6-5 4.6 1.4 6.4L12 17l-5.4 3.6L8 14.2 3 9.6l6.4-.6L12 3z"/></svg>
-                                        @break
-                                    @case('leaf')
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 19c0-8 5-13 14-13 0 9-5 14-13 14-1 0-1 0-1-1z"/><path d="M5 19l8-8"/></svg>
-                                        @break
-                                    @default
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"/></svg>
-                                @endswitch
-                            </div>
-                            <h4>{{ $c['t'] }}</h4>
-                            <p>{{ $c['d'] }}</p>
-                        </div>
-                    @endforeach
+                <div class="kk-about-cta">
+                    <a href="{{ $aboutLink }}" class="kk-btn-brown">Our Story</a>
                 </div>
             </div>
         </section>
@@ -735,12 +780,12 @@
 
                 @php
                     $qualities = [
-                        ['t' => 'Premium Fabrics',     'd' => 'BCI-certified cottons, tencel blends and long-staple linens — sourced from mills we know by name.'],
-                        ['t' => 'Hand-Finished Detailing','d' => 'Seams, buttonholes and hems hand-inspected. If it doesn\'t pass our table, it doesn\'t ship.'],
-                        ['t' => 'Precision Tailoring', 'd' => 'Pattern graded across six sizes so the drape holds true — from the shoulder line to the hem break.'],
-                        ['t' => 'Ethical Production',  'd' => 'Fair-wage partners, regular audits, and transparency reports published twice a year.'],
-                        ['t' => 'Wash-Tested For Life','d' => 'Every fabric survives 50+ wash cycles in our lab before it makes the cut — colour-fast, shape-true.'],
-                        ['t' => 'Lifetime Mend Promise','d' => 'Broken stitch? Lost button? We\'ll fix it on us. Because good clothes deserve long lives.'],
+                        ['t' => 'Premium Fabrics',      'd' => 'BCI-certified cottons, tencel blends and long-staple linens — sourced from mills we know by name.', 'v' => 'premium-fabrics.mp4'],
+                        ['t' => 'Hand-Finished Detailing','d' => 'Seams, buttonholes and hems hand-inspected. If it doesn\'t pass our table, it doesn\'t ship.', 'v' => 'hand-finished.mp4'],
+                        ['t' => 'Precision Tailoring',  'd' => 'Pattern graded across six sizes so the drape holds true — from the shoulder line to the hem break.', 'v' => 'precision-tailoring.mp4'],
+                        ['t' => 'Ethical Production',   'd' => 'Fair-wage partners, regular audits, and transparency reports published twice a year.', 'v' => 'ethical-production.mp4'],
+                        ['t' => 'Wash-Tested For Life', 'd' => 'Every fabric survives 50+ wash cycles in our lab before it makes the cut — colour-fast, shape-true.', 'v' => 'wash-tested.mp4'],
+                        ['t' => 'Lifetime Mend Promise','d' => 'Broken stitch? Lost button? We\'ll fix it on us. Because good clothes deserve long lives.', 'v' => 'lifetime-mend.mp4'],
                     ];
                 @endphp
                 <div class="kk-qualities-grid"
@@ -749,9 +794,18 @@
                      :class="revealed && 'is-revealed'">
                     @foreach($qualities as $q)
                         <div class="kk-quality" style="--reveal-delay: {{ $loop->index * 90 }}ms">
-                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 7L9 18l-5-5"/></svg>
-                            <h4>{{ $q['t'] }}</h4>
-                            <p>{{ $q['d'] }}</p>
+                            <video class="kk-quality__video"
+                                   src="{{ asset('images/qualities/' . $q['v']) }}"
+                                   autoplay muted loop playsinline preload="metadata"
+                                   aria-hidden="true"></video>
+                            <div class="kk-quality__overlay"></div>
+                            <div class="kk-quality__content">
+                                <span class="kk-quality__icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7L9 18l-5-5"/></svg>
+                                </span>
+                                <h4>{{ $q['t'] }}</h4>
+                                <p>{{ $q['d'] }}</p>
+                            </div>
                         </div>
                     @endforeach
                 </div>

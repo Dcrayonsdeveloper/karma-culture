@@ -243,6 +243,10 @@ class ProductController extends Controller
             'variants.*.price' => 'nullable|numeric|min:0',
             'variants.*.mrp' => 'nullable|numeric|min:0',
             'variants.*.stock_quantity' => 'nullable|integer|min:0',
+            'model_glb' => 'nullable|file|mimetypes:model/gltf-binary,application/octet-stream|max:10240',
+            'model_usdz' => 'nullable|file|max:10240',
+            'delete_model_glb' => 'nullable|boolean',
+            'delete_model_usdz' => 'nullable|boolean',
         ]);
 
         $validated['slug'] = $validated['slug'] ?? Str::slug($validated['name']);
@@ -260,7 +264,39 @@ class ProductController extends Controller
 
         // Extract variants data before unsetting
         $variantsData = $validated['variants'] ?? null;
-        unset($validated['images'], $validated['main_image'], $validated['delete_images'], $validated['product_attributes'], $validated['variants']);
+        unset(
+            $validated['images'],
+            $validated['main_image'],
+            $validated['delete_images'],
+            $validated['product_attributes'],
+            $validated['variants'],
+            $validated['model_glb'],
+            $validated['model_usdz'],
+            $validated['delete_model_glb'],
+            $validated['delete_model_usdz'],
+        );
+
+        // Handle 3D model uploads (.glb / .usdz)
+        if ($request->boolean('delete_model_glb') && $product->model_glb_path) {
+            if (!str_starts_with($product->model_glb_path, 'http')) {
+                Storage::disk('public')->delete(ltrim($product->model_glb_path, '/'));
+            }
+            $validated['model_glb_path'] = null;
+        }
+        if ($request->hasFile('model_glb')) {
+            $path = $request->file('model_glb')->store('models', 'public');
+            $validated['model_glb_path'] = $path;
+        }
+        if ($request->boolean('delete_model_usdz') && $product->model_usdz_path) {
+            if (!str_starts_with($product->model_usdz_path, 'http')) {
+                Storage::disk('public')->delete(ltrim($product->model_usdz_path, '/'));
+            }
+            $validated['model_usdz_path'] = null;
+        }
+        if ($request->hasFile('model_usdz')) {
+            $path = $request->file('model_usdz')->store('models', 'public');
+            $validated['model_usdz_path'] = $path;
+        }
 
         $product->update($validated);
 

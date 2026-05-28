@@ -1,1 +1,1 @@
-<img src="{{ asset('images/colorlogo.png') }}" alt="{{ config('app.name', 'ForeverKids') }}" {{ $attributes->merge(['class' => 'object-contain']) }}>
+<img src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" {{ $attributes->merge(['class' => 'object-contain']) }}>
