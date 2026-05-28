@@ -28,7 +28,7 @@
             @price($product->price)
         </div>
         <div class="kk-product__cta">
-            <a href="{{ route('product.show', $product) }}" class="kk-btn-brown" style="width:100%;">Add to Cart</a>
+            <a href="{{ route('product.show', $product) }}" class="kk-btn-brown" style="width:100%; border-radius:6px;">Add to Cart</a>
         </div>
     </div>
 </div>
