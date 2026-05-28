@@ -3,8 +3,11 @@
     $tag = $tag ?? 'Premium';
     $hasDiscount = isset($product->mrp) && $product->price < $product->mrp;
     $discount = (int) ($product->discount_percentage ?? 0);
-    $img = $product->primary_image_url ?? asset('images/placeholder-boys.svg');
     $brandName = optional($product->brand)->name;
+
+    // Show the product's actual admin-uploaded image; fall back to placeholder
+    // only when the product has none.
+    $img = $product->primary_image_url ?? asset('images/placeholder-boys.svg');
 @endphp
 
 <div class="kk-product">

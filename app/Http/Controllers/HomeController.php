@@ -7,7 +7,9 @@ use App\Models\Category;
 use App\Models\FlashSale;
 use App\Models\HomepageSection;
 use App\Models\Product;
+use App\Models\Quality;
 use App\Models\Setting;
+use App\Models\ShopFilterItem;
 use App\Models\Testimonial;
 use Illuminate\View\View;
 
@@ -76,6 +78,12 @@ class HomeController extends Controller
             ->withCount('products')
             ->first();
 
+        // Shop It Your Way filter items grouped by type (size|price|shade)
+        $shopFilters = ShopFilterItem::active()->ordered()->get()->groupBy('type');
+
+        // Our Qualities cards
+        $qualities = Quality::active()->ordered()->get();
+
         // Site settings
         $siteSettings = [
             'site_name' => Setting::get('site_name', 'ForeverKids'),
@@ -94,7 +102,9 @@ class HomeController extends Controller
             'sections',
             'testimonials',
             'siteSettings',
-            'flashSale'
+            'flashSale',
+            'shopFilters',
+            'qualities'
         ));
     }
 }

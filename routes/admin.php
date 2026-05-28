@@ -282,6 +282,20 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::put('/testimonials/{testimonial}/toggle', [App\Http\Controllers\Admin\HomepageController::class, 'toggleTestimonial'])->name('testimonials.toggle');
                 Route::delete('/testimonials/{testimonial}', [App\Http\Controllers\Admin\HomepageController::class, 'deleteTestimonial'])->name('testimonials.destroy');
 
+                // Shop It Your Way filter items
+                Route::get('/shop-filters', [App\Http\Controllers\Admin\HomepageController::class, 'shopFilters'])->name('shop-filters');
+                Route::post('/shop-filters', [App\Http\Controllers\Admin\HomepageController::class, 'storeShopFilter'])->name('shop-filters.store');
+                Route::put('/shop-filters/{shopFilter}', [App\Http\Controllers\Admin\HomepageController::class, 'updateShopFilter'])->name('shop-filters.update');
+                Route::put('/shop-filters/{shopFilter}/toggle', [App\Http\Controllers\Admin\HomepageController::class, 'toggleShopFilter'])->name('shop-filters.toggle');
+                Route::delete('/shop-filters/{shopFilter}', [App\Http\Controllers\Admin\HomepageController::class, 'deleteShopFilter'])->name('shop-filters.destroy');
+
+                // Our Qualities cards
+                Route::get('/qualities', [App\Http\Controllers\Admin\HomepageController::class, 'qualities'])->name('qualities');
+                Route::post('/qualities', [App\Http\Controllers\Admin\HomepageController::class, 'storeQuality'])->name('qualities.store');
+                Route::put('/qualities/{quality}', [App\Http\Controllers\Admin\HomepageController::class, 'updateQuality'])->name('qualities.update');
+                Route::put('/qualities/{quality}/toggle', [App\Http\Controllers\Admin\HomepageController::class, 'toggleQuality'])->name('qualities.toggle');
+                Route::delete('/qualities/{quality}', [App\Http\Controllers\Admin\HomepageController::class, 'deleteQuality'])->name('qualities.destroy');
+
                 // Navigation
                 Route::get('/navigation', [App\Http\Controllers\Admin\HomepageController::class, 'navigation'])->name('navigation');
                 Route::post('/navigation', [App\Http\Controllers\Admin\HomepageController::class, 'storeNavItem'])->name('navigation.store');

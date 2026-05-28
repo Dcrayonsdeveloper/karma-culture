@@ -608,36 +608,26 @@
              SHOP IT YOUR WAY — Rail of hangers per tab
              ============================================ --}}
         @php
-            $kkSizeItems = [
-                ['label' => 'S',   'shade' => '#f0d9b8', 'count' => '120', 'q' => 'size=S'],
-                ['label' => 'M',   'shade' => '#d9b58a', 'count' => '210', 'q' => 'size=M'],
-                ['label' => 'L',   'shade' => '#b8895a', 'count' => '185', 'q' => 'size=L'],
-                ['label' => 'XL',  'shade' => '#8c5c34', 'count' => '140', 'q' => 'size=XL'],
-                ['label' => 'XXL', 'shade' => '#5a3a22', 'count' => '85',  'q' => 'size=XXL'],
-                ['label' => '3XL', 'shade' => '#2d1810', 'count' => '42',  'q' => 'size=3XL'],
-            ];
-            $kkPriceItems = [
-                ['label' => 'Under ₹1k', 'shade' => '#c9986a', 'count' => '60',  'q' => 'price_max=1000'],
-                ['label' => '₹1k – 2k',  'shade' => '#b8895a', 'count' => '95',  'q' => 'price_min=1000&price_max=2000'],
-                ['label' => '₹2k – 3k',  'shade' => '#a07748', 'count' => '145', 'q' => 'price_min=2000&price_max=3000'],
-                ['label' => '₹3k – 5k',  'shade' => '#8c5c34', 'count' => '110', 'q' => 'price_min=3000&price_max=5000'],
-                ['label' => '₹5k – 7k',  'shade' => '#6e4527', 'count' => '70',  'q' => 'price_min=5000&price_max=7000'],
-                ['label' => '₹7k+',      'shade' => '#4a2d1a', 'count' => '50',  'q' => 'price_min=7000'],
-            ];
-            $kkShadeItems = [
-                ['label' => 'Cream',    'shade' => '#efe2cb', 'count' => '88',  'q' => 'shade=cream'],
-                ['label' => 'Sand',     'shade' => '#d4b896', 'count' => '120', 'q' => 'shade=sand'],
-                ['label' => 'Tan',      'shade' => '#b8895a', 'count' => '95',  'q' => 'shade=tan'],
-                ['label' => 'Cinnamon', 'shade' => '#8c5c34', 'count' => '110', 'q' => 'shade=cinnamon'],
-                ['label' => 'Cocoa',    'shade' => '#5a3a22', 'count' => '70',  'q' => 'shade=cocoa'],
-                ['label' => 'Espresso', 'shade' => '#2d1810', 'count' => '45',  'q' => 'shade=espresso'],
-            ];
+            // Filter items come from admin (ShopFilterItem model). Normalise each
+            // group into the {label, shade, count, q} shape the markup expects.
+            $shopFilters = $shopFilters ?? collect();
             $kkTabs = [
-                'size'  => ['eyebrow' => 'Find Your Fit',       'title' => 'Size',  'items' => $kkSizeItems],
-                'price' => ['eyebrow' => 'Perfectly Portioned', 'title' => 'Price', 'items' => $kkPriceItems],
-                'shade' => ['eyebrow' => 'The Dye Lab',         'title' => 'Shade', 'items' => $kkShadeItems],
+                'size'  => ['eyebrow' => 'Find Your Fit',       'title' => 'Size',  'items' => []],
+                'price' => ['eyebrow' => 'Perfectly Portioned', 'title' => 'Price', 'items' => []],
+                'shade' => ['eyebrow' => 'The Dye Lab',         'title' => 'Shade', 'items' => []],
             ];
+            foreach ($kkTabs as $key => $_) {
+                foreach (($shopFilters[$key] ?? collect()) as $row) {
+                    $kkTabs[$key]['items'][] = [
+                        'label' => $row->label,
+                        'shade' => $row->shade_hex ?: '#8c5c34',
+                        'count' => $row->sub_label ?: '',
+                        'q'     => $row->query_string ?: '',
+                    ];
+                }
+            }
         @endphp
+        @if(collect($kkTabs)->contains(fn($t) => count($t['items']) > 0))
         <section class="kk-shop-your-way" x-data="{ tab: 'size' }">
             <div class="container mx-auto px-4 text-center">
                 <span class="kk-eyebrow">Curate The Edit</span>
@@ -701,6 +691,7 @@
                 </div>
             </div>
         </section>
+        @endif
 
         {{-- ============================================
              NEW ARRIVALS
@@ -749,7 +740,12 @@
             $aboutTitle = ($sections['about_us']->title ?? null) ?: 'Crafted to Last';
             $aboutText  = ($sections['about_us']->content ?? null) ?: 'A closer look at the cloth, cut and craft.';
             $aboutLink  = ($sections['about_us']->button_link ?? null) ?: route('about');
-            $aboutVideo = asset('videos/karmaa-about.mp4');
+            // Admin-configurable video URL (Site Settings > About Us — Video).
+            // Falls back to the default path so the section still works pre-config.
+            $aboutVideoSetting = \App\Models\Setting::get('about_us_video_url', '');
+            $aboutVideo = $aboutVideoSetting
+                ? (str_starts_with($aboutVideoSetting, 'http') ? $aboutVideoSetting : asset($aboutVideoSetting))
+                : asset('videos/karmaa-about.mp4');
         @endphp
         <section class="kk-about">
             <div class="container mx-auto px-4">
@@ -778,37 +774,27 @@
                 <h2>Our Qualities</h2>
                 <p class="sub">Six pillars every piece is measured against — no shortcuts, no exceptions.</p>
 
-                @php
-                    $qualities = [
-                        ['t' => 'Premium Fabrics',      'd' => 'BCI-certified cottons, tencel blends and long-staple linens — sourced from mills we know by name.', 'v' => 'premium-fabrics.mp4'],
-                        ['t' => 'Hand-Finished Detailing','d' => 'Seams, buttonholes and hems hand-inspected. If it doesn\'t pass our table, it doesn\'t ship.', 'v' => 'hand-finished.mp4'],
-                        ['t' => 'Precision Tailoring',  'd' => 'Pattern graded across six sizes so the drape holds true — from the shoulder line to the hem break.', 'v' => 'precision-tailoring.mp4'],
-                        ['t' => 'Ethical Production',   'd' => 'Fair-wage partners, regular audits, and transparency reports published twice a year.', 'v' => 'ethical-production.mp4'],
-                        ['t' => 'Wash-Tested For Life', 'd' => 'Every fabric survives 50+ wash cycles in our lab before it makes the cut — colour-fast, shape-true.', 'v' => 'wash-tested.mp4'],
-                        ['t' => 'Lifetime Mend Promise','d' => 'Broken stitch? Lost button? We\'ll fix it on us. Because good clothes deserve long lives.', 'v' => 'lifetime-mend.mp4'],
-                    ];
-                @endphp
+                {{-- Cards come from admin: Online Store > Our Qualities. --}}
+                @php $qualities = $qualities ?? collect(); @endphp
+                @if($qualities->count())
                 <div class="kk-qualities-grid"
                      x-data="{ revealed: false }"
                      x-intersect.once="revealed = true"
                      :class="revealed && 'is-revealed'">
-                    @foreach($qualities as $q)
-                        <div class="kk-quality" style="--reveal-delay: {{ $loop->index * 90 }}ms">
-                            <video class="kk-quality__video"
-                                   src="{{ asset('images/qualities/' . $q['v']) }}"
-                                   autoplay muted loop playsinline preload="metadata"
-                                   aria-hidden="true"></video>
+                    @foreach($qualities as $i => $q)
+                        <div class="kk-quality" style="--reveal-delay: {{ $i * 90 }}ms">
                             <div class="kk-quality__overlay"></div>
                             <div class="kk-quality__content">
                                 <span class="kk-quality__icon">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7L9 18l-5-5"/></svg>
                                 </span>
-                                <h4>{{ $q['t'] }}</h4>
-                                <p>{{ $q['d'] }}</p>
+                                <h4>{{ $q->title }}</h4>
+                                <p>{{ $q->description }}</p>
                             </div>
                         </div>
                     @endforeach
                 </div>
+                @endif
             </div>
         </section>
 

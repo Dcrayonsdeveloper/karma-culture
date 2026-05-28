@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Banner;
 use App\Models\HomepageSection;
 use App\Models\NavigationMenu;
+use App\Models\Quality;
 use App\Models\Setting;
+use App\Models\ShopFilterItem;
 use App\Models\Testimonial;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -43,6 +45,7 @@ class HomepageController extends Controller
             'contact_phone' => Setting::get('contact_phone', ''),
             'contact_address' => Setting::get('contact_address', ''),
             'announcement_text' => Setting::get('announcement_text', ''),
+            'about_us_video_url' => Setting::get('about_us_video_url', ''),
         ];
 
         return view('admin.homepage.site-settings', compact('settings'));
@@ -57,6 +60,7 @@ class HomepageController extends Controller
             'social_youtube', 'social_tiktok', 'social_pinterest',
             'contact_email', 'contact_phone', 'contact_address',
             'announcement_text',
+            'about_us_video_url',
         ];
 
         foreach ($fields as $field) {
@@ -68,6 +72,12 @@ class HomepageController extends Controller
         if ($request->hasFile('site_logo')) {
             $path = $request->file('site_logo')->store('branding', 'public');
             Setting::set('site_logo', $path, 'string', 'homepage');
+        }
+
+        // About Us video upload — saved path overrides the URL field.
+        if ($request->hasFile('about_us_video_file')) {
+            $videoPath = $request->file('about_us_video_file')->store('storefront/about', 'public');
+            Setting::set('about_us_video_url', 'storage/' . $videoPath, 'string', 'homepage');
         }
 
         Cache::flush();
@@ -317,6 +327,106 @@ class HomepageController extends Controller
     {
         $testimonial->update(['is_active' => !$testimonial->is_active]);
         return back()->with('success', 'Testimonial visibility updated.');
+    }
+
+    // ============================================================
+    // Shop It Your Way — Size / Price / Shade filter items
+    // ============================================================
+    public function shopFilters()
+    {
+        $items = ShopFilterItem::ordered()->get()->groupBy('type');
+        return view('admin.homepage.shop-filters', compact('items'));
+    }
+
+    public function storeShopFilter(Request $request)
+    {
+        $data = $request->validate([
+            'type'         => 'required|in:size,price,shade',
+            'label'        => 'required|string|max:120',
+            'sub_label'    => 'nullable|string|max:120',
+            'shade_hex'    => 'nullable|string|max:9',
+            'query_string' => 'nullable|string|max:255',
+        ]);
+        $data['position']  = (ShopFilterItem::where('type', $data['type'])->max('position') ?? 0) + 1;
+        $data['is_active'] = true;
+        ShopFilterItem::create($data);
+        Cache::flush();
+        return back()->with('success', 'Filter item added.');
+    }
+
+    public function updateShopFilter(Request $request, ShopFilterItem $shopFilter)
+    {
+        $data = $request->validate([
+            'type'         => 'required|in:size,price,shade',
+            'label'        => 'required|string|max:120',
+            'sub_label'    => 'nullable|string|max:120',
+            'shade_hex'    => 'nullable|string|max:9',
+            'query_string' => 'nullable|string|max:255',
+        ]);
+        $shopFilter->update($data);
+        Cache::flush();
+        return back()->with('success', 'Filter item updated.');
+    }
+
+    public function toggleShopFilter(ShopFilterItem $shopFilter)
+    {
+        $shopFilter->update(['is_active' => !$shopFilter->is_active]);
+        Cache::flush();
+        return back()->with('success', 'Filter visibility updated.');
+    }
+
+    public function deleteShopFilter(ShopFilterItem $shopFilter)
+    {
+        $shopFilter->delete();
+        Cache::flush();
+        return back()->with('success', 'Filter item deleted.');
+    }
+
+    // ============================================================
+    // Our Qualities — 6 quality blocks on home page dark section
+    // ============================================================
+    public function qualities()
+    {
+        $qualities = Quality::ordered()->get();
+        return view('admin.homepage.qualities', compact('qualities'));
+    }
+
+    public function storeQuality(Request $request)
+    {
+        $data = $request->validate([
+            'title'       => 'required|string|max:255',
+            'description' => 'required|string|max:500',
+        ]);
+        $data['position']  = (Quality::max('position') ?? 0) + 1;
+        $data['is_active'] = true;
+        Quality::create($data);
+        Cache::flush();
+        return back()->with('success', 'Quality added.');
+    }
+
+    public function updateQuality(Request $request, Quality $quality)
+    {
+        $data = $request->validate([
+            'title'       => 'required|string|max:255',
+            'description' => 'required|string|max:500',
+        ]);
+        $quality->update($data);
+        Cache::flush();
+        return back()->with('success', 'Quality updated.');
+    }
+
+    public function toggleQuality(Quality $quality)
+    {
+        $quality->update(['is_active' => !$quality->is_active]);
+        Cache::flush();
+        return back()->with('success', 'Quality visibility updated.');
+    }
+
+    public function deleteQuality(Quality $quality)
+    {
+        $quality->delete();
+        Cache::flush();
+        return back()->with('success', 'Quality deleted.');
     }
 
     // Navigation Menus

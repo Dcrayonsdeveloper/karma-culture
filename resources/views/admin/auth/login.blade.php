@@ -16,7 +16,7 @@
         body { font-family: 'Manrope', sans-serif; margin: 0; }
     </style>
 </head>
-<body style="min-height: 100vh; display: flex; -webkit-font-smoothing: antialiased; background: white;">
+<body class="layout-admin" style="min-height: 100vh; display: flex; -webkit-font-smoothing: antialiased; background: white;">
     {{-- Left side - Branding --}}
     <div style="display: none; width: 50%; background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460); position: relative; overflow: hidden; align-items: center;">
         <style>@media(min-width:1024px){body>div:first-child{display:flex!important;}}</style>
