@@ -338,6 +338,100 @@ body:not(.layout-admin) p {
     line-height: 1.6;
 }
 
+/* Hide storefront breadcrumbs (Home > X chain) per design.
+   Also hides the outer container div so the empty light-grey strip
+   doesn't show as a white ribbon below the header.
+   JSON-LD <script> tag stays in the DOM for SEO. */
+body:not(.layout-admin) nav[aria-label="Breadcrumb"],
+body:not(.layout-admin) div:has(> div.container > nav[aria-label="Breadcrumb"]) {
+    display: none !important;
+}
+
+/* ===================================================================
+   Karmaa Kulture product card + brown CTA — promoted from inline
+   home page styles so the partial works on listing pages
+   (new-arrivals, bestsellers, deals, etc.).
+   =================================================================== */
+:root {
+    --kk-cream:        #efe2cb;
+    --kk-cream-light:  #f7eedb;
+    --kk-cream-lighter:#fbf5e8;
+    --kk-cream-dark:   #e3d2b3;
+    --kk-tan:          #b8895a;
+    --kk-tan-dark:     #8c5c34;
+    --kk-brown:        #4a2d1a;
+    --kk-brown-dark:   #2d1810;
+    --kk-brown-darker: #1f1109;
+    --kk-text:         #2d1810;
+    --kk-text-muted:   #7a6555;
+    --kk-display: 'Playfair Display', 'Fredoka', Georgia, serif;
+}
+
+.kk-btn-brown {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 10px 22px;
+    background: var(--kk-brown); color: var(--kk-cream);
+    border-radius: 999px;
+    font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600;
+    border: none; cursor: pointer;
+    transition: background .2s;
+    text-decoration: none;
+}
+.kk-btn-brown:hover { background: var(--kk-brown-dark); }
+
+.kk-product {
+    background: var(--kk-cream-lighter);
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+}
+.kk-product__media {
+    position: relative;
+    aspect-ratio: 4/5;
+    overflow: hidden;
+    background: var(--kk-cream-dark);
+}
+.kk-product__media img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform .5s;
+}
+.kk-product:hover .kk-product__media img { transform: scale(1.03); }
+.kk-product__tag {
+    position: absolute; top: 12px; left: 12px;
+    background: var(--kk-brown-dark); color: var(--kk-cream);
+    padding: 4px 10px; border-radius: 999px;
+    font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 700;
+}
+.kk-product__discount {
+    position: absolute; top: 12px; right: 12px;
+    background: var(--kk-tan-dark); color: var(--kk-cream);
+    padding: 4px 10px; border-radius: 999px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
+}
+.kk-product__body {
+    padding: 18px 16px 20px;
+    display: flex; flex-direction: column; gap: 6px;
+    flex: 1;
+}
+.kk-product__label {
+    font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--kk-text-muted); font-weight: 600;
+}
+.kk-product__name {
+    font-family: var(--kk-display);
+    font-size: 16px; color: var(--kk-text);
+    line-height: 1.25; margin: 0;
+}
+.kk-product__price {
+    font-size: 14px; color: var(--kk-text); font-weight: 600;
+}
+.kk-product__price del {
+    color: var(--kk-text-muted); font-weight: 400; margin-right: 6px;
+}
+.kk-product__cta { margin-top: 12px; }
+
 /* Storefront sits on cream — keep the fixed-header spacer and any
    layout gaps from flashing white. Admin keeps its own background. */
 body:not(.layout-admin) {

@@ -102,9 +102,9 @@
                 @unless($outOfStock)
                     <button @click="$store.cart.add({{ $product->id }})"
                             class="w-full py-2.5 text-[12px] font-semibold text-white rounded-md transition-colors duration-200"
-                            style="background:#6F9CA2;"
-                            @mouseenter="$el.style.background='#5B878D'"
-                            @mouseleave="$el.style.background='#6F9CA2'">
+                            style="background:#2D1810;"
+                            @mouseenter="$el.style.background='#1F1109'"
+                            @mouseleave="$el.style.background='#2D1810'">
                         Add to Bag
                     </button>
                 @else
@@ -252,9 +252,9 @@
                     @unless($outOfStock)
                         <button @click="$store.cart.add({{ $product->id }})"
                                 class="w-full py-2.5 text-[13px] font-semibold text-white rounded-md transition-colors duration-200"
-                                style="background:#6F9CA2;"
-                                @mouseenter="$el.style.background='#5B878D'"
-                                @mouseleave="$el.style.background='#6F9CA2'">
+                                style="background:#2D1810;"
+                                @mouseenter="$el.style.background='#1F1109'"
+                                @mouseleave="$el.style.background='#2D1810'">
                             Add to Bag
                         </button>
                     @else
