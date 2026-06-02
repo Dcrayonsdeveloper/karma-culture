@@ -8,7 +8,7 @@
            else if (y > lastScroll + 5) { visible = false }
            lastScroll = y;
        "
-       class="bg-kk-cream border-b border-kk-cream-dark fixed left-0 right-0 z-40"
+       class="bg-kk-cream relative left-0 right-0 z-40"
        :style="'top:0; transition: transform 0.3s ease; transform: translateY(' + (visible ? '0' : '-100%') + ')'">
     <!-- Announcement Bar (marquee) -->
     @if($announcement)
@@ -379,10 +379,9 @@
         </div>
     </div>
 </header>
-<!-- Spacer for fixed header + announcement bar -->
-<div id="header-spacer"
-     class="{{ $announcement ? 'h-24 lg:h-32' : 'h-16 lg:h-24' }}"
-     aria-hidden="true"></div>
+<!-- Spacer no longer needed: header is now in normal flow (not fixed),
+     so the hero sits directly below it with no cream gap. -->
+<div id="header-spacer" class="hidden" aria-hidden="true"></div>
 <script>
     (function () {
         function syncSpacer() {

@@ -1,4 +1,4 @@
-<x-layouts.app>
+﻿<x-layouts.app>
     <x-slot name="title">FAQ - {{ config('app.name') }}</x-slot>
 
     @push('meta')
@@ -25,8 +25,8 @@
 
             <!-- Header -->
             <div class="text-center mb-8 sm:mb-10">
-                <div class="w-14 h-14 mx-auto rounded-full bg-[#6F9CA2]/5 flex items-center justify-center mb-4">
-                    <svg class="w-6 h-6 text-[#6F9CA2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="w-14 h-14 mx-auto rounded-full bg-[#2D1810]/5 flex items-center justify-center mb-4">
+                    <svg class="w-6 h-6 text-[#2D1810]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </div>
@@ -38,7 +38,7 @@
             <div x-data="{ open: null }" class="space-y-3">
 
                 <!-- Section: Ordering -->
-                <p class="text-xs font-semibold text-[#6F9CA2] uppercase tracking-wider pt-2 pb-1">Ordering</p>
+                <p class="text-xs font-semibold text-[#2D1810] uppercase tracking-wider pt-2 pb-1">Ordering</p>
 
                 <div class="bg-white border border-neutral-100 rounded-xl overflow-hidden">
                     <button @click="open = open === 1 ? null : 1"
@@ -80,13 +80,13 @@
                     </button>
                     <div x-show="open === 3" x-collapse>
                         <div class="px-5 pb-4 text-[13px] text-neutral-600 leading-relaxed border-t border-neutral-50">
-                            <p class="pt-3">Once your order ships, you'll receive an email with tracking information. You can also track your order by logging into your account and visiting the Orders section, or by using our <a href="{{ route('track-order') }}" class="text-[#6F9CA2] hover:text-[#5B878D] font-medium">order tracking page</a>.</p>
+                            <p class="pt-3">Once your order ships, you'll receive an email with tracking information. You can also track your order by logging into your account and visiting the Orders section, or by using our <a href="{{ route('track-order') }}" class="text-[#2D1810] hover:text-[#1F1109] font-medium">order tracking page</a>.</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Section: Shipping -->
-                <p class="text-xs font-semibold text-[#6F9CA2] uppercase tracking-wider pt-4 pb-1">Shipping</p>
+                <p class="text-xs font-semibold text-[#2D1810] uppercase tracking-wider pt-4 pb-1">Shipping</p>
 
                 <div class="bg-white border border-neutral-100 rounded-xl overflow-hidden">
                     <button @click="open = open === 4 ? null : 4"
@@ -119,7 +119,7 @@
                 </div>
 
                 <!-- Section: Returns & Refunds -->
-                <p class="text-xs font-semibold text-[#6F9CA2] uppercase tracking-wider pt-4 pb-1">Returns & Refunds</p>
+                <p class="text-xs font-semibold text-[#2D1810] uppercase tracking-wider pt-4 pb-1">Returns & Refunds</p>
 
                 <div class="bg-white border border-neutral-100 rounded-xl overflow-hidden">
                     <button @click="open = open === 6 ? null : 6"
@@ -131,7 +131,7 @@
                     </button>
                     <div x-show="open === 6" x-collapse>
                         <div class="px-5 pb-4 text-[13px] text-neutral-600 leading-relaxed border-t border-neutral-50">
-                            <p class="pt-3">We offer a 7-day return policy for most items. Products must be unused and in their original packaging. Please visit our <a href="{{ route('returns') }}" class="text-[#6F9CA2] hover:text-[#5B878D] font-medium">Returns Policy</a> page for full details.</p>
+                            <p class="pt-3">We offer a 7-day return policy for most items. Products must be unused and in their original packaging. Please visit our <a href="{{ route('returns') }}" class="text-[#2D1810] hover:text-[#1F1109] font-medium">Returns Policy</a> page for full details.</p>
                         </div>
                     </div>
                 </div>
@@ -152,7 +152,7 @@
                 </div>
 
                 <!-- Section: Account -->
-                <p class="text-xs font-semibold text-[#6F9CA2] uppercase tracking-wider pt-4 pb-1">Account</p>
+                <p class="text-xs font-semibold text-[#2D1810] uppercase tracking-wider pt-4 pb-1">Account</p>
 
                 <div class="bg-white border border-neutral-100 rounded-xl overflow-hidden">
                     <button @click="open = open === 8 ? null : 8"
@@ -172,18 +172,19 @@
 
             <!-- Still Need Help -->
             <div class="mt-10 bg-white border border-neutral-100 rounded-xl p-6 sm:p-8 text-center">
-                <div class="w-11 h-11 mx-auto rounded-full bg-[#6F9CA2]/5 flex items-center justify-center mb-3">
-                    <svg class="w-5 h-5 text-[#6F9CA2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="w-11 h-11 mx-auto rounded-full bg-[#2D1810]/5 flex items-center justify-center mb-3">
+                    <svg class="w-5 h-5 text-[#2D1810]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
                     </svg>
                 </div>
                 <h3 class="text-[15px] font-bold text-neutral-900 mb-1">Still have questions?</h3>
                 <p class="text-[13px] text-neutral-600 mb-4">Can't find what you're looking for? We're here to help.</p>
                 <a href="{{ route('contact') }}"
-                   class="inline-flex items-center px-6 py-2.5 bg-gradient-to-r from-[#F8931D] via-[#F8931D] to-[#E07E0A] hover:from-[#E07E0A] hover:via-[#E07E0A] hover:to-[#D47200] text-white text-sm font-semibold rounded-xl shadow-lg shadow-[#F8931D]/25 hover:shadow-[#F8931D]/40 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0">
+                   class="inline-flex items-center px-6 py-2.5 bg-[#2D1810] hover:bg-[#1F1109] text-white text-sm font-semibold rounded-xl shadow-lg shadow-[#2D1810]/25 hover:shadow-[#2D1810]/40 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0">
                     Contact Us
                 </a>
             </div>
         </div>
     </div>
 </x-layouts.app>
+

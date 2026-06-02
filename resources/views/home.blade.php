@@ -46,7 +46,7 @@
 
             /* Hero */
             .kk-hero { position: relative; width: 100%; overflow: hidden; background: var(--kk-cream); }
-            .kk-hero-slide { position: relative; width: 100%; aspect-ratio: 21 / 9; overflow: hidden; }
+            .kk-hero-slide { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; }
             .kk-hero-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
             @media (max-width: 767px) { .kk-hero-slide { aspect-ratio: 4 / 5; } }
 

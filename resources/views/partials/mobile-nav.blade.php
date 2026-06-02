@@ -1,4 +1,4 @@
-<!-- Mobile Navigation Drawer -->
+﻿<!-- Mobile Navigation Drawer -->
 <div x-data="{ open: false }"
      @toggle-mobile-nav.window="open = !open"
      @keydown.escape.window="open = false"
@@ -40,7 +40,7 @@
                     <img src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-12 object-contain">
                 @endif
             </a>
-            <button @click="open = false" class="p-2.5 text-neutral-600 hover:text-neutral-600 rounded-full hover:bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]" aria-label="Close menu">
+            <button @click="open = false" class="p-2.5 text-neutral-600 hover:text-neutral-600 rounded-full hover:bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-[#2D1810]" aria-label="Close menu">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
@@ -56,11 +56,11 @@
                 </div>
             @else
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-[#6F9CA2]/10 rounded-full flex items-center justify-center shrink-0">
+                    <div class="w-10 h-10 bg-[#2D1810]/10 rounded-full flex items-center justify-center shrink-0">
                         @if(auth()->user()->avatar_url)
                             <img src="{{ auth()->user()->avatar_url }}" alt="{{ auth()->user()->full_name }}" class="w-full h-full rounded-full object-cover">
                         @else
-                            <span class="text-sm font-semibold text-[#6F9CA2]">{{ substr(auth()->user()->first_name, 0, 1) }}</span>
+                            <span class="text-sm font-semibold text-[#2D1810]">{{ substr(auth()->user()->first_name, 0, 1) }}</span>
                         @endif
                     </div>
                     <div class="min-w-0">
@@ -79,7 +79,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
                     <input type="text" name="q" placeholder="Search products..."
-                           class="w-full pl-9 pr-3 py-2 text-sm bg-neutral-50 border border-neutral-200 rounded-lg focus:outline-none focus:border-[#6F9CA2] placeholder-neutral-400">
+                           class="w-full pl-9 pr-3 py-2 text-sm bg-neutral-50 border border-neutral-200 rounded-lg focus:outline-none focus:border-[#2D1810] placeholder-neutral-400">
                 </div>
             </form>
         </div>
@@ -88,7 +88,7 @@
         <nav class="flex-1 overflow-y-auto">
             <div class="py-2">
                 <!-- Quick Links -->
-                <a href="{{ url('/') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-neutral-700 hover:bg-neutral-50 {{ request()->routeIs('home') ? 'text-[#6F9CA2]! bg-[#6F9CA2]/5 font-medium' : '' }}">
+                <a href="{{ url('/') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-neutral-700 hover:bg-neutral-50 {{ request()->routeIs('home') ? 'text-[#2D1810]! bg-[#2D1810]/5 font-medium' : '' }}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                     </svg>
@@ -132,11 +132,11 @@
                                 </button>
                                 <div x-show="expanded" x-collapse>
                                     <div class="bg-neutral-50/50 py-1">
-                                        <a href="{{ route('category.show', $cat) }}" class="block pl-8 pr-4 py-2 text-xs font-medium text-[#6F9CA2] hover:bg-neutral-100/50">
+                                        <a href="{{ route('category.show', $cat) }}" class="block pl-8 pr-4 py-2 text-xs font-medium text-[#2D1810] hover:bg-neutral-100/50">
                                             View All {{ $cat->name }}
                                         </a>
                                         @foreach($cat->children as $child)
-                                            <a href="{{ route('category.show', $child) }}" class="block pl-8 pr-4 py-2 text-sm text-neutral-600 hover:text-[#6F9CA2] hover:bg-neutral-100/50">
+                                            <a href="{{ route('category.show', $child) }}" class="block pl-8 pr-4 py-2 text-sm text-neutral-600 hover:text-[#2D1810] hover:bg-neutral-100/50">
                                                 {{ $child->name }}
                                             </a>
                                         @endforeach
@@ -150,7 +150,7 @@
                         @endif
                     @endforeach
 
-                    <a href="{{ route('categories.index') }}" class="flex items-center gap-2 px-4 py-3 text-sm text-[#6F9CA2] hover:bg-[#6F9CA2]/5 font-medium">
+                    <a href="{{ route('categories.index') }}" class="flex items-center gap-2 px-4 py-3 text-sm text-[#2D1810] hover:bg-[#2D1810]/5 font-medium">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"/>
                         </svg>
@@ -193,14 +193,14 @@
                         </a>
 
                         @if(auth()->user()->deliveryPartner)
-                            <a href="{{ route('delivery.login') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-[#6F9CA2] hover:bg-[#6F9CA2]/5 font-medium">
+                            <a href="{{ route('delivery.login') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-[#2D1810] hover:bg-[#2D1810]/5 font-medium">
                                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
                                 </svg>
                                 Delivery Panel
                             </a>
                         @else
-                            <a href="{{ route('account.become-delivery-partner') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-[#6F9CA2] hover:bg-[#6F9CA2]/5 font-medium">
+                            <a href="{{ route('account.become-delivery-partner') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-[#2D1810] hover:bg-[#2D1810]/5 font-medium">
                                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
                                 </svg>
@@ -226,3 +226,4 @@
         </nav>
     </div>
 </div>
+

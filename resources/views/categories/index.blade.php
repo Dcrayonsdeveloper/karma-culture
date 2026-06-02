@@ -8,14 +8,6 @@
         </div>
     </div>
 
-    <!-- Header -->
-    <div class="bg-[#F8931D]">
-        <div class="container mx-auto px-4 py-6 md:py-8">
-            <h1 class="text-2xl md:text-3xl font-bold text-white">Shop by Category</h1>
-            <p class="text-white text-sm mt-1">Browse our wide range of kids' clothing & accessories</p>
-        </div>
-    </div>
-
     <div class="container mx-auto px-4 py-6 md:py-8">
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
             @foreach($categories as $category)

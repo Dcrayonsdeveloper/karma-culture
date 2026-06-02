@@ -1,4 +1,4 @@
-<x-layouts.app>
+﻿<x-layouts.app>
     <x-slot name="title">Contact Us - {{ config('app.name') }}</x-slot>
 
     @push('meta')
@@ -147,7 +147,7 @@
 
                             <div class="pt-1">
                                 <button type="submit"
-                                        class="w-full sm:w-auto px-8 py-2.5 bg-gradient-to-r from-[#F8931D] via-[#F8931D] to-[#E07E0A] hover:from-[#E07E0A] hover:via-[#E07E0A] hover:to-[#D47200] text-white text-sm font-semibold rounded-xl shadow-lg shadow-[#F8931D]/25 hover:shadow-[#F8931D]/40 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/50 focus:ring-offset-2">
+                                        class="w-full sm:w-auto px-8 py-2.5 bg-gradient-to-r from-[#2D1810] via-[#2D1810] to-[#1F1109] hover:from-[#1F1109] hover:via-[#1F1109] hover:to-[#1F1109] text-white text-sm font-semibold rounded-xl shadow-lg shadow-[#2D1810]/25 hover:shadow-[#2D1810]/40 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/50 focus:ring-offset-2">
                                     Send Message
                                 </button>
                             </div>
@@ -237,3 +237,4 @@
         </div>
     </div>
 </x-layouts.app>
+

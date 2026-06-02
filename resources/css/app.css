@@ -347,6 +347,27 @@ body:not(.layout-admin) div:has(> div.container > nav[aria-label="Breadcrumb"]) 
     display: none !important;
 }
 
+/* Default link color for storefront content — overrides browser blue. */
+body:not(.layout-admin) a {
+    color: #2D1810;
+}
+body:not(.layout-admin) a:hover {
+    color: #4a2d1a;
+}
+/* Keep cream text on the brown Add to Cart CTA (and brown text on cream variant). */
+body:not(.layout-admin) a.kk-btn-brown,
+body:not(.layout-admin) .kk-btn-brown {
+    color: var(--kk-cream, #efe2cb) !important;
+}
+body:not(.layout-admin) a.kk-btn-cream,
+body:not(.layout-admin) .kk-btn-cream {
+    color: var(--kk-brown, #4a2d1a) !important;
+}
+/* Honour text-white on any link/button styled as such (e.g. FAQ Contact Us). */
+body:not(.layout-admin) a.text-white {
+    color: #ffffff !important;
+}
+
 /* ===================================================================
    Karmaa Kulture product card + brown CTA — promoted from inline
    home page styles so the partial works on listing pages

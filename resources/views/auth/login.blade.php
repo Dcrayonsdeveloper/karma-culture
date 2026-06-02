@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
@@ -158,7 +158,7 @@
                             <div class="flex items-center">
                                 <label class="relative flex items-center cursor-pointer">
                                     <input type="checkbox" name="remember" id="remember" class="peer sr-only" {{ old('remember') ? 'checked' : '' }}>
-                                    <div class="w-5 h-5 border-2 border-neutral-500 rounded-md peer-checked:bg-[#F8931D] peer-checked:border-[#3A6166] transition-all flex items-center justify-center">
+                                    <div class="w-5 h-5 border-2 border-neutral-500 rounded-md peer-checked:bg-[#2D1810] peer-checked:border-[#3A6166] transition-all flex items-center justify-center">
                                         <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
                                         </svg>
@@ -169,7 +169,7 @@
 
                             <!-- Submit -->
                             <button type="submit"
-                                    class="w-full py-3 px-6 bg-gradient-to-r from-[#F8931D] via-[#F8931D] to-[#E07E0A] hover:from-[#E07E0A] hover:via-[#E07E0A] hover:to-[#D47200] text-white font-semibold rounded-xl shadow-lg shadow-[#F8931D]/25 hover:shadow-[#F8931D]/40 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/50 focus:ring-offset-2">
+                                    class="w-full py-3 px-6 bg-gradient-to-r from-[#2D1810] via-[#2D1810] to-[#1F1109] hover:from-[#1F1109] hover:via-[#1F1109] hover:to-[#1F1109] text-white font-semibold rounded-xl shadow-lg shadow-[#2D1810]/25 hover:shadow-[#2D1810]/40 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/50 focus:ring-offset-2">
                                 Sign In
                             </button>
                         </form>
@@ -271,7 +271,7 @@
                             <div class="flex items-start pt-1">
                                 <label class="relative flex items-start cursor-pointer">
                                     <input type="checkbox" name="terms" id="terms" required class="peer sr-only">
-                                    <div class="w-4.5 h-4.5 mt-0.5 border-2 border-neutral-500 rounded peer-checked:bg-[#F8931D] peer-checked:border-[#3A6166] transition-all flex items-center justify-center shrink-0">
+                                    <div class="w-4.5 h-4.5 mt-0.5 border-2 border-neutral-500 rounded peer-checked:bg-[#2D1810] peer-checked:border-[#3A6166] transition-all flex items-center justify-center shrink-0">
                                         <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
                                         </svg>
@@ -287,7 +287,7 @@
 
                             <!-- Submit -->
                             <button type="submit"
-                                    class="w-full py-3 px-6 bg-gradient-to-r from-[#F8931D] via-[#F8931D] to-[#E07E0A] hover:from-[#E07E0A] hover:via-[#E07E0A] hover:to-[#D47200] text-white font-semibold rounded-xl shadow-lg shadow-[#F8931D]/25 hover:shadow-[#F8931D]/40 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/50 focus:ring-offset-2">
+                                    class="w-full py-3 px-6 bg-gradient-to-r from-[#2D1810] via-[#2D1810] to-[#1F1109] hover:from-[#1F1109] hover:via-[#1F1109] hover:to-[#1F1109] text-white font-semibold rounded-xl shadow-lg shadow-[#2D1810]/25 hover:shadow-[#2D1810]/40 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/50 focus:ring-offset-2">
                                 Create Account
                             </button>
                         </form>
@@ -416,3 +416,4 @@
     </div>
 </body>
 </html>
+
