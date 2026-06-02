@@ -80,7 +80,6 @@
                         <li><a href="{{ route('privacy') }}" class="text-kk-text-muted hover:text-kk-tan-dark transition-colors">Privacy Policy</a></li>
                         <li><a href="{{ route('terms') }}" class="text-kk-text-muted hover:text-kk-tan-dark transition-colors">Terms of Service</a></li>
                         <li><a href="{{ route('cookie-policy') }}" class="text-kk-text-muted hover:text-kk-tan-dark transition-colors">Cookie Policy</a></li>
-                        <li><a href="{{ route('gdpr') }}" class="text-kk-text-muted hover:text-kk-tan-dark transition-colors">GDPR Compliance</a></li>
                     </ul>
                 </div>
             </div>

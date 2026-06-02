@@ -253,7 +253,7 @@
                                @blur="if(!query) startTypewriter()"
                                @keydown.escape="showResults = false; $refs.searchInput.blur()"
                                :placeholder="currentPlaceholder"
-                               class="w-full pl-8 pr-16 py-2 text-sm bg-kk-cream-lighter border border-kk-cream-dark rounded-full text-kk-brown placeholder-kk-text-muted focus:bg-white focus:border-kk-brown transition-all"
+                               class="w-full pl-8 pr-16 py-2 text-sm bg-kk-cream-lighter border border-kk-cream-dark rounded-none text-kk-brown placeholder-kk-text-muted focus:bg-white focus:border-kk-brown transition-all"
                                autocomplete="off">
 
                         <!-- Mic button (only shown when browser supports Speech Recognition) -->
