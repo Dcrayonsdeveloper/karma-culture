@@ -103,13 +103,6 @@
                                         @foreach($kkMegaMens as $cat)
                                             <div class="kk-mega__group">
                                                 <a href="{{ route('category.show', $cat) }}" class="kk-mega__cat">{{ $cat->name }}</a>
-                                                @if($cat->children->count())
-                                                    <ul class="kk-mega__subs">
-                                                        @foreach($cat->children as $sub)
-                                                            <li><a href="{{ route('category.show', $sub) }}">{{ $sub->name }}</a></li>
-                                                        @endforeach
-                                                    </ul>
-                                                @endif
                                             </div>
                                         @endforeach
                                     </div>
@@ -123,13 +116,6 @@
                                         @foreach($kkMegaWomens as $cat)
                                             <div class="kk-mega__group">
                                                 <a href="{{ route('category.show', $cat) }}" class="kk-mega__cat">{{ $cat->name }}</a>
-                                                @if($cat->children->count())
-                                                    <ul class="kk-mega__subs">
-                                                        @foreach($cat->children as $sub)
-                                                            <li><a href="{{ route('category.show', $sub) }}">{{ $sub->name }}</a></li>
-                                                        @endforeach
-                                                    </ul>
-                                                @endif
                                             </div>
                                         @endforeach
                                     </div>
