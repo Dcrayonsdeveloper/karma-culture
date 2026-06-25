@@ -1,0 +1,28 @@
+# ============================================================
+#  ROOT .htaccess — FALLBACK ONLY
+#  Use this ONLY if you cannot set the domain's document root to /public
+#  (i.e. the whole Laravel app was uploaded into public_html).
+#  It rewrites every request into the public/ folder and blocks direct
+#  access to application files.
+#
+#  PREFERRED setup: point the document root at /public instead and DELETE
+#  this file. See the deployment guide.
+# ============================================================
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Force HTTPS (enable after SSL is active)
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+    # Route everything through the public/ front controller
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Deny direct web access to sensitive root files/folders
+<FilesMatch "(^\.env|^composer\.(json|lock)$|^package(-lock)?\.json$|^artisan$)">
+    Require all denied
+</FilesMatch>
