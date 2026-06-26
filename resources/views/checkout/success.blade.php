@@ -204,10 +204,17 @@
                     </a>
                 </div>
 
-                <!-- Email Notice -->
-                <p class="text-center text-[12px] text-neutral-600 mt-6">
-                    A confirmation email has been sent to <span class="font-medium text-neutral-600">{{ auth()->user()->email }}</span>
-                </p>
+                <!-- Order Contact -->
+                @php
+                    $orderEmail = $order->user->email
+                        ?? ($order->metadata['guest_email'] ?? null)
+                        ?? ($order->shipping_address_snapshot['email'] ?? null);
+                @endphp
+                @if($orderEmail)
+                    <p class="text-center text-[12px] text-neutral-600 mt-6">
+                        Order confirmation for <span class="font-medium text-neutral-600">{{ $orderEmail }}</span>
+                    </p>
+                @endif
             </div>
         </div>
     </div>
