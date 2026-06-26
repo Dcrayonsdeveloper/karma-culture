@@ -109,6 +109,15 @@ Route::prefix('cart')->name('cart.')->group(function () {
     Route::get('/recommendations', [App\Http\Controllers\CartController::class, 'recommendations'])->name('recommendations');
 });
 
+// Checkout — guest checkout (no authentication required).
+// Order is placed without login; payment/shipping (Shiprocket) will be wired in later.
+Route::prefix('checkout')->name('checkout.')->group(function () {
+    Route::get('/', [App\Http\Controllers\CheckoutController::class, 'index'])->name('index');
+    Route::post('/process', [App\Http\Controllers\CheckoutController::class, 'process'])->middleware('throttle:10,1')->name('process');
+    Route::get('/success/{order}', [App\Http\Controllers\CheckoutController::class, 'success'])->name('success');
+    Route::get('/failed', [App\Http\Controllers\CheckoutController::class, 'failed'])->name('failed');
+});
+
 // Wishlist page (handles auth check in controller)
 Route::get('/wishlist', [App\Http\Controllers\WishlistController::class, 'index'])->name('wishlist');
 
@@ -138,14 +147,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/email/verify', [App\Http\Controllers\Auth\VerificationController::class, 'show'])->name('verification.notice');
     Route::get('/email/verify/{id}/{hash}', [App\Http\Controllers\Auth\VerificationController::class, 'verify'])->middleware('signed')->name('verification.verify');
     Route::post('/email/resend', [App\Http\Controllers\Auth\VerificationController::class, 'resend'])->name('verification.resend');
-
-    // Checkout (requires auth)
-    Route::prefix('checkout')->name('checkout.')->group(function () {
-        Route::get('/', [App\Http\Controllers\CheckoutController::class, 'index'])->name('index');
-        Route::post('/process', [App\Http\Controllers\CheckoutController::class, 'process'])->middleware('throttle:5,1')->name('process');
-        Route::get('/success/{order}', [App\Http\Controllers\CheckoutController::class, 'success'])->name('success');
-        Route::get('/failed', [App\Http\Controllers\CheckoutController::class, 'failed'])->name('failed');
-    });
 
     // PayU Payment Gateway (initiate requires auth)
     Route::get('/payu/initiate/{order}', [App\Http\Controllers\PayUController::class, 'initiate'])->name('payu.initiate');
