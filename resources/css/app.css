@@ -343,7 +343,7 @@ body:not(.layout-admin) p {
    doesn't show as a white ribbon below the header.
    JSON-LD <script> tag stays in the DOM for SEO. */
 body:not(.layout-admin) nav[aria-label="Breadcrumb"],
-body:not(.layout-admin) div:has(> div.container > nav[aria-label="Breadcrumb"]) {
+body:not(.layout-admin) div.container:has(> nav[aria-label="Breadcrumb"]) {
     display: none !important;
 }
 
