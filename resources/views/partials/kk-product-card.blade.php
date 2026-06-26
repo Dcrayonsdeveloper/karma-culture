@@ -31,7 +31,13 @@
             @price($product->price)
         </div>
         <div class="kk-product__cta">
-            <a href="{{ route('product.show', $product) }}" class="kk-btn-brown" style="width:100%; border-radius:6px;">Add to Cart</a>
+            @if($product->isInStock())
+                <button type="button" @click.prevent="$store.cart.add({{ $product->id }})"
+                        class="kk-btn-brown" style="width:100%; border-radius:6px;">Add to Cart</button>
+            @else
+                <a href="{{ route('product.show', $product) }}" class="kk-btn-brown"
+                   style="width:100%; border-radius:6px; opacity:.55; pointer-events:auto;">Out of Stock</a>
+            @endif
         </div>
     </div>
 </div>
