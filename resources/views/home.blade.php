@@ -62,52 +62,41 @@
             .kk-tile-gender { aspect-ratio: 3/4; }
             @media (min-width: 768px) { .kk-tile-gender { aspect-ratio: 4/5; } }
 
-            /* ===== Bento (uneven mosaic grid) ===== */
-            .kk-bento {
+            /* ===== Category grid — uniform equal-size cards (Men's) ===== */
+            .kk-catgrid {
                 display: grid;
-                grid-template-columns: repeat(6, 1fr);
-                grid-auto-rows: 240px;
-                gap: 16px;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 18px;
             }
-            .kk-bento-tile { aspect-ratio: auto !important; height: 100%; width: 100%; }
-
-            /* Men's: 4 items — 1 big + 2 medium + 1 wide */
-            .kk-bento--mens > :nth-child(1) { grid-column: span 4; grid-row: span 2; }
-            .kk-bento--mens > :nth-child(2) { grid-column: span 2; grid-row: span 1; }
-            .kk-bento--mens > :nth-child(3) { grid-column: span 2; grid-row: span 1; }
-            .kk-bento--mens > :nth-child(4) { grid-column: span 6; grid-row: span 1; }
-
-            /* Women's: 7 items — 1 hero + 2 medium + 3 small + 1 wide */
-            .kk-bento--womens > :nth-child(1) { grid-column: span 3; grid-row: span 2; }
-            .kk-bento--womens > :nth-child(2) { grid-column: span 3; grid-row: span 1; }
-            .kk-bento--womens > :nth-child(3) { grid-column: span 3; grid-row: span 1; }
-            .kk-bento--womens > :nth-child(4) { grid-column: span 2; grid-row: span 1; }
-            .kk-bento--womens > :nth-child(5) { grid-column: span 2; grid-row: span 1; }
-            .kk-bento--womens > :nth-child(6) { grid-column: span 2; grid-row: span 1; }
-            .kk-bento--womens > :nth-child(7) { grid-column: span 6; grid-row: span 1; }
-
-            /* Tablet collapse */
-            @media (max-width: 1024px) {
-                .kk-bento { grid-auto-rows: 190px; }
+            .kk-catgrid .kk-tile {
+                aspect-ratio: 4 / 5;
+                border-radius: 12px;
+                box-shadow: 0 2px 8px rgba(45, 24, 16, 0.08);
+                transition: transform .35s cubic-bezier(.2,.7,.2,1), box-shadow .35s ease;
             }
-
-            /* Mobile collapse — keep some asymmetry but readable */
-            @media (max-width: 767px) {
-                .kk-bento { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 130px; gap: 10px; }
-                .kk-bento--mens > :nth-child(1)   { grid-column: span 2; grid-row: span 2; }
-                .kk-bento--mens > :nth-child(2)   { grid-column: span 1; grid-row: span 1; }
-                .kk-bento--mens > :nth-child(3)   { grid-column: span 1; grid-row: span 1; }
-                .kk-bento--mens > :nth-child(4)   { grid-column: span 2; grid-row: span 1; }
-
-                .kk-bento--womens > :nth-child(1) { grid-column: span 2; grid-row: span 2; }
-                .kk-bento--womens > :nth-child(2),
-                .kk-bento--womens > :nth-child(3),
-                .kk-bento--womens > :nth-child(4),
-                .kk-bento--womens > :nth-child(5) { grid-column: span 1; grid-row: span 1; }
-                /* One Piece (6) goes full-width and centered on mobile */
-                .kk-bento--womens > :nth-child(6) { grid-column: span 2; grid-row: span 1; }
-                .kk-bento--womens > :nth-child(7) { grid-column: span 2; grid-row: span 1; }
+            .kk-catgrid .kk-tile:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 18px 38px rgba(45, 24, 16, 0.20);
             }
+            .kk-catgrid .kk-tile video {
+                width: 100%; height: 100%;
+                object-fit: cover; display: block;
+                transition: transform .5s ease;
+            }
+            .kk-catgrid .kk-tile:hover video { transform: scale(1.04); }
+            .kk-catgrid .kk-tile-label { bottom: 16px; }
+            .kk-catgrid .kk-tile-label .pill {
+                background: rgba(31, 17, 9, 0.78);
+                backdrop-filter: blur(4px);
+                transition: background .25s ease, transform .25s ease;
+            }
+            .kk-catgrid .kk-tile:hover .kk-tile-label .pill {
+                background: var(--kk-brown);
+                transform: translateY(-2px);
+            }
+            @media (max-width: 1024px) { .kk-catgrid { grid-template-columns: repeat(3, 1fr); } }
+            @media (max-width: 767px)  { .kk-catgrid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+
 
             /* ===== Shop It Your Way — Rail of hangers ===== */
             .kk-shop-your-way { background: var(--kk-cream-light); padding: 32px 0 64px; }
@@ -166,6 +155,11 @@
             }
             .kk-syw-tab.is-active { background: var(--kk-brown-dark); color: var(--kk-cream); }
             .kk-syw-tab.is-active small { color: var(--kk-tan); opacity: 1; }
+            /* Per-tab active background: 1) brown (default) 2) teal 3) green */
+            .kk-syw-tab.is-active--price { background: #14B8A6; }
+            .kk-syw-tab.is-active--shade { background: #2B4A2A; }
+            .kk-syw-tab.is-active--price small,
+            .kk-syw-tab.is-active--shade small { color: var(--kk-cream); opacity: 0.85; }
             .kk-syw-tab:hover:not(.is-active) { color: var(--kk-brown); }
 
             /* Stage + panel */
@@ -501,7 +495,7 @@
         <section class="kk-hero">
             <div class="kk-hero-slide kk-hero-slide--video">
                 <video class="kk-hero-video"
-                       src="{{ asset('images/web banner v3.mp4') }}"
+                       src="{{ asset('images/karmaa-kulture-web-banner.mp4') }}"
                        autoplay
                        muted
                        loop
@@ -531,8 +525,6 @@
                 width: 100%;
                 height: auto;
                 display: block;
-                transform: scale(1.045);
-                transform-origin: center center;
             }
         </style>
 
@@ -562,7 +554,11 @@
                 ->first();
 
             $mensKids   = $mensRoot   ? $mensRoot->children->take(4)   : collect();
-            $womensKids = $womensRoot ? $womensRoot->children->take(7) : collect();
+            $womensKids = $womensRoot
+                ? $womensRoot->children
+                    ->reject(fn ($c) => \Illuminate\Support\Str::contains(strtolower($c->name), ['t-shirt', 'tshirt', 't shirt']))
+                    ->take(7)->values()
+                : collect();
 
             $mensTints   = ['#7a6347', '#5a4a3c', '#3a2a1f', '#8a6f52'];
             $womensTints = ['#947254', '#7a6347', '#6e5238', '#5a4a3c', '#8a6f52', '#3a2a1f', '#4a3320'];
@@ -578,9 +574,9 @@
                     </div>
                     <a href="{{ route('category.show', $mensRoot) }}" class="kk-view-all">View All <span aria-hidden="true">&rarr;</span></a>
                 </div>
-                <div class="kk-bento kk-bento--mens">
+                <div class="kk-catgrid kk-catgrid--mens">
                     @foreach($mensKids as $i => $child)
-                        <a href="{{ route('category.show', $child) }}" class="kk-tile kk-bento-tile">
+                        <a href="{{ route('category.show', $child) }}" class="kk-tile">
                             @if($child->video_url)
                                 <video autoplay muted loop playsinline preload="metadata"
                                        src="{{ str_starts_with($child->video_url, 'http') ? $child->video_url : asset($child->video_url) }}"
@@ -609,9 +605,9 @@
                     </div>
                     <a href="{{ route('category.show', $womensRoot) }}" class="kk-view-all">View All <span aria-hidden="true">&rarr;</span></a>
                 </div>
-                <div class="kk-bento kk-bento--womens">
+                <div class="kk-catgrid kk-catgrid--womens">
                     @foreach($womensKids as $i => $child)
-                        <a href="{{ route('category.show', $child) }}" class="kk-tile kk-bento-tile">
+                        <a href="{{ route('category.show', $child) }}" class="kk-tile">
                             @if($child->video_url)
                                 <video autoplay muted loop playsinline preload="metadata"
                                        src="{{ str_starts_with($child->video_url, 'http') ? $child->video_url : asset($child->video_url) }}"
@@ -663,7 +659,7 @@
                 <div class="kk-syw-tabs">
                     @foreach($kkTabs as $tabKey => $tabCfg)
                         <button class="kk-syw-tab"
-                                :class="tab==='{{ $tabKey }}' ? 'is-active' : ''"
+                                :class="tab==='{{ $tabKey }}' ? 'is-active is-active--{{ $tabKey }}' : ''"
                                 @click="tab='{{ $tabKey }}'">
                             <small>{{ $tabCfg['eyebrow'] }}</small>
                             <span>{{ $tabCfg['title'] }}</span>
