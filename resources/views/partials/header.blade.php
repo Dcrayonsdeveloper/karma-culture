@@ -57,7 +57,7 @@
 
                 <!-- Desktop Navigation (Left side) -->
                 <nav class="hidden lg:flex items-center gap-1">
-                    <a href="{{ route('new-arrivals') }}" class="px-3 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.18em] uppercase">New In</a>
+                    <a href="{{ route('new-arrivals') }}" class="px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">New In</a>
 
                     {{-- Categories: hover-triggered mega menu — clean text layout, data from admin --}}
                     @php
@@ -72,17 +72,20 @@
                                 ->with(['children' => $loader])->first();
                             return [
                                 $mens   ? $mens->children->take(4)   : collect(),
-                                $womens ? $womens->children->take(7) : collect(),
+                                $womens
+                                    ? $womens->children
+                                        ->reject(fn ($c) => \Illuminate\Support\Str::contains(strtolower($c->name), ['t-shirt', 'tshirt', 't shirt']))
+                                        ->take(7)->values()
+                                    : collect(),
                             ];
                         });
                     @endphp
                     <div class="kk-mega"
-                         x-data="{ open: false, closeT: null, menuTop: 0 }"
-                         @mouseenter="clearTimeout(closeT); menuTop = $el.closest('header').getBoundingClientRect().bottom; open = true"
-                         @mouseleave="closeT = setTimeout(() => open = false, 120)"
-                         @resize.window="if (open) menuTop = $el.closest('header').getBoundingClientRect().bottom">
+                         x-data="{ open: false, closeT: null }"
+                         @mouseenter="clearTimeout(closeT); open = true"
+                         @mouseleave="closeT = setTimeout(() => open = false, 120)">
                         <a href="{{ route('categories.index') }}"
-                           class="px-3 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.18em] uppercase inline-flex items-center gap-1">
+                           class="px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap inline-flex items-center gap-1">
                             Categories
                             <svg class="w-3 h-3 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </a>
@@ -93,101 +96,72 @@
                              x-transition:leave="transition ease-in duration-150"
                              x-transition:leave-start="opacity-100"
                              x-transition:leave-end="opacity-0"
-                             :style="`top: ${menuTop - 1}px`"
-                             class="kk-mega__panel">
-                            <div class="kk-mega__grid">
-                                @if($kkMegaMens->count())
-                                <div class="kk-mega__col">
-                                    <h3 class="kk-mega__heading">Men's</h3>
-                                    <div class="kk-mega__cats kk-mega__cats--4">
-                                        @foreach($kkMegaMens as $cat)
-                                            <div class="kk-mega__group">
-                                                <a href="{{ route('category.show', $cat) }}" class="kk-mega__cat">{{ $cat->name }}</a>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                </div>
-                                @endif
+                             class="kk-dd">
+                            @if($kkMegaMens->count())
+                                <div class="kk-dd__label">Men's</div>
+                                @foreach($kkMegaMens as $cat)
+                                    <a href="{{ route('category.show', $cat) }}" class="kk-dd__item">{{ $cat->name }}</a>
+                                @endforeach
+                            @endif
 
-                                @if($kkMegaWomens->count())
-                                <div class="kk-mega__col">
-                                    <h3 class="kk-mega__heading">Women's</h3>
-                                    <div class="kk-mega__cats kk-mega__cats--2">
-                                        @foreach($kkMegaWomens as $cat)
-                                            <div class="kk-mega__group">
-                                                <a href="{{ route('category.show', $cat) }}" class="kk-mega__cat">{{ $cat->name }}</a>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                </div>
-                                @endif
-                            </div>
+                            @if($kkMegaWomens->count())
+                                @if($kkMegaMens->count())<div class="kk-dd__divider"></div>@endif
+                                <div class="kk-dd__label">Women's</div>
+                                @foreach($kkMegaWomens as $cat)
+                                    <a href="{{ route('category.show', $cat) }}" class="kk-dd__item">{{ $cat->name }}</a>
+                                @endforeach
+                            @endif
                         </div>
                     </div>
 
-                    <a href="{{ route('bestsellers') }}" class="px-3 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.18em] uppercase">Bestsellers</a>
-                    <a href="{{ route('deals') }}" class="px-3 py-2 text-[12px] text-kk-tan-dark hover:text-kk-brown font-semibold transition-colors tracking-[0.18em] uppercase">Sale</a>
+                    <a href="{{ route('bestsellers') }}" class="px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">Bestsellers</a>
+                    <a href="{{ route('deals') }}" class="px-2.5 py-2 text-[12px] text-kk-tan-dark hover:text-kk-brown font-semibold transition-colors tracking-widest uppercase whitespace-nowrap">Introductory Offer</a>
                 </nav>
 
                 <style>
                     .kk-mega { position: relative; }
-                    .kk-mega__panel {
-                        position: fixed;
+                    /* Normal compact dropdown — categories listed in sequence */
+                    .kk-dd {
+                        position: absolute;
+                        top: 100%;
                         left: 0;
-                        right: 0;
-                        width: 100vw;
-                        background: #EFE2CB;
-                        border-top: none;
-                        border-bottom: 1px solid var(--color-kk-cream-dark, #e3d2b3);
-                        box-shadow: none;
-                        padding: 32px 48px;
+                        margin-top: 6px;
+                        min-width: 220px;
+                        background: var(--color-kk-cream-lighter, #fbf5e8);
+                        border: 1px solid var(--color-kk-cream-dark, #e3d2b3);
+                        border-radius: 8px;
+                        box-shadow: 0 12px 32px rgba(45, 24, 16, 0.14);
+                        padding: 8px 0;
                         z-index: 60;
                     }
-                    .kk-mega__grid {
-                        display: grid;
-                        grid-template-columns: 1.6fr 1fr;
-                        gap: 64px;
-                        max-width: 1400px;
-                        margin: 0 auto;
-                    }
-                    .kk-mega__heading {
+                    .kk-dd__label {
                         font-family: 'Cormorant Garamond', Georgia, serif;
-                        font-size: 20px;
+                        font-size: 12px;
                         font-weight: 700;
-                        color: var(--color-kk-brown, #4a2d1a);
-                        margin: 0 0 16px;
+                        letter-spacing: 0.16em;
+                        text-transform: uppercase;
+                        color: var(--color-kk-tan-dark, #8c5c34);
+                        padding: 8px 18px 4px;
                     }
-                    .kk-mega__cats { display: grid; gap: 24px 28px; }
-                    .kk-mega__cats--4 { grid-template-columns: repeat(4, 1fr); }
-                    .kk-mega__cats--2 { grid-template-columns: repeat(2, 1fr); }
-                    .kk-mega__group { margin: 0; }
-                    .kk-mega__cat {
-                        display: inline-block;
-                        font-family: 'Cormorant Garamond', Georgia, serif;
-                        font-size: 15px;
-                        font-weight: 600;
+                    .kk-dd__item {
+                        display: block;
+                        padding: 8px 18px;
+                        font-size: 13px;
+                        letter-spacing: 0.04em;
                         color: var(--color-kk-text, #2d1810);
                         text-decoration: none;
-                        margin-bottom: 4px;
-                        transition: color 0.15s ease;
+                        transition: background 0.15s ease, color 0.15s ease, padding-left 0.15s ease;
                     }
-                    .kk-mega__cat:hover { color: var(--color-kk-tan-dark, #8c5c34); }
-                    .kk-mega__subs {
-                        list-style: none;
-                        padding: 0;
-                        margin: 0 0 0 2px;
+                    .kk-dd__item:hover {
+                        background: var(--color-kk-cream-light, #f7eedb);
+                        color: var(--color-kk-tan-dark, #8c5c34);
+                        padding-left: 22px;
                     }
-                    .kk-mega__subs li { margin: 2px 0; }
-                    .kk-mega__subs a {
-                        display: inline-block;
-                        font-family: 'Cormorant Garamond', Georgia, serif;
-                        font-size: 13px;
-                        color: var(--color-kk-text-muted, #7a6555);
-                        text-decoration: none;
-                        padding: 2px 0;
-                        transition: color 0.15s ease;
+                    .kk-dd__divider {
+                        height: 1px;
+                        background: var(--color-kk-cream-dark, #e3d2b3);
+                        margin: 8px 0;
                     }
-                    .kk-mega__subs a:hover { color: var(--color-kk-brown, #4a2d1a); }
                 </style>
             </div>
 
