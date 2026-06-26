@@ -300,7 +300,7 @@
     </div>
 
     @php
-        $cartItems = $cart->items->map(function ($item) {
+        $cartItems = $cart->items->filter(fn ($item) => $item->product)->map(function ($item) {
             return [
                 'id' => $item->id,
                 'product_id' => $item->product_id,

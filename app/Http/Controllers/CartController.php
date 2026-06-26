@@ -405,16 +405,21 @@ class CartController extends Controller
     protected function getOrCreateCart(): Cart
     {
         if (auth()->check()) {
-            return Cart::firstOrCreate(
+            $cart = Cart::firstOrCreate(
                 ['user_id' => auth()->id()],
                 ['session_id' => null]
             );
+        } else {
+            $cart = Cart::firstOrCreate(
+                ['session_id' => session()->getId()],
+                ['user_id' => null]
+            );
         }
 
-        $sessionId = session()->getId();
-        return Cart::firstOrCreate(
-            ['session_id' => $sessionId],
-            ['user_id' => null]
-        );
+        // Remove orphaned items whose product was deleted — otherwise the cart
+        // page crashes on route('product.show', null) / null property reads.
+        $cart->items()->whereDoesntHave('product')->delete();
+
+        return $cart;
     }
 }
