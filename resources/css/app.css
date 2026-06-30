@@ -310,7 +310,9 @@ body:not(.layout-admin) label {
 html {
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
-    overflow-x: hidden;
+    /* `clip` (not `hidden`) prevents horizontal scroll WITHOUT creating a
+       scroll container, so descendant `position: sticky` still works. */
+    overflow-x: clip;
     max-width: 100%;
 }
 
@@ -326,7 +328,9 @@ body {
     background-color: white;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overflow-x: hidden;
+    /* `clip` instead of `hidden`: keeps horizontal overflow hidden but does
+       not establish a scroll container, allowing `position: sticky` to work. */
+    overflow-x: clip;
     max-width: 100%;
 }
 
