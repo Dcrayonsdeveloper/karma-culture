@@ -31,6 +31,7 @@ class CartController extends Controller
                 'id' => $item->id,
                 'product_id' => $item->product_id,
                 'variant_id' => $item->variant_id,
+                'size' => $item->size,
                 'quantity' => $item->quantity,
                 'price' => (float) $item->price,
                 'product_name' => $item->product->name ?? '',
@@ -54,6 +55,7 @@ class CartController extends Controller
         $validated = $request->validate([
             'product_id' => ['required', 'exists:products,id'],
             'variant_id' => ['nullable', 'exists:product_variants,id'],
+            'size' => ['nullable', 'string', 'max:50'],
             'quantity' => ['required', 'integer', 'min:1', 'max:99'],
         ]);
 
@@ -61,6 +63,7 @@ class CartController extends Controller
 
         // Check stock
         $variantId = $validated['variant_id'] ?? null;
+        $size = $validated['size'] ?? null;
         $stockQuantity = $variantId
             ? $product->variants()->find($variantId)->stock_quantity
             : $product->stock_quantity;
@@ -77,10 +80,11 @@ class CartController extends Controller
 
         $cart = $this->getOrCreateCart();
 
-        // Check if item already in cart
+        // Check if item already in cart (same product + variant + size = same line)
         $existingItem = $cart->items()
             ->where('product_id', $validated['product_id'])
             ->where('variant_id', $variantId)
+            ->where('size', $size)
             ->first();
 
         if ($existingItem) {
@@ -105,6 +109,7 @@ class CartController extends Controller
             $cart->items()->create([
                 'product_id' => $validated['product_id'],
                 'variant_id' => $variantId,
+                'size' => $size,
                 'quantity' => $validated['quantity'],
                 'price' => $price,
             ]);
