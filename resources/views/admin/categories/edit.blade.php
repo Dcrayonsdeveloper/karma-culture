@@ -169,17 +169,18 @@
 
             <!-- Save bar -->
             <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #e3e3e3;">
-                <form action="{{ route('admin.categories.destroy', $category) }}" method="POST"
-                      onsubmit="return confirm('Delete &quot;{{ addslashes($category->name) }}&quot;? This cannot be undone.')" style="display: inline;">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" style="font-size: 13px; font-weight: 500; color: #d72c0d; background: none; border: none; cursor: pointer;">Delete category</button>
-                </form>
+                <button type="submit" form="record-delete-form" style="font-size: 13px; font-weight: 500; color: #d72c0d; background: none; border: none; cursor: pointer;">Delete category</button>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <a href="{{ route('admin.categories.index') }}" class="btn btn-secondary" style="font-size: 13px;">Discard</a>
                     <button type="submit" class="btn btn-primary" style="font-size: 13px;">Save</button>
                 </div>
             </div>
+        </form>
+
+        <form id="record-delete-form" action="{{ route('admin.categories.destroy', $category) }}" method="POST"
+              onsubmit="return confirm('Delete &quot;{{ addslashes($category->name) }}&quot;? This cannot be undone.')">
+            @csrf
+            @method('DELETE')
         </form>
     </div>
 
