@@ -271,22 +271,23 @@
                 .kk-rail-label { font-size: 18px; }
             }
 
-            /* Product cards */
-            .kk-product-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-            @media (max-width: 1024px) { .kk-product-grid { grid-template-columns: repeat(2, 1fr); } }
-            @media (max-width: 640px)  { .kk-product-grid { grid-template-columns: 1fr; } }
+            /* Product cards — compact 4-up grid */
+            .kk-product-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+            @media (max-width: 1024px) { .kk-product-grid { grid-template-columns: repeat(3, 1fr); } }
+            @media (max-width: 640px)  { .kk-product-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
             .kk-product { background: var(--kk-cream-lighter); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; }
             .kk-product__media { position: relative; aspect-ratio: 4/5; overflow: hidden; background: var(--kk-cream-dark); }
             .kk-product__media img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s; }
             .kk-product:hover .kk-product__media img { transform: scale(1.03); }
-            .kk-product__tag { position: absolute; top: 12px; left: 12px; background: var(--kk-brown-dark); color: var(--kk-cream); padding: 4px 10px; border-radius: 999px; font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 700; }
-            .kk-product__discount { position: absolute; top: 12px; right: 12px; background: var(--kk-tan-dark); color: var(--kk-cream); padding: 4px 10px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; }
-            .kk-product__body { padding: 18px 16px 20px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
-            .kk-product__label { font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--kk-text-muted); font-weight: 600; }
-            .kk-product__name { font-family: var(--kk-display); font-size: 16px; color: var(--kk-text); line-height: 1.25; margin: 0; }
-            .kk-product__price { font-size: 14px; color: var(--kk-text); font-weight: 600; }
-            .kk-product__price del { color: var(--kk-text-muted); font-weight: 400; margin-right: 6px; }
-            .kk-product__cta { margin-top: 12px; }
+            .kk-product__tag { position: absolute; top: 9px; left: 9px; background: var(--kk-brown-dark); color: var(--kk-cream); padding: 3px 8px; border-radius: 999px; font-size: 8px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; }
+            .kk-product__discount { position: absolute; top: 9px; right: 9px; background: var(--kk-tan-dark); color: var(--kk-cream); padding: 3px 8px; border-radius: 999px; font-size: 9px; font-weight: 700; letter-spacing: 0.04em; }
+            .kk-product__body { padding: 12px 12px 14px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+            .kk-product__label { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--kk-text-muted); font-weight: 600; }
+            .kk-product__name { font-family: var(--kk-display); font-size: 14px; color: var(--kk-text); line-height: 1.25; margin: 0; }
+            .kk-product__price { font-size: 13px; color: var(--kk-text); font-weight: 600; }
+            .kk-product__price del { color: var(--kk-text-muted); font-weight: 400; margin-right: 6px; font-size: 12px; }
+            .kk-product__cta { margin-top: 8px; }
+            .kk-product__cta .kk-btn-brown { padding: 8px 14px; font-size: 10.5px; letter-spacing: 0.1em; }
 
             /* About Us — video-led, minimal copy */
             .kk-about { background: var(--kk-cream); padding: 88px 0; text-align: center; }
@@ -718,7 +719,7 @@
         {{-- ============================================
              NEW ARRIVALS
              ============================================ --}}
-        @php $arrivals = ($newArrivals ?? collect())->merge($featuredProducts ?? collect())->unique('id')->take(3); @endphp
+        @php $arrivals = ($newArrivals ?? collect())->merge($featuredProducts ?? collect())->unique('id')->take(4); @endphp
         @if($arrivals->count())
         <section class="kk-section">
             <div class="container mx-auto px-4">
@@ -738,7 +739,7 @@
         {{-- ============================================
              BESTSELLERS
              ============================================ --}}
-        @php $bs = ($bestsellers ?? collect())->take(3); @endphp
+        @php $bs = ($bestsellers ?? collect())->take(4); @endphp
         @if($bs->count())
         <section class="kk-section" style="background: var(--kk-cream-light);">
             <div class="container mx-auto px-4">
