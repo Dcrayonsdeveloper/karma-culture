@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-smooth overflow-x-hidden">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-smooth overflow-x-clip">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -78,7 +78,7 @@
 
     {{-- Analytics are loaded after cookie consent (see cookie-consent component) --}}
 </head>
-<body class="font-sans antialiased bg-white text-[#222222] overflow-x-hidden" style="font-family: 'Poppins', sans-serif;" x-data data-authenticated="{{ auth()->check() ? 'true' : 'false' }}">
+<body class="font-sans antialiased bg-white text-[#222222] overflow-x-clip" style="font-family: 'Poppins', sans-serif;" x-data data-authenticated="{{ auth()->check() ? 'true' : 'false' }}">
     <!-- Toast Notifications -->
     <div class="fixed top-4 right-4 z-50 flex flex-col gap-2" aria-live="polite">
         <template x-for="toast in $store.toast.items" :key="toast.id">

@@ -107,7 +107,8 @@ class ProductController extends Controller
             );
         }
 
-        // Related products (prefer products with images)
+        // Related products — same category/brand first (prefer ones with images),
+        // then top up with ANY other active product so the section always appears.
         $relatedProducts = Product::query()
             ->where('is_active', true)
             ->where('id', '!=', $product->id)
@@ -115,25 +116,26 @@ class ProductController extends Controller
                 $query->where('category_id', $product->category_id)
                       ->orWhere('brand_id', $product->brand_id);
             })
-            ->whereHas('images')
             ->with(['category', 'primaryImage'])
+            ->withCount('images')
+            ->orderByDesc('images_count')
             ->inRandomOrder()
             ->take(8)
             ->get();
 
-        // If not enough with images, fill with any
+        // Fallback: if fewer than 4 same-category/brand items, fill with any others.
         if ($relatedProducts->count() < 4) {
-            $relatedProducts = Product::query()
+            $exclude = $relatedProducts->pluck('id')->push($product->id)->all();
+            $fill = Product::query()
                 ->where('is_active', true)
-                ->where('id', '!=', $product->id)
-                ->where(function ($query) use ($product) {
-                    $query->where('category_id', $product->category_id)
-                          ->orWhere('brand_id', $product->brand_id);
-                })
+                ->whereNotIn('id', $exclude)
                 ->with(['category', 'primaryImage'])
+                ->withCount('images')
+                ->orderByDesc('images_count')
                 ->inRandomOrder()
-                ->take(8)
+                ->take(8 - $relatedProducts->count())
                 ->get();
+            $relatedProducts = $relatedProducts->concat($fill);
         }
 
         // Breadcrumbs
