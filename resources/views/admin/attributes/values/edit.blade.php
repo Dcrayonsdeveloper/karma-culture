@@ -53,15 +53,16 @@
 
             <!-- Save bar -->
             <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #e3e3e3;">
-                <form action="{{ route('admin.values.destroy', $value) }}" method="POST"
-                      onsubmit="return confirm('Delete this value?')" style="display: inline;">
-                    @csrf @method('DELETE')
-                    <button type="submit" style="font-size: 13px; font-weight: 500; color: #d72c0d; background: none; border: none; cursor: pointer;">Delete value</button>
-                </form>
+                <button type="submit" form="record-delete-form" style="font-size: 13px; font-weight: 500; color: #d72c0d; background: none; border: none; cursor: pointer;">Delete value</button>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <a href="{{ route('admin.attributes.edit', $value->attribute) }}" class="btn btn-secondary" style="font-size: 13px;">Discard</a>
                     <button type="submit" class="btn btn-primary" style="font-size: 13px;">Save</button>
                 </div>
             </div>
     </form>
+
+        <form id="record-delete-form" action="{{ route('admin.values.destroy', $value) }}" method="POST"
+              onsubmit="return confirm('Delete this value?')">
+            @csrf @method('DELETE')
+        </form>
 </x-layouts.admin>

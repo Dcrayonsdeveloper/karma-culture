@@ -107,6 +107,32 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <style>
+        /* Admin toast (toastr): sit below the 56px header, away from the bell/avatar, and render legibly */
+        #toast-container { top: 70px !important; right: 16px !important; }
+        #toast-container > div {
+            position: relative;
+            min-width: 300px; max-width: 380px;
+            padding: 14px 42px 14px 50px !important;
+            border-radius: 10px !important;
+            box-shadow: 0 10px 28px rgba(0,0,0,.18) !important;
+            opacity: 1 !important;
+            background-position: 15px center !important;
+            background-size: 22px !important;
+            font-size: 13px; line-height: 1.45;
+        }
+        #toast-container > div .toast-close-button {
+            position: absolute !important; top: 8px; right: 10px;
+            font-size: 18px; font-weight: 700; line-height: 1;
+            color: #fff; opacity: .85; text-shadow: none;
+        }
+        #toast-container > div .toast-close-button:hover { opacity: 1; }
+        #toast-container .toast-progress { height: 3px !important; opacity: .35 !important; }
+        @media (max-width: 640px) {
+            #toast-container { top: 62px !important; right: 8px !important; left: 8px !important; }
+            #toast-container > div { min-width: 0; max-width: none; }
+        }
+    </style>
     <script>
         toastr.options = {
             closeButton: true,

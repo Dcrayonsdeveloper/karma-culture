@@ -156,13 +156,14 @@
                                 @error('price') <p class="form-error">{{ $message }}</p> @enderror
                             </div>
                             <div>
-                                <label for="sale_price" class="form-label">Compare-at price</label>
+                                <label for="mrp" class="form-label">Compare-at price</label>
                                 <div class="relative">
                                     <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[13px]" style="color: #616161;">₹</span>
-                                    <input type="number" name="sale_price" id="sale_price" value="{{ old('sale_price', $product->sale_price) }}"
-                                           step="0.01" min="0" class="form-input w-full pl-7 @error('sale_price') form-input-error @enderror">
+                                    <input type="number" name="mrp" id="mrp" value="{{ old('mrp', $product->mrp) }}"
+                                           step="0.01" min="0" class="form-input w-full pl-7 @error('mrp') form-input-error @enderror">
                                 </div>
-                                @error('sale_price') <p class="form-error">{{ $message }}</p> @enderror
+                                @error('mrp') <p class="form-error">{{ $message }}</p> @enderror
+                                <p class="form-hint" style="font-size:11px;color:#999;margin-top:4px;">Shown struck-through on the product page. Must be higher than Price.</p>
                             </div>
                             <div>
                                 <label for="cost_price" class="form-label">Cost per item</label>
@@ -436,17 +437,20 @@
             <!-- Save bar -->
             <div class="flex items-center justify-between mt-5 pt-4" style="border-top: 1px solid #e3e3e3;">
                 <div>
-                    <form action="{{ route('admin.products.destroy', $product) }}" method="POST" class="inline"
-                          onsubmit="return confirm('Delete {{ addslashes($product->name) }}? This cannot be undone.')">
-                        @csrf @method('DELETE')
-                        <button type="submit" class="text-[13px] font-medium" style="color: #d72c0d;">Delete product</button>
-                    </form>
+                    <button type="submit" form="delete-product-form" class="text-[13px] font-medium" style="color: #d72c0d;">Delete product</button>
                 </div>
                 <div class="flex items-center gap-2">
                     <a href="{{ route('admin.products.index') }}" class="btn btn-secondary text-[13px]">Discard</a>
                     <button type="submit" class="btn btn-primary text-[13px]">Save</button>
                 </div>
             </div>
+        </form>
+
+        {{-- Delete form kept OUTSIDE the edit form. Nested forms are invalid HTML and
+             caused the edit form to submit _method=DELETE, deleting the product on Save. --}}
+        <form id="delete-product-form" action="{{ route('admin.products.destroy', $product) }}" method="POST"
+              onsubmit="return confirm('Delete {{ addslashes($product->name) }}? This cannot be undone.')">
+            @csrf @method('DELETE')
         </form>
     </div>
 
