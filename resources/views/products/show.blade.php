@@ -122,7 +122,9 @@
         .kk-pdp__gallery { flex-direction: column-reverse; }
         .kk-pdp__thumbs { flex-direction: row; width: 100%; max-height: none; overflow-x: auto; }
         .kk-pdp__thumb { width: 60px; flex-shrink: 0; }
-        .kk-pdp__main { aspect-ratio: 3/4; max-height: none; }
+        /* flex:none + width:100% so aspect-ratio drives the height in the
+           column layout (flex:1 would collapse it to 0 height on mobile) */
+        .kk-pdp__main { aspect-ratio: 3/4; max-height: none; flex: none; width: 100%; }
     }
 
     /* ===== Info column — scrolls normally ===== */
