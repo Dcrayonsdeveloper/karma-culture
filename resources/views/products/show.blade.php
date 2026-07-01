@@ -123,8 +123,10 @@
         .kk-pdp__thumbs { flex-direction: row; width: 100%; max-height: none; overflow-x: auto; }
         .kk-pdp__thumb { width: 60px; flex-shrink: 0; }
         /* flex:none + width:100% so aspect-ratio drives the height in the
-           column layout (flex:1 would collapse it to 0 height on mobile) */
-        .kk-pdp__main { aspect-ratio: 3/4; max-height: none; flex: none; width: 100%; }
+           column layout (flex:1 would collapse it to 0 height on mobile).
+           Cap to 45vh so the image stays compact on phones and the
+           title/price/size sit near the top of the screen. */
+        .kk-pdp__main { aspect-ratio: 3/4; max-height: 45vh; flex: none; width: 100%; }
     }
 
     /* ===== Info column — scrolls normally ===== */
@@ -228,7 +230,7 @@
     .kk-pdp__cta-row { display: flex; gap: 12px; margin: 14px 0 14px; }
     .kk-pdp__cta {
         flex: 1; padding: 14px 18px; font-size: 13px; font-weight: 700;
-        letter-spacing: 0.08em; text-transform: uppercase;
+        letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap;
         border-radius: 4px; cursor: pointer; border: none;
         transition: background 0.15s ease;
     }
@@ -243,10 +245,26 @@
         padding: 8px 32px 8px 12px; border: 1px solid #c9b393; border-radius: 4px;
         font-size: 13px; background: #fff; color: #2d1810; cursor: pointer; min-height: 40px;
     }
+    .kk-pdp__actions { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .kk-pdp__wish {
-        margin-top: 16px; display: inline-flex; align-items: center; gap: 8px;
-        background: none; border: none; cursor: pointer; font-size: 13px; color: #2d1810; padding: 4px 0;
+        display: inline-flex; align-items: center; gap: 9px; height: 44px;
+        background: #fff; border: 1px solid #c9b393; border-radius: 999px;
+        cursor: pointer; font-size: 13px; font-weight: 600; color: #2d1810;
+        padding: 0 20px; letter-spacing: 0.02em; transition: all .18s ease;
     }
+    .kk-pdp__wish:hover { border-color: #2d1810; background: #f7eedb; }
+    .kk-pdp__wish svg { width: 18px; height: 18px; transition: transform .18s ease; }
+    .kk-pdp__wish.is-saved { border-color: #dc362e; color: #dc362e; background: #fdecea; }
+    .kk-pdp__wish.is-saved svg { transform: scale(1.08); }
+    .kk-pdp__share {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 44px; height: 44px; flex-shrink: 0;
+        background: #fff; border: 1px solid #c9b393; border-radius: 50%;
+        cursor: pointer; color: #2d1810; transition: all .18s ease;
+    }
+    .kk-pdp__share:hover { border-color: #2d1810; background: #2d1810; color: #efe2cb; transform: translateY(-1px); }
+    .kk-pdp__share svg { width: 18px; height: 18px; }
+    .kk-pdp__share-ok { border-color: #2a9d3e !important; background: #eaf6ec !important; color: #2a9d3e !important; }
     </style>
     <div class="pdp-wrapper">
     <div class="container mx-auto px-4" x-data="productPage()">
@@ -315,6 +333,12 @@
                 .kk-sizeguide__size:hover { border-color: #2d1810; }
                 .kk-sizeguide__size.is-selected { background: #2d1810; color: #efe2cb; border-color: #2d1810; }
                 .kk-sizeguide__size.is-unavailable { color: #a08e76; text-decoration: line-through; cursor: not-allowed; opacity: .55; }
+                /* Mobile: wrap all sizes onto multiple rows (no hidden horizontal
+                   scroll) and enlarge tap targets to ~44px for easy tapping. */
+                @media (max-width: 640px) {
+                    .kk-sizeguide__row { flex-wrap: wrap; overflow-x: visible; gap: 8px; }
+                    .kk-sizeguide__size { flex: 1 0 auto; min-width: 58px; text-align: center; padding: 11px 10px; font-size: 13px; }
+                }
                 </style>
                 <section class="kk-sizeguide" id="kk-size-select" aria-label="Select size">
                     <h2 class="kk-sizeguide__title">Select Size<span class="kk-sizeguide__sel" x-show="selectedSize" x-cloak> — <span x-text="selectedSize"></span></span></h2>
@@ -351,10 +375,23 @@
                             @endfor
                         </select>
                     </div>
-                    <button type="button" class="kk-pdp__wish" style="margin-top:0; padding-bottom:9px;" @click="$store.wishlist.toggle({{ $product->id }})">
-                        <svg style="width:18px;height:18px;" :fill="$store.wishlist.has({{ $product->id }}) ? '#dc362e' : 'none'" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
-                        <span x-text="$store.wishlist.has({{ $product->id }}) ? 'Saved to Wishlist' : 'Save to Wishlist'">Save to Wishlist</span>
-                    </button>
+                    <div class="kk-pdp__actions">
+                        <button type="button" class="kk-pdp__wish"
+                                :class="$store.wishlist.has({{ $product->id }}) ? 'is-saved' : ''"
+                                @click="$store.wishlist.toggle({{ $product->id }})">
+                            <svg :fill="$store.wishlist.has({{ $product->id }}) ? '#dc362e' : 'none'" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                            <span x-text="$store.wishlist.has({{ $product->id }}) ? 'Saved to Wishlist' : 'Save to Wishlist'">Save to Wishlist</span>
+                        </button>
+                        <button type="button" class="kk-pdp__share" :class="shareCopied ? 'kk-pdp__share-ok' : ''"
+                                @click="shareProduct()" aria-label="Share this product" title="Share">
+                            <template x-if="!shareCopied">
+                                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z"/></svg>
+                            </template>
+                            <template x-if="shareCopied">
+                                <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                            </template>
+                        </button>
+                    </div>
                 </div>
 
                 @if($product->isInStock())
@@ -375,6 +412,65 @@
                     <div style="padding:14px 0;font-size:14px;color:#b71c00;font-weight:600;">Currently Unavailable</div>
                 @endif
 
+                {{-- ===== Offers widget (collapsible bank offers — sample data) ===== --}}
+                <style>
+                    .kk-offers { margin: 2px 0 16px; border: 1px solid #e3d2b3; border-radius: 12px; overflow: hidden; background: #fbf5e8; }
+                    .kk-offers__head { width: 100%; display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #fbf5e8; border: none; cursor: pointer; text-align: left; font-family: inherit; }
+                    .kk-offers__badge { background: #4a2d1a; color: #efe2cb; font-size: 10px; font-weight: 800; letter-spacing: 0.1em; padding: 4px 8px; border-radius: 5px; flex-shrink: 0; }
+                    .kk-offers__headtext { font-size: 13px; font-weight: 600; color: #2d1810; flex: 1; }
+                    .kk-offers__chev { width: 18px; height: 18px; color: #7a6555; transition: transform .25s ease; flex-shrink: 0; }
+                    .kk-offers__chev.is-open { transform: rotate(180deg); }
+                    .kk-offers__body { padding: 0 14px 14px; }
+                    .kk-offers__price { font-size: 15px; font-weight: 700; color: #2d1810; margin: 6px 0 2px; }
+                    .kk-offers__subtitle { font-size: 12px; font-weight: 600; color: #7a6555; margin: 10px 0 12px; }
+                    .kk-offers__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+                    @media (max-width: 640px) { .kk-offers__grid { grid-template-columns: 1fr; } }
+                    .kk-offers__card { position: relative; background: #fff; border: 1px solid #e3d2b3; border-radius: 8px; padding: 12px 12px 10px; }
+                    .kk-offers__tag { position: absolute; top: -8px; left: 10px; background: #f3e3bf; color: #8c5c34; font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 4px; letter-spacing: .02em; }
+                    .kk-offers__row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-top: 2px; }
+                    .kk-offers__amt { font-size: 14px; font-weight: 700; color: #2d1810; }
+                    .kk-offers__name { font-size: 12px; color: #7a6555; margin-top: 1px; }
+                    .kk-offers__apply { font-size: 13px; font-weight: 700; color: #8c5c34; text-decoration: none; background: none; border: none; cursor: pointer; padding: 0; font-family: inherit; }
+                    .kk-offers__apply:hover { text-decoration: underline; }
+                    .kk-offers__type { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: #9b8a72; margin-top: 8px; padding-top: 7px; border-top: 1px solid #f0e6d2; }
+                </style>
+                @php
+                    $bankOffers = [
+                        ['amt' => 50, 'name' => 'Paytm',     'type' => 'UPI • Cashback',         'best' => true],
+                        ['amt' => 22, 'name' => 'Axis Bank', 'type' => 'Debit Card • Cashback',  'best' => false],
+                        ['amt' => 22, 'name' => 'Axis Bank', 'type' => 'Credit Card • Cashback', 'best' => false],
+                        ['amt' => 22, 'name' => 'SBI Card',  'type' => 'Credit Card • Cashback', 'best' => false],
+                    ];
+                    $bestPrice = max(1, round($product->price) - 50);
+                @endphp
+                <div class="kk-offers" x-data="{ offersOpen: false }">
+                    <button type="button" class="kk-offers__head" @click="offersOpen = !offersOpen" :aria-expanded="offersOpen">
+                        <span class="kk-offers__badge">OFFERS</span>
+                        <span class="kk-offers__headtext">Apply offers for maximum savings</span>
+                        <svg class="kk-offers__chev" :class="offersOpen ? 'is-open' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                    <div class="kk-offers__body" x-show="offersOpen" x-collapse.duration.250ms x-cloak>
+                        <div class="kk-offers__price">Buy at ₹{{ number_format($bestPrice) }}</div>
+                        <div class="kk-offers__subtitle">Bank offers</div>
+                        <div class="kk-offers__grid">
+                            @foreach($bankOffers as $o)
+                                <div class="kk-offers__card">
+                                    @if($o['best'])<span class="kk-offers__tag">Best value for you</span>@endif
+                                    <div class="kk-offers__row">
+                                        <div>
+                                            <div class="kk-offers__amt">₹{{ $o['amt'] }} off</div>
+                                            <div class="kk-offers__name">{{ $o['name'] }}</div>
+                                        </div>
+                                        <button type="button" class="kk-offers__apply" @click="$store.toast && $store.toast.show ? $store.toast.show('Offer applied at checkout') : null">Apply</button>
+                                    </div>
+                                    <div class="kk-offers__type"><span>{{ $o['type'] }}</span><span aria-hidden="true">&rsaquo;</span></div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
 
                 @php
                     $tier1 = max(1, round($product->price * 0.85));
@@ -442,25 +538,6 @@
         <style>
             .kk-pi { max-width: 860px; margin: 8px auto 0; padding: 0 16px; }
 
-            /* Share row — circular icon buttons + divider */
-            .kk-pi__share {
-                display: flex; align-items: center; justify-content: center;
-                gap: 14px; padding: 4px 0 28px; margin-bottom: 32px;
-                border-bottom: 1px solid #e3d2b3;
-            }
-            .kk-pi__share-label {
-                font-size: 11px; font-weight: 700; letter-spacing: 0.22em;
-                color: #7a6555; text-transform: uppercase; margin-right: 4px;
-            }
-            .kk-pi__share a {
-                color: #2d1810; width: 36px; height: 36px; border-radius: 50%;
-                border: 1px solid #e3d2b3; background: #fbf5e8;
-                display: inline-flex; align-items: center; justify-content: center;
-                transition: all 0.18s ease;
-            }
-            .kk-pi__share a:hover { background: #2d1810; color: #efe2cb; border-color: #2d1810; transform: translateY(-2px); }
-            .kk-pi__share a svg { width: 16px; height: 16px; }
-
             /* Accordion cards */
             .kk-pi__item {
                 background: #fbf5e8; border: 1px solid #e3d2b3; border-radius: 12px;
@@ -495,29 +572,7 @@
             .kk-pi__panel dd { margin: 0; color: #2d1810; }
         </style>
 
-        @php
-            $shareUrl = urlencode(route('product.show', $product));
-            $shareText = urlencode($product->name);
-        @endphp
-
         <div class="kk-pi">
-            <!-- SHARE row -->
-            <div class="kk-pi__share">
-                <span class="kk-pi__share-label">Share</span>
-                <a href="https://www.facebook.com/sharer/sharer.php?u={{ $shareUrl }}" target="_blank" rel="noopener" aria-label="Share on Facebook">
-                    <svg fill="currentColor" viewBox="0 0 24 24"><path d="M22.675 0h-21.35C.593 0 0 .593 0 1.325v21.351C0 23.407.593 24 1.325 24H12.82V14.706h-3.13v-3.622h3.13V8.413c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.464.099 2.795.143v3.24h-1.917c-1.504 0-1.795.715-1.795 1.764v2.313h3.587l-.467 3.622h-3.12V24h6.116c.73 0 1.323-.593 1.323-1.324V1.325C24 .593 23.407 0 22.675 0z"/></svg>
-                </a>
-                <a href="https://twitter.com/intent/tweet?url={{ $shareUrl }}&text={{ $shareText }}" target="_blank" rel="noopener" aria-label="Share on Twitter">
-                    <svg fill="currentColor" viewBox="0 0 24 24"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723 10.054 10.054 0 01-3.127 1.184 4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.937 4.937 0 004.604 3.417 9.868 9.868 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.054 0 13.999-7.496 13.999-13.985 0-.21 0-.42-.015-.63A9.936 9.936 0 0024 4.59z"/></svg>
-                </a>
-                <a href="https://wa.me/?text={{ $shareText }}%20{{ $shareUrl }}" target="_blank" rel="noopener" aria-label="Share on WhatsApp">
-                    <svg fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                </a>
-                <a href="mailto:?subject={{ $shareText }}&body={{ $shareText }}%20{{ $shareUrl }}" aria-label="Share by Email">
-                    <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
-                </a>
-            </div>
-
             {{-- PRODUCT INFO --}}
             <div class="kk-pi__item" x-data="{ open: false }">
                 <button class="kk-pi__btn" @click="open = !open" :aria-expanded="open ? 'true' : 'false'">
@@ -595,7 +650,8 @@
 
         <!-- ===== CUSTOMER REVIEWS (Judge.me-style) ===== -->
         <style>
-            .kk-rev { max-width: 880px; margin: 56px auto 0; padding: 36px 16px 0; }
+            .kk-rev { max-width: 880px; margin: 28px auto 0; padding: 16px 16px 0; }
+            @media (max-width: 640px) { .kk-rev { margin-top: 16px; padding-top: 4px; } }
             .kk-rev__title { text-align: center; font-family: 'Playfair Display', Georgia, serif; font-size: 28px; font-weight: 700; color: #2d1810; margin: 0 0 26px; }
 
             /* Summary card */
@@ -1055,11 +1111,11 @@
             @endif
         </div>
         <button @click="$dispatch('mobile-add-to-cart')"
-                style="padding:0.625rem 1.25rem;border-radius:0.5rem;font-size:13px;font-weight:600;background:#8c5c34;color:#fff;border:none;cursor:pointer;">
+                style="padding:0.75rem 1.1rem;border-radius:0.375rem;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;background:#4a2d1a;color:#efe2cb;border:none;cursor:pointer;white-space:nowrap;">
             Add to Cart
         </button>
         <button @click="$dispatch('mobile-buy-now')"
-                style="padding:0.625rem 1.25rem;border-radius:0.5rem;font-size:13px;font-weight:600;background:#F8931D;color:#fff;border:none;cursor:pointer;">
+                style="padding:0.75rem 1.1rem;border-radius:0.375rem;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;background:#2d1810;color:#efe2cb;border:none;cursor:pointer;white-space:nowrap;">
             Buy Now
         </button>
     </div>
@@ -1076,6 +1132,7 @@
             variants: @json($variantData),
             showZoom: false,
             linkCopied: false,
+            shareCopied: false,
             basePrice: {{ (float) $product->price }},
             baseMrp: {{ (float) $product->mrp }},
             inStock: {{ $product->isInStock() ? 'true' : 'false' }},
@@ -1152,6 +1209,27 @@
             async addAllToCart(productIds) {
                 for (const id of productIds) {
                     await Alpine.store('cart').add(id, 1, null);
+                }
+            },
+
+            async shareProduct() {
+                const url = '{{ route("product.show", $product) }}';
+                const title = @json($product->name);
+                // Native share sheet on supporting devices (mobile) …
+                if (navigator.share) {
+                    try {
+                        await navigator.share({ title: title, text: title, url: url });
+                    } catch (e) { /* user dismissed the share sheet — ignore */ }
+                    return;
+                }
+                // … otherwise copy the link to the clipboard as a fallback.
+                try {
+                    await navigator.clipboard.writeText(url);
+                    this.shareCopied = true;
+                    Alpine.store('toast')?.success('Link copied to clipboard!');
+                    setTimeout(() => this.shareCopied = false, 2000);
+                } catch (e) {
+                    Alpine.store('toast')?.error('Could not copy the link');
                 }
             },
 
