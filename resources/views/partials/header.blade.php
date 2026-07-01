@@ -44,7 +44,7 @@
     </style>
     @endif
     <div class="w-full px-4 lg:px-6">
-        <div class="relative flex items-center justify-between h-16 lg:h-24">
+        <div class="relative flex items-center justify-between h-20 lg:h-20">
 
             <!-- Left: Mobile menu + Desktop Nav -->
             <div class="flex items-center gap-3 lg:gap-0 flex-1">
@@ -54,6 +54,16 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"/>
                     </svg>
                 </button>
+
+                <!-- Logo (centered on mobile/tablet, left-aligned on desktop) -->
+                <a href="{{ url('/') }}" class="absolute inset-0 flex items-center justify-center pointer-events-none lg:static lg:inset-auto lg:justify-start lg:pointer-events-auto shrink-0 lg:mr-8">
+                    @php $siteLogo = \App\Models\Setting::get('site_logo', ''); @endphp
+                    @if($siteLogo)
+                        <img id="site-logo" src="{{ asset('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-16 object-contain pointer-events-auto">
+                    @else
+                        <img id="site-logo" src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-16 object-contain pointer-events-auto">
+                    @endif
+                </a>
 
                 <!-- Desktop Navigation (Left side) -->
                 <nav class="hidden lg:flex items-center gap-1">
@@ -165,17 +175,6 @@
                 </style>
             </div>
 
-            <!-- Center: Logo (absolute-centered so it stays in the geometric middle regardless of left/right widths) -->
-            <a href="{{ url('/') }}" class="absolute left-[44%] top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center shrink-0 pointer-events-auto">
-                @php $siteLogo = \App\Models\Setting::get('site_logo', ''); @endphp
-                @if($siteLogo)
-                    <img id="site-logo" src="{{ asset('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-14 lg:h-20 object-contain">
-                @else
-                    <img id="site-logo" src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-14 lg:h-20 object-contain">
-                @endif
-            </a>
-            <style>@media (max-width: 767px) { #site-logo { height: 52px; } }</style>
-
             <!-- Right: Nav links + Icons -->
             <div class="flex items-center gap-1 lg:gap-0 flex-1 justify-end">
 
@@ -213,7 +212,7 @@
                                @blur="if(!query) startTypewriter()"
                                @keydown.escape="showResults = false; $refs.searchInput.blur()"
                                :placeholder="currentPlaceholder"
-                               class="w-full pl-8 pr-16 py-2 text-sm bg-kk-cream-lighter border border-kk-cream-dark rounded-none text-kk-brown placeholder-kk-text-muted focus:bg-white focus:border-kk-brown transition-all"
+                               class="w-full pl-9 pr-16 py-1.5 text-xs bg-kk-cream-lighter border border-kk-cream-dark rounded-full text-kk-brown placeholder-kk-text-muted focus:bg-white focus:border-kk-brown transition-all"
                                autocomplete="off">
 
                         <!-- Mic button (only shown when browser supports Speech Recognition) -->
