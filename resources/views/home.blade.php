@@ -63,17 +63,44 @@
             @media (min-width: 768px) { .kk-tile-gender { aspect-ratio: 4/5; } }
 
             /* ===== Category grid — uniform equal-size cards (Men's) ===== */
-            .kk-catgrid {
-                display: grid;
-                grid-template-columns: repeat(4, 1fr);
+            .kk-catgrid { position: relative; }
+            .kk-catgrid__track {
+                display: flex;
                 gap: 18px;
+                overflow-x: auto;
+                scroll-snap-type: x mandatory;
+                scroll-behavior: smooth;
+                -webkit-overflow-scrolling: touch;
+                padding: 8px 2px 14px;                 /* room so hover-lift/shadow isn't clipped */
+                scrollbar-width: none;                 /* hide bar — navigate via arrows / swipe */
             }
+            .kk-catgrid__track::-webkit-scrollbar { display: none; }
             .kk-catgrid .kk-tile {
+                flex: 0 0 calc((100% - 3 * 18px) / 4); /* 4 cards per view on desktop */
+                scroll-snap-align: start;
                 aspect-ratio: 4 / 5;
                 border-radius: 12px;
                 box-shadow: 0 2px 8px rgba(45, 24, 16, 0.08);
                 transition: transform .35s cubic-bezier(.2,.7,.2,1), box-shadow .35s ease;
             }
+            @media (max-width: 1024px) { .kk-catgrid .kk-tile { flex-basis: calc((100% - 2 * 18px) / 3); } }  /* 3 per view */
+            @media (max-width: 767px)  { .kk-catgrid__track { gap: 12px; } .kk-catgrid .kk-tile { flex-basis: calc((100% - 12px) / 2); } }  /* 2 per view */
+
+            /* Prev / next arrows */
+            .kk-catgrid__nav {
+                position: absolute; top: 50%; transform: translateY(-50%);
+                width: 44px; height: 44px; border-radius: 50%;
+                background: var(--kk-cream-lighter); border: 1px solid var(--kk-cream-dark);
+                color: var(--kk-brown); display: flex; align-items: center; justify-content: center;
+                cursor: pointer; z-index: 3; box-shadow: 0 4px 14px rgba(45, 24, 16, 0.16);
+                transition: background .2s ease, color .2s ease, opacity .2s ease;
+            }
+            .kk-catgrid__nav:hover { background: var(--kk-brown); color: var(--kk-cream); }
+            .kk-catgrid__nav--prev { left: -10px; }
+            .kk-catgrid__nav--next { right: -10px; }
+            .kk-catgrid__nav.is-disabled { opacity: 0; pointer-events: none; }
+            .kk-catgrid__nav svg { width: 18px; height: 18px; }
+            @media (max-width: 767px) { .kk-catgrid__nav { display: none; } }   /* mobile: swipe */
             .kk-catgrid .kk-tile:hover {
                 transform: translateY(-5px);
                 box-shadow: 0 18px 38px rgba(45, 24, 16, 0.20);
@@ -94,8 +121,7 @@
                 background: var(--kk-brown);
                 transform: translateY(-2px);
             }
-            @media (max-width: 1024px) { .kk-catgrid { grid-template-columns: repeat(3, 1fr); } }
-            @media (max-width: 767px)  { .kk-catgrid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+            @media (max-width: 767px) { .kk-catgrid .kk-tile { margin-right: 12px; } }
 
 
             /* ===== Shop It Your Way — Rail of hangers ===== */
@@ -292,34 +318,41 @@
             /* About Us — video-led, minimal copy */
             .kk-about { background: var(--kk-cream); padding: 88px 0; text-align: center; }
             .kk-about p.intro { max-width: 480px; margin: 14px auto 0; color: var(--kk-text-muted); font-size: 15px; line-height: 1.65; }
-            .kk-about-video {
-                position: relative;
-                margin: 40px auto 0;
+            /* Three reel-style (9:16) videos, Instagram-reels grid */
+            .kk-about-reels {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 20px;
                 width: 100%;
-                max-width: 1100px;
-                aspect-ratio: 16 / 9;
-                border-radius: 10px;
+                max-width: 900px;
+                margin: 40px auto 0;
+            }
+            .kk-about-reel {
+                position: relative;
+                aspect-ratio: 9 / 16;
+                border-radius: 14px;
                 overflow: hidden;
                 background: var(--kk-brown-darker);
                 box-shadow: 0 24px 60px rgba(45, 24, 16, 0.20);
             }
-            .kk-about-video video,
-            .kk-about-video img {
+            .kk-about-reel video,
+            .kk-about-reel img {
                 width: 100%; height: 100%;
                 object-fit: cover;
                 display: block;
             }
-            .kk-about-video::after {
+            .kk-about-reel::after {
                 content: '';
                 position: absolute;
                 inset: 0;
-                background: linear-gradient(180deg, rgba(0,0,0,0) 60%, rgba(45,24,16,0.25) 100%);
+                background: linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(45,24,16,0.28) 100%);
                 pointer-events: none;
             }
             .kk-about-cta { margin-top: 36px; }
             @media (max-width: 640px) {
                 .kk-about { padding: 56px 0; }
-                .kk-about-video { margin-top: 28px; border-radius: 6px; }
+                .kk-about-reels { margin-top: 28px; gap: 10px; }
+                .kk-about-reel { border-radius: 8px; }
             }
 
             /* Qualities (dark) — video-background cards */
@@ -554,11 +587,11 @@
                 ->with(['children' => fn($q) => $q->where('is_active', true)->orderBy('position')])
                 ->first();
 
-            $mensKids   = $mensRoot   ? $mensRoot->children->take(4)   : collect();
+            $mensKids   = $mensRoot   ? $mensRoot->children->take(12)  : collect();
             $womensKids = $womensRoot
                 ? $womensRoot->children
                     ->reject(fn ($c) => \Illuminate\Support\Str::contains(strtolower($c->name), ['t-shirt', 'tshirt', 't shirt']))
-                    ->take(7)->values()
+                    ->take(12)->values()
                 : collect();
 
             $mensTints   = ['#7a6347', '#5a4a3c', '#3a2a1f', '#8a6f52'];
@@ -575,7 +608,11 @@
                     </div>
                     <a href="{{ route('category.show', $mensRoot) }}" class="kk-view-all">View All <span aria-hidden="true">&rarr;</span></a>
                 </div>
-                <div class="kk-catgrid kk-catgrid--mens">
+                <div class="kk-catgrid kk-catgrid--mens" x-data="kkCarousel">
+                    <button type="button" class="kk-catgrid__nav kk-catgrid__nav--prev" :class="{ 'is-disabled': atStart }" @click="prev()" aria-label="Previous">
+                        <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                    </button>
+                    <div class="kk-catgrid__track" x-ref="track" @scroll.debounce.80ms="update()">
                     @foreach($mensKids as $i => $child)
                         <a href="{{ route('category.show', $child) }}" class="kk-tile">
                             @if($child->video_url)
@@ -591,6 +628,10 @@
                             <div class="kk-tile-label"><span class="pill">{{ Str::upper($child->name) }}</span></div>
                         </a>
                     @endforeach
+                    </div>
+                    <button type="button" class="kk-catgrid__nav kk-catgrid__nav--next" :class="{ 'is-disabled': atEnd }" @click="next()" aria-label="Next">
+                        <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </button>
                 </div>
             </div>
         </section>
@@ -606,7 +647,11 @@
                     </div>
                     <a href="{{ route('category.show', $womensRoot) }}" class="kk-view-all">View All <span aria-hidden="true">&rarr;</span></a>
                 </div>
-                <div class="kk-catgrid kk-catgrid--womens">
+                <div class="kk-catgrid kk-catgrid--womens" x-data="kkCarousel">
+                    <button type="button" class="kk-catgrid__nav kk-catgrid__nav--prev" :class="{ 'is-disabled': atStart }" @click="prev()" aria-label="Previous">
+                        <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                    </button>
+                    <div class="kk-catgrid__track" x-ref="track" @scroll.debounce.80ms="update()">
                     @foreach($womensKids as $i => $child)
                         <a href="{{ route('category.show', $child) }}" class="kk-tile">
                             @if($child->video_url)
@@ -622,10 +667,120 @@
                             <div class="kk-tile-label"><span class="pill">{{ Str::upper($child->name) }}</span></div>
                         </a>
                     @endforeach
+                    </div>
+                    <button type="button" class="kk-catgrid__nav kk-catgrid__nav--next" :class="{ 'is-disabled': atEnd }" @click="next()" aria-label="Next">
+                        <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </button>
                 </div>
             </div>
         </section>
         @endif
+
+        <script>
+            document.addEventListener('alpine:init', () => {
+                Alpine.data('kkCarousel', () => ({
+                    atStart: true,
+                    atEnd: false,
+                    init() {
+                        this.$nextTick(() => this.update());
+                        window.addEventListener('resize', () => this.update());
+                    },
+                    update() {
+                        const t = this.$refs.track;
+                        if (!t) return;
+                        this.atStart = t.scrollLeft <= 2;
+                        this.atEnd = Math.ceil(t.scrollLeft + t.clientWidth) >= t.scrollWidth - 2;
+                    },
+                    step() {
+                        const t = this.$refs.track;
+                        return Math.max(t.clientWidth * 0.9, 200);   // page by ~one viewport
+                    },
+                    prev() { this.$refs.track.scrollBy({ left: -this.step(), behavior: 'smooth' }); },
+                    next() { this.$refs.track.scrollBy({ left:  this.step(), behavior: 'smooth' }); },
+                }));
+            });
+        </script>
+
+        {{-- ============================================
+             NEW ARRIVALS
+             ============================================ --}}
+        @php $arrivals = ($newArrivals ?? collect())->merge($featuredProducts ?? collect())->unique('id')->take(4); @endphp
+        @if($arrivals->count())
+        <section class="kk-section">
+            <div class="container mx-auto px-4">
+                <div class="kk-section-header">
+                    <h2 class="kk-section-title">New Arrivals</h2>
+                    <a href="{{ route('new-arrivals') }}" class="kk-view-all">View All <span aria-hidden="true">&rarr;</span></a>
+                </div>
+                <div class="kk-product-grid">
+                    @foreach($arrivals as $product)
+                        @include('partials.kk-product-card', ['product' => $product, 'tag' => 'Premium'])
+                    @endforeach
+                </div>
+            </div>
+        </section>
+        @endif
+
+        {{-- ============================================
+             BESTSELLERS
+             ============================================ --}}
+        @php $bs = ($bestsellers ?? collect())->take(4); @endphp
+        @if($bs->count())
+        <section class="kk-section" style="background: var(--kk-cream-light);">
+            <div class="container mx-auto px-4">
+                <div class="kk-section-header">
+                    <h2 class="kk-section-title">Bestsellers</h2>
+                    <a href="{{ route('bestsellers') }}" class="kk-view-all">View All <span aria-hidden="true">&rarr;</span></a>
+                </div>
+                <div class="kk-product-grid">
+                    @foreach($bs as $product)
+                        @include('partials.kk-product-card', ['product' => $product, 'tag' => 'Bestseller'])
+                    @endforeach
+                </div>
+            </div>
+        </section>
+        @endif
+
+        {{-- ============================================
+             ABOUT US — video-led, minimal text
+             ============================================ --}}
+        @php
+            $aboutTitle = ($sections['about_us']->title ?? null) ?: 'Crafted to Last';
+            $aboutText  = ($sections['about_us']->content ?? null) ?: 'A closer look at the cloth, cut and craft.';
+            $aboutLink  = ($sections['about_us']->button_link ?? null) ?: route('about');
+            // Three reel-style videos, each admin-configurable (Site Settings).
+            // Falls back to numbered default paths so the section works pre-config.
+            $aboutVideoKeys     = ['about_us_video_url', 'about_us_video_url_2', 'about_us_video_url_3'];
+            $aboutVideoDefaults = ['videos/karmaa-about.mp4', 'videos/karmaa-about-2.mp4', 'videos/karmaa-about-3.mp4'];
+            $aboutVideos = [];
+            foreach ($aboutVideoKeys as $ai => $ak) {
+                $val = \App\Models\Setting::get($ak, '');
+                $aboutVideos[] = $val
+                    ? (str_starts_with($val, 'http') ? $val : asset($val))
+                    : asset($aboutVideoDefaults[$ai]);
+            }
+        @endphp
+        <section class="kk-about">
+            <div class="container mx-auto px-4">
+                <span class="kk-eyebrow">About Us</span>
+                <h2 class="kk-section-title kk-section-title--lg" style="margin-top:8px;">{{ $aboutTitle }}</h2>
+                <p class="intro">{{ is_string($aboutText) ? $aboutText : '' }}</p>
+
+                <div class="kk-about-reels">
+                    @foreach($aboutVideos as $aboutVideo)
+                        <div class="kk-about-reel">
+                            <video autoplay muted loop playsinline preload="metadata">
+                                <source src="{{ $aboutVideo }}" type="video/mp4">
+                            </video>
+                        </div>
+                    @endforeach
+                </div>
+
+                <div class="kk-about-cta">
+                    <a href="{{ $aboutLink }}" class="kk-btn-brown">Our Story</a>
+                </div>
+            </div>
+        </section>
 
         {{-- ============================================
              SHOP IT YOUR WAY — Rail of hangers per tab
@@ -715,78 +870,6 @@
             </div>
         </section>
         @endif
-
-        {{-- ============================================
-             NEW ARRIVALS
-             ============================================ --}}
-        @php $arrivals = ($newArrivals ?? collect())->merge($featuredProducts ?? collect())->unique('id')->take(4); @endphp
-        @if($arrivals->count())
-        <section class="kk-section">
-            <div class="container mx-auto px-4">
-                <div class="kk-section-header">
-                    <h2 class="kk-section-title">New Arrivals</h2>
-                    <a href="{{ route('new-arrivals') }}" class="kk-view-all">View All <span aria-hidden="true">&rarr;</span></a>
-                </div>
-                <div class="kk-product-grid">
-                    @foreach($arrivals as $product)
-                        @include('partials.kk-product-card', ['product' => $product, 'tag' => 'Premium'])
-                    @endforeach
-                </div>
-            </div>
-        </section>
-        @endif
-
-        {{-- ============================================
-             BESTSELLERS
-             ============================================ --}}
-        @php $bs = ($bestsellers ?? collect())->take(4); @endphp
-        @if($bs->count())
-        <section class="kk-section" style="background: var(--kk-cream-light);">
-            <div class="container mx-auto px-4">
-                <div class="kk-section-header">
-                    <h2 class="kk-section-title">Bestsellers</h2>
-                    <a href="{{ route('bestsellers') }}" class="kk-view-all">View All <span aria-hidden="true">&rarr;</span></a>
-                </div>
-                <div class="kk-product-grid">
-                    @foreach($bs as $product)
-                        @include('partials.kk-product-card', ['product' => $product, 'tag' => 'Bestseller'])
-                    @endforeach
-                </div>
-            </div>
-        </section>
-        @endif
-
-        {{-- ============================================
-             ABOUT US — video-led, minimal text
-             ============================================ --}}
-        @php
-            $aboutTitle = ($sections['about_us']->title ?? null) ?: 'Crafted to Last';
-            $aboutText  = ($sections['about_us']->content ?? null) ?: 'A closer look at the cloth, cut and craft.';
-            $aboutLink  = ($sections['about_us']->button_link ?? null) ?: route('about');
-            // Admin-configurable video URL (Site Settings > About Us — Video).
-            // Falls back to the default path so the section still works pre-config.
-            $aboutVideoSetting = \App\Models\Setting::get('about_us_video_url', '');
-            $aboutVideo = $aboutVideoSetting
-                ? (str_starts_with($aboutVideoSetting, 'http') ? $aboutVideoSetting : asset($aboutVideoSetting))
-                : asset('videos/karmaa-about.mp4');
-        @endphp
-        <section class="kk-about">
-            <div class="container mx-auto px-4">
-                <span class="kk-eyebrow">About Us</span>
-                <h2 class="kk-section-title kk-section-title--lg" style="margin-top:8px;">{{ $aboutTitle }}</h2>
-                <p class="intro">{{ is_string($aboutText) ? $aboutText : '' }}</p>
-
-                <div class="kk-about-video">
-                    <video autoplay muted loop playsinline preload="metadata">
-                        <source src="{{ $aboutVideo }}" type="video/mp4">
-                    </video>
-                </div>
-
-                <div class="kk-about-cta">
-                    <a href="{{ $aboutLink }}" class="kk-btn-brown">Our Story</a>
-                </div>
-            </div>
-        </section>
 
         {{-- ============================================
              OUR QUALITIES (dark)
