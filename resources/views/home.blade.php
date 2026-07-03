@@ -529,7 +529,7 @@
         <section class="kk-hero">
             <div class="kk-hero-slide kk-hero-slide--video">
                 <video class="kk-hero-video"
-                       src="{{ asset('images/karmaa-kulture-web-banner-v2.mp4') }}"
+                       src="{{ asset('images/karmaa-kulture-web-banner-v3.mp4') }}"
                        autoplay
                        muted
                        loop
