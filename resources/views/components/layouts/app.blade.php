@@ -601,14 +601,14 @@
                 recognition: null,
                 currentPlaceholder: '',
                 placeholders: [
-                    'Search for Frocks...',
                     'Search for Shirts...',
+                    'Search for Polo T-Shirts...',
+                    'Search for Oxford Shirts...',
+                    'Search for Formal Shirts...',
+                    'Search for Linen Shirts...',
                     'Search for T-Shirts...',
-                    'Search for Sharara Set...',
-                    'Search for Bib...',
-                    'Search for Kurta Pajama...',
-                    'Search for Party Wear...',
-                    'Search for Lehenga Choli...',
+                    'Search for Trousers...',
+                    'Search for Chinos...',
                 ],
                 placeholderIndex: 0,
                 charIndex: 0,
@@ -706,7 +706,9 @@
                     this.showResults = true;
                     try {
                         const response = await axios.get('/search/suggestions', { params: { q: this.query } });
-                        this.results = response.data.results || response.data || [];
+                        // API returns { suggestions: [...] }; keep old keys as fallbacks
+                        const data = response.data || {};
+                        this.results = Array.isArray(data) ? data : (data.suggestions || data.results || []);
                     } catch (e) {
                         this.results = [];
                     } finally {
