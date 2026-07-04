@@ -43,7 +43,7 @@ Route::get('/', [App\Http\Controllers\HomeController::class, 'index'])->name('ho
 
 // Products
 Route::prefix('products')->name('products.')->group(function () {
-    Route::get('/', [App\Http\Controllers\ProductController::class, 'index'])->name('index');
+    // All-products index page removed — CTAs now point to the home page.
     Route::get('/{product:slug}', [App\Http\Controllers\ProductController::class, 'show'])->name('show');
 });
 
@@ -70,7 +70,7 @@ Route::post('/products/{product}/notify-back-in-stock', [App\Http\Controllers\Pr
 
 // Categories
 Route::prefix('categories')->name('categories.')->group(function () {
-    Route::get('/', [App\Http\Controllers\CategoryController::class, 'index'])->name('index');
+    // Categories index page removed — the navbar shows a hover dropdown instead.
     Route::get('/{category:slug}', [App\Http\Controllers\CategoryController::class, 'show'])->name('show');
 });
 
