@@ -377,6 +377,9 @@
                             </a>
                             <div class="flex-1 min-w-0">
                                 <a :href="'/product/' + item.slug" class="text-sm font-medium line-clamp-2 block" style="color:#222;" x-text="item.product_name"></a>
+                                <template x-if="item.size">
+                                    <p class="text-xs mt-0.5" style="color:#777;">Size: <span class="font-medium" style="color:#444;" x-text="item.size"></span></p>
+                                </template>
                                 <p class="text-sm font-bold mt-1" style="color:#222;" x-text="formatCurrency(item.price)"></p>
                                 <div class="flex items-center gap-2 mt-1.5">
                                     <div class="flex items-center rounded overflow-hidden" style="border:1px solid #ddd;">
@@ -455,140 +458,6 @@
 
     <!-- Mobile Bottom Navigation -->
     @include('partials.mobile-bottom-nav')
-
-    <!-- Quick View Modal -->
-    <div x-data="quickViewModal()"
-         x-show="open" x-cloak
-         @quick-view.window="show($event.detail.productId)"
-         @keydown.escape.window="close()"
-         class="fixed inset-0 z-60 flex items-center justify-center p-4">
-
-        {{-- Backdrop --}}
-        <div x-show="open"
-             x-transition:enter="transition ease-out duration-200"
-             x-transition:enter-start="opacity-0"
-             x-transition:enter-end="opacity-100"
-             x-transition:leave="transition ease-in duration-150"
-             x-transition:leave-start="opacity-100"
-             x-transition:leave-end="opacity-0"
-             @click="close()"
-             class="absolute inset-0 bg-black/50"></div>
-
-        {{-- Modal Content --}}
-        <div x-show="open"
-             x-transition:enter="transition ease-out duration-200"
-             x-transition:enter-start="opacity-0 scale-95"
-             x-transition:enter-end="opacity-100 scale-100"
-             x-transition:leave="transition ease-in duration-150"
-             x-transition:leave-start="opacity-100 scale-100"
-             x-transition:leave-end="opacity-0 scale-95"
-             class="relative bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-hidden"
-             @click.stop>
-
-            {{-- Close --}}
-            <button @click="close()" aria-label="Close quick view"
-                    class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-neutral-600 hover:text-neutral-800 rounded-full hover:bg-neutral-100 transition-colors z-10">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-            </button>
-
-            {{-- Loading State --}}
-            <div x-show="loading" class="flex items-center justify-center py-20">
-                <svg class="w-8 h-8 animate-spin text-[#6F9CA2]" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                </svg>
-            </div>
-
-            {{-- Product Content --}}
-            <div x-show="!loading && product" class="overflow-y-auto max-h-[85vh]">
-                <div class="grid grid-cols-1 sm:grid-cols-2">
-                    {{-- Image Gallery --}}
-                    <div class="relative bg-neutral-50 aspect-square sm:aspect-auto sm:min-h-[400px]">
-                        <img :src="activeImage" :alt="product?.name" class="w-full h-full object-cover">
-
-                        {{-- Image thumbnails --}}
-                        <template x-if="product?.images?.length > 1">
-                            <div class="absolute bottom-3 left-3 right-3 flex gap-1.5 justify-center">
-                                <template x-for="(img, i) in product.images.slice(0, 5)" :key="i">
-                                    <button @click="activeImageIndex = i"
-                                            class="w-10 h-10 rounded border-2 overflow-hidden bg-white transition-colors"
-                                            :class="activeImageIndex === i ? 'border-[#6F9CA2]' : 'border-white/80'">
-                                        <img :src="img" class="w-full h-full object-cover">
-                                    </button>
-                                </template>
-                            </div>
-                        </template>
-                    </div>
-
-                    {{-- Details --}}
-                    <div class="p-5 flex flex-col">
-                        {{-- Brand --}}
-                        <p x-show="product?.brand" x-text="product?.brand"
-                           class="text-[11px] text-neutral-600 uppercase tracking-wide mb-1"></p>
-
-                        {{-- Name --}}
-                        <h2 x-text="product?.name"
-                            class="text-lg font-semibold text-neutral-900 leading-snug mb-2"></h2>
-
-                        {{-- Rating --}}
-                        <template x-if="product?.rating > 0">
-                            <div class="flex items-center gap-1.5 mb-3">
-                                <span class="inline-flex items-center gap-0.5 bg-success-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-sm">
-                                    <span x-text="product?.rating?.toFixed(1)"></span>
-                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                                </span>
-                                <span class="text-xs text-neutral-600" x-text="'(' + product?.review_count + ' reviews)'"></span>
-                            </div>
-                        </template>
-
-                        {{-- Price --}}
-                        <div class="flex items-baseline gap-2 mb-3">
-                            <span class="text-xl font-bold text-neutral-900" x-text="formatCurrency(product?.price)"></span>
-                            <template x-if="product?.price < product?.mrp">
-                                <span class="text-sm text-neutral-600 line-through" x-text="formatCurrency(product?.mrp)"></span>
-                            </template>
-                            <template x-if="product?.discount_percentage > 0">
-                                <span class="text-sm font-semibold text-success-600" x-text="Math.round(product?.discount_percentage) + '% off'"></span>
-                            </template>
-                        </div>
-
-                        {{-- Description --}}
-                        <p x-show="product?.short_description" x-text="product?.short_description"
-                           class="text-sm text-neutral-600 leading-relaxed mb-4 line-clamp-3"></p>
-
-                        {{-- Stock Status --}}
-                        <div class="mb-4">
-                            <span x-show="product?.in_stock"
-                                  class="inline-flex items-center gap-1 text-xs font-medium text-success-700 bg-success-50 px-2 py-1 rounded-full">
-                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                                In Stock
-                            </span>
-                            <span x-show="!product?.in_stock"
-                                  class="inline-flex items-center text-xs font-medium text-error-700 bg-error-50 px-2 py-1 rounded-full">
-                                Out of Stock
-                            </span>
-                        </div>
-
-                        {{-- Actions --}}
-                        <div class="mt-auto space-y-2">
-                            <template x-if="product?.in_stock">
-                                <button @click="$store.cart.add(product.id); close()"
-                                        class="w-full py-2.5 bg-[#F8931D] hover:bg-[#E07E0A] text-white font-semibold rounded-lg text-sm transition-colors">
-                                    Add to Bag
-                                </button>
-                            </template>
-                            <a :href="product?.url"
-                               class="block w-full py-2.5 text-center text-sm font-medium text-[#6F9CA2] border border-[#6F9CA2]/30 rounded-lg hover:bg-[#6F9CA2]/5 transition-colors">
-                                View Full Details
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <script>
         function searchBar() {
@@ -750,43 +619,6 @@
             };
         }
 
-        function quickViewModal() {
-            return {
-                open: false,
-                loading: false,
-                product: null,
-                activeImageIndex: 0,
-
-                get activeImage() {
-                    if (!this.product?.images?.length) return this.product?.primary_image || '';
-                    return this.product.images[this.activeImageIndex] || this.product.primary_image;
-                },
-
-                async show(productId) {
-                    this.open = true;
-                    this.loading = true;
-                    this.product = null;
-                    this.activeImageIndex = 0;
-                    document.body.style.overflow = 'hidden';
-
-                    try {
-                        const response = await axios.get(`/product/${productId}/quick-view`);
-                        this.product = response.data;
-                    } catch (error) {
-                        console.error('Quick view failed:', error);
-                        Alpine.store('toast').error('Could not load product details');
-                        this.close();
-                    } finally {
-                        this.loading = false;
-                    }
-                },
-
-                close() {
-                    this.open = false;
-                    document.body.style.overflow = '';
-                }
-            };
-        }
     </script>
 
     {{ $scripts ?? '' }}
