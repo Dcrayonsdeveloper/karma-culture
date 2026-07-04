@@ -490,7 +490,7 @@
                     <p class="text-xs text-kk-text-muted mb-3">
                         <span class="font-semibold text-kk-brown">{{ $flashSale->products_count }} {{ Str::plural('product', $flashSale->products_count) }}</span> on sale
                     </p>
-                    <a href="{{ route('products.index') }}?flash_sale={{ $flashSale->slug }}" @click="dismiss()" class="kk-btn-brown w-full">
+                    <a href="{{ route('home') }}?flash_sale={{ $flashSale->slug }}" @click="dismiss()" class="kk-btn-brown w-full">
                         Shop the Sale Now
                     </a>
                 </div>
@@ -747,7 +747,8 @@
         @php
             $aboutTitle = ($sections['about_us']->title ?? null) ?: 'Crafted to Last';
             $aboutText  = ($sections['about_us']->content ?? null) ?: 'A closer look at the cloth, cut and craft.';
-            $aboutLink  = ($sections['about_us']->button_link ?? null) ?: route('about');
+            $aboutLink  = ($sections['about_us']->button_link ?? null);
+            $aboutLink  = ($aboutLink && $aboutLink !== '#') ? $aboutLink : route('about');
             // Three reel-style videos, each admin-configurable (Site Settings).
             // Falls back to numbered default paths so the section works pre-config.
             $aboutVideoKeys     = ['about_us_video_url', 'about_us_video_url_2', 'about_us_video_url_3'];
@@ -838,7 +839,7 @@
                                 <div class="kk-rail-bar" aria-hidden="true"></div>
                                 <div class="kk-rail-cells">
                                     @foreach($tabCfg['items'] as $i => $item)
-                                        <a href="{{ route('products.index') }}?{{ $item['q'] }}"
+                                        <a href="{{ route('home') }}?{{ $item['q'] }}"
                                            class="kk-rail-cell"
                                            style="--d: {{ $i * 80 }}ms;">
                                             <div class="kk-shirt-hanger" style="color: {{ $item['shade'] }};">

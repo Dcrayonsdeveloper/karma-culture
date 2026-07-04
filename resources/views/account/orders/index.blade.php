@@ -149,7 +149,7 @@
                             </div>
                             <h3 class="text-base font-semibold text-neutral-900 mb-1">No orders yet</h3>
                             <p class="text-sm text-neutral-600 mb-5">Start shopping to see your orders here.</p>
-                            <a href="{{ route('products.index') }}" class="inline-flex items-center gap-2 bg-[#F8931D] hover:bg-[#E07E0A] text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors">
+                            <a href="{{ route('home') }}" class="inline-flex items-center gap-2 bg-[#F8931D] hover:bg-[#E07E0A] text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors">
                                 Browse Products
                             </a>
                         </div>

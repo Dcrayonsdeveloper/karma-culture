@@ -142,7 +142,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                             </svg>
                             <p class="text-sm text-neutral-600 mb-4">You haven't placed any orders yet.</p>
-                            <a href="{{ route('products.index') }}" class="inline-flex items-center px-5 py-2.5 text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors">
+                            <a href="{{ route('home') }}" class="inline-flex items-center px-5 py-2.5 text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors">
                                 Start Shopping
                             </a>
                         </div>
