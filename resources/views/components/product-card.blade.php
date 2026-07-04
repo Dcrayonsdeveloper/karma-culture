@@ -96,23 +96,16 @@
             </div>
         @endif
 
-        {{-- Add to Cart --}}
+        {{-- View Product --}}
         @if($showAddToCart)
             <div class="mt-2 px-1">
-                @unless($outOfStock)
-                    <button @click="$store.cart.add({{ $product->id }})"
-                            class="w-full py-2.5 text-[12px] font-semibold text-white rounded-md transition-colors duration-200"
-                            style="background:#2D1810;"
-                            @mouseenter="$el.style.background='#1F1109'"
-                            @mouseleave="$el.style.background='#2D1810'">
-                        Add to Bag
-                    </button>
-                @else
-                    <button @click="$dispatch('notify-stock', { productId: {{ $product->id }} })"
-                            class="w-full py-2.5 text-[12px] font-medium text-neutral-600 border border-neutral-200 rounded-md hover:bg-neutral-50 transition-colors">
-                        Notify Me
-                    </button>
-                @endunless
+                <a href="{{ route('product.show', $product) }}"
+                   class="block w-full py-2.5 text-[12px] font-semibold text-white rounded-md transition-colors duration-200 text-center"
+                   style="background:#2D1810;"
+                   onmouseover="this.style.background='#1F1109'"
+                   onmouseout="this.style.background='#2D1810'">
+                    View Product
+                </a>
             </div>
         @endif
     </div>
@@ -149,16 +142,6 @@
                                 aria-label="Toggle wishlist">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
-                            </svg>
-                        </button>
-                    @endif
-                    @if($showQuickViewBtn)
-                        <button @click="$dispatch('quick-view', { productId: {{ $product->id }} })"
-                                class="w-10 h-10 bg-white rounded-full shadow-sm flex items-center justify-center text-neutral-600 hover:text-[#6F9CA2] transition-colors focus:outline-none focus:ring-2 focus:ring-[#6F9CA2] focus:ring-offset-1"
-                                aria-label="Quick view">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                             </svg>
                         </button>
                     @endif
@@ -246,23 +229,16 @@
                 </div>
             @endif
 
-            {{-- Add to Cart / Notify --}}
+            {{-- View Product --}}
             @if($showAddToCart)
                 <div class="mt-auto pt-1">
-                    @unless($outOfStock)
-                        <button @click="$store.cart.add({{ $product->id }})"
-                                class="w-full py-2.5 text-[13px] font-semibold text-white rounded-md transition-colors duration-200"
-                                style="background:#2D1810;"
-                                @mouseenter="$el.style.background='#1F1109'"
-                                @mouseleave="$el.style.background='#2D1810'">
-                            Add to Bag
-                        </button>
-                    @else
-                        <button @click="$dispatch('notify-stock', { productId: {{ $product->id }} })"
-                                class="w-full py-2.5 text-[13px] font-medium text-neutral-600 border border-neutral-200 rounded-md hover:bg-neutral-50 transition-colors">
-                            Notify Me
-                        </button>
-                    @endunless
+                    <a href="{{ route('product.show', $product) }}"
+                       class="block w-full py-2.5 text-[13px] font-semibold text-white rounded-md transition-colors duration-200 text-center"
+                       style="background:#2D1810;"
+                       onmouseover="this.style.background='#1F1109'"
+                       onmouseout="this.style.background='#2D1810'">
+                        View Product
+                    </a>
                 </div>
             @endif
         </div>

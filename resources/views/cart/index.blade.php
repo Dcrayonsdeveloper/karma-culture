@@ -57,7 +57,7 @@
                         <h1 class="text-lg font-bold text-neutral-900">
                             My Cart <span class="text-sm font-normal text-neutral-600" x-text="'(' + totalQty + ' ' + (totalQty === 1 ? 'item' : 'items') + ')'"></span>
                         </h1>
-                        <a href="{{ route('products.index') }}" class="text-sm text-primary-600 hover:text-primary-700 font-medium">
+                        <a href="{{ route('home') }}" class="text-sm text-primary-600 hover:text-primary-700 font-medium">
                             Continue Shopping
                         </a>
                     </div>
@@ -292,7 +292,7 @@
                     </div>
                     <h2 class="text-xl font-bold text-neutral-800 mb-2">Your bag is empty</h2>
                     <p class="text-sm text-neutral-600 mb-8 max-w-sm text-center leading-relaxed">There is nothing in your bag. Let's add some items.</p>
-                    <a href="{{ route('products.index') }}"
+                    <a href="{{ route('home') }}"
                        class="inline-flex items-center gap-2 bg-[#F8931D] hover:bg-[#E07E0A] text-white text-sm font-semibold px-10 py-3 rounded-lg transition-colors shadow-md shadow-[#F8931D]/20">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
                         Start Shopping

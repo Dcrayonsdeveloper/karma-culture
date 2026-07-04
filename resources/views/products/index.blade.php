@@ -80,7 +80,7 @@
                 @if(request('on_sale'))
                     <span class="inline-flex items-center px-2.5 py-1 bg-[#6F9CA2]/5 text-[#5B878D] text-xs font-medium rounded-full border border-[#6F9CA2]/30">On Sale</span>
                 @endif
-                <a href="{{ route('products.index') }}" class="text-xs text-neutral-600 hover:text-[#6F9CA2] underline ml-1">Clear all</a>
+                <a href="{{ route('home') }}" class="text-xs text-neutral-600 hover:text-[#6F9CA2] underline ml-1">Clear all</a>
             </div>
         @endif
 
@@ -137,7 +137,7 @@
 
                     <div class="flex items-center gap-2">
                         <label class="text-xs text-neutral-600 hidden sm:inline">Sort by:</label>
-                        <select onchange="window.location.href = '{{ route('products.index') }}?' + new URLSearchParams({...Object.fromEntries(new URLSearchParams(window.location.search)), sort: this.value})"
+                        <select onchange="window.location.href = '{{ route('home') }}?' + new URLSearchParams({...Object.fromEntries(new URLSearchParams(window.location.search)), sort: this.value})"
                                 class="text-sm py-1.5 pl-3 pr-8 border border-neutral-200 rounded-lg bg-white text-neutral-700 focus:outline-none focus:border-[#6F9CA2] cursor-pointer">
                             <option value="newest" {{ request('sort') === 'newest' ? 'selected' : '' }}>Newest</option>
                             <option value="price_asc" {{ request('sort') === 'price_asc' ? 'selected' : '' }}>Price: Low to High</option>
@@ -167,7 +167,7 @@
                         </div>
                         <h3 class="text-lg font-semibold text-neutral-900 mb-1">No products found</h3>
                         <p class="text-sm text-neutral-600 mb-5">Try adjusting your filters or browse all products.</p>
-                        <a href="{{ route('products.index') }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-[#F8931D] hover:bg-[#E07E0A] text-white text-sm font-semibold rounded-lg transition-colors">
+                        <a href="{{ route('home') }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-[#F8931D] hover:bg-[#E07E0A] text-white text-sm font-semibold rounded-lg transition-colors">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                             Clear All Filters
                         </a>
