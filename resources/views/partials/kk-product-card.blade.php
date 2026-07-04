@@ -1,6 +1,6 @@
 @php
     /** @var \App\Models\Product $product */
-    $tag = $tag ?? 'Premium';
+    $tag = $tag ?? null;
     $hasDiscount = isset($product->mrp) && $product->price < $product->mrp;
     $discount = (int) ($product->discount_percentage ?? 0);
     $brandName = optional($product->brand)->name;
@@ -14,7 +14,7 @@
     <a href="{{ route('product.show', $product) }}" class="kk-product__media block">
         <img src="{{ $img }}" alt="{{ $product->name }}" loading="lazy"
              onerror="this.src='{{ asset('images/placeholder-boys.svg') }}'">
-        <span class="kk-product__tag">{{ Str::upper($tag) }}</span>
+        @if($tag)<span class="kk-product__tag">{{ Str::upper($tag) }}</span>@endif
         @if($hasDiscount && $discount > 0)
             <span class="kk-product__discount">{{ $discount }}% OFF</span>
         @endif

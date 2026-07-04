@@ -455,7 +455,7 @@ body:not(.layout-admin) a.text-white {
 .kk-product__price del {
     color: var(--kk-text-muted); font-weight: 400; margin-right: 6px;
 }
-.kk-product__cta { margin-top: 12px; }
+.kk-product__cta { margin-top: auto; padding-top: 12px; }
 
 /* Storefront sits on cream — keep the fixed-header spacer and any
    layout gaps from flashing white. Admin keeps its own background. */
