@@ -15,10 +15,11 @@
             </button>
             <div x-show="open" x-collapse>
                 <div class="space-y-1.5 max-h-52 overflow-y-auto pt-1 pb-2">
+                    @php $activeSubs = $activeSubcategorySlugs ?? (array) request('subcategory'); @endphp
                     @foreach($filterSubcategories as $sub)
                         <label class="flex items-center gap-2.5 cursor-pointer group py-0.5">
                             <input type="checkbox" name="subcategory[]" value="{{ $sub->slug }}"
-                                   {{ in_array($sub->slug, (array) request('subcategory')) ? 'checked' : '' }}
+                                   {{ in_array($sub->slug, $activeSubs) ? 'checked' : '' }}
                                    class="w-3.5 h-3.5 rounded border-neutral-300 text-[#6F9CA2] focus:ring-[#6F9CA2] focus:ring-offset-0">
                             <span class="text-sm text-neutral-600 group-hover:text-neutral-900 transition-colors">{{ $sub->name }}</span>
                         </label>

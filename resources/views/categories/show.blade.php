@@ -47,26 +47,6 @@
         </div>
     </div>
 
-    <!-- Subcategories -->
-    @if($subcategories->count())
-        <div class="bg-white border-b border-neutral-200 sticky top-14 z-20">
-            <div class="container mx-auto px-4">
-                <div class="flex gap-1 overflow-x-auto py-2.5 scrollbar-hide">
-                    <a href="{{ route('category.show', $category) }}"
-                       class="shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors {{ !request('subcategory') ? 'bg-[#F8931D] text-white shadow-sm' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200' }}">
-                        All
-                    </a>
-                    @foreach($subcategories as $sub)
-                        <a href="{{ route('category.show', $sub) }}"
-                           class="shrink-0 px-4 py-1.5 rounded-full text-sm font-medium bg-neutral-100 text-neutral-600 hover:bg-neutral-200 transition-colors">
-                            {{ $sub->name }}
-                        </a>
-                    @endforeach
-                </div>
-            </div>
-        </div>
-    @endif
-
     <div class="container mx-auto px-4 py-6">
         <!-- Active Filters -->
         @if(request()->hasAny(['subcategory', 'min_price', 'max_price', 'in_stock', 'on_sale']))
@@ -162,9 +142,9 @@
                 </div>
 
                 @if($products->count())
-                    <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                         @foreach($products as $product)
-                            <x-product-card :product="$product" />
+                            @include('partials.kk-product-card', ['product' => $product, 'tag' => 'Premium'])
                         @endforeach
                     </div>
 
