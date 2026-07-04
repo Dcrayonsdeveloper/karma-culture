@@ -226,60 +226,88 @@ Alpine.store('cart', {
  * Wishlist store
  */
 Alpine.store('wishlist', {
-    items: [],
+    ids: [],            // product IDs — persisted in a browser COOKIE (works for guests)
+    items: [],          // product data for the drawer / wishlist page
+    isOpen: false,      // wishlist drawer (popup) open state
     isLoading: false,
 
+    init() {
+        this.ids = this.readCookie();
+        if (this.ids.length) this.fetch();
+    },
+
     get count() {
-        return this.items.length;
+        return this.ids.length;
+    },
+
+    // ---- cookie persistence ----
+    readCookie() {
+        const m = document.cookie.match(/(?:^|;\s*)kk_wishlist=([^;]*)/);
+        if (!m) return [];
+        try {
+            return JSON.parse(decodeURIComponent(m[1])).map(n => parseInt(n, 10)).filter(Boolean);
+        } catch (e) {
+            return [];
+        }
+    },
+    saveCookie() {
+        const value = encodeURIComponent(JSON.stringify(this.ids));
+        document.cookie = 'kk_wishlist=' + value + '; path=/; max-age=' + (60 * 60 * 24 * 365) + '; SameSite=Lax';
     },
 
     has(productId) {
-        return this.items.some(item => item.product_id === productId);
+        return this.ids.includes(parseInt(productId, 10));
     },
 
     async fetch() {
+        if (!this.ids.length) { this.items = []; return; }
         this.isLoading = true;
         try {
-            const response = await axios.get('/wishlist', {
-                headers: { 'Accept': 'application/json' }
-            });
-            this.items = response.data.items || [];
-        } catch (error) {
-            console.error('Failed to fetch wishlist:', error);
+            const res = await axios.get('/wishlist-items', { params: { ids: this.ids.join(',') } });
+            const byId = {};
+            (res.data.items || []).forEach(p => byId[p.id] = p);
+            this.items = this.ids.map(id => byId[id]).filter(Boolean);
+        } catch (e) {
+            this.items = [];
         } finally {
             this.isLoading = false;
         }
     },
 
     async toggle(productId) {
-        // Show login modal if not authenticated
-        if (document.body.dataset.authenticated !== 'true') {
-            Alpine.store('authModal').open();
-            return;
+        productId = parseInt(productId, 10);
+        if (this.has(productId)) {
+            this.remove(productId);
+        } else {
+            await this.add(productId);
         }
+    },
 
-        this.isLoading = true;
-        try {
-            if (this.has(productId)) {
-                await axios.delete(`/wishlist/${productId}`);
-                this.items = this.items.filter(item => item.product_id !== productId);
-                Alpine.store('toast').info('Removed from wishlist');
-            } else {
-                await axios.post(`/wishlist/${productId}`);
-                this.items.push({ product_id: productId });
-                Alpine.store('toast').success('Added to wishlist');
-            }
-        } catch (error) {
-            if (error.response && error.response.status === 401) {
-                Alpine.store('authModal').open();
-                return;
-            }
-            Alpine.store('toast').error('Failed to update wishlist');
-            console.error('Failed to toggle wishlist:', error);
-        } finally {
-            this.isLoading = false;
+    async add(productId) {
+        productId = parseInt(productId, 10);
+        if (!this.has(productId)) {
+            this.ids.push(productId);
+            this.saveCookie();
+            Alpine.store('toast').success('Added to wishlist');
+            await this.fetch();
         }
-    }
+    },
+
+    remove(productId) {
+        productId = parseInt(productId, 10);
+        this.ids = this.ids.filter(id => id !== productId);
+        this.items = this.items.filter(p => p.id !== productId);
+        this.saveCookie();
+        Alpine.store('toast').info('Removed from wishlist');
+    },
+
+    open() {
+        try { Alpine.store('cart').close(); } catch (e) {}
+        this.isOpen = true;
+    },
+    close() { this.isOpen = false; },
+    // legacy alias
+    fetchRemote() { this.fetch(); }
 });
 
 /**
