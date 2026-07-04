@@ -71,19 +71,6 @@
             @endguest
         </div>
 
-        <!-- Search -->
-        <div class="px-4 py-3 border-b border-neutral-100 shrink-0">
-            <form action="{{ route('search') }}" method="GET">
-                <div class="relative">
-                    <svg class="w-4 h-4 text-neutral-600 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                    </svg>
-                    <input type="text" name="q" placeholder="Search products..."
-                           class="w-full pl-9 pr-3 py-2 text-sm bg-neutral-50 border border-neutral-200 rounded-lg focus:outline-none focus:border-[#2D1810] placeholder-neutral-400">
-                </div>
-            </form>
-        </div>
-
         <!-- Scrollable Navigation -->
         <nav class="flex-1 overflow-y-auto">
             <div class="py-2">
@@ -120,7 +107,17 @@
                 <div class="mt-2 pt-2 border-t border-neutral-100">
                     <p class="px-4 py-2 text-[11px] font-semibold text-neutral-600 uppercase tracking-wider">Shop by Category</p>
 
-                    @foreach($navCategories ?? [] as $cat)
+                    @php
+                        // Only the Men's & Women's roots; each expands to show its categories.
+                        $genderRoots = \App\Models\Category::whereIn('slug', ['mens', 'womens'])
+                            ->where('is_active', true)
+                            ->with(['children' => fn ($q) => $q->where('is_active', true)->orderBy('name')])
+                            ->get()
+                            ->sortBy(fn ($c) => $c->slug === 'womens' ? 1 : 0)
+                            ->values();
+                    @endphp
+
+                    @foreach($genderRoots as $cat)
                         @if($cat->children->count())
                             <div x-data="{ expanded: false }">
                                 <button @click="expanded = !expanded"
@@ -149,13 +146,6 @@
                             </a>
                         @endif
                     @endforeach
-
-                    <a href="{{ route('categories.index') }}" class="flex items-center gap-2 px-4 py-3 text-sm text-[#2D1810] hover:bg-[#2D1810]/5 font-medium">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"/>
-                        </svg>
-                        All Categories
-                    </a>
                 </div>
 
                 <!-- Account Links -->
