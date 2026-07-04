@@ -3,7 +3,7 @@
 
     <div class="container mx-auto px-4 py-8">
         {{-- Search input with autocomplete dropdown --}}
-        <div class="relative max-w-xl mb-6"
+        <div class="relative max-w-xl mb-6 mx-auto"
              x-data="searchBar()"
              x-init="query = '{{ addslashes($query ?? '') }}'; if(query) stopTypewriter()"
              @click.outside="showResults = false">
@@ -182,7 +182,7 @@
                         <!-- Products Grid -->
                         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             @foreach($products as $product)
-                                <x-product-card :product="$product" />
+                                @include('partials.kk-product-card', ['product' => $product])
                             @endforeach
                         </div>
 
