@@ -1,15 +1,7 @@
 @php $announcement = \App\Models\Setting::get('announcement_text') ?: 'Our All Products are 100% Made in India'; @endphp
 
-<header id="main-header" x-data="{ visible: true, lastScroll: 0 }"
-       x-on:scroll.window="
-           let y = window.scrollY;
-           if (y < 60) { visible = true }
-           else if (y < lastScroll) { visible = true }
-           else if (y > lastScroll + 5) { visible = false }
-           lastScroll = y;
-       "
-       class="bg-kk-cream relative left-0 right-0 z-40"
-       :style="'top:0; transition: transform 0.3s ease; transform: translateY(' + (visible ? '0' : '-100%') + ')'">
+<header id="main-header"
+       class="bg-kk-cream sticky top-0 left-0 right-0 z-40 shadow-sm">
     <!-- Announcement Bar (marquee) -->
     @if($announcement)
     <div style="background:#2d1810;" class="kk-marquee text-kk-text-on-dark py-1.5 text-[11px] sm:text-xs font-medium tracking-[0.18em] uppercase">
@@ -71,7 +63,7 @@
 
                     {{-- Categories: hover-triggered mega menu — clean text layout, data from admin --}}
                     @php
-                        [$kkMegaMens, $kkMegaWomens] = \Illuminate\Support\Facades\Cache::remember('kk_mega_menu_v3', 300, function () {
+                        [$kkMegaMens, $kkMegaWomens] = \Illuminate\Support\Facades\Cache::remember('kk_mega_menu_v4', 300, function () {
                             $loader = fn($q) => $q->where('is_active', true)->orderBy('position')
                                 ->with(['children' => fn($qq) => $qq->where('is_active', true)->orderBy('position')]);
                             $mens = \App\Models\Category::whereNull('parent_id')->where('is_active', true)
@@ -80,25 +72,24 @@
                             $womens = \App\Models\Category::whereNull('parent_id')->where('is_active', true)
                                 ->where(function ($q) { $q->where('slug', 'womens')->orWhere('slug', 'women')->orWhere('name', "Women's")->orWhere('name', 'Women'); })
                                 ->with(['children' => $loader])->first();
-                            return [
-                                $mens   ? $mens->children->take(4)   : collect(),
-                                $womens
-                                    ? $womens->children
-                                        ->reject(fn ($c) => \Illuminate\Support\Str::contains(strtolower($c->name), ['t-shirt', 'tshirt', 't shirt']))
-                                        ->take(7)->values()
-                                    : collect(),
-                            ];
+                            // Men's is rendered exactly like Women's: exclude any "T-Shirts" category, take up to 7.
+                            $shape = fn ($cat) => $cat
+                                ? $cat->children
+                                    ->reject(fn ($c) => \Illuminate\Support\Str::contains(strtolower($c->name), ['t-shirt', 'tshirt', 't shirt']))
+                                    ->take(7)->values()
+                                : collect();
+                            return [$shape($mens), $shape($womens)];
                         });
                     @endphp
                     <div class="kk-mega"
                          x-data="{ open: false, closeT: null }"
                          @mouseenter="clearTimeout(closeT); open = true"
                          @mouseleave="closeT = setTimeout(() => open = false, 120)">
-                        <a href="{{ route('categories.index') }}"
-                           class="px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap inline-flex items-center gap-1">
+                        <button type="button" @click="open = !open"
+                                class="px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap inline-flex items-center gap-1 cursor-pointer bg-transparent border-0">
                             Categories
                             <svg class="w-3 h-3 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                        </a>
+                        </button>
                         <div x-cloak x-show="open"
                              x-transition:enter="transition ease-out duration-200"
                              x-transition:enter-start="opacity-0 -translate-y-1"

@@ -8,12 +8,12 @@
             <span class="text-xs font-medium">Home</span>
         </a>
 
-        <a href="{{ route('categories.index') }}" class="flex flex-col items-center gap-1 px-3 py-2 {{ request()->routeIs('categories*') ? 'text-primary-500' : 'text-neutral-600' }}">
+        <button type="button" @click="$dispatch('toggle-mobile-nav')" class="flex flex-col items-center gap-1 px-3 py-2 text-neutral-600">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 6h16M4 12h16M4 18h16"/>
             </svg>
             <span class="text-xs font-medium">Categories</span>
-        </a>
+        </button>
 
         <a href="{{ route('cart.index') }}" class="flex flex-col items-center gap-1 px-3 py-2 text-neutral-600 relative">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
