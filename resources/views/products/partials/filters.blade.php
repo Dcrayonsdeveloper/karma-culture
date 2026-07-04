@@ -1,4 +1,4 @@
-<form action="{{ route('products.index') }}" method="GET" class="space-y-4">
+<form action="{{ route('home') }}" method="GET" class="space-y-4">
     {{-- Preserve sort --}}
     @if(request('sort'))
         <input type="hidden" name="sort" value="{{ request('sort') }}">
@@ -142,7 +142,7 @@
         <button type="submit" class="flex-1 py-2.5 bg-[#F8931D] hover:bg-[#E07E0A] text-white text-sm font-semibold rounded-lg transition-colors">
             Apply
         </button>
-        <a href="{{ route('products.index') }}" class="flex-1 py-2.5 text-center text-sm font-medium text-neutral-600 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
+        <a href="{{ route('home') }}" class="flex-1 py-2.5 text-center text-sm font-medium text-neutral-600 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
             Reset
         </a>
     </div>

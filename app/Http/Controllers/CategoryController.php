@@ -26,27 +26,49 @@ class CategoryController extends Controller
     {
         abort_unless($category->is_active, 404);
 
-        // Get all descendant category IDs
-        $categoryIds = collect([$category->id]);
-        if ($category->children->count()) {
-            $categoryIds = $categoryIds->merge(
-                $category->children->pluck('id')
-            );
-        }
+        // Any category that sits UNDER a gender root (Men's/Women's) is browsed within
+        // its parent's scope, so the sidebar "Sub-categories" filter always lists the
+        // top-level categories (e.g. T-Shirts, Shirts, Kurtas, Trousers) — never the
+        // clicked category's own deeper subcategories. Root pages scope to themselves.
+        $isSubPage = $category->parent !== null;
+        $scopeCategory = $isSubPage ? $category->parent : $category;
+
+        // Outer bound: the scope category and every descendant beneath it, so products
+        // filed under deeper subcategories are still included.
+        $categoryIds = $scopeCategory->getAllDescendantIds();
+
+        // Does this section's category tree hold any products right now? When it's empty
+        // (catalogue not categorised yet) the default view falls back to the full
+        // catalogue so Men's/Women's aren't blank — but any explicit filter the shopper
+        // applies below (sub-category, price, availability) still narrows the results.
+        $sectionHasProducts = Product::where('is_active', true)
+            ->whereIn('category_id', $categoryIds)
+            ->exists();
 
         $query = Product::query()
             ->where('is_active', true)
-            ->whereIn('category_id', $categoryIds)
             ->with(['category', 'brand', 'primaryImage']);
 
-        // Subcategory filter
         if ($request->filled('subcategory')) {
+            // Explicit sub-category selection ALWAYS filters — even in fallback mode — so
+            // ticking a box narrows the products to that category (and its descendants).
             $subSlugs = (array) $request->subcategory;
-            $subIds = Category::whereIn('slug', $subSlugs)->pluck('id');
-            if ($subIds->isNotEmpty()) {
-                $query->whereIn('category_id', $subIds);
+            $subIds = collect();
+            foreach (Category::whereIn('slug', $subSlugs)->get() as $sub) {
+                $subIds = $subIds->merge($sub->getAllDescendantIds());
+            }
+            $subIds = $subIds->unique()->values();
+            // Force an empty result (not "no filter") if the slugs resolve to nothing.
+            $query->whereIn('category_id', $subIds->isNotEmpty() ? $subIds->all() : [0]);
+        } elseif ($sectionHasProducts) {
+            // No explicit pick, but this section has products — scope to it. A sub-page
+            // defaults to the clicked category (and its descendants).
+            $query->whereIn('category_id', $categoryIds);
+            if ($isSubPage) {
+                $query->whereIn('category_id', $category->getAllDescendantIds());
             }
         }
+        // else: section empty and nothing ticked → show the full catalogue (fallback).
 
         // Price filter
         if ($request->filled('min_price')) {
@@ -92,11 +114,12 @@ class CategoryController extends Controller
 
         $products = $query->paginate(24)->withQueryString();
 
-        // Subcategories for filter sidebar
-        $filterSubcategories = $category->children()->where('is_active', true)->withCount('products')->get();
-
-        // Subcategories for pill nav
+        // Sub-categories for the sidebar checkbox filter (the scope category's children).
+        $filterSubcategories = $scopeCategory->children()->where('is_active', true)->withCount('products')->get();
         $subcategories = $filterSubcategories;
+
+        // Which sub-category checkboxes are active (default to the clicked category).
+        $activeSubcategorySlugs = (array) $request->input('subcategory', $isSubPage ? [$category->slug] : []);
 
         // Breadcrumbs
         $breadcrumbs = [];
@@ -105,6 +128,6 @@ class CategoryController extends Controller
         }
         $breadcrumbs[] = ['label' => $category->name, 'url' => null];
 
-        return view('categories.show', compact('category', 'products', 'filterSubcategories', 'subcategories', 'breadcrumbs'));
+        return view('categories.show', compact('category', 'products', 'filterSubcategories', 'subcategories', 'activeSubcategorySlugs', 'breadcrumbs'));
     }
 }
