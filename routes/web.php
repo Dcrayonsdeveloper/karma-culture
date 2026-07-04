@@ -118,10 +118,12 @@ Route::prefix('checkout')->name('checkout.')->group(function () {
     Route::get('/failed', [App\Http\Controllers\CheckoutController::class, 'failed'])->name('failed');
 });
 
-// Wishlist page (handles auth check in controller)
+// Wishlist page — client-side (localStorage) wishlist, works for guests
 Route::get('/wishlist', [App\Http\Controllers\WishlistController::class, 'index'])->name('wishlist');
+// Product data for the favourited IDs (guest-accessible; used to render the wishlist page)
+Route::get('/wishlist-items', [App\Http\Controllers\WishlistController::class, 'items'])->name('wishlist.items');
 
-// Wishlist actions (require auth)
+// Wishlist actions (require auth — legacy server wishlist, kept for logged-in sync if needed)
 Route::middleware('auth')->prefix('wishlist')->name('wishlist.')->group(function () {
     Route::post('/{product}', [App\Http\Controllers\WishlistController::class, 'store'])->name('store');
     Route::delete('/{product}', [App\Http\Controllers\WishlistController::class, 'destroy'])->name('destroy');

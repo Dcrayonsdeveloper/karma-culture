@@ -11,30 +11,41 @@ use Illuminate\View\View;
 
 class WishlistController extends Controller
 {
-    public function index(Request $request): View|JsonResponse|RedirectResponse
+    public function index(): View
     {
-        if (!auth()->check()) {
-            if ($request->wantsJson()) {
-                return response()->json(['items' => []], 401);
-            }
-            return redirect()->route('login');
+        // Wishlist is stored client-side (localStorage) so it works for guests.
+        // The page fetches the favourited products via the wishlist-items endpoint.
+        return view('wishlist.index');
+    }
+
+    public function items(Request $request): JsonResponse
+    {
+        $ids = collect(explode(',', (string) $request->query('ids', '')))
+            ->map(fn ($id) => (int) trim($id))
+            ->filter()
+            ->take(100)
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return response()->json(['items' => []]);
         }
 
-        if ($request->wantsJson()) {
-            $items = Wishlist::where('user_id', auth()->id())
-                ->select('id', 'product_id')
-                ->get();
+        $products = Product::whereIn('id', $ids)
+            ->where('is_active', true)
+            ->with(['primaryImage', 'category'])
+            ->get()
+            ->map(fn ($p) => [
+                'id' => $p->id,
+                'name' => $p->name,
+                'url' => route('product.show', $p),
+                'image' => $p->primary_image_url,
+                'price' => (float) $p->price,
+                'mrp' => (float) $p->mrp,
+                'discount' => (int) ($p->discount_percentage ?? 0),
+                'in_stock' => $p->isInStock(),
+            ]);
 
-            return response()->json(['items' => $items]);
-        }
-
-        $wishlistItems = Wishlist::query()
-            ->where('user_id', auth()->id())
-            ->with(['product.category', 'product.primaryImage'])
-            ->latest()
-            ->paginate(24);
-
-        return view('wishlist.index', compact('wishlistItems'));
+        return response()->json(['items' => $products]);
     }
 
     public function store(Request $request, Product $product): JsonResponse|RedirectResponse
