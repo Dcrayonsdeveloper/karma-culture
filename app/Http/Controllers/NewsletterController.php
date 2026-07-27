@@ -13,9 +13,15 @@ class NewsletterController extends Controller
         $validated = $request->validate([
             'email' => 'required|email|max:255',
             'name' => 'nullable|string|max:100',
-            // Mobile: optional in general, but the offer popup enforces it client-side.
-            // Accept 10-15 digit numbers (allow +, spaces, hyphens which we strip).
-            'phone' => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\-\s]{8,20}$/'],
+            // Mobile: optional for plain newsletter signups, required by the offer popup
+            // client-side. Validate on the actual DIGIT count (mirrors the client rule) so
+            // symbol/whitespace-only input can't create junk leads via direct POST.
+            'phone' => ['nullable', 'string', 'max:20', function ($attribute, $value, $fail) {
+                $digits = preg_replace('/\D/', '', (string) $value);
+                if (strlen($digits) < 10 || strlen($digits) > 15) {
+                    $fail('Please enter a valid mobile number (10–15 digits).');
+                }
+            }],
         ]);
 
         $phone = isset($validated['phone']) ? preg_replace('/[^0-9+]/', '', $validated['phone']) : null;
