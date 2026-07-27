@@ -620,6 +620,123 @@ if (document.readyState === 'loading') {
 }
 
 // ========================================
+// Marketing / conversion components (offer popup, purchase notification,
+// exit-intent cart popup). Registered here so init() always runs reliably.
+// ========================================
+const _csrf = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+const _seen = (k) => { try { if (localStorage.getItem(k)) return true; } catch (e) {} return document.cookie.split('; ').some((c) => c.startsWith(k + '=')); };
+const _markSeen = (k) => { try { localStorage.setItem(k, '1'); } catch (e) {} document.cookie = `${k}=1; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`; };
+const _validPhone = (v) => /^[0-9]{10}$/.test((v || '').replace(/\D/g, ''));
+
+Alpine.data('offerPopup', () => ({
+    open: false, submitting: false, done: false, error: '',
+    form: { name: '', email: '', phone: '' },
+    key: 'kk_offer_popup_seen',
+    init() {
+        if (_seen(this.key)) return;
+        window.setTimeout(() => { this.open = true; _markSeen(this.key); }, 3500);
+    },
+    close() { this.open = false; },
+    async submit() {
+        this.error = '';
+        if (!this.form.email) { this.error = 'Please enter your email address.'; return; }
+        if (!_validPhone(this.form.phone)) { this.error = 'Please enter a valid 10-digit mobile number.'; return; }
+        this.submitting = true;
+        try {
+            const res = await fetch('/newsletter/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': _csrf() },
+                body: JSON.stringify({ ...this.form, source: 'offer_popup' }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data.success) { this.done = true; window.setTimeout(() => this.close(), 2800); }
+            else { this.error = data.message || 'Something went wrong. Please try again.'; }
+        } catch (e) { this.error = 'Network error. Please try again.'; }
+        finally { this.submitting = false; }
+    },
+}));
+
+Alpine.data('purchaseNotif', (messages = [], productName = '') => ({
+    messages, productName, idx: 0, current: '', visible: false, _t: null,
+    init() {
+        if (!this.messages.length) return;
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        window.setTimeout(() => this.showNext(), 5000);
+    },
+    showNext() {
+        if (this.idx >= this.messages.length) return;
+        this.current = this.messages[this.idx];
+        this.idx++;
+        this.visible = true;
+        this._t = window.setTimeout(() => {
+            this.visible = false;
+            const gap = 16000 + Math.floor(Math.random() * 12000);
+            window.setTimeout(() => this.showNext(), gap);
+        }, 5000);
+    },
+    dismiss() { this.visible = false; this.idx = this.messages.length; if (this._t) window.clearTimeout(this._t); },
+}));
+
+Alpine.data('exitPopup', (code = 'KARMAA10', minutes = 10) => ({
+    open: false, submitting: false, done: false, error: '',
+    form: { email: '', phone: '' },
+    code, timeLeft: `${minutes}:00`, _tick: null, _dwell: null, _armed: false, _lastY: 0,
+    key: 'kk_exit_popup_seen',
+    init() {
+        if (_seen(this.key)) return;
+        this._onMouseOut = (e) => { if (e.clientY <= 0 && !e.relatedTarget) this.trigger(); };
+        document.addEventListener('mouseout', this._onMouseOut);
+        // Mobile-friendly fallbacks: a fast upward scroll near the top, or long dwell.
+        this._lastY = window.scrollY;
+        this._onScroll = () => {
+            const y = window.scrollY;
+            if (this._lastY - y > 60 && y < 120) this.trigger();
+            this._lastY = y;
+        };
+        window.addEventListener('scroll', this._onScroll, { passive: true });
+        this._dwell = window.setTimeout(() => this.trigger(), 60000);
+    },
+    trigger() {
+        if (this.open || _seen(this.key)) return;
+        this.open = true;
+        _markSeen(this.key);
+        this.startCountdown(parseInt((this.timeLeft || '10:00').split(':')[0], 10) || 10);
+        this.cleanup();
+    },
+    startCountdown(minutes) {
+        const end = Date.now() + minutes * 60 * 1000;
+        this._tick = window.setInterval(() => {
+            const ms = Math.max(0, end - Date.now());
+            const m = Math.floor(ms / 60000), s = Math.floor((ms % 60000) / 1000);
+            this.timeLeft = `${m}:${s < 10 ? '0' : ''}${s}`;
+            if (ms <= 0) window.clearInterval(this._tick);
+        }, 1000);
+    },
+    cleanup() {
+        if (this._onMouseOut) document.removeEventListener('mouseout', this._onMouseOut);
+        if (this._onScroll) window.removeEventListener('scroll', this._onScroll);
+        if (this._dwell) window.clearTimeout(this._dwell);
+    },
+    close() { this.open = false; if (this._tick) window.clearInterval(this._tick); },
+    async claim() {
+        this.error = '';
+        if (!this.form.email) { this.error = 'Please enter your email address.'; return; }
+        if (this.form.phone && !_validPhone(this.form.phone)) { this.error = 'Enter a valid 10-digit mobile number.'; return; }
+        this.submitting = true;
+        try {
+            const res = await fetch('/newsletter/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': _csrf() },
+                body: JSON.stringify({ ...this.form, source: 'exit_intent' }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data.success) { this.done = true; } else { this.error = data.message || 'Something went wrong.'; }
+        } catch (e) { this.error = 'Network error. Please try again.'; }
+        finally { this.submitting = false; }
+    },
+}));
+
+// ========================================
 // Start Alpine.js (MUST be after all stores and components are registered)
 // ========================================
 Alpine.start();

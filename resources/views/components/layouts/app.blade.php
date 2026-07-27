@@ -638,5 +638,8 @@
     <!-- Cookie Consent -->
     <x-cookie-consent />
 
+    <!-- Exit-intent / abandoned-cart popup (once per visitor) -->
+    @include('partials.exit-popup')
+
 </body>
 </html>

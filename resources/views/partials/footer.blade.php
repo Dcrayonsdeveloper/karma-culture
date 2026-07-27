@@ -27,9 +27,8 @@
                             'youtube'   => \App\Models\Setting::get('social_youtube', ''),
                         ];
                     @endphp
-                    <div class="flex items-center gap-3 mb-3">
-                        <span class="text-xs font-semibold uppercase tracking-widest text-kk-brown/70">Follow</span>
-                        {{-- Instagram (always shown; links to the configured profile) --}}
+                    <div class="flex items-center gap-3 mt-1">
+                        {{-- Social profiles (admin-configurable), clean icon row, no heading --}}
                         <a href="{{ $kkSocials['instagram'] }}" target="_blank" rel="noopener" class="w-9 h-9 bg-kk-cream-lighter hover:bg-kk-brown text-kk-brown hover:text-kk-cream rounded-full flex items-center justify-center transition-all border border-kk-cream-dark" aria-label="Follow us on Instagram">
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.42-.36-1.06-.41-2.23C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.42 2.17 8.8 2.16 12 2.16M12 0C8.74 0 8.33.01 7.05.07 5.78.13 4.9.33 4.14.63c-.79.3-1.46.72-2.13 1.38C1.35 2.68.93 3.35.63 4.14.33 4.9.13 5.78.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.27.26 2.15.56 2.91.3.79.72 1.46 1.38 2.13.67.66 1.34 1.08 2.13 1.38.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.27-.06 2.15-.26 2.91-.56.79-.3 1.46-.72 2.13-1.38.66-.67 1.08-1.34 1.38-2.13.3-.76.5-1.64.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.27-.26-2.15-.56-2.91-.3-.79-.72-1.46-1.38-2.13C21.32 1.35 20.65.93 19.86.63c-.76-.3-1.64-.5-2.91-.56C15.67.01 15.26 0 12 0Zm0 5.84A6.16 6.16 0 1 0 18.16 12 6.16 6.16 0 0 0 12 5.84Zm0 10.15A4 4 0 1 1 16 12a4 4 0 0 1-4 4Zm6.41-10.4a1.44 1.44 0 1 0 1.44 1.44 1.44 1.44 0 0 0-1.44-1.44Z"/></svg>
                         </a>
@@ -45,26 +44,6 @@
                         @endif
                     </div>
 
-                    <!-- Share this page -->
-                    @php
-                        $kkShareUrl  = urlencode(url()->current());
-                        $kkShareText = urlencode(\App\Models\Setting::get('site_name', config('app.name', 'Karmaa Kulture')));
-                    @endphp
-                    <div class="flex items-center gap-3">
-                        <span class="text-xs font-semibold uppercase tracking-widest text-kk-brown/70">Share</span>
-                        <a href="https://www.facebook.com/sharer/sharer.php?u={{ $kkShareUrl }}" target="_blank" rel="noopener" class="w-9 h-9 bg-kk-cream-lighter hover:bg-kk-brown text-kk-brown hover:text-kk-cream rounded-full flex items-center justify-center transition-all border border-kk-cream-dark" aria-label="Share on Facebook">
-                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M22.675 0h-21.35C.593 0 0 .593 0 1.325v21.351C0 23.407.593 24 1.325 24H12.82V14.706h-3.13v-3.622h3.13V8.413c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.464.099 2.795.143v3.24h-1.917c-1.504 0-1.795.715-1.795 1.764v2.313h3.587l-.467 3.622h-3.12V24h6.116c.73 0 1.323-.593 1.323-1.324V1.325C24 .593 23.407 0 22.675 0z"/></svg>
-                        </a>
-                        <a href="https://twitter.com/intent/tweet?url={{ $kkShareUrl }}&text={{ $kkShareText }}" target="_blank" rel="noopener" class="w-9 h-9 bg-kk-cream-lighter hover:bg-kk-brown text-kk-brown hover:text-kk-cream rounded-full flex items-center justify-center transition-all border border-kk-cream-dark" aria-label="Share on Twitter">
-                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723 10.054 10.054 0 01-3.127 1.184 4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.937 4.937 0 004.604 3.417 9.868 9.868 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.054 0 13.999-7.496 13.999-13.985 0-.21 0-.42-.015-.63A9.936 9.936 0 0024 4.59z"/></svg>
-                        </a>
-                        <a href="https://wa.me/?text={{ $kkShareText }}%20{{ $kkShareUrl }}" target="_blank" rel="noopener" class="w-9 h-9 bg-kk-cream-lighter hover:bg-kk-brown text-kk-brown hover:text-kk-cream rounded-full flex items-center justify-center transition-all border border-kk-cream-dark" aria-label="Share on WhatsApp">
-                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                        </a>
-                        <a href="mailto:?subject={{ $kkShareText }}&body={{ $kkShareText }}%20{{ $kkShareUrl }}" class="w-9 h-9 bg-kk-cream-lighter hover:bg-kk-brown text-kk-brown hover:text-kk-cream rounded-full flex items-center justify-center transition-all border border-kk-cream-dark" aria-label="Share by Email">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
-                        </a>
-                    </div>
                 </div>
 
                 <!-- Quick Links -->

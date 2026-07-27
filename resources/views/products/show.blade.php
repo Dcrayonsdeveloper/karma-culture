@@ -118,6 +118,19 @@
         background: rgba(31,17,9,.72); color: #efe2cb; font-size: 12px; letter-spacing: .05em;
         padding: 4px 12px; border-radius: 999px;
     }
+    /* Gallery prev/next arrows */
+    .kk-pdp__navbtn {
+        position: absolute; top: 50%; transform: translateY(-50%); z-index: 2;
+        width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer;
+        background: rgba(255,255,255,.9); color: #2d1810;
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 4px 12px rgba(45,24,16,.18); transition: background .15s ease;
+    }
+    .kk-pdp__navbtn:hover { background: #fff; }
+    .kk-pdp__navbtn svg { width: 18px; height: 18px; }
+    .kk-pdp__navbtn--prev { left: 10px; }
+    .kk-pdp__navbtn--next { right: 10px; }
+    @media (max-width: 640px) { .kk-pdp__navbtn { display: none; } }  /* mobile uses swipe */
     @media (max-width: 640px) {
         .kk-pdp__gallery { flex-direction: column-reverse; }
         .kk-pdp__thumbs { flex-direction: row; width: 100%; max-height: none; overflow-x: auto; }
@@ -286,7 +299,9 @@
                         @endforeach
                     </div>
                 @endif
-                <div class="kk-pdp__main" @click="showZoom = true">
+                <div class="kk-pdp__main"
+                     @click="showZoom = true"
+                     @touchstart.passive="onTouchStart($event)" @touchend="onTouchEnd($event)">
                     @foreach($images as $i => $img)
                         <img src="{{ $img }}" alt="{{ $product->name }}" class="kk-pdp__main-img"
                              x-show="currentImage === {{ $i }}" @if($i !== 0) x-cloak @endif
@@ -294,6 +309,13 @@
                              loading="{{ $i === 0 ? 'eager' : 'lazy' }}" @if($i === 0) fetchpriority="high" @endif>
                     @endforeach
                     @if(count($images) > 1)
+                        {{-- Prev/next arrows (desktop) --}}
+                        <button type="button" class="kk-pdp__navbtn kk-pdp__navbtn--prev" @click.stop="prevImage()" aria-label="Previous image">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                        </button>
+                        <button type="button" class="kk-pdp__navbtn kk-pdp__navbtn--next" @click.stop="nextImage()" aria-label="Next image">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                        </button>
                         <span class="kk-pdp__counter"><span x-text="currentImage + 1"></span> / {{ count($images) }}</span>
                     @endif
                 </div>
@@ -546,51 +568,60 @@
 
         </div>
 
-        <!-- ===== SHARE + PRODUCT INFO ACCORDION ===== -->
+        <!-- ===== PRODUCT INFO ACCORDION (redesigned) ===== -->
         <style>
-            .kk-pi { max-width: 860px; margin: 8px auto 0; padding: 0 16px; }
+            .kk-pi { max-width: 880px; margin: 40px auto 0; padding: 0 16px; }
+            .kk-pi__heading { text-align: center; font-family: 'Playfair Display', Georgia, serif; font-size: 26px; font-weight: 700; color: #2d1810; margin: 0 0 22px; }
 
             /* Accordion cards */
             .kk-pi__item {
-                background: #fbf5e8; border: 1px solid #e3d2b3; border-radius: 12px;
+                background: #fff; border: 1px solid #ece0c8; border-radius: 14px;
                 margin-bottom: 12px; overflow: hidden;
-                transition: border-color 0.2s ease, box-shadow 0.2s ease;
+                transition: border-color .2s ease, box-shadow .2s ease;
             }
-            .kk-pi__item:hover { border-color: #c9b393; box-shadow: 0 4px 14px rgba(45,24,16,0.06); }
+            .kk-pi__item[data-open="true"], .kk-pi__item:hover { border-color: #d8c39c; box-shadow: 0 8px 26px rgba(45,24,16,0.07); }
             .kk-pi__btn {
                 width: 100%; display: flex; align-items: center; justify-content: space-between;
-                padding: 18px 22px; background: none; border: none; cursor: pointer;
-                font-family: inherit; text-align: left; transition: background 0.2s ease;
+                gap: 14px; padding: 18px 22px; background: none; border: none; cursor: pointer;
+                font-family: inherit; text-align: left;
             }
-            .kk-pi__btn[aria-expanded="true"] { background: #f3e9d4; }
+            /* Icon in a rounded tan circle */
+            .kk-pi__btn-lead { display: inline-flex; align-items: center; gap: 15px; min-width: 0; }
+            .kk-pi__btn-ico {
+                width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+                background: #f3e9d4; color: #8c5c34;
+                display: inline-flex; align-items: center; justify-content: center;
+                transition: background .2s ease, color .2s ease;
+            }
+            .kk-pi__btn-ico svg { width: 20px; height: 20px; }
+            .kk-pi__item[data-open="true"] .kk-pi__btn-ico { background: #2d1810; color: #efe2cb; }
             .kk-pi__btn-label {
-                font-size: 13px; font-weight: 700; letter-spacing: 0.16em;
-                color: #2d1810; text-transform: uppercase;
+                font-size: 15px; font-weight: 700; letter-spacing: 0.02em; color: #2d1810; text-transform: none;
             }
-            /* Chevron icon (rotates on open) */
+            /* Chevron */
             .kk-pi__btn-icon {
-                width: 9px; height: 9px; flex-shrink: 0; margin-right: 5px; margin-bottom: 3px;
-                border-right: 2px solid #2d1810; border-bottom: 2px solid #2d1810;
-                transform: rotate(45deg); transition: transform 0.28s ease;
+                width: 10px; height: 10px; flex-shrink: 0; margin-right: 4px; margin-bottom: 3px;
+                border-right: 2px solid #8c5c34; border-bottom: 2px solid #8c5c34;
+                transform: rotate(45deg); transition: transform .28s ease;
             }
             .kk-pi__btn[aria-expanded="true"] .kk-pi__btn-icon { transform: rotate(-135deg); margin-bottom: -2px; }
 
-            .kk-pi__panel { padding: 2px 22px 20px; font-size: 14px; line-height: 1.7; color: #2d1810; }
+            .kk-pi__panel { padding: 0 22px 22px 79px; font-size: 14.5px; line-height: 1.75; color: #4a3627; }
+            @media (max-width: 560px) { .kk-pi__panel { padding-left: 22px; } }
             .kk-pi__panel p { margin: 0 0 10px; }
             .kk-pi__panel p:last-child { margin: 0; }
             .kk-pi__panel ul { margin: 0 0 10px; padding-left: 20px; }
-            .kk-pi__panel dl { display: grid; grid-template-columns: 1fr 2fr; gap: 10px 16px; margin: 0; }
-            .kk-pi__panel dt { font-weight: 600; color: #7a6555; }
-            .kk-pi__panel dd { margin: 0; color: #2d1810; }
-            /* Section icon in the accordion header (Task 11) */
-            .kk-pi__btn-lead { display: inline-flex; align-items: center; gap: 13px; }
-            .kk-pi__btn-ico { width: 20px; height: 20px; color: #8c5c34; flex-shrink: 0; display: inline-flex; }
-            .kk-pi__btn-ico svg { width: 100%; height: 100%; }
+            /* Spec rows with subtle dividers */
+            .kk-pi__panel dl { display: grid; grid-template-columns: minmax(120px, 1fr) 2fr; margin: 0; }
+            .kk-pi__panel dt { font-weight: 600; color: #7a6555; padding: 9px 0; border-top: 1px solid #f0e6d2; }
+            .kk-pi__panel dd { margin: 0; color: #2d1810; padding: 9px 0; border-top: 1px solid #f0e6d2; }
+            .kk-pi__panel dl > dt:first-of-type, .kk-pi__panel dl > dd:nth-of-type(1) { border-top: none; }
         </style>
 
         <div class="kk-pi">
+            <h2 class="kk-pi__heading">Product Details</h2>
             {{-- PRODUCT INFO --}}
-            <div class="kk-pi__item" x-data="{ open: false }">
+            <div class="kk-pi__item" x-data="{ open: false }" :data-open="open ? 'true' : 'false'">
                 <button class="kk-pi__btn" @click="open = !open" :aria-expanded="open ? 'true' : 'false'">
                     <span class="kk-pi__btn-lead">
                         <span class="kk-pi__btn-ico" aria-hidden="true"><svg fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/></svg></span>
@@ -618,7 +649,7 @@
             </div>
 
             {{-- DESCRIPTION --}}
-            <div class="kk-pi__item" x-data="{ open: false }">
+            <div class="kk-pi__item" x-data="{ open: true }" :data-open="open ? 'true' : 'false'">
                 <button class="kk-pi__btn" @click="open = !open" :aria-expanded="open ? 'true' : 'false'">
                     <span class="kk-pi__btn-lead">
                         <span class="kk-pi__btn-ico" aria-hidden="true"><svg fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"/></svg></span>
@@ -640,7 +671,7 @@
             </div>
 
             {{-- SHIPPING, RETURNS & EXCHANGE --}}
-            <div class="kk-pi__item" x-data="{ open: false }">
+            <div class="kk-pi__item" x-data="{ open: false }" :data-open="open ? 'true' : 'false'">
                 <button class="kk-pi__btn" @click="open = !open" :aria-expanded="open ? 'true' : 'false'">
                     <span class="kk-pi__btn-lead">
                         <span class="kk-pi__btn-ico" aria-hidden="true"><svg fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-6.75V6.75a1.5 1.5 0 011.5-1.5h4.5a1.5 1.5 0 011.5 1.5v12z"/></svg></span>
@@ -656,7 +687,7 @@
             </div>
 
             {{-- MANUFACTURED AND PACKAGED BY --}}
-            <div class="kk-pi__item" x-data="{ open: false }">
+            <div class="kk-pi__item" x-data="{ open: false }" :data-open="open ? 'true' : 'false'">
                 <button class="kk-pi__btn" @click="open = !open" :aria-expanded="open ? 'true' : 'false'">
                     <span class="kk-pi__btn-lead">
                         <span class="kk-pi__btn-ico" aria-hidden="true"><svg fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21"/></svg></span>
@@ -680,22 +711,27 @@
         @php $featureHighlights = collect($product->feature_highlights ?? [])->filter(fn ($f) => !empty($f['image']) || !empty($f['heading']) || !empty($f['caption'])); @endphp
         @if($featureHighlights->isNotEmpty())
         <style>
-            .kk-fh { max-width: 980px; margin: 40px auto 0; padding: 0 16px; }
-            .kk-fh__title { text-align: center; font-family: 'Playfair Display', Georgia, serif; font-size: 28px; font-weight: 700; color: #2d1810; margin: 0 0 28px; }
-            .kk-fh__row { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: center; margin-bottom: 28px; }
+            .kk-fh { max-width: 1120px; margin: 56px auto 0; padding: 0 16px; }
+            .kk-fh__title { text-align: center; font-family: 'Playfair Display', Georgia, serif; font-size: 30px; font-weight: 700; color: #2d1810; margin: 0 0 8px; }
+            .kk-fh__sub { text-align: center; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: #9b8a72; margin: 0 0 40px; }
+            .kk-fh__row { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; margin-bottom: 56px; }
             .kk-fh__row:nth-child(even) .kk-fh__media { order: 2; }
-            .kk-fh__media { border-radius: 14px; overflow: hidden; background: #f3e9d4; aspect-ratio: 4 / 3; }
-            .kk-fh__media img { width: 100%; height: 100%; object-fit: cover; display: block; }
-            .kk-fh__heading { font-family: 'Playfair Display', Georgia, serif; font-size: 22px; color: #2d1810; margin: 0 0 10px; }
-            .kk-fh__caption { font-size: 14.5px; line-height: 1.7; color: #5b4636; margin: 0; }
-            @media (max-width: 720px) {
-                .kk-fh__row { grid-template-columns: 1fr; gap: 14px; margin-bottom: 32px; }
+            .kk-fh__media { border-radius: 16px; overflow: hidden; background: #f3e9d4; aspect-ratio: 3 / 2; box-shadow: 0 20px 50px rgba(45,24,16,0.10); }
+            .kk-fh__media img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .8s ease; }
+            .kk-fh__row:hover .kk-fh__media img { transform: scale(1.04); }
+            .kk-fh__eyebrow { font-size: 11px; letter-spacing: .28em; text-transform: uppercase; color: #8c5c34; font-weight: 700; display: block; margin-bottom: 12px; }
+            .kk-fh__heading { font-family: 'Playfair Display', Georgia, serif; font-size: 28px; line-height: 1.2; color: #2d1810; margin: 0 0 14px; }
+            .kk-fh__caption { font-size: 15.5px; line-height: 1.8; color: #5b4636; margin: 0; }
+            @media (max-width: 768px) {
+                .kk-fh__row { grid-template-columns: 1fr; gap: 18px; margin-bottom: 44px; }
                 .kk-fh__row:nth-child(even) .kk-fh__media { order: 0; }
+                .kk-fh__heading { font-size: 23px; }
             }
         </style>
         <section class="kk-fh" aria-label="Product highlights">
-            <h2 class="kk-fh__title">Product Highlights</h2>
-            @foreach($featureHighlights as $fh)
+            <h2 class="kk-fh__title">Why You'll Love It</h2>
+            <p class="kk-fh__sub">Crafted with intention</p>
+            @foreach($featureHighlights as $idx => $fh)
                 @php
                     $fhImg = $fh['image'] ?? null;
                     if ($fhImg && !str_starts_with($fhImg, 'http') && !str_starts_with($fhImg, '/')) {
@@ -707,6 +743,7 @@
                         <div class="kk-fh__media"><img src="{{ $fhImg }}" alt="{{ $fh['heading'] ?? $product->name }}" loading="lazy" decoding="async"></div>
                     @endif
                     <div class="kk-fh__text">
+                        <span class="kk-fh__eyebrow">0{{ $idx + 1 }} — Karmaa Kulture</span>
                         @if(!empty($fh['heading']))<h3 class="kk-fh__heading">{{ $fh['heading'] }}</h3>@endif
                         @if(!empty($fh['caption']))<p class="kk-fh__caption">{{ $fh['caption'] }}</p>@endif
                     </div>
@@ -1172,38 +1209,7 @@
             </div>
             <button type="button" class="kk-pnotif__close" @click="dismiss()" aria-label="Dismiss notification">&times;</button>
         </div>
-        <script>
-            function purchaseNotif(messages) {
-                return {
-                    messages: messages || [],
-                    idx: 0,
-                    current: '',
-                    visible: false,
-                    _hideTimer: null,
-                    init() {
-                        if (!this.messages.length) return;
-                        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-                        window.setTimeout(() => this.showNext(), 6000);
-                    },
-                    showNext() {
-                        if (this.idx >= this.messages.length) return;   // don't repeat excessively
-                        this.current = this.messages[this.idx];
-                        this.idx++;
-                        this.visible = true;
-                        this._hideTimer = window.setTimeout(() => {
-                            this.visible = false;
-                            const gap = 18000 + Math.floor(Math.random() * 12000); // 18–30s
-                            window.setTimeout(() => this.showNext(), gap);
-                        }, 5000);
-                    },
-                    dismiss() {
-                        this.visible = false;
-                        this.idx = this.messages.length; // stop further popups
-                        if (this._hideTimer) window.clearTimeout(this._hideTimer);
-                    },
-                };
-            }
-        </script>
+        {{-- purchaseNotif() is registered in resources/js/app.js (reliable init) --}}
         @endif
 
         <!-- ===== IMAGE ZOOM MODAL ===== -->
@@ -1290,6 +1296,8 @@
     function productPage() {
         return {
             currentImage: 0,
+            imageCount: {{ count($images) }},
+            touchStartX: 0,
             quantity: 1,
             selectedSize: null,
             selectedVariant: null,
@@ -1322,6 +1330,18 @@
                 this.$el.addEventListener('mobile-add-to-cart', () => this.addToCart());
                 this.$el.addEventListener('mobile-buy-now', () => this.buyNow());
             },
+
+            // Mobile swipe on the main gallery image
+            onTouchStart(e) { this.touchStartX = e.changedTouches[0].screenX; },
+            onTouchEnd(e) {
+                if (this.imageCount < 2) return;
+                const dx = e.changedTouches[0].screenX - this.touchStartX;
+                if (Math.abs(dx) < 40) return;
+                if (dx < 0) this.currentImage = (this.currentImage + 1) % this.imageCount;
+                else this.currentImage = (this.currentImage - 1 + this.imageCount) % this.imageCount;
+            },
+            nextImage() { if (this.imageCount > 1) this.currentImage = (this.currentImage + 1) % this.imageCount; },
+            prevImage() { if (this.imageCount > 1) this.currentImage = (this.currentImage - 1 + this.imageCount) % this.imageCount; },
 
             selectAttribute(attrName, value) {
                 this.selectedAttributes[attrName] = value;
