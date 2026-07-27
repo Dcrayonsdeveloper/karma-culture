@@ -1,26 +1,40 @@
-@php $announcement = \App\Models\Setting::get('announcement_text') ?: 'Our All Products are 100% Made in India'; @endphp
+@php
+    $announcement = \App\Models\Setting::get('announcement_text') ?: 'Free Shipping on Orders Above Rs. {threshold} | Easy Returns';
+    // Single source of truth for the free-shipping threshold (Task 8).
+    // Admins can write "{threshold}" in the announcement text and it is interpolated site-wide.
+    $freeShipThreshold = (int) \App\Models\Setting::get('free_shipping_threshold', 999);
+    $announcement = str_replace(['{threshold}', '{free_shipping_threshold}'], number_format($freeShipThreshold), $announcement);
+@endphp
 
 <header id="main-header"
        class="bg-kk-cream sticky top-0 left-0 right-0 z-40 shadow-sm">
-    <!-- Announcement Bar (marquee) -->
+    <!-- Announcement Bar (seamless marquee — two identical groups, translateX(-50%) loop) -->
     @if($announcement)
     <div style="background:#2d1810;" class="kk-marquee text-kk-text-on-dark py-1.5 text-[11px] sm:text-xs font-medium tracking-[0.18em] uppercase">
         <div class="kk-marquee__track" aria-hidden="true">
-            @for ($i = 0; $i < 8; $i++)
-                <span class="kk-marquee__item">{{ $announcement }}</span>
-                <span class="kk-marquee__sep">&bull;</span>
+            @for ($g = 0; $g < 2; $g++)
+                <div class="kk-marquee__group">
+                    @for ($i = 0; $i < 6; $i++)
+                        <span class="kk-marquee__item">{{ $announcement }}</span>
+                        <span class="kk-marquee__sep">&bull;</span>
+                    @endfor
+                </div>
             @endfor
         </div>
         <span class="sr-only">{{ $announcement }}</span>
     </div>
     <style>
         .kk-marquee { overflow: hidden; position: relative; }
+        /* Track holds two identical groups; shifting by exactly one group width (-50%)
+           loops seamlessly at any viewport width (fixes desktop/ultrawide gaps). */
         .kk-marquee__track {
-            display: inline-flex;
-            white-space: nowrap;
-            animation: kk-marquee-scroll 35s linear infinite;
+            display: flex;
+            width: max-content;
+            flex-wrap: nowrap;
+            animation: kk-marquee-scroll 40s linear infinite;
             will-change: transform;
         }
+        .kk-marquee__group { display: flex; flex-shrink: 0; white-space: nowrap; }
         .kk-marquee__item,
         .kk-marquee__sep { padding: 0 22px; }
         .kk-marquee__sep { opacity: 0.5; }
@@ -30,13 +44,15 @@
             to   { transform: translateX(-50%); }
         }
         @media (prefers-reduced-motion: reduce) {
-            .kk-marquee__track { animation: none; justify-content: center; width: 100%; }
-            .kk-marquee__track > :nth-child(n+3) { display: none; }
+            .kk-marquee__track { animation: none; width: 100%; justify-content: center; }
+            .kk-marquee__group:nth-child(2) { display: none; }
+            .kk-marquee__group:first-child .kk-marquee__item:nth-of-type(n+2),
+            .kk-marquee__group:first-child .kk-marquee__sep { display: none; }
         }
     </style>
     @endif
     <div class="w-full px-4 lg:px-6">
-        <div class="relative flex items-center justify-between h-20 lg:h-20">
+        <div class="relative flex items-center justify-between h-16 lg:h-16">
 
             <!-- Left: Mobile menu + Desktop Nav -->
             <div class="flex items-center gap-3 lg:gap-0 flex-1">
@@ -51,9 +67,9 @@
                 <a href="{{ url('/') }}" class="absolute inset-0 flex items-center justify-center pointer-events-none lg:static lg:inset-auto lg:justify-start lg:pointer-events-auto shrink-0 lg:mr-8">
                     @php $siteLogo = \App\Models\Setting::get('site_logo', ''); @endphp
                     @if($siteLogo)
-                        <img id="site-logo" src="{{ asset('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-22 object-contain pointer-events-auto">
+                        <img id="site-logo" src="{{ asset('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-10 lg:h-11 object-contain pointer-events-auto">
                     @else
-                        <img id="site-logo" src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-22 object-contain pointer-events-auto">
+                        <img id="site-logo" src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-10 lg:h-11 object-contain pointer-events-auto">
                     @endif
                 </a>
 

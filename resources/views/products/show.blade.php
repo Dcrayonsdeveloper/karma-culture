@@ -290,7 +290,8 @@
                     @foreach($images as $i => $img)
                         <img src="{{ $img }}" alt="{{ $product->name }}" class="kk-pdp__main-img"
                              x-show="currentImage === {{ $i }}" @if($i !== 0) x-cloak @endif
-                             loading="{{ $i === 0 ? 'eager' : 'lazy' }}">
+                             sizes="(max-width: 1024px) 100vw, 50vw" decoding="async"
+                             loading="{{ $i === 0 ? 'eager' : 'lazy' }}" @if($i === 0) fetchpriority="high" @endif>
                     @endforeach
                     @if(count($images) > 1)
                         <span class="kk-pdp__counter"><span x-text="currentImage + 1"></span> / {{ count($images) }}</span>
@@ -302,17 +303,26 @@
             <div class="kk-pdp__info" x-ref="buyBox">
                 <h1 class="kk-pdp__title">{{ $product->name }}</h1>
 
-                @if($product->review_count > 0)
+                @if($product->short_description)
+                    <p class="kk-pdp__subtitle" style="margin:6px 0 0; color:#7a6555; font-size:14px; line-height:1.55;">{{ $product->short_description }}</p>
+                @endif
+
+                {{-- Rating: always shown directly below title/description (Task 7). --}}
                 <div class="kk-pdp__rating">
+                    @php $ratingStars = $product->review_count > 0 ? (int) round($product->rating ?: 0) : 0; @endphp
                     <span class="kk-pdp__rating-stars">
                         @for($s = 1; $s <= 5; $s++)
-                            <svg fill="{{ $s <= round($product->rating ?: 5) ? '#1f1109' : '#c9b393' }}" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                            <svg fill="{{ $s <= $ratingStars ? '#1f1109' : '#c9b393' }}" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
                         @endfor
                     </span>
-                    <a href="#customer-reviews" @click.prevent="document.getElementById('customer-reviews')?.scrollIntoView({behavior:'smooth'})"
-                       class="kk-pdp__rating-count" style="text-decoration:none;">{{ $product->review_count }} {{ Str::plural('review', $product->review_count) }}</a>
+                    @if($product->review_count > 0)
+                        <a href="#customer-reviews" @click.prevent="document.getElementById('customer-reviews')?.scrollIntoView({behavior:'smooth'})"
+                           class="kk-pdp__rating-count" style="text-decoration:none;">{{ number_format($product->rating, 1) }} · {{ $product->review_count }} {{ Str::plural('review', $product->review_count) }}</a>
+                    @else
+                        <a href="#customer-reviews" @click.prevent="document.getElementById('customer-reviews')?.scrollIntoView({behavior:'smooth'})"
+                           class="kk-pdp__rating-count" style="text-decoration:none;">No reviews yet — be the first</a>
+                    @endif
                 </div>
-                @endif
 
                 <div class="kk-pdp__price-row">
                     <span class="kk-pdp__price" x-text="'₹' + currentPrice.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})">₹{{ number_format($product->price, 2) }}</span>
@@ -489,6 +499,8 @@
                     $dMin = now()->addDays(3); $dMax = now()->addDays(7);
                     while ($dMin->isWeekend()) $dMin->addDay();
                     while ($dMax->isWeekend()) $dMax->addDay();
+                    // Single source of truth for free-shipping threshold (Task 8).
+                    $freeShipThreshold = (int) \App\Models\Setting::get('free_shipping_threshold', 999);
                 @endphp
                 <style>
                 .kk-pdp__delivery { margin: 2px 0 12px; }
@@ -513,7 +525,7 @@
                                 @click="state = /^\d{6}$/.test(pin) ? 'ok' : 'err'">Check</button>
                     </div>
                     <p class="kk-pdp__delivery-msg kk-pdp__delivery-msg--ok" x-show="state==='ok'" x-cloak>
-                        Free delivery to <span x-text="pin"></span> &mdash; estimated {{ $dMin->format('D, d M') }} &ndash; {{ $dMax->format('D, d M') }}.
+                        Free delivery on orders above &#8377;{{ number_format($freeShipThreshold) }} to <span x-text="pin"></span> &mdash; estimated {{ $dMin->format('D, d M') }} &ndash; {{ $dMax->format('D, d M') }}.
                     </p>
                     <p class="kk-pdp__delivery-msg kk-pdp__delivery-msg--err" x-show="state==='err'" x-cloak>
                         Please enter a valid 6-digit pincode.
@@ -527,7 +539,7 @@
                     while ($deliveryMax->isWeekend()) $deliveryMax->addDay();
                 @endphp
                 <div class="kk-pdp__meta">
-                    <strong>Free Delivery:</strong> {{ $deliveryMin->format('D, d M') }} &ndash; {{ $deliveryMax->format('D, d M') }}<br>
+                    <strong>Free Delivery</strong> on orders above &#8377;{{ number_format($freeShipThreshold) }}: {{ $deliveryMin->format('D, d M') }} &ndash; {{ $deliveryMax->format('D, d M') }}<br>
                     <strong>Easy Returns:</strong> 7-day return &amp; exchange policy
                 </div>
             </div>
@@ -570,13 +582,20 @@
             .kk-pi__panel dl { display: grid; grid-template-columns: 1fr 2fr; gap: 10px 16px; margin: 0; }
             .kk-pi__panel dt { font-weight: 600; color: #7a6555; }
             .kk-pi__panel dd { margin: 0; color: #2d1810; }
+            /* Section icon in the accordion header (Task 11) */
+            .kk-pi__btn-lead { display: inline-flex; align-items: center; gap: 13px; }
+            .kk-pi__btn-ico { width: 20px; height: 20px; color: #8c5c34; flex-shrink: 0; display: inline-flex; }
+            .kk-pi__btn-ico svg { width: 100%; height: 100%; }
         </style>
 
         <div class="kk-pi">
             {{-- PRODUCT INFO --}}
             <div class="kk-pi__item" x-data="{ open: false }">
                 <button class="kk-pi__btn" @click="open = !open" :aria-expanded="open ? 'true' : 'false'">
-                    <span class="kk-pi__btn-label">Product Info</span>
+                    <span class="kk-pi__btn-lead">
+                        <span class="kk-pi__btn-ico" aria-hidden="true"><svg fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/></svg></span>
+                        <span class="kk-pi__btn-label">Product Info</span>
+                    </span>
                     <span class="kk-pi__btn-icon" aria-hidden="true"></span>
                 </button>
                 <div class="kk-pi__panel" x-show="open" x-collapse>
@@ -601,7 +620,10 @@
             {{-- DESCRIPTION --}}
             <div class="kk-pi__item" x-data="{ open: false }">
                 <button class="kk-pi__btn" @click="open = !open" :aria-expanded="open ? 'true' : 'false'">
-                    <span class="kk-pi__btn-label">Description</span>
+                    <span class="kk-pi__btn-lead">
+                        <span class="kk-pi__btn-ico" aria-hidden="true"><svg fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"/></svg></span>
+                        <span class="kk-pi__btn-label">Description</span>
+                    </span>
                     <span class="kk-pi__btn-icon" aria-hidden="true"></span>
                 </button>
                 <div class="kk-pi__panel" x-show="open" x-collapse>
@@ -620,11 +642,14 @@
             {{-- SHIPPING, RETURNS & EXCHANGE --}}
             <div class="kk-pi__item" x-data="{ open: false }">
                 <button class="kk-pi__btn" @click="open = !open" :aria-expanded="open ? 'true' : 'false'">
-                    <span class="kk-pi__btn-label">Shipping, Returns &amp; Exchange</span>
+                    <span class="kk-pi__btn-lead">
+                        <span class="kk-pi__btn-ico" aria-hidden="true"><svg fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-6.75V6.75a1.5 1.5 0 011.5-1.5h4.5a1.5 1.5 0 011.5 1.5v12z"/></svg></span>
+                        <span class="kk-pi__btn-label">Shipping, Returns &amp; Exchange</span>
+                    </span>
                     <span class="kk-pi__btn-icon" aria-hidden="true"></span>
                 </button>
                 <div class="kk-pi__panel" x-show="open" x-collapse>
-                    <p><strong>Shipping:</strong> Free delivery on orders above &#8377;499. Standard delivery in 3&ndash;7 business days across India.</p>
+                    <p><strong>Shipping:</strong> Free delivery on orders above &#8377;{{ number_format($freeShipThreshold) }}. Standard delivery in 3&ndash;7 business days across India.</p>
                     <p><strong>Returns:</strong> Easy 7-day return &amp; exchange policy. Items must be unworn, unwashed and with original tags attached.</p>
                     <p><strong>Exchange:</strong> One free size or colour exchange per order. Reach out via WhatsApp or email to initiate.</p>
                 </div>
@@ -633,7 +658,10 @@
             {{-- MANUFACTURED AND PACKAGED BY --}}
             <div class="kk-pi__item" x-data="{ open: false }">
                 <button class="kk-pi__btn" @click="open = !open" :aria-expanded="open ? 'true' : 'false'">
-                    <span class="kk-pi__btn-label">Manufactured and Packaged by</span>
+                    <span class="kk-pi__btn-lead">
+                        <span class="kk-pi__btn-ico" aria-hidden="true"><svg fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21"/></svg></span>
+                        <span class="kk-pi__btn-label">Manufactured and Packaged by</span>
+                    </span>
                     <span class="kk-pi__btn-icon" aria-hidden="true"></span>
                 </button>
                 <div class="kk-pi__panel" x-show="open" x-collapse>
@@ -647,6 +675,45 @@
         </div>
 
 
+
+        {{-- ===== FEATURE HIGHLIGHTS (Amazon/Flipkart-style image-wise blocks, Task 12) ===== --}}
+        @php $featureHighlights = collect($product->feature_highlights ?? [])->filter(fn ($f) => !empty($f['image']) || !empty($f['heading']) || !empty($f['caption'])); @endphp
+        @if($featureHighlights->isNotEmpty())
+        <style>
+            .kk-fh { max-width: 980px; margin: 40px auto 0; padding: 0 16px; }
+            .kk-fh__title { text-align: center; font-family: 'Playfair Display', Georgia, serif; font-size: 28px; font-weight: 700; color: #2d1810; margin: 0 0 28px; }
+            .kk-fh__row { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: center; margin-bottom: 28px; }
+            .kk-fh__row:nth-child(even) .kk-fh__media { order: 2; }
+            .kk-fh__media { border-radius: 14px; overflow: hidden; background: #f3e9d4; aspect-ratio: 4 / 3; }
+            .kk-fh__media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+            .kk-fh__heading { font-family: 'Playfair Display', Georgia, serif; font-size: 22px; color: #2d1810; margin: 0 0 10px; }
+            .kk-fh__caption { font-size: 14.5px; line-height: 1.7; color: #5b4636; margin: 0; }
+            @media (max-width: 720px) {
+                .kk-fh__row { grid-template-columns: 1fr; gap: 14px; margin-bottom: 32px; }
+                .kk-fh__row:nth-child(even) .kk-fh__media { order: 0; }
+            }
+        </style>
+        <section class="kk-fh" aria-label="Product highlights">
+            <h2 class="kk-fh__title">Product Highlights</h2>
+            @foreach($featureHighlights as $fh)
+                @php
+                    $fhImg = $fh['image'] ?? null;
+                    if ($fhImg && !str_starts_with($fhImg, 'http') && !str_starts_with($fhImg, '/')) {
+                        $fhImg = asset('storage/' . $fhImg);
+                    }
+                @endphp
+                <div class="kk-fh__row">
+                    @if($fhImg)
+                        <div class="kk-fh__media"><img src="{{ $fhImg }}" alt="{{ $fh['heading'] ?? $product->name }}" loading="lazy" decoding="async"></div>
+                    @endif
+                    <div class="kk-fh__text">
+                        @if(!empty($fh['heading']))<h3 class="kk-fh__heading">{{ $fh['heading'] }}</h3>@endif
+                        @if(!empty($fh['caption']))<p class="kk-fh__caption">{{ $fh['caption'] }}</p>@endif
+                    </div>
+                </div>
+            @endforeach
+        </section>
+        @endif
 
         <!-- ===== CUSTOMER REVIEWS (Judge.me-style) ===== -->
         <style>
@@ -837,7 +904,22 @@
                             </div>
                         </div>
                         @if($review->title)<p class="kk-rev__item-title">{{ $review->title }}</p>@endif
-                        <p class="kk-rev__item-body">{{ $review->review }}</p>
+                        <p class="kk-rev__item-body">{{ $review->content }}</p>
+                        @if($review->relationLoaded('images') && $review->images->isNotEmpty())
+                            <div class="kk-rev__media">
+                                @foreach($review->images as $media)
+                                    @if($media->is_video)
+                                        <video class="kk-rev__media-item" controls preload="metadata" playsinline @if($media->display_thumbnail) poster="{{ $media->display_thumbnail }}" @endif>
+                                            <source src="{{ $media->display_url }}">
+                                        </video>
+                                    @else
+                                        <a href="{{ $media->display_url }}" target="_blank" rel="noopener" class="kk-rev__media-item kk-rev__media-item--img">
+                                            <img src="{{ $media->display_url }}" alt="{{ $media->alt_text ?? 'Customer review photo' }}" loading="lazy">
+                                        </a>
+                                    @endif
+                                @endforeach
+                            </div>
+                        @endif
                     </div>
                     @endforeach
                 </div>
@@ -862,6 +944,19 @@
             .kk-revform__alert--err { background: #fdecea; color: #b71c00; border: 1px solid #f3c4be; }
             .kk-revform__alert ul { margin: 0; padding-left: 18px; }
             .kk-rev__write[disabled] { opacity: .5; cursor: not-allowed; transform: none; }
+            /* Uploaded review media (Task 10) */
+            .kk-rev__media { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+            .kk-rev__media-item { width: 72px; height: 72px; border-radius: 8px; overflow: hidden; border: 1px solid #e3d2b3; display: block; background: #000; }
+            .kk-rev__media-item img, .kk-rev__media-item video { width: 100%; height: 100%; object-fit: cover; display: block; }
+            .kk-rev__media-item video { background: #000; }
+            @media (max-width: 640px) { .kk-rev__media-item { width: 64px; height: 64px; } }
+            /* Upload controls in the review form */
+            .kk-revform__uploads { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+            @media (max-width: 600px) { .kk-revform__uploads { grid-template-columns: 1fr; } }
+            .kk-revform__file { font-size: 12px; color: #7a6555; }
+            .kk-revform__file span { display: block; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #2d1810; margin-bottom: 6px; }
+            .kk-revform__file input[type="file"] { width: 100%; font-size: 12px; color: #2d1810; }
+            .kk-revform__hint { font-size: 11px; color: #9b8a72; margin-top: 4px; }
             </style>
             <div id="write-review-form" x-show="showForm" x-collapse x-cloak class="kk-revform">
                 <h3 class="kk-revform__title">Write a Review</h3>
@@ -878,7 +973,7 @@
                     </div>
                 @endif
 
-                <form action="{{ route('product.guest-review', $product) }}" method="POST" x-data="{ rating: {{ (int) old('rating', 0) }}, hover: 0 }">
+                <form action="{{ route('product.guest-review', $product) }}" method="POST" enctype="multipart/form-data" x-data="{ rating: {{ (int) old('rating', 0) }}, hover: 0 }">
                     @csrf
                     {{-- anti-spam honeypot: must stay empty --}}
                     <div style="position:absolute; left:-9999px;" aria-hidden="true">
@@ -902,6 +997,20 @@
                     </div>
                     <input class="kk-revform__input" type="text" name="title" placeholder="Review title (optional)" value="{{ old('title') }}" maxlength="255" style="margin-bottom:12px;">
                     <textarea class="kk-revform__textarea" name="content" rows="4" placeholder="Share your experience (at least 20 characters)…" required minlength="20" maxlength="2000">{{ old('content') }}</textarea>
+
+                    {{-- Photo & video uploads (Task 10) --}}
+                    <div class="kk-revform__uploads">
+                        <label class="kk-revform__file">
+                            <span>Add Photos</span>
+                            <input type="file" name="images[]" accept="image/jpeg,image/png,image/webp" multiple>
+                            <p class="kk-revform__hint">Up to 5 images (JPG/PNG/WEBP, max 5MB each).</p>
+                        </label>
+                        <label class="kk-revform__file">
+                            <span>Add Videos</span>
+                            <input type="file" name="videos[]" accept="video/mp4,video/webm,video/quicktime" multiple>
+                            <p class="kk-revform__hint">Up to 2 short videos (MP4/WEBM/MOV, max 20MB each).</p>
+                        </label>
+                    </div>
 
                     <button type="submit" class="kk-rev__write" :disabled="rating < 1">Submit Review</button>
                     <p class="kk-revform__note">Open to everyone — no account needed. Your review is published after moderation; your email is never shown publicly.</p>
@@ -1014,31 +1123,87 @@
             }
         </style>
         <div class="kk-related">
-            <h2 class="kk-related__title">Related Products</h2>
+            <h2 class="kk-related__title">You May Also Like</h2>
+            {{-- Reuse the shared product card (rating, wishlist, stock, placeholder) — Task 13 --}}
             <div class="kk-related__grid">
                 @foreach($relatedProducts as $rp)
-                <div class="kk-related__card">
-                    <a href="{{ route('product.show', $rp) }}" style="display:block;text-decoration:none;color:inherit;">
-                        <div class="kk-related__imgwrap">
-                            <img class="kk-related__img" src="{{ $rp->primary_image_url }}" alt="{{ $rp->name }}" loading="lazy">
-                        </div>
-                        <p class="kk-related__name">{{ $rp->name }}</p>
-                        <div>
-                            <span class="kk-related__price">₹{{ number_format($rp->price) }}</span>
-                            @if($rp->mrp > $rp->price)
-                            <span class="kk-related__price-mrp">₹{{ number_format($rp->mrp) }}</span>
-                            @endif
-                        </div>
-                    </a>
-                    @if($rp->isInStock())
-                    <button type="button" class="kk-related__add" @click="$store.cart.add({{ $rp->id }})">
-                        Add to Cart
-                    </button>
-                    @endif
-                </div>
+                    <x-product-card :product="$rp" :show-quick-view="false" />
                 @endforeach
             </div>
         </div>
+        @endif
+
+        {{-- ===== PURCHASE / SOCIAL-PROOF NOTIFICATION (Task 9) ===== --}}
+        @php
+            $notifEnabled = (bool) \App\Models\Setting::get('purchase_notif_enabled', true);
+            $notifMsgs = collect($recentPurchases ?? [])
+                ->map(fn ($p) => 'Someone purchased this product ' . $p['minutes'] . ' ' . \Illuminate\Support\Str::plural('minute', $p['minutes']) . ' ago')
+                ->values();
+            if ($notifMsgs->isEmpty()) {
+                // Configurable demo notifications when there is no live order data.
+                $demoMinutes = \App\Models\Setting::get('purchase_notif_demo_minutes', [10, 15, 27, 8, 42]);
+                $demoMinutes = is_array($demoMinutes) ? $demoMinutes : [10, 15, 27, 8, 42];
+                $notifMsgs = collect($demoMinutes)
+                    ->map(fn ($m) => 'Someone purchased this product ' . (int) $m . ' minutes ago');
+            }
+        @endphp
+        @if($notifEnabled && $notifMsgs->isNotEmpty())
+        <style>
+            .kk-pnotif { position: fixed; left: 16px; bottom: 16px; z-index: 55; display: flex; align-items: center; gap: 12px;
+                background: #fff; border: 1px solid #e3d2b3; border-radius: 12px; box-shadow: 0 10px 30px rgba(45,24,16,0.18);
+                padding: 12px 14px; max-width: 320px; }
+            .kk-pnotif__icon { width: 38px; height: 38px; border-radius: 9px; background: #f3e9d4; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+            .kk-pnotif__msg { font-size: 13px; color: #2d1810; font-weight: 600; margin: 0; line-height: 1.3; }
+            .kk-pnotif__product { font-size: 11px; color: #9b8a72; margin: 2px 0 0; }
+            .kk-pnotif__close { background: none; border: none; color: #9b8a72; cursor: pointer; font-size: 18px; line-height: 1; padding: 2px 4px; align-self: flex-start; }
+            @media (max-width: 480px) { .kk-pnotif { left: 10px; right: 10px; bottom: 10px; max-width: none; } }
+        </style>
+        <div x-data="purchaseNotif(@js($notifMsgs->all()))" x-cloak x-show="visible"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 translate-y-3"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-end="opacity-0"
+             class="kk-pnotif" role="status" aria-live="polite">
+            <div class="kk-pnotif__icon" aria-hidden="true">🛍️</div>
+            <div style="flex:1;min-width:0;">
+                <p class="kk-pnotif__msg" x-text="current"></p>
+                <p class="kk-pnotif__product">{{ \Illuminate\Support\Str::limit($product->name, 42) }}</p>
+            </div>
+            <button type="button" class="kk-pnotif__close" @click="dismiss()" aria-label="Dismiss notification">&times;</button>
+        </div>
+        <script>
+            function purchaseNotif(messages) {
+                return {
+                    messages: messages || [],
+                    idx: 0,
+                    current: '',
+                    visible: false,
+                    _hideTimer: null,
+                    init() {
+                        if (!this.messages.length) return;
+                        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+                        window.setTimeout(() => this.showNext(), 6000);
+                    },
+                    showNext() {
+                        if (this.idx >= this.messages.length) return;   // don't repeat excessively
+                        this.current = this.messages[this.idx];
+                        this.idx++;
+                        this.visible = true;
+                        this._hideTimer = window.setTimeout(() => {
+                            this.visible = false;
+                            const gap = 18000 + Math.floor(Math.random() * 12000); // 18–30s
+                            window.setTimeout(() => this.showNext(), gap);
+                        }, 5000);
+                    },
+                    dismiss() {
+                        this.visible = false;
+                        this.idx = this.messages.length; // stop further popups
+                        if (this._hideTimer) window.clearTimeout(this._hideTimer);
+                    },
+                };
+            }
+        </script>
         @endif
 
         <!-- ===== IMAGE ZOOM MODAL ===== -->

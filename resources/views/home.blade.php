@@ -356,17 +356,26 @@
             }
 
             /* Qualities (dark) — video-background cards */
-            .kk-qualities { background: var(--kk-brown-dark); color: var(--kk-cream); padding: 80px 0; text-align: center; }
-            .kk-qualities h2 { font-family: var(--kk-display); font-size: 38px; color: var(--kk-cream); margin: 12px 0 8px; }
+            .kk-qualities { background: var(--kk-brown-dark); color: var(--kk-cream); padding: 48px 0; text-align: center; }
+            .kk-qualities h2 { font-family: var(--kk-display); font-size: 32px; color: var(--kk-cream); margin: 10px 0 8px; }
             .kk-qualities p.sub { color: rgba(239,226,203,.7); font-size: 13px; max-width: 520px; margin: 0 auto; }
-            .kk-qualities-grid {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 18px;
-                margin-top: 56px;
+
+            /* Our Qualities — horizontal autoplay slider (Task 4) */
+            .kk-qslider { position: relative; margin-top: 28px; }
+            .kk-qslider__track {
+                display: flex; gap: 16px; overflow-x: auto;
+                scroll-snap-type: x mandatory; scroll-behavior: smooth;
+                -webkit-overflow-scrolling: touch;
+                padding: 6px 2px 12px; scrollbar-width: none;
             }
-            @media (max-width: 1024px) { .kk-qualities-grid { grid-template-columns: repeat(2, 1fr); } }
-            @media (max-width: 640px)  { .kk-qualities-grid { grid-template-columns: 1fr; } }
+            .kk-qslider__track::-webkit-scrollbar { display: none; }
+            .kk-qslider .kk-quality {
+                flex: 0 0 calc((100% - 2 * 16px) / 3);   /* 3 per view (desktop) */
+                scroll-snap-align: start;
+                opacity: 1; transform: none; transition: none;   /* slider: no reveal offset */
+            }
+            @media (max-width: 1024px) { .kk-qslider .kk-quality { flex-basis: calc((100% - 16px) / 2); } }  /* 2 per view */
+            @media (max-width: 640px)  { .kk-qslider .kk-quality { flex-basis: 80%; } }                       /* ~1 per view */
 
             .kk-quality {
                 position: relative;
@@ -520,6 +529,9 @@
             }
         </script>
     @endif
+
+    {{-- Offer popup (Task 1): shown once per visitor, captures name/email/mobile --}}
+    @include('partials.offer-popup')
 
     <div class="kk-home">
 
@@ -678,12 +690,31 @@
 
         <script>
             document.addEventListener('alpine:init', () => {
-                Alpine.data('kkCarousel', () => ({
+                Alpine.data('kkCarousel', (opts = {}) => ({
                     atStart: true,
                     atEnd: false,
+                    autoplay: opts.autoplay || false,
+                    interval: opts.interval || 3500,
+                    _timer: null,
                     init() {
                         this.$nextTick(() => this.update());
                         window.addEventListener('resize', () => this.update());
+                        if (this.autoplay) this.start();
+                    },
+                    start() {
+                        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+                        this.stop();
+                        this._timer = window.setInterval(() => this.auto(), this.interval);
+                    },
+                    stop() { if (this._timer) { window.clearInterval(this._timer); this._timer = null; } },
+                    auto() {
+                        const t = this.$refs.track;
+                        if (!t) return;
+                        if (Math.ceil(t.scrollLeft + t.clientWidth) >= t.scrollWidth - 2) {
+                            t.scrollTo({ left: 0, behavior: 'smooth' });   // loop back to start
+                        } else {
+                            t.scrollBy({ left: this.step(), behavior: 'smooth' });
+                        }
                     },
                     update() {
                         const t = this.$refs.track;
@@ -881,25 +912,34 @@
                 <h2>Our Qualities</h2>
                 <p class="sub">Six pillars every piece is measured against — no shortcuts, no exceptions.</p>
 
-                {{-- Cards come from admin: Online Store > Our Qualities. --}}
+                {{-- Cards come from admin: Online Store > Our Qualities. Autoplay slider (Task 4). --}}
                 @php $qualities = $qualities ?? collect(); @endphp
                 @if($qualities->count())
-                <div class="kk-qualities-grid"
-                     x-data="{ revealed: false }"
-                     x-intersect.once="revealed = true"
-                     :class="revealed && 'is-revealed'">
-                    @foreach($qualities as $i => $q)
-                        <div class="kk-quality" style="--reveal-delay: {{ $i * 90 }}ms">
-                            <div class="kk-quality__overlay"></div>
-                            <div class="kk-quality__content">
-                                <span class="kk-quality__icon">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7L9 18l-5-5"/></svg>
-                                </span>
-                                <h4>{{ $q->title }}</h4>
-                                <p>{{ $q->description }}</p>
+                <div class="kk-qslider"
+                     x-data="kkCarousel({ autoplay: true, interval: 3800 })"
+                     @mouseenter="stop()" @mouseleave="autoplay && start()">
+                    <div class="kk-qslider__track" x-ref="track" @scroll.debounce.100ms="update()" tabindex="0" aria-label="Our qualities">
+                        @foreach($qualities as $q)
+                            <div class="kk-quality">
+                                <div class="kk-quality__overlay"></div>
+                                <div class="kk-quality__content">
+                                    <span class="kk-quality__icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7L9 18l-5-5"/></svg>
+                                    </span>
+                                    <h4>{{ $q->title }}</h4>
+                                    <p>{{ $q->description }}</p>
+                                </div>
                             </div>
-                        </div>
-                    @endforeach
+                        @endforeach
+                    </div>
+                    @if($qualities->count() > 3)
+                    <button type="button" class="kk-catgrid__nav kk-catgrid__nav--prev" :class="atStart && 'is-disabled'" @click="prev()" aria-label="Previous">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                    </button>
+                    <button type="button" class="kk-catgrid__nav kk-catgrid__nav--next" :class="atEnd && 'is-disabled'" @click="next()" aria-label="Next">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </button>
+                    @endif
                 </div>
                 @endif
             </div>

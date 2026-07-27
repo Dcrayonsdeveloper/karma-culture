@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 use Laravel\Scout\Searchable;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
@@ -53,6 +54,7 @@ class Product extends Model
         'seo_data',
         'attributes',
         'specifications',
+        'feature_highlights',
         'status',
         'rejection_reason',
         'published_at',
@@ -76,6 +78,7 @@ class Product extends Model
             'seo_data' => 'array',
             'attributes' => 'array',
             'specifications' => 'array',
+            'feature_highlights' => 'array',
             'published_at' => 'datetime',
         ];
     }
@@ -91,7 +94,7 @@ class Product extends Model
     {
         static::creating(function ($product) {
             if (empty($product->uuid)) {
-                $product->uuid = (string) \Illuminate\Support\Str::uuid();
+                $product->uuid = (string) Str::uuid();
             }
         });
     }
@@ -233,9 +236,10 @@ class Product extends Model
 
         if ($url) {
             // If it's a relative path (stored in storage), prefix with /storage/
-            if ($url && !str_starts_with($url, 'http') && !str_starts_with($url, '/')) {
-                return asset('storage/' . $url);
+            if ($url && ! str_starts_with($url, 'http') && ! str_starts_with($url, '/')) {
+                return asset('storage/'.$url);
             }
+
             return $url;
         }
 
@@ -261,12 +265,12 @@ class Product extends Model
 
     public function hasArModel(): bool
     {
-        return !empty($this->model_glb_path);
+        return ! empty($this->model_glb_path);
     }
 
     protected function resolveModelUrl(?string $path): ?string
     {
-        if (!$path) {
+        if (! $path) {
             return null;
         }
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
@@ -275,7 +279,8 @@ class Product extends Model
         if (str_starts_with($path, '/')) {
             return asset(ltrim($path, '/'));
         }
-        return asset('storage/' . $path);
+
+        return asset('storage/'.$path);
     }
 
     // Helper methods
