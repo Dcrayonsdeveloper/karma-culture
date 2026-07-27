@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\BackInStockSubscription;
-use App\Models\Coupon;
-use App\Models\Product;
 use App\Models\Category;
+use App\Models\Coupon;
+use App\Models\OrderItem;
+use App\Models\Product;
 use App\Models\ProductQuestion;
 use App\Models\ProductView;
+use App\Services\RecommendationService;
 use App\Services\ReviewSchemaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -92,6 +94,7 @@ class ProductController extends Controller
             'variants',
             'reviews' => fn ($q) => $q->where('is_approved', true)->latest()->take(10),
             'reviews.user',
+            'reviews.images',
             'questions' => fn ($q) => $q->where('is_answered', true)->latest()->take(5),
             'questions.answers',
         ]);
@@ -107,23 +110,11 @@ class ProductController extends Controller
             );
         }
 
-        // Related products — same category/brand first (prefer ones with images),
-        // then top up with ANY other active product so the section always appears.
-        $relatedProducts = Product::query()
-            ->where('is_active', true)
-            ->where('id', '!=', $product->id)
-            ->where(function ($query) use ($product) {
-                $query->where('category_id', $product->category_id)
-                      ->orWhere('brand_id', $product->brand_id);
-            })
-            ->with(['category', 'primaryImage'])
-            ->withCount('images')
-            ->orderByDesc('images_count')
-            ->inRandomOrder()
-            ->take(8)
-            ->get();
+        // Similar / "You May Also Like" products (Task 13) — use the cached
+        // RecommendationService (category+brand ranked), then top up so the
+        // section always appears, and normalise relations for the product card.
+        $relatedProducts = app(RecommendationService::class)->similarProducts($product->id, 8);
 
-        // Fallback: if fewer than 4 same-category/brand items, fill with any others.
         if ($relatedProducts->count() < 4) {
             $exclude = $relatedProducts->pluck('id')->push($product->id)->all();
             $fill = Product::query()
@@ -137,6 +128,9 @@ class ProductController extends Controller
                 ->get();
             $relatedProducts = $relatedProducts->concat($fill);
         }
+
+        // Ensure the relations the product card needs are loaded (cached models may be lean).
+        $relatedProducts->loadMissing(['category', 'brand', 'primaryImage', 'images']);
 
         // Breadcrumbs
         $breadcrumbs = [];
@@ -196,14 +190,39 @@ class ProductController extends Controller
 
         // Active coupons applicable to this product
         $activeCoupons = Coupon::where('is_active', true)
-            ->where(function ($q) { $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()); })
-            ->where(function ($q) { $q->whereNull('expires_at')->orWhere('expires_at', '>=', now()); })
+            ->where(function ($q) {
+                $q->whereNull('starts_at')->orWhere('starts_at', '<=', now());
+            })
+            ->where(function ($q) {
+                $q->whereNull('expires_at')->orWhere('expires_at', '>=', now());
+            })
             ->whereRaw('(usage_limit IS NULL OR times_used < usage_limit)')
             ->orderByDesc('value')
             ->take(3)
             ->get();
 
-        return view('products.show', compact('product', 'relatedProducts', 'crossSellProducts', 'compareProducts', 'activeCoupons', 'breadcrumbs', 'productSchema', 'faqSchema'));
+        // Recent-purchase social proof (Task 9). Real order data first; the view
+        // falls back to configurable demo notifications when this is empty.
+        $recentPurchases = [];
+        try {
+            $recentPurchases = OrderItem::where('product_id', $product->id)
+                ->whereHas('order', function ($q) {
+                    $q->whereNotIn('status', ['cancelled', 'failed', 'pending']);
+                })
+                ->latest()
+                ->take(8)
+                ->get()
+                ->map(fn ($item) => [
+                    'minutes' => max(1, (int) $item->created_at->diffInMinutes(now())),
+                ])
+                ->filter(fn ($n) => $n['minutes'] <= 60 * 24 * 14) // within 2 weeks
+                ->values()
+                ->all();
+        } catch (\Throwable $e) {
+            $recentPurchases = [];
+        }
+
+        return view('products.show', compact('product', 'relatedProducts', 'crossSellProducts', 'compareProducts', 'activeCoupons', 'breadcrumbs', 'productSchema', 'faqSchema', 'recentPurchases'));
     }
 
     public function quickView(Product $product): JsonResponse

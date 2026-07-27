@@ -355,6 +355,32 @@
                         </div>
                     </div>
                     @endif
+
+                    <!-- Feature Highlights (Task 12) -->
+                    <div class="card p-5">
+                        <h2 class="text-[13px] font-semibold mb-1" style="color: #303030;">Feature Highlights</h2>
+                        <p class="text-xs mb-4" style="color: #616161;">Amazon/Flipkart-style image + description blocks shown on the product page (up to 4). Leave a slot empty to skip it.</p>
+                        @php $fhRows = array_values($product->feature_highlights ?? []); @endphp
+                        <div class="space-y-3">
+                            @for($i = 0; $i < 4; $i++)
+                                @php $row = $fhRows[$i] ?? []; @endphp
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start border rounded-lg p-3" style="border-color:#e5e5e5;">
+                                    <div>
+                                        @if(!empty($row['image']))
+                                            @php $prev = $row['image']; if(!str_starts_with($prev,'http') && !str_starts_with($prev,'/')) $prev = asset('storage/'.$prev); @endphp
+                                            <img src="{{ $prev }}" alt="" class="w-full h-20 object-cover rounded mb-2">
+                                            <input type="hidden" name="fh_existing[{{ $i }}]" value="{{ $row['image'] }}">
+                                        @endif
+                                        <input type="file" name="fh_image[{{ $i }}]" accept="image/jpeg,image/png,image/webp" class="form-input w-full text-xs">
+                                    </div>
+                                    <div class="sm:col-span-2 space-y-2">
+                                        <input type="text" name="fh_heading[{{ $i }}]" value="{{ old('fh_heading.'.$i, $row['heading'] ?? '') }}" maxlength="120" class="form-input w-full text-sm" placeholder="Highlight heading (e.g. Premium Cotton Fabric)">
+                                        <textarea name="fh_caption[{{ $i }}]" rows="2" maxlength="600" class="form-input w-full text-sm" placeholder="Short description for this highlight">{{ old('fh_caption.'.$i, $row['caption'] ?? '') }}</textarea>
+                                    </div>
+                                </div>
+                            @endfor
+                        </div>
+                    </div>
                 </div>
 
                 <!-- RIGHT COLUMN (1/3) - Sidebar -->

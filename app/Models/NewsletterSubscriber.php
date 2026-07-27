@@ -9,6 +9,7 @@ class NewsletterSubscriber extends Model
     protected $fillable = [
         'email',
         'name',
+        'phone',
         'source',
         'is_active',
         'subscribed_at',
@@ -19,8 +20,8 @@ class NewsletterSubscriber extends Model
     protected function casts(): array
     {
         return [
-            'is_active'       => 'boolean',
-            'subscribed_at'   => 'datetime',
+            'is_active' => 'boolean',
+            'subscribed_at' => 'datetime',
             'unsubscribed_at' => 'datetime',
         ];
     }

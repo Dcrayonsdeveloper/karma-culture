@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Account;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Review;
+use App\Support\ReviewMediaUploader;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -51,7 +52,7 @@ class ReviewController extends Controller
 
         $hasPurchased = $request->user()->orders()
             ->where('status', 'completed')
-            ->whereHas('items', fn($q) => $q->where('product_id', $product->id))
+            ->whereHas('items', fn ($q) => $q->where('product_id', $product->id))
             ->exists();
 
         $validated = $request->validate([
@@ -60,21 +61,33 @@ class ReviewController extends Controller
             'content' => 'required|string|max:2000',
             'pros' => 'nullable|string|max:1000',
             'cons' => 'nullable|string|max:1000',
+            'images' => 'nullable|array|max:5',
+            'images.*' => 'image|mimes:jpeg,jpg,png,webp|max:5120',
+            'videos' => 'nullable|array|max:2',
+            'videos.*' => 'mimetypes:video/mp4,video/webm,video/quicktime|max:20480',
         ]);
 
-        if (!empty($validated['pros'])) {
+        if (! empty($validated['pros'])) {
             $validated['pros'] = array_filter(array_map('trim', explode("\n", $validated['pros'])));
         }
-        if (!empty($validated['cons'])) {
+        if (! empty($validated['cons'])) {
             $validated['cons'] = array_filter(array_map('trim', explode("\n", $validated['cons'])));
         }
 
-        $validated['user_id'] = $request->user()->id;
-        $validated['product_id'] = $product->id;
-        $validated['status'] = 'pending';
-        $validated['is_verified_purchase'] = $hasPurchased;
+        // Only mass-assign review columns (exclude file inputs).
+        $reviewData = collect($validated)->except(['images', 'videos'])->all();
+        $reviewData['user_id'] = $request->user()->id;
+        $reviewData['product_id'] = $product->id;
+        $reviewData['status'] = 'pending';
+        $reviewData['is_verified_purchase'] = $hasPurchased;
 
-        Review::create($validated);
+        $review = Review::create($reviewData);
+
+        ReviewMediaUploader::attach(
+            $review,
+            $request->file('images', []),
+            $request->file('videos', []),
+        );
 
         return redirect()->route('account.reviews')
             ->with('success', 'Thank you for your review! It will be published after moderation.');

@@ -170,8 +170,9 @@
                                         </div>
                                     @endif
 
+                                    @php $kkFreeShip = (int) \App\Models\Setting::get('free_shipping_threshold', 999); @endphp
                                     <div class="flex items-center justify-between text-[13px]">
-                                        <span class="text-neutral-600">Shipping</span>
+                                        <span class="text-neutral-600">Shipping <span class="text-neutral-400">(free over ₹{{ number_format($kkFreeShip) }})</span></span>
                                         <span class="text-success-600 font-semibold">FREE</span>
                                     </div>
                                 </div>

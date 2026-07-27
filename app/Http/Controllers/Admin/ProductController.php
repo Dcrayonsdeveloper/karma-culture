@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Attribute;
-use App\Models\Product;
-use App\Models\ProductImage;
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\Product;
+use App\Models\ProductImage;
 use App\Models\Seller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,7 +27,7 @@ class ProductController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('sku', 'like', "%{$search}%");
+                    ->orWhere('sku', 'like', "%{$search}%");
             });
         }
 
@@ -81,7 +81,7 @@ class ProductController extends Controller
 
         $ids = json_decode($validated['ids'], true);
 
-        if (empty($ids) || !is_array($ids)) {
+        if (empty($ids) || ! is_array($ids)) {
             return back()->with('error', 'No products selected.');
         }
 
@@ -153,9 +153,9 @@ class ProductController extends Controller
 
         // Save attributes as JSON
         $productAttributes = collect($request->input('product_attributes', []))
-            ->filter(fn($value) => $value !== null && $value !== '')
+            ->filter(fn ($value) => $value !== null && $value !== '')
             ->toArray();
-        $validated['attributes'] = !empty($productAttributes) ? $productAttributes : null;
+        $validated['attributes'] = ! empty($productAttributes) ? $productAttributes : null;
 
         unset($validated['images'], $validated['main_image'], $validated['product_attributes']);
 
@@ -166,7 +166,7 @@ class ProductController extends Controller
             $path = $request->file('main_image')->store('products', 'public');
             ProductImage::create([
                 'product_id' => $product->id,
-                'url' => '/storage/' . $path,
+                'url' => '/storage/'.$path,
                 'is_primary' => true,
                 'position' => 0,
             ]);
@@ -179,7 +179,7 @@ class ProductController extends Controller
                 $path = $file->store('products', 'public');
                 ProductImage::create([
                     'product_id' => $product->id,
-                    'url' => '/storage/' . $path,
+                    'url' => '/storage/'.$path,
                     'is_primary' => false,
                     'position' => $startPosition + $index + 1,
                 ]);
@@ -212,10 +212,10 @@ class ProductController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:products,slug,' . $product->id,
+            'slug' => 'nullable|string|max:255|unique:products,slug,'.$product->id,
             'description' => 'required|string',
             'short_description' => 'nullable|string|max:500',
-            'sku' => 'required|string|max:100|unique:products,sku,' . $product->id,
+            'sku' => 'required|string|max:100|unique:products,sku,'.$product->id,
             'barcode' => 'nullable|string|max:128',
             'price' => 'required|numeric|min:0',
             'mrp' => 'nullable|numeric|min:0|gte:price',
@@ -250,6 +250,15 @@ class ProductController extends Controller
             'model_usdz' => 'nullable|file|max:10240',
             'delete_model_glb' => 'nullable|boolean',
             'delete_model_usdz' => 'nullable|boolean',
+            // Feature highlights (Task 12) — image-wise description blocks
+            'fh_heading' => 'nullable|array',
+            'fh_heading.*' => 'nullable|string|max:120',
+            'fh_caption' => 'nullable|array',
+            'fh_caption.*' => 'nullable|string|max:600',
+            'fh_existing' => 'nullable|array',
+            'fh_existing.*' => 'nullable|string',
+            'fh_image' => 'nullable|array',
+            'fh_image.*' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
         ]);
 
         $validated['slug'] = $validated['slug'] ?? Str::slug($validated['name']);
@@ -261,9 +270,13 @@ class ProductController extends Controller
 
         // Save attributes as JSON
         $productAttributes = collect($request->input('product_attributes', []))
-            ->filter(fn($value) => $value !== null && $value !== '')
+            ->filter(fn ($value) => $value !== null && $value !== '')
             ->toArray();
-        $validated['attributes'] = !empty($productAttributes) ? $productAttributes : null;
+        $validated['attributes'] = ! empty($productAttributes) ? $productAttributes : null;
+
+        // Save feature highlights as JSON (image + heading + caption rows)
+        $validated['feature_highlights'] = $this->buildFeatureHighlights($request);
+        unset($validated['fh_heading'], $validated['fh_caption'], $validated['fh_existing'], $validated['fh_image']);
 
         // Extract variants data before unsetting
         $variantsData = $validated['variants'] ?? null;
@@ -281,7 +294,7 @@ class ProductController extends Controller
 
         // Handle 3D model uploads (.glb / .usdz)
         if ($request->boolean('delete_model_glb') && $product->model_glb_path) {
-            if (!str_starts_with($product->model_glb_path, 'http')) {
+            if (! str_starts_with($product->model_glb_path, 'http')) {
                 Storage::disk('public')->delete(ltrim($product->model_glb_path, '/'));
             }
             $validated['model_glb_path'] = null;
@@ -291,7 +304,7 @@ class ProductController extends Controller
             $validated['model_glb_path'] = $path;
         }
         if ($request->boolean('delete_model_usdz') && $product->model_usdz_path) {
-            if (!str_starts_with($product->model_usdz_path, 'http')) {
+            if (! str_starts_with($product->model_usdz_path, 'http')) {
                 Storage::disk('public')->delete(ltrim($product->model_usdz_path, '/'));
             }
             $validated['model_usdz_path'] = null;
@@ -345,7 +358,7 @@ class ProductController extends Controller
             $path = $request->file('main_image')->store('products', 'public');
             ProductImage::create([
                 'product_id' => $product->id,
-                'url' => '/storage/' . $path,
+                'url' => '/storage/'.$path,
                 'is_primary' => true,
                 'position' => 0,
             ]);
@@ -358,7 +371,7 @@ class ProductController extends Controller
                 $path = $file->store('products', 'public');
                 ProductImage::create([
                     'product_id' => $product->id,
-                    'url' => '/storage/' . $path,
+                    'url' => '/storage/'.$path,
                     'is_primary' => false,
                     'position' => $maxPosition + $index + 1,
                 ]);
@@ -367,6 +380,36 @@ class ProductController extends Controller
 
         return redirect()->route('admin.products.edit', $product)
             ->with('success', 'Product updated successfully.');
+    }
+
+    /**
+     * Build the feature_highlights JSON from fixed-slot form inputs (Task 12).
+     * Returns null when no slot has any content.
+     */
+    private function buildFeatureHighlights(Request $request): ?array
+    {
+        $headings = $request->input('fh_heading', []);
+        $captions = $request->input('fh_caption', []);
+        $existing = $request->input('fh_existing', []);
+        $highlights = [];
+
+        foreach ($headings as $i => $heading) {
+            $image = $existing[$i] ?? null;
+            if ($request->hasFile("fh_image.$i")) {
+                $image = $request->file("fh_image.$i")->store('products/highlights', 'public');
+            }
+            $caption = $captions[$i] ?? null;
+
+            if ($image || trim((string) $heading) !== '' || trim((string) $caption) !== '') {
+                $highlights[] = array_filter([
+                    'image' => $image ?: null,
+                    'heading' => $heading ?: null,
+                    'caption' => $caption ?: null,
+                ]);
+            }
+        }
+
+        return $highlights ? array_values($highlights) : null;
     }
 
     public function destroy(Product $product): RedirectResponse
@@ -379,7 +422,7 @@ class ProductController extends Controller
 
     public function toggleStatus(Product $product): RedirectResponse
     {
-        $product->update(['is_active' => !$product->is_active]);
+        $product->update(['is_active' => ! $product->is_active]);
 
         $status = $product->is_active ? 'activated' : 'deactivated';
 
@@ -388,7 +431,7 @@ class ProductController extends Controller
 
     public function toggleFeatured(Product $product): RedirectResponse
     {
-        $product->update(['is_featured' => !$product->is_featured]);
+        $product->update(['is_featured' => ! $product->is_featured]);
 
         $status = $product->is_featured ? 'marked as featured' : 'removed from featured';
 
@@ -403,7 +446,7 @@ class ProductController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('sku', 'like', "%{$search}%");
+                    ->orWhere('sku', 'like', "%{$search}%");
             });
         }
 
@@ -421,7 +464,7 @@ class ProductController extends Controller
 
         $products = $query->orderBy('name')->get();
 
-        $filename = 'products-' . now()->format('Y-m-d-His') . '.csv';
+        $filename = 'products-'.now()->format('Y-m-d-His').'.csv';
 
         return response()->streamDownload(function () use ($products) {
             $handle = fopen('php://output', 'w');
@@ -468,13 +511,14 @@ class ProductController extends Controller
         $file = $request->file('csv_file');
         $handle = fopen($file->getRealPath(), 'r');
 
-        if (!$handle) {
+        if (! $handle) {
             return back()->with('error', 'Could not read the uploaded file.');
         }
 
         $header = fgetcsv($handle);
-        if (!$header) {
+        if (! $header) {
             fclose($handle);
+
             return back()->with('error', 'CSV file is empty or has no header row.');
         }
 
@@ -482,9 +526,10 @@ class ProductController extends Controller
 
         $requiredColumns = ['name', 'sku', 'price'];
         $missingColumns = array_diff($requiredColumns, $header);
-        if (!empty($missingColumns)) {
+        if (! empty($missingColumns)) {
             fclose($handle);
-            return back()->with('error', 'Missing required columns: ' . implode(', ', $missingColumns));
+
+            return back()->with('error', 'Missing required columns: '.implode(', ', $missingColumns));
         }
 
         $categories = Category::pluck('id', 'name')->toArray();
@@ -510,6 +555,7 @@ class ProductController extends Controller
             if (count($data) !== count($header)) {
                 $errors[] = "Row {$row}: Column count mismatch.";
                 $skipped++;
+
                 continue;
             }
 
@@ -519,32 +565,34 @@ class ProductController extends Controller
             $sku = trim($record['sku'] ?? '');
             $price = $record['price'] ?? '';
 
-            if (empty($name) || empty($sku) || !is_numeric($price)) {
+            if (empty($name) || empty($sku) || ! is_numeric($price)) {
                 $errors[] = "Row {$row}: Missing name, SKU, or invalid price.";
                 $skipped++;
+
                 continue;
             }
 
             if (Product::where('sku', $sku)->exists()) {
                 $errors[] = "Row {$row}: SKU '{$sku}' already exists.";
                 $skipped++;
+
                 continue;
             }
 
             $categoryId = null;
-            if (!empty($record['category'])) {
+            if (! empty($record['category'])) {
                 $categoryId = $categoriesLower[strtolower(trim($record['category']))] ?? null;
             }
 
             $sellerId = null;
-            if (!empty($record['seller'])) {
+            if (! empty($record['seller'])) {
                 $sellerId = $sellersLower[strtolower(trim($record['seller']))] ?? null;
             }
 
             $product = Product::create([
                 'name' => $name,
                 'sku' => $sku,
-                'slug' => !empty($record['slug']) ? trim($record['slug']) : Str::slug($name),
+                'slug' => ! empty($record['slug']) ? trim($record['slug']) : Str::slug($name),
                 'price' => (float) $price,
                 'sale_price' => is_numeric($record['sale_price'] ?? null) ? (float) $record['sale_price'] : null,
                 'cost_price' => is_numeric($record['cost_price'] ?? null) ? (float) $record['cost_price'] : null,
@@ -561,18 +609,18 @@ class ProductController extends Controller
 
             // Handle image URL
             $imageUrl = trim($record['image_url'] ?? '');
-            if (!empty($imageUrl) && filter_var($imageUrl, FILTER_VALIDATE_URL)) {
+            if (! empty($imageUrl) && filter_var($imageUrl, FILTER_VALIDATE_URL)) {
                 try {
                     $imageContents = @file_get_contents($imageUrl);
                     if ($imageContents) {
                         $extension = pathinfo(parse_url($imageUrl, PHP_URL_PATH), PATHINFO_EXTENSION);
                         $extension = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']) ? $extension : 'jpg';
-                        $path = 'products/' . Str::uuid() . '.' . $extension;
+                        $path = 'products/'.Str::uuid().'.'.$extension;
                         Storage::disk('public')->put($path, $imageContents);
 
                         ProductImage::create([
                             'product_id' => $product->id,
-                            'url' => asset('storage/' . $path),
+                            'url' => asset('storage/'.$path),
                             'is_primary' => true,
                             'position' => 0,
                         ]);
@@ -592,11 +640,12 @@ class ProductController extends Controller
             $message .= " {$skipped} row(s) skipped.";
         }
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             $errorSummary = implode(' | ', array_slice($errors, 0, 5));
             if (count($errors) > 5) {
-                $errorSummary .= ' ... and ' . (count($errors) - 5) . ' more.';
+                $errorSummary .= ' ... and '.(count($errors) - 5).' more.';
             }
+
             return back()
                 ->with('warning', $message)
                 ->with('error', $errorSummary);

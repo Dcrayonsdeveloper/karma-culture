@@ -11,14 +11,15 @@ class SettingSeeder extends Seeder
     {
         $settings = [
             // General Settings
-            ['group' => 'general', 'key' => 'site_name', 'value' => 'ForeverKids', 'type' => 'string'],
-            ['group' => 'general', 'key' => 'site_tagline', 'value' => 'Your Trusted Online Marketplace', 'type' => 'string'],
-            ['group' => 'general', 'key' => 'site_email', 'value' => 'support@larashop.test', 'type' => 'string'],
-            ['group' => 'general', 'key' => 'site_phone', 'value' => '+1 (234) 567-890', 'type' => 'string'],
-            ['group' => 'general', 'key' => 'site_address', 'value' => '123 Commerce Street, Business City, BC 12345', 'type' => 'string'],
-            ['group' => 'general', 'key' => 'timezone', 'value' => 'America/New_York', 'type' => 'string'],
+            ['group' => 'general', 'key' => 'site_name', 'value' => 'Karmaa Kulture', 'type' => 'string'],
+            ['group' => 'general', 'key' => 'site_tagline', 'value' => 'Premium tailored essentials', 'type' => 'string'],
+            ['group' => 'general', 'key' => 'site_email', 'value' => 'support@karmaakulture.com', 'type' => 'string'],
+            ['group' => 'general', 'key' => 'site_phone', 'value' => '+91 00000 00000', 'type' => 'string'],
+            ['group' => 'general', 'key' => 'site_address', 'value' => 'India', 'type' => 'string'],
+            ['group' => 'general', 'key' => 'timezone', 'value' => 'Asia/Kolkata', 'type' => 'string'],
             ['group' => 'general', 'key' => 'date_format', 'value' => 'M d, Y', 'type' => 'string'],
-            ['group' => 'general', 'key' => 'currency', 'value' => 'USD', 'type' => 'string'],
+            ['group' => 'general', 'key' => 'currency', 'value' => 'INR', 'type' => 'string'],
+            ['group' => 'general', 'key' => 'currency_symbol', 'value' => '₹', 'type' => 'string'],
             ['group' => 'general', 'key' => 'currency_position', 'value' => 'before', 'type' => 'string'],
 
             // Payment Settings
@@ -29,7 +30,7 @@ class SettingSeeder extends Seeder
 
             // Shipping Settings
             ['group' => 'shipping', 'key' => 'free_shipping_enabled', 'value' => '1', 'type' => 'boolean'],
-            ['group' => 'shipping', 'key' => 'free_shipping_threshold', 'value' => '50', 'type' => 'integer'],
+            ['group' => 'shipping', 'key' => 'free_shipping_threshold', 'value' => '999', 'type' => 'integer'],
             ['group' => 'shipping', 'key' => 'flat_rate_enabled', 'value' => '1', 'type' => 'boolean'],
             ['group' => 'shipping', 'key' => 'flat_rate_amount', 'value' => '5.99', 'type' => 'string'],
             ['group' => 'shipping', 'key' => 'local_pickup_enabled', 'value' => '0', 'type' => 'boolean'],
@@ -43,13 +44,21 @@ class SettingSeeder extends Seeder
 
             // Email Settings
             ['group' => 'email', 'key' => 'mail_driver', 'value' => 'smtp', 'type' => 'string'],
-            ['group' => 'email', 'key' => 'mail_from_address', 'value' => 'noreply@foreverkids.com', 'type' => 'string'],
-            ['group' => 'email', 'key' => 'mail_from_name', 'value' => 'ForeverKids', 'type' => 'string'],
+            ['group' => 'email', 'key' => 'mail_from_address', 'value' => 'noreply@karmaakulture.com', 'type' => 'string'],
+            ['group' => 'email', 'key' => 'mail_from_name', 'value' => 'Karmaa Kulture', 'type' => 'string'],
 
             // SEO Settings
-            ['group' => 'seo', 'key' => 'meta_title', 'value' => 'ForeverKids - Your Trusted Kids Online Marketplace', 'type' => 'string'],
-            ['group' => 'seo', 'key' => 'meta_description', 'value' => 'Shop the latest kids products at ForeverKids. Discover clothing, toys, accessories & more at unbeatable prices with fast shipping.', 'type' => 'string'],
-            ['group' => 'seo', 'key' => 'meta_keywords', 'value' => 'online shopping, ecommerce, electronics, fashion, home', 'type' => 'string'],
+            ['group' => 'seo', 'key' => 'meta_title', 'value' => 'Karmaa Kulture - Premium Tailored Essentials', 'type' => 'string'],
+            ['group' => 'seo', 'key' => 'meta_description', 'value' => 'Shop premium tailored essentials at Karmaa Kulture. Curated fashion for the modern individual, crafted with care.', 'type' => 'string'],
+            ['group' => 'seo', 'key' => 'meta_keywords', 'value' => 'fashion, clothing, premium, tailored, karmaa kulture', 'type' => 'string'],
+
+            // Offer popup (Task 1) — placeholder content, admin-editable
+            ['group' => 'offer_popup', 'key' => 'offer_popup_enabled', 'value' => '1', 'type' => 'boolean'],
+            ['group' => 'offer_popup', 'key' => 'offer_popup_title', 'value' => 'Unlock Exciting Offers!', 'type' => 'string'],
+            ['group' => 'offer_popup', 'key' => 'offer_popup_subtitle', 'value' => 'Join our list and be the first to hear about exclusive deals and new drops.', 'type' => 'string'],
+
+            // Social proof / purchase notifications (Task 9)
+            ['group' => 'social_proof', 'key' => 'purchase_notif_enabled', 'value' => '1', 'type' => 'boolean'],
         ];
 
         foreach ($settings as $settingData) {

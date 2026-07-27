@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\Review;
+use App\Support\ReviewMediaUploader;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -18,6 +19,11 @@ class GuestReviewController extends Controller
             'title' => 'nullable|string|max:255',
             'content' => 'required|string|min:20|max:2000',
             'honeypot' => 'max:0', // anti-spam: must be empty
+            // Media (Task 10): up to 5 images, up to 2 videos.
+            'images' => 'nullable|array|max:5',
+            'images.*' => 'image|mimes:jpeg,jpg,png,webp|max:5120',      // 5 MB
+            'videos' => 'nullable|array|max:2',
+            'videos.*' => 'mimetypes:video/mp4,video/webm,video/quicktime|max:20480', // 20 MB
         ]);
 
         // Check for duplicate guest review on same product
@@ -29,7 +35,7 @@ class GuestReviewController extends Controller
             return back()->with('error', 'You have already reviewed this product.');
         }
 
-        Review::create([
+        $review = Review::create([
             'product_id' => $product->id,
             'guest_name' => $validated['guest_name'],
             'guest_email' => $validated['guest_email'],
@@ -40,6 +46,12 @@ class GuestReviewController extends Controller
             'is_approved' => false,
             'status' => 'pending',
         ]);
+
+        ReviewMediaUploader::attach(
+            $review,
+            $request->file('images', []),
+            $request->file('videos', []),
+        );
 
         return back()->with('success', 'Thank you for your review! It will be visible after moderation.');
     }
