@@ -303,6 +303,20 @@
         </div>
     </div>
 
+    {{-- You May Also Like (cart page) --}}
+    @if(isset($recommended) && $recommended->count())
+    <section class="border-t border-neutral-200 bg-white">
+        <div class="container mx-auto px-4 py-10 lg:py-14">
+            <h2 class="text-center" style="font-family:'Playfair Display',Georgia,serif; font-size:26px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; color:#2d1810; margin:0 0 28px;">You May Also Like</h2>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+                @foreach($recommended as $product)
+                    <x-product-card :product="$product" :show-quick-view="false" />
+                @endforeach
+            </div>
+        </div>
+    </section>
+    @endif
+
     @php
         $cartItems = $cart->items->filter(fn ($item) => $item->product)->map(function ($item) {
             return [

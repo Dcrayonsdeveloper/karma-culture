@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Coupon;
+use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class CartController extends Controller
@@ -18,7 +20,43 @@ class CartController extends Controller
         $cart = $this->getOrCreateCart();
         $cart->load(['items.product.primaryImage', 'items.variant']);
 
-        return view('cart.index', compact('cart'));
+        // "You May Also Like" — products related to the cart's items (else popular).
+        $recommended = $this->recommendedForCart($cart);
+
+        return view('cart.index', compact('cart', 'recommended'));
+    }
+
+    /**
+     * Recommended products for the cart page — same category as cart items,
+     * topped up with other active products so the section always shows 4.
+     */
+    private function recommendedForCart(Cart $cart): Collection
+    {
+        $productIds = $cart->items->pluck('product_id')->filter()->unique()->all();
+        $with = ['category', 'brand', 'primaryImage', 'images'];
+
+        $query = Product::where('is_active', true)->with($with)->whereHas('images');
+        if (! empty($productIds)) {
+            $categoryIds = Product::whereIn('id', $productIds)->pluck('category_id')->unique()->filter()->all();
+            $query->whereNotIn('id', $productIds)
+                ->when(! empty($categoryIds), fn ($q) => $q->whereIn('category_id', $categoryIds));
+        }
+        $recommended = $query->inRandomOrder()->take(4)->get();
+
+        if ($recommended->count() < 4) {
+            $exclude = $recommended->pluck('id')->merge($productIds)->all();
+            $recommended = $recommended->concat(
+                Product::where('is_active', true)
+                    ->whereNotIn('id', $exclude)
+                    ->whereHas('images')
+                    ->with($with)
+                    ->inRandomOrder()
+                    ->take(4 - $recommended->count())
+                    ->get()
+            );
+        }
+
+        return collect($recommended);
     }
 
     public function data(): JsonResponse
@@ -75,6 +113,7 @@ class CartController extends Controller
             if ($request->wantsJson()) {
                 return response()->json(['error' => $error, 'available' => $stockQuantity], 422);
             }
+
             return back()->with('error', $error);
         }
 
@@ -98,6 +137,7 @@ class CartController extends Controller
                 if ($request->wantsJson()) {
                     return response()->json(['error' => $error, 'available' => $stockQuantity, 'in_cart' => $inCart], 422);
                 }
+
                 return back()->with('error', $error);
             }
             $existingItem->update(['quantity' => $newQuantity]);
@@ -151,6 +191,7 @@ class CartController extends Controller
             if ($request->wantsJson()) {
                 return response()->json(['error' => $error, 'available' => $stockQuantity], 422);
             }
+
             return back()->with('error', $error);
         }
 
@@ -161,7 +202,7 @@ class CartController extends Controller
         $cart->refresh();
         $cart->load('coupon');
 
-        $couponRemoved = $hadCoupon && !$cart->coupon_id;
+        $couponRemoved = $hadCoupon && ! $cart->coupon_id;
         $message = $couponRemoved
             ? 'Cart updated. Coupon was removed as it no longer applies.'
             : 'Cart updated';
@@ -194,7 +235,7 @@ class CartController extends Controller
         $cart->refresh();
         $cart->load('coupon');
 
-        $couponRemoved = $hadCoupon && !$cart->coupon_id;
+        $couponRemoved = $hadCoupon && ! $cart->coupon_id;
         $message = $couponRemoved
             ? 'Item removed from cart. Coupon was removed as it no longer applies.'
             : 'Item removed from cart';
@@ -250,6 +291,7 @@ class CartController extends Controller
             if ($request->wantsJson()) {
                 return response()->json(['error' => $message], 422);
             }
+
             return back()->with('error', $message);
         }
 
@@ -261,19 +303,21 @@ class CartController extends Controller
             ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>=', now()))
             ->first();
 
-        if (!$coupon) {
+        if (! $coupon) {
             if ($request->wantsJson()) {
                 return response()->json(['error' => 'Invalid or expired coupon code'], 422);
             }
+
             return back()->with('error', 'Invalid or expired coupon code.');
         }
 
         // Check minimum order amount (not for BOGO — BOGO checks quantity instead)
         if ($coupon->type !== 'buy_x_get_y' && $coupon->min_order_amount && $cart->subtotal < $coupon->min_order_amount) {
-            $message = "This coupon requires a minimum order of " . format_price($coupon->min_order_amount);
+            $message = 'This coupon requires a minimum order of '.format_price($coupon->min_order_amount);
             if ($request->wantsJson()) {
                 return response()->json(['error' => $message], 422);
             }
+
             return back()->with('error', $message);
         }
 
@@ -282,12 +326,13 @@ class CartController extends Controller
             if ($request->wantsJson()) {
                 return response()->json(['error' => 'This coupon has reached its usage limit'], 422);
             }
+
             return back()->with('error', 'This coupon has reached its usage limit.');
         }
 
         // Check per-user usage limit
         if (auth()->check() && $coupon->usage_per_user) {
-            $userUsage = \App\Models\Order::where('user_id', auth()->id())
+            $userUsage = Order::where('user_id', auth()->id())
                 ->where('coupon_id', $coupon->id)
                 ->count();
             if ($userUsage >= $coupon->usage_per_user) {
@@ -295,6 +340,7 @@ class CartController extends Controller
                 if ($request->wantsJson()) {
                     return response()->json(['error' => $message], 422);
                 }
+
                 return back()->with('error', $message);
             }
         }
@@ -309,6 +355,7 @@ class CartController extends Controller
             if ($request->wantsJson()) {
                 return response()->json(['error' => $message], 422);
             }
+
             return back()->with('error', $message);
         }
 
@@ -395,13 +442,13 @@ class CartController extends Controller
             ->take(6)
             ->get()
             ->map(fn (Product $p) => [
-                'id'    => $p->id,
-                'name'  => $p->name,
-                'slug'  => $p->slug,
+                'id' => $p->id,
+                'name' => $p->name,
+                'slug' => $p->slug,
                 'price' => (float) $p->price,
-                'mrp'   => (float) $p->mrp,
+                'mrp' => (float) $p->mrp,
                 'image' => $p->primary_image_url,
-                'url'   => route('product.show', $p),
+                'url' => route('product.show', $p),
             ]);
 
         return response()->json(['products' => $products]);
