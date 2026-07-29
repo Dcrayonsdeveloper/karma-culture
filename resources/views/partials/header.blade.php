@@ -67,9 +67,9 @@
                 <a href="{{ url('/') }}" class="absolute inset-0 flex items-center justify-center pointer-events-none lg:static lg:inset-auto lg:justify-start lg:pointer-events-auto shrink-0 lg:mr-8">
                     @php $siteLogo = \App\Models\Setting::get('site_logo', ''); @endphp
                     @if($siteLogo)
-                        <img id="site-logo" src="{{ asset('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-14 lg:h-16 object-contain pointer-events-auto">
+                        <img id="site-logo" src="{{ asset('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-16 lg:h-20 object-contain pointer-events-auto">
                     @else
-                        <img id="site-logo" src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-14 lg:h-16 object-contain pointer-events-auto">
+                        <img id="site-logo" src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-16 lg:h-20 object-contain pointer-events-auto">
                     @endif
                 </a>
 
