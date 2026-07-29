@@ -1,7 +1,7 @@
 <x-layouts.app>
     <x-slot name="title">Shopping Cart - {{ config('app.name') }}</x-slot>
 
-    <div class="bg-neutral-50 min-h-screen" x-data="cartPage()" x-cloak>
+    <div class="bg-neutral-50" x-data="cartPage()" x-cloak>
         <div class="container mx-auto px-4 py-4">
             <x-breadcrumb :items="[['label' => 'Shopping Cart', 'url' => null]]" />
         </div>
