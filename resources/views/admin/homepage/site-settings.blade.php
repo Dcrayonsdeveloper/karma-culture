@@ -74,20 +74,25 @@
                     <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Social Media Links</h2>
                 </div>
                 <div style="padding: 1rem; display: flex; flex-direction: column; gap: 1rem;">
-                    <div>
-                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Facebook</label>
-                        <input type="url" name="social_facebook" value="{{ $settings['social_facebook'] }}" class="form-input" placeholder="https://facebook.com/...">
-                    </div>
+                    {{-- Displayed on the storefront in this order: Instagram, Facebook, Twitter, LinkedIn --}}
                     <div>
                         <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Instagram</label>
                         <input type="url" name="social_instagram" value="{{ $settings['social_instagram'] }}" class="form-input" placeholder="https://instagram.com/...">
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Facebook</label>
+                        <input type="url" name="social_facebook" value="{{ $settings['social_facebook'] }}" class="form-input" placeholder="https://facebook.com/...">
                     </div>
                     <div>
                         <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Twitter / X</label>
                         <input type="url" name="social_twitter" value="{{ $settings['social_twitter'] }}" class="form-input" placeholder="https://x.com/...">
                     </div>
                     <div>
-                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">YouTube</label>
+                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">LinkedIn</label>
+                        <input type="url" name="social_linkedin" value="{{ $settings['social_linkedin'] }}" class="form-input" placeholder="https://linkedin.com/company/...">
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">YouTube <span style="color:#999;font-weight:400;">(optional)</span></label>
                         <input type="url" name="social_youtube" value="{{ $settings['social_youtube'] }}" class="form-input" placeholder="https://youtube.com/...">
                     </div>
                     <div>

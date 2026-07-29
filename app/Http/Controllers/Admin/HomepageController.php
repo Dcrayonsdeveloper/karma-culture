@@ -38,6 +38,7 @@ class HomepageController extends Controller
             'social_facebook' => Setting::get('social_facebook', ''),
             'social_instagram' => Setting::get('social_instagram', ''),
             'social_twitter' => Setting::get('social_twitter', ''),
+            'social_linkedin' => Setting::get('social_linkedin', ''),
             'social_youtube' => Setting::get('social_youtube', ''),
             'social_tiktok' => Setting::get('social_tiktok', ''),
             'social_pinterest' => Setting::get('social_pinterest', ''),
@@ -56,7 +57,7 @@ class HomepageController extends Controller
         $fields = [
             'site_name', 'site_tagline', 'site_description',
             'footer_about', 'footer_copyright',
-            'social_facebook', 'social_instagram', 'social_twitter',
+            'social_facebook', 'social_instagram', 'social_twitter', 'social_linkedin',
             'social_youtube', 'social_tiktok', 'social_pinterest',
             'contact_email', 'contact_phone', 'contact_address',
             'announcement_text',

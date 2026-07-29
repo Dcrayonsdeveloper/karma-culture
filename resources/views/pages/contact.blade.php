@@ -49,9 +49,10 @@
                 ],
             ],
             'sameAs' => array_values(array_filter([
-                \App\Models\Setting::get('social_facebook'),
                 \App\Models\Setting::get('social_instagram'),
-                \App\Models\Setting::get('social_youtube'),
+                \App\Models\Setting::get('social_facebook'),
+                \App\Models\Setting::get('social_twitter'),
+                \App\Models\Setting::get('social_linkedin'),
             ])),
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
         </script>
