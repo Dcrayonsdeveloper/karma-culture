@@ -745,7 +745,7 @@
                 </div>
                 <div class="kk-product-grid">
                     @foreach($arrivals as $product)
-                        @include('partials.kk-product-card', ['product' => $product, 'tag' => 'Premium'])
+                        <x-product-card :product="$product" :show-quick-view="false" />
                     @endforeach
                 </div>
             </div>
@@ -765,7 +765,7 @@
                 </div>
                 <div class="kk-product-grid">
                     @foreach($bs as $product)
-                        @include('partials.kk-product-card', ['product' => $product, 'tag' => 'Bestseller'])
+                        <x-product-card :product="$product" :show-quick-view="false" />
                     @endforeach
                 </div>
             </div>

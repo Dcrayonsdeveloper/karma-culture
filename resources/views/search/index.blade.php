@@ -182,7 +182,7 @@
                         <!-- Products Grid -->
                         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             @foreach($products as $product)
-                                @include('partials.kk-product-card', ['product' => $product])
+                                <x-product-card :product="$product" :show-quick-view="false" />
                             @endforeach
                         </div>
 

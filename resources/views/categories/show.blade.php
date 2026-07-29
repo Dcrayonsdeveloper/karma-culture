@@ -144,7 +144,7 @@
                 @if($products->count())
                     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                         @foreach($products as $product)
-                            @include('partials.kk-product-card', ['product' => $product, 'tag' => 'Premium'])
+                            <x-product-card :product="$product" :show-quick-view="false" />
                         @endforeach
                     </div>
 
