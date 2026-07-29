@@ -51,8 +51,8 @@
         }
     </style>
     @endif
-    <div class="w-full px-4 lg:px-6">
-        <div class="relative flex items-center justify-between h-16 lg:h-20">
+    <div class="w-full px-3 lg:px-4">
+        <div class="relative flex items-center justify-between h-20 lg:h-24">
 
             <!-- Left: Mobile menu + Desktop Nav -->
             <div class="flex items-center gap-3 lg:gap-0 flex-1">
@@ -67,9 +67,9 @@
                 <a href="{{ url('/') }}" class="absolute inset-0 flex items-center justify-center pointer-events-none lg:static lg:inset-auto lg:justify-start lg:pointer-events-auto shrink-0 lg:mr-8">
                     @php $siteLogo = \App\Models\Setting::get('site_logo', ''); @endphp
                     @if($siteLogo)
-                        <img id="site-logo" src="{{ asset('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-12 lg:h-14 object-contain pointer-events-auto">
+                        <img id="site-logo" src="{{ asset('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-14 lg:h-16 object-contain pointer-events-auto">
                     @else
-                        <img id="site-logo" src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-12 lg:h-14 object-contain pointer-events-auto">
+                        <img id="site-logo" src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-14 lg:h-16 object-contain pointer-events-auto">
                     @endif
                 </a>
 
