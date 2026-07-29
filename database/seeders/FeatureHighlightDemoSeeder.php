@@ -20,10 +20,10 @@ class FeatureHighlightDemoSeeder extends Seeder
             ['heading' => 'Made Responsibly', 'caption' => 'Ethically sourced and made in India with genuine care for people and the planet.'],
         ];
 
+        // All active products that have images (skips any with curated highlights).
         $products = Product::where('is_active', true)
             ->whereHas('images')
             ->with('images')
-            ->take(8)
             ->get();
 
         foreach ($products as $product) {
