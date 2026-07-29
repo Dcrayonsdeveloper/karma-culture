@@ -657,11 +657,13 @@ Alpine.data('offerPopup', () => ({
 }));
 
 Alpine.data('purchaseNotif', (messages = [], productName = '') => ({
-    messages, productName, idx: 0, current: '', visible: false, _t: null,
+    messages, productName, idx: 0, current: '', visible: false, reduced: false, _t: null,
     init() {
         if (!this.messages.length) return;
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-        window.setTimeout(() => this.showNext(), 5000);
+        // Always show the toast (social proof). For reduced-motion users we still
+        // display it once but skip the repeated cycling.
+        this.reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        window.setTimeout(() => this.showNext(), 3500);
     },
     showNext() {
         if (this.idx >= this.messages.length) return;
@@ -670,9 +672,10 @@ Alpine.data('purchaseNotif', (messages = [], productName = '') => ({
         this.visible = true;
         this._t = window.setTimeout(() => {
             this.visible = false;
-            const gap = 16000 + Math.floor(Math.random() * 12000);
+            if (this.reduced) return;
+            const gap = 14000 + Math.floor(Math.random() * 12000);
             window.setTimeout(() => this.showNext(), gap);
-        }, 5000);
+        }, 6000);
     },
     dismiss() { this.visible = false; this.idx = this.messages.length; if (this._t) window.clearTimeout(this._t); },
 }));
