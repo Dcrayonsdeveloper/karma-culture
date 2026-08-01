@@ -779,13 +779,15 @@
             /* Full width: edge-to-edge (may be taller than one screen) */
             .kk-aplus__img { width: 100%; max-width: 100%; }
             @elseif($aplusMode === 'custom')
-            /* Custom cap: never taller than the admin value; and never past one mobile screen */
+            /* Custom cap: never taller than the admin value; and never past one mobile screen.
+               --kk-header-h is the live sticky-header height (set by header.blade.php). */
             .kk-aplus__img { width: auto; max-width: 100%; max-height: {{ $aplusCustomH }}px; }
-            @media (max-width: 640px) { .kk-aplus__img { max-height: min({{ $aplusCustomH }}px, calc(100dvh - 64px)); } }
+            @media (max-width: 640px) { .kk-aplus__img { max-height: min({{ $aplusCustomH }}px, calc(100dvh - var(--kk-header-h, 112px))); } }
             @else
-            /* Fit to screen: the whole banner fits within a single desktop/mobile frame */
-            .kk-aplus__img { width: auto; max-width: 100%; max-height: calc(100vh - 96px); }
-            @media (max-width: 640px) { .kk-aplus__img { max-height: calc(100dvh - 64px); } }
+            /* Fit to screen: the whole banner fits within a single desktop/mobile frame,
+               below the sticky header (--kk-header-h; conservative fallback covers marquee + nav). */
+            .kk-aplus__img { width: auto; max-width: 100%; max-height: calc(100vh - var(--kk-header-h, 128px)); }
+            @media (max-width: 640px) { .kk-aplus__img { max-height: calc(100dvh - var(--kk-header-h, 112px)); } }
             @endif
         </style>
         <section class="kk-aplus" aria-label="Product information">

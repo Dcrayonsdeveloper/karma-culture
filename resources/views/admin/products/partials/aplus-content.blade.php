@@ -14,8 +14,8 @@
         reorderUrl: '{{ route('admin.products.aplus.reorder', $product) }}',
         itemBase: '{{ url('admin/products/aplus') }}',
         images: {{ \Illuminate\Support\Js::from($aplusImages) }},
-        bannerSize: '{{ $aplusBannerSize }}',
-        maxHeight: '{{ $aplusMaxHeight }}',
+        bannerSize: {{ \Illuminate\Support\Js::from($aplusBannerSize) }},
+        maxHeight: {{ \Illuminate\Support\Js::from((string) ($aplusMaxHeight ?? '')) }},
      })">
 
     {{-- Card header --}}
@@ -44,6 +44,7 @@
                 </select>
                 <div class="flex items-center gap-1" x-show="bannerSize === 'custom'" x-cloak>
                     <input type="number" name="aplus_banner_max_height" x-model="maxHeight" min="100" max="6000" step="10"
+                           :disabled="bannerSize !== 'custom'"
                            class="form-input text-xs" style="width:110px;" placeholder="e.g. 800">
                     <span class="text-xs" style="color:#616161;">px tall</span>
                 </div>

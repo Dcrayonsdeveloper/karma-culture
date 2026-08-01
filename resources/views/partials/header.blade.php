@@ -353,10 +353,15 @@
         function syncSpacer() {
             var hdr = document.getElementById('main-header');
             var spc = document.getElementById('header-spacer');
-            if (hdr && spc) spc.style.height = hdr.offsetHeight + 'px';
+            if (!hdr) return;
+            if (spc) spc.style.height = hdr.offsetHeight + 'px';
+            // Expose the live sticky-header height so full-height content (e.g. A+ banners)
+            // can size to "one screen minus header" and never sit under the sticky header.
+            document.documentElement.style.setProperty('--kk-header-h', hdr.offsetHeight + 'px');
         }
         syncSpacer();
         window.addEventListener('resize', syncSpacer);
+        window.addEventListener('load', syncSpacer);
     })();
 </script>
 
