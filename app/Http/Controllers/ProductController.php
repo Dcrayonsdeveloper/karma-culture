@@ -201,19 +201,22 @@ class ProductController extends Controller
             ->take(3)
             ->get();
 
-        // Recent-purchase social proof (Task 9). Real order data first; the view
-        // falls back to configurable demo notifications when this is empty.
+        // Recent-purchase social proof. Real order data first (with buyer city);
+        // the view falls back to configurable demo notifications when this is empty.
         $recentPurchases = [];
         try {
             $recentPurchases = OrderItem::where('product_id', $product->id)
                 ->whereHas('order', function ($q) {
                     $q->whereNotIn('status', ['cancelled', 'failed', 'pending']);
                 })
+                ->with('order')
                 ->latest()
                 ->take(8)
                 ->get()
                 ->map(fn ($item) => [
                     'minutes' => max(1, (int) $item->created_at->diffInMinutes(now())),
+                    'city' => data_get($item->order, 'shipping_address.city')
+                        ?? data_get($item->order, 'shipping_address_snapshot.city'),
                 ])
                 ->filter(fn ($n) => $n['minutes'] <= 60 * 24 * 14) // within 2 weeks
                 ->values()

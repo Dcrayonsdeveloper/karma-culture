@@ -9,6 +9,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\Seller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -138,6 +139,8 @@ class ProductController extends Controller
             'main_image' => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:2048',
             'images' => 'nullable|array|max:10',
             'images.*' => 'image|mimes:jpeg,jpg,png,webp,gif|max:2048',
+            'videos' => 'nullable|array|max:5',
+            'videos.*' => 'mimetypes:video/mp4,video/webm,video/quicktime|max:51200',
             'product_attributes' => 'nullable|array',
             'product_attributes.*' => 'nullable|string|max:255',
         ]);
@@ -157,7 +160,7 @@ class ProductController extends Controller
             ->toArray();
         $validated['attributes'] = ! empty($productAttributes) ? $productAttributes : null;
 
-        unset($validated['images'], $validated['main_image'], $validated['product_attributes']);
+        unset($validated['images'], $validated['videos'], $validated['main_image'], $validated['product_attributes']);
 
         $product = Product::create($validated);
 
@@ -179,6 +182,22 @@ class ProductController extends Controller
                 $path = $file->store('products', 'public');
                 ProductImage::create([
                     'product_id' => $product->id,
+                    'media_type' => 'image',
+                    'url' => '/storage/'.$path,
+                    'is_primary' => false,
+                    'position' => $startPosition + $index + 1,
+                ]);
+            }
+        }
+
+        // Handle gallery video uploads
+        if ($request->hasFile('videos')) {
+            $startPosition = $product->images()->max('position') ?? 0;
+            foreach ($request->file('videos') as $index => $file) {
+                $path = $file->store('products/videos', 'public');
+                ProductImage::create([
+                    'product_id' => $product->id,
+                    'media_type' => 'video',
                     'url' => '/storage/'.$path,
                     'is_primary' => false,
                     'position' => $startPosition + $index + 1,
@@ -236,6 +255,8 @@ class ProductController extends Controller
             'main_image' => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:2048',
             'images' => 'nullable|array|max:10',
             'images.*' => 'image|mimes:jpeg,jpg,png,webp,gif|max:2048',
+            'videos' => 'nullable|array|max:5',
+            'videos.*' => 'mimetypes:video/mp4,video/webm,video/quicktime|max:51200', // 50 MB each
             'delete_images' => 'nullable|array',
             'delete_images.*' => 'integer|exists:product_images,id',
             'product_attributes' => 'nullable|array',
@@ -250,15 +271,15 @@ class ProductController extends Controller
             'model_usdz' => 'nullable|file|max:10240',
             'delete_model_glb' => 'nullable|boolean',
             'delete_model_usdz' => 'nullable|boolean',
-            // Feature highlights (Task 12) — image-wise description blocks
+            // Feature highlights ("Why You'll Love It") — sections with multiple images + multi-paragraph body
             'fh_heading' => 'nullable|array',
             'fh_heading.*' => 'nullable|string|max:120',
-            'fh_caption' => 'nullable|array',
-            'fh_caption.*' => 'nullable|string|max:600',
-            'fh_existing' => 'nullable|array',
-            'fh_existing.*' => 'nullable|string',
-            'fh_image' => 'nullable|array',
-            'fh_image.*' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+            'fh_body' => 'nullable|array',
+            'fh_body.*' => 'nullable|string|max:2000',
+            'fh_existing' => 'nullable|array',        // [section => [kept image paths]]
+            'fh_images' => 'nullable|array',           // [section => [uploaded files]]
+            'fh_images.*' => 'nullable|array',
+            'fh_images.*.*' => 'image|mimes:jpeg,jpg,png,webp|max:2048',
         ]);
 
         $validated['slug'] = $validated['slug'] ?? Str::slug($validated['name']);
@@ -371,6 +392,22 @@ class ProductController extends Controller
                 $path = $file->store('products', 'public');
                 ProductImage::create([
                     'product_id' => $product->id,
+                    'media_type' => 'image',
+                    'url' => '/storage/'.$path,
+                    'is_primary' => false,
+                    'position' => $maxPosition + $index + 1,
+                ]);
+            }
+        }
+
+        // Upload new gallery videos
+        if ($request->hasFile('videos')) {
+            $maxPosition = $product->images()->max('position') ?? 0;
+            foreach ($request->file('videos') as $index => $file) {
+                $path = $file->store('products/videos', 'public');
+                ProductImage::create([
+                    'product_id' => $product->id,
+                    'media_type' => 'video',
                     'url' => '/storage/'.$path,
                     'is_primary' => false,
                     'position' => $maxPosition + $index + 1,
@@ -383,33 +420,73 @@ class ProductController extends Controller
     }
 
     /**
-     * Build the feature_highlights JSON from fixed-slot form inputs (Task 12).
-     * Returns null when no slot has any content.
+     * Reorder a product's media (images + videos) from a drag-and-drop list.
+     * Mirrors the hero-banners reorder pattern.
+     */
+    public function reorderImages(Request $request, Product $product): JsonResponse
+    {
+        $data = $request->validate([
+            'order' => 'required|array',
+            'order.*' => 'integer',
+        ]);
+
+        foreach ($data['order'] as $position => $id) {
+            ProductImage::where('id', $id)
+                ->where('product_id', $product->id)
+                ->update(['position' => $position]);
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Build the feature_highlights JSON from the section form inputs.
+     * New shape: [{ images: [paths], heading, body }]. Returns null when empty.
+     * (Backward compatible: old {image, caption} rows are read by the renderer.)
      */
     private function buildFeatureHighlights(Request $request): ?array
     {
         $headings = $request->input('fh_heading', []);
-        $captions = $request->input('fh_caption', []);
-        $existing = $request->input('fh_existing', []);
-        $highlights = [];
+        $bodies = $request->input('fh_body', []);
+        $existing = $request->input('fh_existing', []); // [section => [kept paths]]
+        $sections = [];
+        $slots = max(count($headings), count($bodies), count($existing), 4);
 
-        foreach ($headings as $i => $heading) {
-            $image = $existing[$i] ?? null;
-            if ($request->hasFile("fh_image.$i")) {
-                $image = $request->file("fh_image.$i")->store('products/highlights', 'public');
+        for ($s = 0; $s < $slots; $s++) {
+            $heading = $headings[$s] ?? null;
+            $body = $bodies[$s] ?? null;
+            $images = array_values(array_filter((array) ($existing[$s] ?? [])));
+
+            if ($request->hasFile("fh_images.$s")) {
+                foreach ($request->file("fh_images.$s") as $file) {
+                    $images[] = $file->store('products/highlights', 'public');
+                }
             }
-            $caption = $captions[$i] ?? null;
 
-            if ($image || trim((string) $heading) !== '' || trim((string) $caption) !== '') {
-                $highlights[] = array_filter([
-                    'image' => $image ?: null,
+            if (! empty($images) || trim((string) $heading) !== '' || trim((string) $body) !== '') {
+                $sections[] = array_filter([
+                    'images' => $images ?: null,
                     'heading' => $heading ?: null,
-                    'caption' => $caption ?: null,
+                    'body' => $body ?: null,
                 ]);
             }
         }
 
-        return $highlights ? array_values($highlights) : null;
+        return $sections ? array_values($sections) : null;
+    }
+
+    /** Normalise a stored feature_highlights section (old or new shape) to { images:[], heading, paragraphs:[] }. */
+    public static function normaliseHighlight(array $section): array
+    {
+        $images = $section['images'] ?? (isset($section['image']) && $section['image'] ? [$section['image']] : []);
+        $body = $section['body'] ?? ($section['caption'] ?? '');
+        $paragraphs = array_values(array_filter(array_map('trim', preg_split('/\n\s*\n/', (string) $body))));
+
+        return [
+            'images' => array_values(array_filter((array) $images)),
+            'heading' => $section['heading'] ?? null,
+            'paragraphs' => $paragraphs,
+        ];
     }
 
     public function destroy(Product $product): RedirectResponse

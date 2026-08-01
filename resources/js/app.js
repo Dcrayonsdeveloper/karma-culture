@@ -656,18 +656,18 @@ Alpine.data('offerPopup', () => ({
     },
 }));
 
-Alpine.data('purchaseNotif', (messages = [], productName = '') => ({
-    messages, productName, idx: 0, current: '', visible: false, reduced: false, _t: null,
+Alpine.data('purchaseNotif', (items = [], productName = '', thumb = '') => ({
+    items, productName, thumb, idx: 0, current: { city: '', time: '' }, visible: false, reduced: false, _t: null,
     init() {
-        if (!this.messages.length) return;
+        if (!this.items.length) return;
         // Always show the toast (social proof). For reduced-motion users we still
         // display it once but skip the repeated cycling.
         this.reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         window.setTimeout(() => this.showNext(), 3500);
     },
     showNext() {
-        if (this.idx >= this.messages.length) return;
-        this.current = this.messages[this.idx];
+        if (this.idx >= this.items.length) return;
+        this.current = this.items[this.idx];
         this.idx++;
         this.visible = true;
         this._t = window.setTimeout(() => {
@@ -677,7 +677,7 @@ Alpine.data('purchaseNotif', (messages = [], productName = '') => ({
             window.setTimeout(() => this.showNext(), gap);
         }, 6000);
     },
-    dismiss() { this.visible = false; this.idx = this.messages.length; if (this._t) window.clearTimeout(this._t); },
+    dismiss() { this.visible = false; this.idx = this.items.length; if (this._t) window.clearTimeout(this._t); },
 }));
 
 Alpine.data('exitPopup', (code = 'KARMAA10', minutes = 10) => ({

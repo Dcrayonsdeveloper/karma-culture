@@ -19,15 +19,25 @@
     @endpush
 
     @php
-        $images = $product->images->pluck('url')->map(function($url) {
+        // Media = images + videos (ordered by position). Each item carries a type + optional poster.
+        $resolveUrl = function ($url) {
             if ($url && !str_starts_with($url, 'http') && !str_starts_with($url, '/')) {
                 return asset('storage/' . $url);
             }
-            return $url ?: asset('images/no-product-image.svg');
+            return $url;
+        };
+        $media = $product->images->sortBy('position')->map(function ($img) use ($resolveUrl) {
+            return [
+                'url'   => $resolveUrl($img->url) ?: asset('images/no-product-image.svg'),
+                'type'  => $img->media_type ?? 'image',
+                'thumb' => $img->thumbnail_url ? $resolveUrl($img->thumbnail_url) : null,
+            ];
         })->values()->toArray();
-        if (empty($images)) {
-            $images = [$product->primary_image_url];
+        if (empty($media)) {
+            $media = [['url' => $product->primary_image_url, 'type' => 'image', 'thumb' => null]];
         }
+        // Backward-compat: keep $images (image URLs only) for any legacy references.
+        $images = collect($media)->pluck('url')->toArray();
 
         $variantData = $product->variants->map(function($v) {
             return [
@@ -102,7 +112,9 @@
         padding: 0; border: 1px solid #e3d2b3; border-radius: 8px; overflow: hidden;
         background: #fff; cursor: pointer; aspect-ratio: 3/4; transition: border-color .15s ease;
     }
-    .kk-pdp__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .kk-pdp__thumb img, .kk-pdp__thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .kk-pdp__thumb--video { position: relative; }
+    .kk-pdp__thumb-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; background: rgba(0,0,0,.18); text-shadow: 0 1px 3px rgba(0,0,0,.6); }
     .kk-pdp__thumb:hover { border-color: #c9b393; }
     .kk-pdp__thumb.is-active { border-color: #2d1810; }
 
@@ -113,6 +125,7 @@
         border-radius: 10px; overflow: hidden; background: #fff; cursor: zoom-in;
     }
     .kk-pdp__main-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+    .kk-pdp__main-video { object-fit: contain; background: #000; cursor: default; }
     .kk-pdp__counter {
         position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
         background: rgba(31,17,9,.72); color: #efe2cb; font-size: 12px; letter-spacing: .05em;
@@ -285,38 +298,55 @@
         <!-- ===== TWO-COLUMN LAYOUT ===== -->
         <div class="kk-pdp">
 
-            <!-- LEFT: Image grid -->
+            <!-- LEFT: Media gallery (images + videos) -->
             <div class="kk-pdp__gallery">
-                @if(count($images) > 1)
+                @if(count($media) > 1)
                     <div class="kk-pdp__thumbs">
-                        @foreach($images as $i => $img)
-                            <button type="button" class="kk-pdp__thumb"
+                        @foreach($media as $i => $m)
+                            <button type="button" class="kk-pdp__thumb {{ $m['type'] === 'video' ? 'kk-pdp__thumb--video' : '' }}"
                                     :class="currentImage === {{ $i }} ? 'is-active' : ''"
                                     @click="currentImage = {{ $i }}"
-                                    aria-label="View image {{ $i + 1 }}">
-                                <img src="{{ $img }}" alt="{{ $product->name }} — thumbnail {{ $i + 1 }}" loading="lazy">
+                                    aria-label="View media {{ $i + 1 }}">
+                                @if($m['type'] === 'video')
+                                    @if($m['thumb'])
+                                        <img src="{{ $m['thumb'] }}" alt="{{ $product->name }} — video {{ $i + 1 }}" loading="lazy">
+                                    @else
+                                        <video src="{{ $m['url'] }}#t=0.1" muted playsinline preload="metadata"></video>
+                                    @endif
+                                    <span class="kk-pdp__thumb-play" aria-hidden="true">&#9654;</span>
+                                @else
+                                    <img src="{{ $m['url'] }}" alt="{{ $product->name }} — thumbnail {{ $i + 1 }}" loading="lazy">
+                                @endif
                             </button>
                         @endforeach
                     </div>
                 @endif
                 <div class="kk-pdp__main"
-                     @click="showZoom = true"
                      @touchstart.passive="onTouchStart($event)" @touchend="onTouchEnd($event)">
-                    @foreach($images as $i => $img)
-                        <img src="{{ $img }}" alt="{{ $product->name }}" class="kk-pdp__main-img"
-                             x-show="currentImage === {{ $i }}" @if($i !== 0) x-cloak @endif
-                             sizes="(max-width: 1024px) 100vw, 50vw" decoding="async"
-                             loading="{{ $i === 0 ? 'eager' : 'lazy' }}" @if($i === 0) fetchpriority="high" @endif>
+                    @foreach($media as $i => $m)
+                        @if($m['type'] === 'video')
+                            <video class="kk-pdp__main-img kk-pdp__main-video" controls playsinline preload="metadata"
+                                   @if($m['thumb']) poster="{{ $m['thumb'] }}" @endif
+                                   x-show="currentImage === {{ $i }}" @if($i !== 0) x-cloak @endif>
+                                <source src="{{ $m['url'] }}">
+                            </video>
+                        @else
+                            <img src="{{ $m['url'] }}" alt="{{ $product->name }}" class="kk-pdp__main-img"
+                                 @click="showZoom = true"
+                                 x-show="currentImage === {{ $i }}" @if($i !== 0) x-cloak @endif
+                                 sizes="(max-width: 1024px) 100vw, 50vw" decoding="async"
+                                 loading="{{ $i === 0 ? 'eager' : 'lazy' }}" @if($i === 0) fetchpriority="high" @endif>
+                        @endif
                     @endforeach
-                    @if(count($images) > 1)
+                    @if(count($media) > 1)
                         {{-- Prev/next arrows (desktop) --}}
-                        <button type="button" class="kk-pdp__navbtn kk-pdp__navbtn--prev" @click.stop="prevImage()" aria-label="Previous image">
+                        <button type="button" class="kk-pdp__navbtn kk-pdp__navbtn--prev" @click.stop="prevImage()" aria-label="Previous">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                         </button>
-                        <button type="button" class="kk-pdp__navbtn kk-pdp__navbtn--next" @click.stop="nextImage()" aria-label="Next image">
+                        <button type="button" class="kk-pdp__navbtn kk-pdp__navbtn--next" @click.stop="nextImage()" aria-label="Next">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                         </button>
-                        <span class="kk-pdp__counter"><span x-text="currentImage + 1"></span> / {{ count($images) }}</span>
+                        <span class="kk-pdp__counter"><span x-text="currentImage + 1"></span> / {{ count($media) }}</span>
                     @endif
                 </div>
             </div>
@@ -443,6 +473,32 @@
                 @else
                     <div style="padding:14px 0;font-size:14px;color:#b71c00;font-weight:600;">Currently Unavailable</div>
                 @endif
+
+                {{-- Trust badges --}}
+                <style>
+                    .kk-pdp__trust { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 16px 0 4px; padding: 14px 0; border-top: 1px solid #ece0c8; border-bottom: 1px solid #ece0c8; }
+                    .kk-pdp__trust-item { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; font-size: 10.5px; color: #7a6555; font-weight: 600; letter-spacing: .02em; }
+                    .kk-pdp__trust-item svg { width: 22px; height: 22px; color: #8c5c34; stroke-width: 1.6; }
+                    @media (max-width: 420px) { .kk-pdp__trust { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+                </style>
+                <div class="kk-pdp__trust" role="list">
+                    <div class="kk-pdp__trust-item" role="listitem">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span>Secure Checkout</span>
+                    </div>
+                    <div class="kk-pdp__trust-item" role="listitem">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"/></svg>
+                        <span>7-Day Returns</span>
+                    </div>
+                    <div class="kk-pdp__trust-item" role="listitem">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z"/></svg>
+                        <span>Cash on Delivery</span>
+                    </div>
+                    <div class="kk-pdp__trust-item" role="listitem">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
+                        <span>100% Genuine</span>
+                    </div>
+                </div>
 
                 {{-- ===== Offers widget (collapsible bank offers — sample data) ===== --}}
                 <style>
@@ -707,8 +763,13 @@
 
 
 
-        {{-- ===== FEATURE HIGHLIGHTS (Amazon/Flipkart-style image-wise blocks, Task 12) ===== --}}
-        @php $featureHighlights = collect($product->feature_highlights ?? [])->filter(fn ($f) => !empty($f['image']) || !empty($f['heading']) || !empty($f['caption'])); @endphp
+        {{-- ===== FEATURE HIGHLIGHTS ("Why You'll Love It") — multiple images + paragraphs ===== --}}
+        @php
+            $featureHighlights = collect($product->feature_highlights ?? [])
+                ->map(fn ($f) => \App\Http\Controllers\Admin\ProductController::normaliseHighlight((array) $f))
+                ->filter(fn ($f) => !empty($f['images']) || !empty($f['heading']) || !empty($f['paragraphs']))
+                ->values();
+        @endphp
         @if($featureHighlights->isNotEmpty())
         <style>
             .kk-fh { max-width: 1120px; margin: 56px auto 0; padding: 0 16px; }
@@ -716,12 +777,15 @@
             .kk-fh__sub { text-align: center; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: #9b8a72; margin: 0 0 40px; }
             .kk-fh__row { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; margin-bottom: 56px; }
             .kk-fh__row:nth-child(even) .kk-fh__media { order: 2; }
-            .kk-fh__media { border-radius: 16px; overflow: hidden; background: #f3e9d4; aspect-ratio: 3 / 2; box-shadow: 0 20px 50px rgba(45,24,16,0.10); }
-            .kk-fh__media img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .8s ease; }
-            .kk-fh__row:hover .kk-fh__media img { transform: scale(1.04); }
+            /* Media = one image, or a swipeable strip for multiple images */
+            .kk-fh__media { border-radius: 16px; overflow: hidden; background: #f3e9d4; aspect-ratio: 3 / 2; box-shadow: 0 20px 50px rgba(45,24,16,0.10);
+                display: flex; scroll-snap-type: x mandatory; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+            .kk-fh__media::-webkit-scrollbar { display: none; }
+            .kk-fh__media img { flex: 0 0 100%; width: 100%; height: 100%; object-fit: cover; display: block; scroll-snap-align: start; }
             .kk-fh__eyebrow { font-size: 11px; letter-spacing: .28em; text-transform: uppercase; color: #8c5c34; font-weight: 700; display: block; margin-bottom: 12px; }
             .kk-fh__heading { font-family: 'Playfair Display', Georgia, serif; font-size: 28px; line-height: 1.2; color: #2d1810; margin: 0 0 14px; }
-            .kk-fh__caption { font-size: 15.5px; line-height: 1.8; color: #5b4636; margin: 0; }
+            .kk-fh__caption { font-size: 15.5px; line-height: 1.8; color: #5b4636; margin: 0 0 14px; }
+            .kk-fh__caption:last-child { margin-bottom: 0; }
             @media (max-width: 768px) {
                 .kk-fh__row { grid-template-columns: 1fr; gap: 18px; margin-bottom: 44px; }
                 .kk-fh__row:nth-child(even) .kk-fh__media { order: 0; }
@@ -732,20 +796,19 @@
             <h2 class="kk-fh__title">Why You'll Love It</h2>
             <p class="kk-fh__sub">Crafted with intention</p>
             @foreach($featureHighlights as $idx => $fh)
-                @php
-                    $fhImg = $fh['image'] ?? null;
-                    if ($fhImg && !str_starts_with($fhImg, 'http') && !str_starts_with($fhImg, '/')) {
-                        $fhImg = asset('storage/' . $fhImg);
-                    }
-                @endphp
                 <div class="kk-fh__row">
-                    @if($fhImg)
-                        <div class="kk-fh__media"><img src="{{ $fhImg }}" alt="{{ $fh['heading'] ?? $product->name }}" loading="lazy" decoding="async"></div>
+                    @if(!empty($fh['images']))
+                        <div class="kk-fh__media">
+                            @foreach($fh['images'] as $img)
+                                @php $u = $img; if ($u && !str_starts_with($u, 'http') && !str_starts_with($u, '/')) $u = asset('storage/' . $u); @endphp
+                                <img src="{{ $u }}" alt="{{ $fh['heading'] ?? $product->name }}" loading="lazy" decoding="async">
+                            @endforeach
+                        </div>
                     @endif
                     <div class="kk-fh__text">
                         <span class="kk-fh__eyebrow">0{{ $idx + 1 }} — Karmaa Kulture</span>
                         @if(!empty($fh['heading']))<h3 class="kk-fh__heading">{{ $fh['heading'] }}</h3>@endif
-                        @if(!empty($fh['caption']))<p class="kk-fh__caption">{{ $fh['caption'] }}</p>@endif
+                        @foreach($fh['paragraphs'] as $para)<p class="kk-fh__caption">{{ $para }}</p>@endforeach
                     </div>
                 </div>
             @endforeach
@@ -1170,44 +1233,57 @@
         </div>
         @endif
 
-        {{-- ===== PURCHASE / SOCIAL-PROOF NOTIFICATION (Task 9) ===== --}}
+        {{-- ===== PURCHASE / SOCIAL-PROOF NOTIFICATION ===== --}}
         @php
             $notifEnabled = (bool) \App\Models\Setting::get('purchase_notif_enabled', true);
-            $notifMsgs = collect($recentPurchases ?? [])
-                ->map(fn ($p) => 'Someone purchased this product ' . $p['minutes'] . ' ' . \Illuminate\Support\Str::plural('minute', $p['minutes']) . ' ago')
-                ->values();
-            if ($notifMsgs->isEmpty()) {
-                // Configurable demo notifications when there is no live order data.
-                $demoMinutes = \App\Models\Setting::get('purchase_notif_demo_minutes', [10, 15, 27, 8, 42]);
-                $demoMinutes = is_array($demoMinutes) ? $demoMinutes : [10, 15, 27, 8, 42];
-                $notifMsgs = collect($demoMinutes)
-                    ->map(fn ($m) => 'Someone purchased this product ' . (int) $m . ' minutes ago');
+            $notifThumb = $product->primary_image_url;
+            $notifItems = collect($recentPurchases ?? [])->map(fn ($p) => [
+                'city' => $p['city'] ?: 'India',
+                'time' => $p['minutes'] . ' ' . \Illuminate\Support\Str::plural('min', $p['minutes']) . ' ago',
+            ])->values();
+            if ($notifItems->isEmpty()) {
+                $demoCities = \App\Models\Setting::get('purchase_notif_cities', ['Mumbai', 'Delhi', 'Bengaluru', 'Pune', 'Hyderabad', 'Chennai', 'Jaipur', 'Surat']);
+                $demoCities = (is_array($demoCities) && $demoCities) ? $demoCities : ['Mumbai', 'Delhi', 'Bengaluru', 'Pune'];
+                $demoMinutes = \App\Models\Setting::get('purchase_notif_demo_minutes', [9, 14, 27, 6, 41]);
+                $demoMinutes = (is_array($demoMinutes) && $demoMinutes) ? $demoMinutes : [9, 14, 27, 6, 41];
+                $notifItems = collect($demoMinutes)->values()->map(fn ($m, $i) => [
+                    'city' => $demoCities[$i % count($demoCities)],
+                    'time' => (int) $m . ' min ago',
+                ]);
             }
         @endphp
-        @if($notifEnabled && $notifMsgs->isNotEmpty())
+        @if($notifEnabled && $notifItems->isNotEmpty())
         <style>
-            .kk-pnotif { position: fixed; left: 16px; bottom: 16px; z-index: 55; display: flex; align-items: center; gap: 12px;
-                background: #fff; border: 1px solid #e3d2b3; border-radius: 12px; box-shadow: 0 10px 30px rgba(45,24,16,0.18);
-                padding: 12px 14px; max-width: 320px; }
-            .kk-pnotif__icon { width: 38px; height: 38px; border-radius: 9px; background: #f3e9d4; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
-            .kk-pnotif__msg { font-size: 13px; color: #2d1810; font-weight: 600; margin: 0; line-height: 1.3; }
-            .kk-pnotif__product { font-size: 11px; color: #9b8a72; margin: 2px 0 0; }
-            .kk-pnotif__close { background: none; border: none; color: #9b8a72; cursor: pointer; font-size: 18px; line-height: 1; padding: 2px 4px; align-self: flex-start; }
+            .kk-pnotif { position: fixed; left: 18px; bottom: 18px; z-index: 55; display: flex; align-items: center; gap: 12px;
+                background: #fffdf8; border: 1px solid #eaddc4; border-radius: 14px; box-shadow: 0 12px 34px rgba(45,24,16,0.16);
+                padding: 10px 30px 10px 10px; max-width: 340px; }
+            .kk-pnotif__thumb { width: 46px; height: 46px; border-radius: 10px; object-fit: cover; flex-shrink: 0; background: #f3e9d4; }
+            .kk-pnotif__body { flex: 1; min-width: 0; }
+            .kk-pnotif__msg { font-size: 13px; color: #2d1810; margin: 0; line-height: 1.35; }
+            .kk-pnotif__meta { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #9b8a72; margin: 3px 0 0; }
+            .kk-pnotif__verified { display: inline-flex; align-items: center; gap: 3px; color: #2a7d3e; font-weight: 600; }
+            .kk-pnotif__verified svg { width: 11px; height: 11px; }
+            .kk-pnotif__dot { width: 3px; height: 3px; border-radius: 50%; background: #cbb998; }
+            .kk-pnotif__close { position: absolute; top: 7px; right: 9px; background: none; border: none; color: #b9a888; cursor: pointer; font-size: 16px; line-height: 1; }
             @media (max-width: 480px) { .kk-pnotif { left: 10px; right: 10px; bottom: 10px; max-width: none; } }
         </style>
-        <div x-data="purchaseNotif(@js($notifMsgs->all()))" x-cloak x-show="visible"
+        <div x-data="purchaseNotif(@js($notifItems->all()), @js(\Illuminate\Support\Str::limit($product->name, 34)), @js($notifThumb))" x-cloak x-show="visible"
              x-transition:enter="transition ease-out duration-300"
              x-transition:enter-start="opacity-0 translate-y-3"
              x-transition:enter-end="opacity-100 translate-y-0"
              x-transition:leave="transition ease-in duration-200"
              x-transition:leave-end="opacity-0"
              class="kk-pnotif" role="status" aria-live="polite">
-            <div class="kk-pnotif__icon" aria-hidden="true">🛍️</div>
-            <div style="flex:1;min-width:0;">
-                <p class="kk-pnotif__msg" x-text="current"></p>
-                <p class="kk-pnotif__product">{{ \Illuminate\Support\Str::limit($product->name, 42) }}</p>
+            <img class="kk-pnotif__thumb" :src="thumb" :alt="productName">
+            <div class="kk-pnotif__body">
+                <p class="kk-pnotif__msg">Someone in <strong x-text="current.city"></strong> bought <strong>{{ \Illuminate\Support\Str::limit($product->name, 28) }}</strong></p>
+                <p class="kk-pnotif__meta">
+                    <span class="kk-pnotif__verified"><svg fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>Verified</span>
+                    <span class="kk-pnotif__dot"></span>
+                    <span x-text="current.time"></span>
+                </p>
             </div>
-            <button type="button" class="kk-pnotif__close" @click="dismiss()" aria-label="Dismiss notification">&times;</button>
+            <button type="button" class="kk-pnotif__close" @click="dismiss()" aria-label="Dismiss">&times;</button>
         </div>
         {{-- purchaseNotif() is registered in resources/js/app.js (reliable init) --}}
         @endif
@@ -1236,14 +1312,22 @@
             @endif
 
             <div @click.stop style="max-width:56rem;max-height:90vh;width:100%;padding:0 1rem;">
-                @foreach($images as $i => $img)
-                <img x-show="currentImage === {{ $i }}"
-                     x-transition:enter="transition ease-out duration-200"
-                     x-transition:enter-start="opacity-0"
-                     x-transition:enter-end="opacity-100"
-                     src="{{ $img }}"
-                     alt="{{ $product->name }}"
-                     style="max-width:100%;max-height:90vh;object-fit:contain;margin:0 auto;display:block;">
+                @foreach($media as $i => $m)
+                    @if($m['type'] === 'video')
+                        <video x-show="currentImage === {{ $i }}" controls playsinline
+                               @if($m['thumb']) poster="{{ $m['thumb'] }}" @endif
+                               style="max-width:100%;max-height:90vh;margin:0 auto;display:block;background:#000;">
+                            <source src="{{ $m['url'] }}">
+                        </video>
+                    @else
+                        <img x-show="currentImage === {{ $i }}"
+                             x-transition:enter="transition ease-out duration-200"
+                             x-transition:enter-start="opacity-0"
+                             x-transition:enter-end="opacity-100"
+                             src="{{ $m['url'] }}"
+                             alt="{{ $product->name }}"
+                             style="max-width:100%;max-height:90vh;object-fit:contain;margin:0 auto;display:block;">
+                    @endif
                 @endforeach
             </div>
 
@@ -1296,7 +1380,7 @@
     function productPage() {
         return {
             currentImage: 0,
-            imageCount: {{ count($images) }},
+            imageCount: {{ count($media) }},
             touchStartX: 0,
             quantity: 1,
             selectedSize: null,

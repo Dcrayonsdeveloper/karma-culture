@@ -50,45 +50,31 @@
                         </div>
                     </div>
 
-                    <!-- Media -->
-                    <div class="card p-5" x-data="imageManager()">
-                        <h2 class="text-[13px] font-semibold mb-4" style="color: #303030;">Media</h2>
+                    <!-- Media (images + videos, drag to reorder) -->
+                    <div class="card p-5" x-data="imageManager('{{ route('admin.products.images.reorder', $product) }}')">
+                        <h2 class="text-[13px] font-semibold mb-1" style="color: #303030;">Media</h2>
+                        <p class="text-xs mb-3" style="color: #616161;">Images &amp; videos. <strong>Drag tiles to reorder</strong> (saved instantly). The tile marked "Main" is the primary image.</p>
 
-                        @php $primaryImage = $product->images->firstWhere('is_primary', true) ?? $product->images->first(); @endphp
-                        @php $galleryImages = $product->images->where('id', '!=', $primaryImage?->id)->sortBy('position'); @endphp
+                        @php $allMedia = $product->images->sortBy('position'); @endphp
 
-                        <!-- All images grid -->
-                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-4">
-                            <!-- Main image -->
-                            <div class="relative group rounded-lg overflow-hidden aspect-square" style="border: 2px solid #005bd3;"
-                                 x-show="!mainImageChanged && !mainImageDeleted">
-                                @if($primaryImage)
-                                    <img src="{{ $primaryImage->url }}" style="width: 100%; height: 100%; object-fit: cover;">
-                                @else
-                                    <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #f1f1f1;">
-                                        <svg style="width: 2rem; height: 2rem; color: #b5b5b5;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                        </svg>
-                                    </div>
-                                @endif
-                                <span class="absolute bottom-0 left-0 right-0 px-2 py-1 text-[10px] font-semibold text-center text-white" style="background: rgba(0,91,211,0.85);">Main</span>
-                            </div>
-
-                            <!-- New main preview -->
-                            <div x-show="mainPreview" x-transition class="relative rounded-lg overflow-hidden aspect-square" style="border: 2px solid #005bd3;">
-                                <img :src="mainPreview" style="width: 100%; height: 100%; object-fit: cover;">
-                                <button type="button" @click="removeNewMainImage()"
-                                        class="absolute top-1.5 right-1.5 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm">
-                                    <svg style="width: 0.875rem; height: 0.875rem; color: #d72c0d;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                                </button>
-                                <span class="absolute bottom-0 left-0 right-0 px-2 py-1 text-[10px] font-semibold text-center text-white" style="background: rgba(0,91,211,0.85);">New Main</span>
-                            </div>
-
-                            <!-- Existing gallery -->
-                            @foreach($galleryImages as $image)
-                            <div class="relative group rounded-lg overflow-hidden aspect-square" style="border: 1px solid #e3e3e3;"
+                        <!-- Existing media grid (sortable) -->
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-3" x-ref="mediaList">
+                            @foreach($allMedia as $image)
+                            <div class="relative group rounded-lg overflow-hidden aspect-square media-tile"
+                                 style="border: 1px solid #e3e3e3; cursor: grab;"
+                                 draggable="true" data-id="{{ $image->id }}"
+                                 @dragstart="onDragStart($event)" @dragover.prevent="onDragOver($event)"
+                                 @drop.prevent="onDrop($event)" @dragend="onDragEnd()"
                                  x-show="!deletedIds.includes({{ $image->id }})">
-                                <img src="{{ $image->url }}" alt="{{ $image->alt_text }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                @if($image->is_video)
+                                    <video src="{{ $image->display_url }}" muted playsinline preload="metadata" style="width: 100%; height: 100%; object-fit: cover; background:#000;"></video>
+                                    <span class="absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[10px] font-semibold rounded text-white" style="background: rgba(0,0,0,0.7);">&#9654; Video</span>
+                                @else
+                                    <img src="{{ $image->display_url }}" alt="{{ $image->alt_text }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                    @if($image->is_primary)
+                                        <span class="absolute bottom-0 left-0 right-0 px-2 py-1 text-[10px] font-semibold text-center text-white" style="background: rgba(0,91,211,0.85);">Main</span>
+                                    @endif
+                                @endif
                                 <button type="button" @click="markForDelete({{ $image->id }})"
                                         class="absolute top-1.5 right-1.5 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
                                     <svg style="width: 0.875rem; height: 0.875rem; color: #d72c0d;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -96,13 +82,22 @@
                             </div>
                             @endforeach
 
-                            <!-- New gallery previews -->
-                            <template x-for="(preview, index) in galleryPreviews" :key="index">
+                            <!-- New image previews -->
+                            <template x-for="(preview, index) in galleryPreviews" :key="'img'+index">
                                 <div class="relative group rounded-lg overflow-hidden aspect-square" style="border: 1px solid #e3e3e3;">
                                     <img :src="preview.url" style="width: 100%; height: 100%; object-fit: cover;">
                                     <span class="absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[10px] font-semibold rounded text-white" style="background: #2a9d3e;">New</span>
-                                    <button type="button" @click="removeGalleryImage(index)"
-                                            class="absolute top-1.5 right-1.5 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button type="button" @click="removeGalleryImage(index)" class="absolute top-1.5 right-1.5 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm">
+                                        <svg style="width: 0.875rem; height: 0.875rem; color: #d72c0d;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    </button>
+                                </div>
+                            </template>
+                            <!-- New video previews -->
+                            <template x-for="(preview, index) in videoPreviews" :key="'vid'+index">
+                                <div class="relative group rounded-lg overflow-hidden aspect-square" style="border: 1px solid #e3e3e3;">
+                                    <video :src="preview.url" muted playsinline style="width: 100%; height: 100%; object-fit: cover; background:#000;"></video>
+                                    <span class="absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[10px] font-semibold rounded text-white" style="background: #2a9d3e;">New &#9654;</span>
+                                    <button type="button" @click="removeVideo(index)" class="absolute top-1.5 right-1.5 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm">
                                         <svg style="width: 0.875rem; height: 0.875rem; color: #d72c0d;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                     </button>
                                 </div>
@@ -114,32 +109,27 @@
                             <input type="hidden" name="delete_images[]" :value="id">
                         </template>
 
-                        <!-- Upload zone -->
-                        <div class="flex gap-3">
-                            <div class="flex-1 border border-dashed rounded-lg p-3 text-center cursor-pointer hover:border-neutral-400 transition-colors"
-                                 style="border-color: #b5b5b5;"
-                                 @click="$refs.mainFileInput.click()"
-                                 @dragover.prevent="mainDragOver = true" @dragleave.prevent="mainDragOver = false"
-                                 @drop.prevent="mainDragOver = false; handleMainImage($event.dataTransfer.files[0])"
-                                 :style="mainDragOver ? 'border-color: #005bd3; background: #f0f6ff;' : ''">
-                                <input type="file" name="main_image" accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-                                       x-ref="mainFileInput" style="display: none;" @change="handleMainImage($event.target.files[0])">
-                                <p class="text-xs font-medium" style="color: #005bd3;">Replace main image</p>
+                        <!-- Upload zones -->
+                        <div class="flex flex-wrap gap-3">
+                            <div class="flex-1 min-w-[45%] border border-dashed rounded-lg p-3 text-center cursor-pointer hover:border-neutral-400 transition-colors" style="border-color: #b5b5b5;"
+                                 @click="$refs.mainFileInput.click()">
+                                <input type="file" name="main_image" accept="image/jpeg,image/jpg,image/png,image/webp,image/gif" x-ref="mainFileInput" style="display: none;" @change="handleMainImage($event.target.files[0])">
+                                <p class="text-xs font-medium" style="color: #005bd3;" x-text="mainImageChanged ? 'Main image ready ✓' : 'Set / replace main image'">Set / replace main image</p>
                             </div>
-                            <div class="flex-1 border border-dashed rounded-lg p-3 text-center cursor-pointer hover:border-neutral-400 transition-colors"
-                                 style="border-color: #b5b5b5;"
-                                 @click="$refs.galleryInput.click()"
-                                 @dragover.prevent="galleryDragOver = true" @dragleave.prevent="galleryDragOver = false"
-                                 @drop.prevent="galleryDragOver = false; handleGalleryFiles($event.dataTransfer.files)"
-                                 :style="galleryDragOver ? 'border-color: #005bd3; background: #f0f6ff;' : ''">
-                                <input type="file" name="images[]" multiple accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-                                       x-ref="galleryInput" style="display: none;" @change="handleGalleryFiles($event.target.files)">
-                                <p class="text-xs font-medium" style="color: #005bd3;">Add gallery images</p>
+                            <div class="flex-1 min-w-[45%] border border-dashed rounded-lg p-3 text-center cursor-pointer hover:border-neutral-400 transition-colors" style="border-color: #b5b5b5;"
+                                 @click="$refs.galleryInput.click()">
+                                <input type="file" name="images[]" multiple accept="image/jpeg,image/jpg,image/png,image/webp,image/gif" x-ref="galleryInput" style="display: none;" @change="handleGalleryFiles($event.target.files)">
+                                <p class="text-xs font-medium" style="color: #005bd3;">Add images</p>
+                            </div>
+                            <div class="flex-1 min-w-[45%] border border-dashed rounded-lg p-3 text-center cursor-pointer hover:border-neutral-400 transition-colors" style="border-color: #b5b5b5;"
+                                 @click="$refs.videoInput.click()">
+                                <input type="file" name="videos[]" multiple accept="video/mp4,video/webm,video/quicktime" x-ref="videoInput" style="display: none;" @change="handleVideoFiles($event.target.files)">
+                                <p class="text-xs font-medium" style="color: #005bd3;">Add videos <span style="color:#999;">(MP4/WEBM/MOV, max 50MB)</span></p>
                             </div>
                         </div>
                         @error('main_image') <p class="form-error mt-2">{{ $message }}</p> @enderror
-                        @error('images') <p class="form-error mt-2">{{ $message }}</p> @enderror
                         @error('images.*') <p class="form-error mt-2">{{ $message }}</p> @enderror
+                        @error('videos.*') <p class="form-error mt-2">{{ $message }}</p> @enderror
                     </div>
 
                     <!-- Pricing -->
@@ -356,27 +346,35 @@
                     </div>
                     @endif
 
-                    <!-- Feature Highlights (Task 12) -->
+                    <!-- Feature Highlights ("Why You'll Love It") -->
                     <div class="card p-5">
-                        <h2 class="text-[13px] font-semibold mb-1" style="color: #303030;">Feature Highlights</h2>
-                        <p class="text-xs mb-4" style="color: #616161;">Amazon/Flipkart-style image + description blocks shown on the product page (up to 4). Leave a slot empty to skip it.</p>
+                        <h2 class="text-[13px] font-semibold mb-1" style="color: #303030;">Feature Highlights <span style="color:#999;font-weight:400;">("Why You'll Love It")</span></h2>
+                        <p class="text-xs mb-4" style="color: #616161;">Up to 4 sections. Each can have <strong>multiple images</strong>, a heading, and <strong>multiple paragraphs</strong> (separate paragraphs with a blank line). Leave a section empty to skip it.</p>
                         @php $fhRows = array_values($product->feature_highlights ?? []); @endphp
-                        <div class="space-y-3">
-                            @for($i = 0; $i < 4; $i++)
-                                @php $row = $fhRows[$i] ?? []; @endphp
-                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start border rounded-lg p-3" style="border-color:#e5e5e5;">
-                                    <div>
-                                        @if(!empty($row['image']))
-                                            @php $prev = $row['image']; if(!str_starts_with($prev,'http') && !str_starts_with($prev,'/')) $prev = asset('storage/'.$prev); @endphp
-                                            <img src="{{ $prev }}" alt="" class="w-full h-20 object-cover rounded mb-2">
-                                            <input type="hidden" name="fh_existing[{{ $i }}]" value="{{ $row['image'] }}">
-                                        @endif
-                                        <input type="file" name="fh_image[{{ $i }}]" accept="image/jpeg,image/png,image/webp" class="form-input w-full text-xs">
+                        <div class="space-y-4">
+                            @for($s = 0; $s < 4; $s++)
+                                @php
+                                    $row = $fhRows[$s] ?? [];
+                                    $norm = \App\Http\Controllers\Admin\ProductController::normaliseHighlight($row);
+                                    $bodyText = old('fh_body.'.$s, implode("\n\n", $norm['paragraphs']));
+                                @endphp
+                                <div class="border rounded-lg p-3" style="border-color:#e5e5e5;">
+                                    <p class="text-[11px] font-semibold mb-2" style="color:#8a8a8a;">Section {{ $s + 1 }}</p>
+                                    @if(!empty($norm['images']))
+                                    <div class="flex flex-wrap gap-2 mb-2">
+                                        @foreach($norm['images'] as $img)
+                                            @php $prev = $img; if(!str_starts_with($prev,'http') && !str_starts_with($prev,'/')) $prev = asset('storage/'.$prev); @endphp
+                                            <div class="relative" x-data="{ kept: true }" x-show="kept">
+                                                <img src="{{ $prev }}" alt="" class="w-16 h-16 object-cover rounded">
+                                                <template x-if="kept"><input type="hidden" name="fh_existing[{{ $s }}][]" value="{{ $img }}"></template>
+                                                <button type="button" @click="kept=false" title="Remove image" class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white rounded-full shadow flex items-center justify-center" style="color:#d72c0d;font-size:12px;line-height:1;">&times;</button>
+                                            </div>
+                                        @endforeach
                                     </div>
-                                    <div class="sm:col-span-2 space-y-2">
-                                        <input type="text" name="fh_heading[{{ $i }}]" value="{{ old('fh_heading.'.$i, $row['heading'] ?? '') }}" maxlength="120" class="form-input w-full text-sm" placeholder="Highlight heading (e.g. Premium Cotton Fabric)">
-                                        <textarea name="fh_caption[{{ $i }}]" rows="2" maxlength="600" class="form-input w-full text-sm" placeholder="Short description for this highlight">{{ old('fh_caption.'.$i, $row['caption'] ?? '') }}</textarea>
-                                    </div>
+                                    @endif
+                                    <input type="file" name="fh_images[{{ $s }}][]" multiple accept="image/jpeg,image/png,image/webp" class="form-input w-full text-xs mb-2">
+                                    <input type="text" name="fh_heading[{{ $s }}]" value="{{ old('fh_heading.'.$s, $norm['heading'] ?? '') }}" maxlength="120" class="form-input w-full text-sm mb-2" placeholder="Heading (e.g. Premium Cotton Fabric)">
+                                    <textarea name="fh_body[{{ $s }}]" rows="4" maxlength="2000" class="form-input w-full text-sm" placeholder="Description. Separate paragraphs with a blank line to create multiple content blocks.">{{ $bodyText }}</textarea>
                                 </div>
                             @endfor
                         </div>
@@ -501,16 +499,17 @@
             };
         }
 
-        function imageManager() {
+        function imageManager(reorderUrl = '') {
             return {
+                reorderUrl,
                 deletedIds: [],
                 mainPreview: null,
                 mainImageChanged: false,
-                mainImageDeleted: false,
-                mainDragOver: false,
                 galleryPreviews: [],
-                galleryDragOver: false,
                 galleryFileList: new DataTransfer(),
+                videoPreviews: [],
+                videoFileList: new DataTransfer(),
+                dragEl: null,
                 handleMainImage(file) {
                     if (!file || !file.type.startsWith('image/')) return;
                     if (file.size > 2 * 1024 * 1024) { toastr.error(file.name + ' exceeds 2MB limit.'); return; }
@@ -522,13 +521,12 @@
                     reader.onload = (e) => { this.mainPreview = e.target.result; };
                     reader.readAsDataURL(file);
                 },
-                removeNewMainImage() { this.mainPreview = null; this.mainImageChanged = false; this.$refs.mainFileInput.value = ''; },
-                markForDelete(id) { if (!confirm('Remove this image?')) return; this.deletedIds.push(id); },
+                markForDelete(id) { if (!confirm('Remove this media item?')) return; this.deletedIds.push(id); },
                 handleGalleryFiles(files) {
                     for (const file of files) {
                         if (!file.type.startsWith('image/')) continue;
                         if (file.size > 2 * 1024 * 1024) { toastr.error(file.name + ' exceeds 2MB.'); continue; }
-                        if (this.galleryPreviews.length >= 10) { toastr.error('Max 10 gallery images.'); break; }
+                        if (this.galleryPreviews.length >= 10) { toastr.error('Max 10 images.'); break; }
                         this.galleryFileList.items.add(file);
                         const reader = new FileReader();
                         reader.onload = (e) => { this.galleryPreviews.push({ url: e.target.result, name: file.name }); };
@@ -536,7 +534,39 @@
                     }
                     this.$refs.galleryInput.files = this.galleryFileList.files;
                 },
-                removeGalleryImage(index) { this.galleryPreviews.splice(index, 1); this.galleryFileList.items.remove(index); this.$refs.galleryInput.files = this.galleryFileList.files; }
+                removeGalleryImage(index) { this.galleryPreviews.splice(index, 1); this.galleryFileList.items.remove(index); this.$refs.galleryInput.files = this.galleryFileList.files; },
+                handleVideoFiles(files) {
+                    for (const file of files) {
+                        if (!file.type.startsWith('video/')) continue;
+                        if (file.size > 50 * 1024 * 1024) { toastr.error(file.name + ' exceeds 50MB.'); continue; }
+                        if (this.videoPreviews.length >= 5) { toastr.error('Max 5 videos.'); break; }
+                        this.videoFileList.items.add(file);
+                        this.videoPreviews.push({ url: URL.createObjectURL(file), name: file.name });
+                    }
+                    this.$refs.videoInput.files = this.videoFileList.files;
+                },
+                removeVideo(index) { this.videoPreviews.splice(index, 1); this.videoFileList.items.remove(index); this.$refs.videoInput.files = this.videoFileList.files; },
+                // ---- Drag reorder (saves instantly) ----
+                onDragStart(e) { this.dragEl = e.currentTarget; e.dataTransfer.effectAllowed = 'move'; },
+                onDragOver(e) {
+                    const target = e.currentTarget;
+                    if (!this.dragEl || target === this.dragEl) return;
+                    const list = this.$refs.mediaList;
+                    const items = [...list.querySelectorAll('.media-tile')];
+                    if (items.indexOf(target) < items.indexOf(this.dragEl)) list.insertBefore(this.dragEl, target);
+                    else list.insertBefore(this.dragEl, target.nextSibling);
+                },
+                onDrop(e) { e.preventDefault(); },
+                onDragEnd() { this.dragEl = null; this.saveOrder(); },
+                saveOrder() {
+                    const ids = [...this.$refs.mediaList.querySelectorAll('.media-tile')].map(el => el.dataset.id);
+                    if (!this.reorderUrl || !ids.length) return;
+                    fetch(this.reorderUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || '', 'Accept': 'application/json' },
+                        body: JSON.stringify({ order: ids }),
+                    }).then(r => { if (r.ok && window.toastr) toastr.success('Order saved'); });
+                },
             };
         }
 
