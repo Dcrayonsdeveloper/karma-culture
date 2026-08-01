@@ -23,6 +23,18 @@ class LoginController extends Controller
         ]);
 
         if (Auth::guard('admin')->attempt($credentials, $request->boolean('remember'))) {
+            $user = Auth::guard('admin')->user();
+
+            // Only admin/staff accounts may use the admin panel — reject others
+            // instead of creating a session that hits a 403 on every page.
+            if (! $user->isAdmin() && ! $user->isStaff()) {
+                Auth::guard('admin')->logout();
+
+                return back()->withErrors([
+                    'email' => 'This account does not have admin access.',
+                ])->onlyInput('email');
+            }
+
             $request->session()->regenerate();
 
             return redirect()->intended(route('admin.dashboard'));
