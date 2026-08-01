@@ -147,6 +147,11 @@ class Product extends Model
         return $this->hasMany(ProductVariant::class);
     }
 
+    public function aplusImages(): HasMany
+    {
+        return $this->hasMany(ProductAplusImage::class)->orderBy('sort_order');
+    }
+
     public function attributeValues(): HasMany
     {
         return $this->hasMany(ProductAttributeValue::class);

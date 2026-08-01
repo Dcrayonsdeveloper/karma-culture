@@ -346,39 +346,8 @@
                     </div>
                     @endif
 
-                    <!-- Feature Highlights ("Why You'll Love It") -->
-                    <div class="card p-5">
-                        <h2 class="text-[13px] font-semibold mb-1" style="color: #303030;">Feature Highlights <span style="color:#999;font-weight:400;">("Why You'll Love It")</span></h2>
-                        <p class="text-xs mb-4" style="color: #616161;">Up to 4 sections. Each can have <strong>multiple images</strong>, a heading, and <strong>multiple paragraphs</strong> (separate paragraphs with a blank line). Leave a section empty to skip it.</p>
-                        @php $fhRows = array_values($product->feature_highlights ?? []); $fhSlots = max(4, count($fhRows)); @endphp
-                        <div class="space-y-4">
-                            @for($s = 0; $s < $fhSlots; $s++)
-                                @php
-                                    $row = $fhRows[$s] ?? [];
-                                    $norm = \App\Http\Controllers\Admin\ProductController::normaliseHighlight($row);
-                                    $bodyText = old('fh_body.'.$s, implode("\n\n", $norm['paragraphs']));
-                                @endphp
-                                <div class="border rounded-lg p-3" style="border-color:#e5e5e5;">
-                                    <p class="text-[11px] font-semibold mb-2" style="color:#8a8a8a;">Section {{ $s + 1 }}</p>
-                                    @if(!empty($norm['images']))
-                                    <div class="flex flex-wrap gap-2 mb-2">
-                                        @foreach($norm['images'] as $img)
-                                            @php $prev = $img; if(!str_starts_with($prev,'http') && !str_starts_with($prev,'/')) $prev = asset('storage/'.$prev); @endphp
-                                            <div class="relative" x-data="{ kept: true }" x-show="kept">
-                                                <img src="{{ $prev }}" alt="" class="w-16 h-16 object-cover rounded">
-                                                <template x-if="kept"><input type="hidden" name="fh_existing[{{ $s }}][]" value="{{ $img }}"></template>
-                                                <button type="button" @click="kept=false" title="Remove image" class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white rounded-full shadow flex items-center justify-center" style="color:#d72c0d;font-size:12px;line-height:1;">&times;</button>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                    @endif
-                                    <input type="file" name="fh_images[{{ $s }}][]" multiple accept="image/jpeg,image/png,image/webp" class="form-input w-full text-xs mb-2">
-                                    <input type="text" name="fh_heading[{{ $s }}]" value="{{ old('fh_heading.'.$s, $norm['heading'] ?? '') }}" maxlength="120" class="form-input w-full text-sm mb-2" placeholder="Heading (e.g. Premium Cotton Fabric)">
-                                    <textarea name="fh_body[{{ $s }}]" rows="4" maxlength="2000" class="form-input w-full text-sm" placeholder="Description. Separate paragraphs with a blank line to create multiple content blocks.">{{ $bodyText }}</textarea>
-                                </div>
-                            @endfor
-                        </div>
-                    </div>
+                    {{-- A+ Content (Amazon-style banner images) — replaces the old Feature Highlights --}}
+                    @include('admin.products.partials.aplus-content')
                 </div>
 
                 <!-- RIGHT COLUMN (1/3) - Sidebar -->

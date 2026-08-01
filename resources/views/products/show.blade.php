@@ -763,54 +763,20 @@
 
 
 
-        {{-- ===== FEATURE HIGHLIGHTS ("Why You'll Love It") — multiple images + paragraphs ===== --}}
-        @php
-            $featureHighlights = collect($product->feature_highlights ?? [])
-                ->map(fn ($f) => \App\Http\Controllers\Admin\ProductController::normaliseHighlight((array) $f))
-                ->filter(fn ($f) => !empty($f['images']) || !empty($f['heading']) || !empty($f['paragraphs']))
-                ->values();
-        @endphp
-        @if($featureHighlights->isNotEmpty())
+        {{-- ===== A+ CONTENT (Amazon-style banner images, admin-managed, stacked in saved order) ===== --}}
+        @if($product->aplusImages->isNotEmpty())
         <style>
-            .kk-fh { max-width: 1120px; margin: 56px auto 0; padding: 0 16px; }
-            .kk-fh__title { text-align: center; font-family: 'Playfair Display', Georgia, serif; font-size: 30px; font-weight: 700; color: #2d1810; margin: 0 0 8px; }
-            .kk-fh__sub { text-align: center; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: #9b8a72; margin: 0 0 40px; }
-            .kk-fh__row { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; margin-bottom: 56px; }
-            .kk-fh__row:nth-child(even) .kk-fh__media { order: 2; }
-            /* Media = one image, or a swipeable strip for multiple images */
-            .kk-fh__media { border-radius: 16px; overflow: hidden; background: #f3e9d4; aspect-ratio: 3 / 2; box-shadow: 0 20px 50px rgba(45,24,16,0.10);
-                display: flex; scroll-snap-type: x mandatory; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-            .kk-fh__media::-webkit-scrollbar { display: none; }
-            .kk-fh__media img { flex: 0 0 100%; width: 100%; height: 100%; object-fit: cover; display: block; scroll-snap-align: start; }
-            .kk-fh__eyebrow { font-size: 11px; letter-spacing: .28em; text-transform: uppercase; color: #8c5c34; font-weight: 700; display: block; margin-bottom: 12px; }
-            .kk-fh__heading { font-family: 'Playfair Display', Georgia, serif; font-size: 28px; line-height: 1.2; color: #2d1810; margin: 0 0 14px; }
-            .kk-fh__caption { font-size: 15.5px; line-height: 1.8; color: #5b4636; margin: 0 0 14px; }
-            .kk-fh__caption:last-child { margin-bottom: 0; }
-            @media (max-width: 768px) {
-                .kk-fh__row { grid-template-columns: 1fr; gap: 18px; margin-bottom: 44px; }
-                .kk-fh__row:nth-child(even) .kk-fh__media { order: 0; }
-                .kk-fh__heading { font-size: 23px; }
-            }
+            .kk-aplus { max-width: 1120px; margin: 48px auto 0; padding: 0; }
+            /* Banners stack edge-to-edge with no spacing between them; natural aspect ratio keeps original quality */
+            .kk-aplus__img { display: block; width: 100%; height: auto; margin: 0; border: 0; }
+            @media (max-width: 640px) { .kk-aplus { margin-top: 32px; } }
         </style>
-        <section class="kk-fh" aria-label="Product highlights">
-            <h2 class="kk-fh__title">Why You'll Love It</h2>
-            <p class="kk-fh__sub">Crafted with intention</p>
-            @foreach($featureHighlights as $idx => $fh)
-                <div class="kk-fh__row">
-                    @if(!empty($fh['images']))
-                        <div class="kk-fh__media">
-                            @foreach($fh['images'] as $img)
-                                @php $u = $img; if ($u && !str_starts_with($u, 'http') && !str_starts_with($u, '/')) $u = asset('storage/' . $u); @endphp
-                                <img src="{{ $u }}" alt="{{ $fh['heading'] ?? $product->name }}" loading="lazy" decoding="async">
-                            @endforeach
-                        </div>
-                    @endif
-                    <div class="kk-fh__text">
-                        <span class="kk-fh__eyebrow">0{{ $idx + 1 }} — Karmaa Kulture</span>
-                        @if(!empty($fh['heading']))<h3 class="kk-fh__heading">{{ $fh['heading'] }}</h3>@endif
-                        @foreach($fh['paragraphs'] as $para)<p class="kk-fh__caption">{{ $para }}</p>@endforeach
-                    </div>
-                </div>
+        <section class="kk-aplus" aria-label="Product information">
+            @foreach($product->aplusImages as $aplus)
+                <img class="kk-aplus__img"
+                     src="{{ $aplus->image_url }}"
+                     alt="{{ $aplus->alt_text ?: $product->name }}"
+                     loading="lazy" decoding="async">
             @endforeach
         </section>
         @endif

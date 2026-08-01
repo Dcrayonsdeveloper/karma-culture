@@ -91,6 +91,7 @@ class ProductController extends Controller
             'brand',
             'seller',
             'images',
+            'aplusImages',
             'variants',
             'reviews' => fn ($q) => $q->where('is_approved', true)->latest()->take(10),
             'reviews.user',
