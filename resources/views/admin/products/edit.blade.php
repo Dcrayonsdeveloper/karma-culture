@@ -350,9 +350,9 @@
                     <div class="card p-5">
                         <h2 class="text-[13px] font-semibold mb-1" style="color: #303030;">Feature Highlights <span style="color:#999;font-weight:400;">("Why You'll Love It")</span></h2>
                         <p class="text-xs mb-4" style="color: #616161;">Up to 4 sections. Each can have <strong>multiple images</strong>, a heading, and <strong>multiple paragraphs</strong> (separate paragraphs with a blank line). Leave a section empty to skip it.</p>
-                        @php $fhRows = array_values($product->feature_highlights ?? []); @endphp
+                        @php $fhRows = array_values($product->feature_highlights ?? []); $fhSlots = max(4, count($fhRows)); @endphp
                         <div class="space-y-4">
-                            @for($s = 0; $s < 4; $s++)
+                            @for($s = 0; $s < $fhSlots; $s++)
                                 @php
                                     $row = $fhRows[$s] ?? [];
                                     $norm = \App\Http\Controllers\Admin\ProductController::normaliseHighlight($row);
@@ -559,7 +559,10 @@
                 onDrop(e) { e.preventDefault(); },
                 onDragEnd() { this.dragEl = null; this.saveOrder(); },
                 saveOrder() {
-                    const ids = [...this.$refs.mediaList.querySelectorAll('.media-tile')].map(el => el.dataset.id);
+                    const deleted = this.deletedIds.map(String);
+                    const ids = [...this.$refs.mediaList.querySelectorAll('.media-tile')]
+                        .map(el => el.dataset.id)
+                        .filter(id => !deleted.includes(id));
                     if (!this.reorderUrl || !ids.length) return;
                     fetch(this.reorderUrl, {
                         method: 'POST',

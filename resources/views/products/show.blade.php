@@ -1413,6 +1413,14 @@
             init() {
                 this.$el.addEventListener('mobile-add-to-cart', () => this.addToCart());
                 this.$el.addEventListener('mobile-buy-now', () => this.buyNow());
+                // Pause any playing gallery/zoom video when the active item or zoom changes,
+                // so audio never keeps playing after the user navigates away.
+                this.$watch('currentImage', () => this.pauseVideos());
+                this.$watch('showZoom', () => this.pauseVideos());
+            },
+
+            pauseVideos() {
+                this.$el.querySelectorAll('video').forEach((v) => { try { v.pause(); } catch (e) {} });
             },
 
             // Mobile swipe on the main gallery image

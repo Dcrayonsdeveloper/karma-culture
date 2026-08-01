@@ -231,8 +231,13 @@ class Product extends Model
 
     public function getPrimaryImageUrlAttribute(): string
     {
-        $url = $this->images->firstWhere('is_primary', true)?->url
-            ?? $this->images->first()?->url;
+        // Never use a video as the thumbnail — pick the primary image, else the
+        // first non-video media, else any first media.
+        $notVideo = fn ($i) => ($i->media_type ?? 'image') !== 'video';
+        $primary = $this->images->firstWhere('is_primary', true);
+        $img = ($primary && $notVideo($primary)) ? $primary
+            : ($this->images->first($notVideo) ?? $this->images->first());
+        $url = $img?->url;
 
         if ($url) {
             // If it's a relative path (stored in storage), prefix with /storage/
