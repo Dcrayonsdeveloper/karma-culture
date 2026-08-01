@@ -547,7 +547,7 @@
                 },
                 removeVideo(index) { this.videoPreviews.splice(index, 1); this.videoFileList.items.remove(index); this.$refs.videoInput.files = this.videoFileList.files; },
                 // ---- Drag reorder (saves instantly) ----
-                onDragStart(e) { this.dragEl = e.currentTarget; e.dataTransfer.effectAllowed = 'move'; },
+                onDragStart(e) { this.dragEl = e.currentTarget; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', e.currentTarget.dataset.id || ''); },
                 onDragOver(e) {
                     const target = e.currentTarget;
                     if (!this.dragEl || target === this.dragEl) return;

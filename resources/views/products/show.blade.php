@@ -1424,8 +1424,13 @@
             },
 
             // Mobile swipe on the main gallery image
-            onTouchStart(e) { this.touchStartX = e.changedTouches[0].screenX; },
+            onTouchStart(e) {
+                // Don't treat native video-control (seek bar) touches as gallery swipes.
+                if (e.target?.closest?.('video')) { this.touchStartX = null; return; }
+                this.touchStartX = e.changedTouches[0].screenX;
+            },
             onTouchEnd(e) {
+                if (this.touchStartX === null || e.target?.closest?.('video')) return;
                 if (this.imageCount < 2) return;
                 const dx = e.changedTouches[0].screenX - this.touchStartX;
                 if (Math.abs(dx) < 40) return;
