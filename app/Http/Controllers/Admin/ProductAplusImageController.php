@@ -16,7 +16,7 @@ class ProductAplusImageController extends Controller
     {
         $request->validate([
             'images' => 'required|array|max:20',
-            'images.*' => 'image|mimes:jpeg,jpg,png,webp|max:8192', // 8 MB each
+            'images.*' => 'image|mimes:jpeg,jpg,png,webp,gif|max:5120', // 5 MB each
         ]);
 
         $position = (int) ($product->aplusImages()->max('sort_order') ?? -1);
