@@ -23,9 +23,13 @@ class ProductAplusImageController extends Controller
         $created = [];
 
         foreach ($request->file('images') as $file) {
+            // Capture intrinsic dimensions so the storefront can reserve layout space (no CLS).
+            $dimensions = @getimagesize($file->getPathname());
             $path = $file->store('products/aplus', 'public');
             $image = $product->aplusImages()->create([
                 'image_path' => $path,
+                'width' => $dimensions[0] ?? null,
+                'height' => $dimensions[1] ?? null,
                 'sort_order' => ++$position,
             ]);
             $created[] = $this->transform($image);

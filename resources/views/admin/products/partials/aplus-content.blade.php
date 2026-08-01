@@ -115,8 +115,9 @@
                 if (!confirm('Delete this A+ image?')) return;
                 try {
                     const res = await fetch(this.itemBase + '/' + img.id, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': this.csrf(), 'Accept': 'application/json' } });
-                    if (res.ok) this.images.splice(index, 1);
-                } catch (e) {}
+                    if (res.ok) { this.images.splice(index, 1); }
+                    else if (window.toastr) { toastr.error('Delete failed'); }
+                } catch (e) { if (window.toastr) toastr.error('Delete failed'); }
             },
             move(index, dir) {
                 const ni = index + dir;
@@ -136,9 +137,9 @@
             onDragEnd() { this.dragIndex = null; },
             async saveOrder() {
                 try {
-                    await fetch(this.reorderUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrf(), 'Accept': 'application/json' }, body: JSON.stringify({ order: this.images.map(i => i.id) }) });
-                    if (window.toastr) toastr.success('Order saved');
-                } catch (e) {}
+                    const res = await fetch(this.reorderUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrf(), 'Accept': 'application/json' }, body: JSON.stringify({ order: this.images.map(i => i.id) }) });
+                    if (window.toastr) { res.ok ? toastr.success('Order saved') : toastr.error('Could not save order'); }
+                } catch (e) { if (window.toastr) toastr.error('Could not save order'); }
             },
         };
     }

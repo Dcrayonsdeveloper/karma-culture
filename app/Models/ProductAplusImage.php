@@ -11,6 +11,8 @@ class ProductAplusImage extends Model
         'product_id',
         'image_path',
         'alt_text',
+        'width',
+        'height',
         'sort_order',
     ];
 

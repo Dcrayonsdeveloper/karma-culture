@@ -149,7 +149,7 @@ class Product extends Model
 
     public function aplusImages(): HasMany
     {
-        return $this->hasMany(ProductAplusImage::class)->orderBy('sort_order');
+        return $this->hasMany(ProductAplusImage::class)->orderBy('sort_order')->orderBy('id');
     }
 
     public function attributeValues(): HasMany

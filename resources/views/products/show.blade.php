@@ -776,6 +776,7 @@
                 <img class="kk-aplus__img"
                      src="{{ $aplus->image_url }}"
                      alt="{{ $aplus->alt_text ?: $product->name }}"
+                     @if($aplus->width && $aplus->height) width="{{ $aplus->width }}" height="{{ $aplus->height }}" @endif
                      loading="lazy" decoding="async">
             @endforeach
         </section>
