@@ -25,6 +25,7 @@ use App\Http\Controllers\Admin\NewsletterController;
 use App\Http\Controllers\Admin\NotificationController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PageController;
+use App\Http\Controllers\Admin\ProductAplusImageController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\ReportController;
@@ -115,6 +116,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('/products/{product}/toggle-featured', [ProductController::class, 'toggleFeatured'])->name('products.toggle-featured');
             Route::post('/products/{product}/duplicate', [ProductController::class, 'duplicate'])->name('products.duplicate');
             Route::post('/products/{product}/images/reorder', [ProductController::class, 'reorderImages'])->name('products.images.reorder');
+            // A+ Content (Amazon-style banner images)
+            Route::post('/products/{product}/aplus', [ProductAplusImageController::class, 'store'])->name('products.aplus.store');
+            Route::post('/products/{product}/aplus/reorder', [ProductAplusImageController::class, 'reorder'])->name('products.aplus.reorder');
+            Route::patch('/products/aplus/{aplusImage}', [ProductAplusImageController::class, 'update'])->name('products.aplus.update');
+            Route::delete('/products/aplus/{aplusImage}', [ProductAplusImageController::class, 'destroy'])->name('products.aplus.destroy');
             Route::post('/products/bulk-action', [ProductController::class, 'bulkAction'])->name('products.bulk-action');
 
             // Categories

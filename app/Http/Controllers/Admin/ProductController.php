@@ -271,15 +271,6 @@ class ProductController extends Controller
             'model_usdz' => 'nullable|file|max:10240',
             'delete_model_glb' => 'nullable|boolean',
             'delete_model_usdz' => 'nullable|boolean',
-            // Feature highlights ("Why You'll Love It") — sections with multiple images + multi-paragraph body
-            'fh_heading' => 'nullable|array',
-            'fh_heading.*' => 'nullable|string|max:120',
-            'fh_body' => 'nullable|array',
-            'fh_body.*' => 'nullable|string|max:2000',
-            'fh_existing' => 'nullable|array',        // [section => [kept image paths]]
-            'fh_images' => 'nullable|array',           // [section => [uploaded files]]
-            'fh_images.*' => 'nullable|array',
-            'fh_images.*.*' => 'image|mimes:jpeg,jpg,png,webp|max:2048',
         ]);
 
         $validated['slug'] = $validated['slug'] ?? Str::slug($validated['name']);
@@ -294,10 +285,6 @@ class ProductController extends Controller
             ->filter(fn ($value) => $value !== null && $value !== '')
             ->toArray();
         $validated['attributes'] = ! empty($productAttributes) ? $productAttributes : null;
-
-        // Save feature highlights as JSON (image + heading + caption rows)
-        $validated['feature_highlights'] = $this->buildFeatureHighlights($request);
-        unset($validated['fh_heading'], $validated['fh_caption'], $validated['fh_existing'], $validated['fh_image']);
 
         // Extract variants data before unsetting
         $variantsData = $validated['variants'] ?? null;
@@ -437,56 +424,6 @@ class ProductController extends Controller
         }
 
         return response()->json(['success' => true]);
-    }
-
-    /**
-     * Build the feature_highlights JSON from the section form inputs.
-     * New shape: [{ images: [paths], heading, body }]. Returns null when empty.
-     * (Backward compatible: old {image, caption} rows are read by the renderer.)
-     */
-    private function buildFeatureHighlights(Request $request): ?array
-    {
-        $headings = $request->input('fh_heading', []);
-        $bodies = $request->input('fh_body', []);
-        $existing = $request->input('fh_existing', []); // [section => [kept paths]]
-        $sections = [];
-        $slots = max(count($headings), count($bodies), count($existing), 4);
-
-        for ($s = 0; $s < $slots; $s++) {
-            $heading = $headings[$s] ?? null;
-            $body = $bodies[$s] ?? null;
-            $images = array_values(array_filter((array) ($existing[$s] ?? [])));
-
-            if ($request->hasFile("fh_images.$s")) {
-                foreach ($request->file("fh_images.$s") as $file) {
-                    $images[] = $file->store('products/highlights', 'public');
-                }
-            }
-
-            if (! empty($images) || trim((string) $heading) !== '' || trim((string) $body) !== '') {
-                $sections[] = array_filter([
-                    'images' => $images ?: null,
-                    'heading' => $heading ?: null,
-                    'body' => $body ?: null,
-                ]);
-            }
-        }
-
-        return $sections ? array_values($sections) : null;
-    }
-
-    /** Normalise a stored feature_highlights section (old or new shape) to { images:[], heading, paragraphs:[] }. */
-    public static function normaliseHighlight(array $section): array
-    {
-        $images = $section['images'] ?? (isset($section['image']) && $section['image'] ? [$section['image']] : []);
-        $body = $section['body'] ?? ($section['caption'] ?? '');
-        $paragraphs = array_values(array_filter(array_map('trim', preg_split('/\n\s*\n/', (string) $body))));
-
-        return [
-            'images' => array_values(array_filter((array) $images)),
-            'heading' => $section['heading'] ?? null,
-            'paragraphs' => $paragraphs,
-        ];
     }
 
     public function destroy(Product $product): RedirectResponse
