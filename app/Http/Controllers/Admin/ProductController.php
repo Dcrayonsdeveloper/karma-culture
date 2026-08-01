@@ -143,6 +143,8 @@ class ProductController extends Controller
             'videos.*' => 'mimetypes:video/mp4,video/webm,video/quicktime|max:51200',
             'product_attributes' => 'nullable|array',
             'product_attributes.*' => 'nullable|string|max:255',
+            'aplus_banner_size' => 'nullable|in:fit,full,custom',
+            'aplus_banner_max_height' => 'nullable|integer|min:100|max:6000|required_if:aplus_banner_size,custom',
         ]);
 
         $validated['slug'] = $validated['slug'] ?? Str::slug($validated['name']);
@@ -150,6 +152,9 @@ class ProductController extends Controller
         $validated['is_featured'] = $request->boolean('is_featured');
         $validated['seller_id'] = $validated['seller_id'] ?: null;
         $validated['brand_id'] = $validated['brand_id'] ?: null;
+        if (($validated['aplus_banner_size'] ?? null) !== 'custom') {
+            $validated['aplus_banner_max_height'] = null;
+        }
         // `mrp` column is NOT NULL — default it to price when the form omits it
         // (admin form currently only shows a single price field).
         $validated['mrp'] = $validated['mrp'] ?? $validated['price'];
@@ -271,6 +276,8 @@ class ProductController extends Controller
             'model_usdz' => 'nullable|file|max:10240',
             'delete_model_glb' => 'nullable|boolean',
             'delete_model_usdz' => 'nullable|boolean',
+            'aplus_banner_size' => 'nullable|in:fit,full,custom',
+            'aplus_banner_max_height' => 'nullable|integer|min:100|max:6000|required_if:aplus_banner_size,custom',
         ]);
 
         $validated['slug'] = $validated['slug'] ?? Str::slug($validated['name']);
@@ -279,6 +286,9 @@ class ProductController extends Controller
         $validated['is_taxable'] = $request->boolean('is_taxable');
         $validated['seller_id'] = $validated['seller_id'] ?: null;
         $validated['brand_id'] = $validated['brand_id'] ?: null;
+        if (($validated['aplus_banner_size'] ?? null) !== 'custom') {
+            $validated['aplus_banner_max_height'] = null;
+        }
 
         // Save attributes as JSON
         $productAttributes = collect($request->input('product_attributes', []))

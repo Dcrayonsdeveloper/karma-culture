@@ -3,6 +3,8 @@
         'id' => $i->id,
         'url' => $i->image_url,
     ])->values();
+    $aplusBannerSize = old('aplus_banner_size', $product->aplus_banner_size ?? 'fit');
+    $aplusMaxHeight = old('aplus_banner_max_height', $product->aplus_banner_max_height);
 @endphp
 
 <!-- A+ Content -->
@@ -12,6 +14,8 @@
         reorderUrl: '{{ route('admin.products.aplus.reorder', $product) }}',
         itemBase: '{{ url('admin/products/aplus') }}',
         images: {{ \Illuminate\Support\Js::from($aplusImages) }},
+        bannerSize: '{{ $aplusBannerSize }}',
+        maxHeight: '{{ $aplusMaxHeight }}',
      })">
 
     {{-- Card header --}}
@@ -28,6 +32,28 @@
         <p class="text-xs mb-4" style="color:#616161; line-height:1.6;">
             Rich banner images shown stacked at the bottom of the product's <span class="font-semibold" style="color:#005bd3;">Description</span> tab (like Amazon A+ content). They display top-to-bottom in the order below. Max 20 images, 5MB each.
         </p>
+
+        {{-- Banner size on the product page (saved when you click "Update product") --}}
+        <div class="rounded-lg border p-3 mb-4" style="border-color:#e3e3e3; background:#fafafa;">
+            <label class="block text-xs font-semibold mb-1" style="color:#303030;">Banner size on product page</label>
+            <div class="flex flex-wrap items-center gap-2">
+                <select name="aplus_banner_size" x-model="bannerSize" class="form-input text-xs" style="max-width:220px;">
+                    <option value="fit">Fit to screen (one banner per screen)</option>
+                    <option value="full">Full width (edge-to-edge)</option>
+                    <option value="custom">Custom max-height…</option>
+                </select>
+                <div class="flex items-center gap-1" x-show="bannerSize === 'custom'" x-cloak>
+                    <input type="number" name="aplus_banner_max_height" x-model="maxHeight" min="100" max="6000" step="10"
+                           class="form-input text-xs" style="width:110px;" placeholder="e.g. 800">
+                    <span class="text-xs" style="color:#616161;">px tall</span>
+                </div>
+            </div>
+            <p class="text-[11px] mt-2" style="color:#8a8a8a;">
+                <span x-show="bannerSize === 'fit'">Each banner is scaled so the whole banner fits within one screen on desktop and mobile.</span>
+                <span x-show="bannerSize === 'full'" x-cloak>Banners span the full content width; a tall banner may extend beyond one screen.</span>
+                <span x-show="bannerSize === 'custom'" x-cloak>Banners are capped to the height you set (and never exceed one screen on mobile).</span>
+            </p>
+        </div>
 
         {{-- Saved banners (drag to reorder, or use the arrows) --}}
         <div class="space-y-2 mb-4" x-ref="list">
@@ -72,6 +98,7 @@
 </div>
 
 <style>
+    [x-cloak] { display: none !important; }
     .aplus-btn { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid #e3e3e3; border-radius:6px; background:#fff; color:#616161; transition:background .12s, color .12s, border-color .12s; }
     .aplus-btn:hover { background:#f6f6f6; color:#303030; }
     .aplus-btn--off { opacity:.4; pointer-events:none; }
@@ -89,6 +116,8 @@
             storeUrl: cfg.storeUrl,
             reorderUrl: cfg.reorderUrl,
             itemBase: cfg.itemBase,
+            bannerSize: cfg.bannerSize || 'fit',
+            maxHeight: cfg.maxHeight || '',
             uploading: false,
             dragOver: false,
             dragIndex: null,

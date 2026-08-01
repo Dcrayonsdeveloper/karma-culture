@@ -55,6 +55,8 @@ class Product extends Model
         'attributes',
         'specifications',
         'feature_highlights',
+        'aplus_banner_size',
+        'aplus_banner_max_height',
         'status',
         'rejection_reason',
         'published_at',

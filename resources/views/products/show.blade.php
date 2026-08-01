@@ -765,11 +765,28 @@
 
         {{-- ===== A+ CONTENT (Amazon-style banner images, admin-managed, stacked in saved order) ===== --}}
         @if($product->aplusImages->isNotEmpty())
+        @php
+            $aplusMode = in_array($product->aplus_banner_size ?? 'fit', ['fit', 'full', 'custom'], true) ? ($product->aplus_banner_size ?? 'fit') : 'fit';
+            $aplusCustomH = (int) ($product->aplus_banner_max_height ?? 0);
+            if ($aplusMode === 'custom' && $aplusCustomH < 100) { $aplusMode = 'fit'; } // guard empty/invalid custom height
+        @endphp
         <style>
             .kk-aplus { max-width: 1120px; margin: 48px auto 0; padding: 0; }
-            /* Banners stack edge-to-edge with no spacing between them; natural aspect ratio keeps original quality */
-            .kk-aplus__img { display: block; width: 100%; height: auto; margin: 0; border: 0; }
+            /* Banners stack with no vertical gap; aspect ratio preserved for original quality */
+            .kk-aplus__img { display: block; margin: 0 auto; border: 0; height: auto; }
             @media (max-width: 640px) { .kk-aplus { margin-top: 32px; } }
+            @if($aplusMode === 'full')
+            /* Full width: edge-to-edge (may be taller than one screen) */
+            .kk-aplus__img { width: 100%; max-width: 100%; }
+            @elseif($aplusMode === 'custom')
+            /* Custom cap: never taller than the admin value; and never past one mobile screen */
+            .kk-aplus__img { width: auto; max-width: 100%; max-height: {{ $aplusCustomH }}px; }
+            @media (max-width: 640px) { .kk-aplus__img { max-height: min({{ $aplusCustomH }}px, calc(100dvh - 64px)); } }
+            @else
+            /* Fit to screen: the whole banner fits within a single desktop/mobile frame */
+            .kk-aplus__img { width: auto; max-width: 100%; max-height: calc(100vh - 96px); }
+            @media (max-width: 640px) { .kk-aplus__img { max-height: calc(100dvh - 64px); } }
+            @endif
         </style>
         <section class="kk-aplus" aria-label="Product information">
             @foreach($product->aplusImages as $aplus)
