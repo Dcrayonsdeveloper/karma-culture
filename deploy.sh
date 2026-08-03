@@ -193,6 +193,21 @@ REMOTE
 
 # --- ship the built assets -------------------------------------------------
 
+echo "==> Uploading media (images, video, favicons) ..."
+# Media is gitignored — large binaries would bloat every clone forever — so it
+# cannot arrive via git pull and must be shipped here. Additive by design: no
+# --delete, so files uploaded through the admin panel are never destroyed.
+tar -czf - -C public \
+    $( [ -d public/images ] && echo images ) \
+    $(cd public 2>/dev/null && ls *.png *.ico *.jpg *.jpeg *.svg *.webp 2>/dev/null) \
+    2>/dev/null | ssh "$SSH_ALIAS" "
+set -eu
+WEBROOT=\"\$(dirname '$APP_DIR')/public_html\"
+[ -f \"\$WEBROOT/index.php\" ] || WEBROOT='$APP_DIR/public'
+cd \"\$WEBROOT\"
+tar -xzf -
+" && echo "    media synced" || echo "    (no media to sync)"
+
 echo "==> Uploading assets ..."
 # Hostinger serves the site from public_html, a real directory beside the app
 # dir whose index.php bootstraps the checkout and calls usePublicPath(): PHP

@@ -27,6 +27,32 @@ Thumbs.db
 /backups
 .claude/settings.local.json
 
+# ===== Media assets =====
+# Images and video are large binaries (public/images alone is ~105 MB, with
+# individual banner videos over 15 MB) and they bloat every clone and fetch
+# permanently, since git keeps all history. They are deployed by deploy.sh,
+# which syncs public/images to the webroot, so they still reach production.
+/public/images/
+/storage/app/public/
+
+# Web icons/favicons in the public root (deploy.sh ships these too).
+# pos-desktop/assets/* is deliberately NOT ignored — those icons are build
+# inputs for the Electron POS app, not web media, and total only ~17 KB.
+/public/*.png
+/public/*.ico
+/public/*.jpg
+/public/*.jpeg
+/public/*.svg
+/public/*.webp
+
+# Video, wherever it lives
+*.mp4
+*.mov
+*.webm
+*.avi
+*.mkv
+*.m4v
+
 # ===== Secrets & credentials =====
 # Env files (any variant — but keep the example)
 .env.*
