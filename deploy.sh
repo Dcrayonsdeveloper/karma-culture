@@ -151,27 +151,27 @@ envval() {
 }
 
 echo "==> Backing up database ..."
-# Credentials go through MYSQL_PWD rather than an option file or -p. This
-# password contains a '#', which an option file would read as a comment
-# (silently blanking it), and -p would expose it in the process list.
-DB_USER="$(envval DB_USERNAME)"
 DB_NAME="$(envval DB_DATABASE)"
-# MySQL treats 'user'@'localhost' (unix socket) and 'user'@'127.0.0.1' (TCP) as
-# separate accounts, so the host from .env must be passed through explicitly —
-# omitting it authenticates as a different, ungranted account.
-DB_HOST="$(envval DB_HOST)"; DB_HOST="${DB_HOST:-127.0.0.1}"
-DB_PORT="$(envval DB_PORT)"; DB_PORT="${DB_PORT:-3306}"
 
-MYSQL_PWD="$(envval DB_PASSWORD)" \
-    mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -e 'SELECT 1;' "$DB_NAME" >/dev/null 2>&1 || {
-    echo "ERROR: cannot connect to database '$DB_NAME' as '$DB_USER'@'$DB_HOST'." >&2
-    echo "       Check DB_* values in .env." >&2
+# Hand-parsing .env for the password proved unreliable — it differs subtly from
+# what the app actually uses, and mysql rejected it while PDO connected fine.
+# Let Laravel's own dotenv supply the values instead, and let PHP write the
+# option file so quoting is exact: values are quoted because this password
+# contains '#', which MySQL's parser would otherwise read as a comment.
+CNF="$(mktemp)"
+trap 'rm -f "$CNF"' EXIT
+chmod 600 "$CNF"
+
+CNF_PATH="$CNF" "$PHP_BIN" -r 'require "vendor/autoload.php"; $d = Dotenv\Dotenv::createImmutable(__DIR__); $d->safeLoad(); $e = function ($v) { return addcslashes((string) $v, "\\\""); }; file_put_contents(getenv("CNF_PATH"), "[client]\nhost=\"" . $e($_ENV["DB_HOST"] ?? "127.0.0.1") . "\"\nport=\"" . $e($_ENV["DB_PORT"] ?? "3306") . "\"\nuser=\"" . $e($_ENV["DB_USERNAME"] ?? "") . "\"\npassword=\"" . $e($_ENV["DB_PASSWORD"] ?? "") . "\"\n");'
+
+if ! MYSQL_ERR="$(mysql --defaults-file="$CNF" -e 'SELECT 1;' "$DB_NAME" 2>&1 >/dev/null)"; then
+    echo "ERROR: cannot connect to database '$DB_NAME'." >&2
+    echo "       mysql said: $MYSQL_ERR" >&2
     exit 1
-}
+fi
 
 BACKUP=~/backups/karmaa_db_$STAMP.sql.gz
-MYSQL_PWD="$(envval DB_PASSWORD)" \
-    mysqldump -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" \
+mysqldump --defaults-file="$CNF" \
     --single-transaction --quick --no-tablespaces \
     "$DB_NAME" | gzip > "$BACKUP"
 
@@ -194,20 +194,35 @@ REMOTE
 # --- ship the built assets -------------------------------------------------
 
 echo "==> Uploading assets ..."
+# Hostinger serves the site from public_html, a real directory beside the app
+# dir whose index.php bootstraps the checkout and calls usePublicPath(): PHP
+# comes from the git checkout, but assets — including the Vite manifest — are
+# resolved from public_html/build. Shipping assets to the checkout's public/
+# leaves the live site on the old manifest, so target the real webroot.
+#
+# The remote script is passed as an argument, not a heredoc: a heredoc would
+# occupy ssh's stdin, leaving the tar stream with nowhere to go (the remote
+# tar then reads the script text and reports "not in gzip format").
+#
 # Extract beside the live directory and swap, so the site is never left
 # without a build/ folder while the transfer is in flight.
-tar -czf - -C public build | ssh "$SSH_ALIAS" "bash -s -- '$APP_DIR'" <<'REMOTE'
-set -euo pipefail
-APP_DIR="$1"
-cd "$APP_DIR/public"
-rm -rf build.incoming
+tar -czf - -C public build | ssh "$SSH_ALIAS" "
+set -eu
+WEBROOT=\"\$(dirname '$APP_DIR')/public_html\"
+if [ -f \"\$WEBROOT/index.php\" ] && grep -q \"\$(basename '$APP_DIR')\" \"\$WEBROOT/index.php\"; then
+    :  # public_html wraps this app — deploy assets there
+else
+    WEBROOT='$APP_DIR/public'
+fi
+echo \"    webroot: \$WEBROOT\"
+cd \"\$WEBROOT\"
+rm -rf build.incoming build.previous
 mkdir build.incoming
 tar -xzf - -C build.incoming --strip-components=1
-rm -rf build.previous
 if [ -d build ]; then mv build build.previous; fi
 mv build.incoming build
 rm -rf build.previous
-REMOTE
+"
 
 # --- server: rebuild caches ------------------------------------------------
 
