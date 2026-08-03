@@ -35,7 +35,7 @@ if (!function_exists('format_price')) {
 }
 
 if (!function_exists('currency_config')) {
-    function currency_config(string $key = null): mixed
+    function currency_config(?string $key = null): mixed
     {
         $config = Cache::remember('currency_config', 3600, function () {
             return [

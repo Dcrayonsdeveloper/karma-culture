@@ -39,7 +39,7 @@ class PosCashMovement extends Model
     /**
      * Record a cash movement from any context.
      */
-    public static function record(int $shiftId, int $staffId, string $type, float $amount, string $refType = null, int $refId = null, string $note = null): void
+    public static function record(int $shiftId, int $staffId, string $type, float $amount, ?string $refType = null, ?int $refId = null, ?string $note = null): void
     {
         static::create([
             'shift_id'       => $shiftId,
