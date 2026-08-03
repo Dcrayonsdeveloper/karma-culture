@@ -106,6 +106,26 @@ for tool in git composer php; do
     }
 done
 
+# The default CLI php is 8.3 while the web server runs 8.4, and composer.lock
+# pins platform php to 8.4 — so `composer install` under the default binary
+# fails outright. Select an 8.4+ interpreter explicitly.
+is84() { [ -x "$1" ] && "$1" -r 'exit(PHP_VERSION_ID >= 80400 ? 0 : 1);' 2>/dev/null; }
+
+PHP_BIN="$(command -v php)"
+if ! is84 "$PHP_BIN"; then
+    PHP_BIN=""
+    for cand in /opt/alt/php84/usr/bin/php /opt/alt/php85/usr/bin/php \
+                /usr/bin/php8.4 /usr/bin/php84; do
+        if is84 "$cand"; then PHP_BIN="$cand"; break; fi
+    done
+fi
+[ -n "$PHP_BIN" ] || {
+    echo "ERROR: no PHP 8.4+ interpreter found; composer.lock requires it." >&2
+    exit 1
+}
+COMPOSER_BIN="$(command -v composer)"
+echo "==> PHP: $("$PHP_BIN" -r 'echo PHP_VERSION;') ($PHP_BIN)"
+
 [ -d .git ] || {
     echo "ERROR: $APP_DIR is not a git repository — this script pulls from" >&2
     echo "       origin/main and cannot deploy a directory uploaded by FTP." >&2
@@ -150,10 +170,10 @@ git fetch origin
 git reset --hard origin/main
 
 echo "==> Installing PHP dependencies ..."
-composer install --no-dev --optimize-autoloader --no-interaction
+"$PHP_BIN" "$COMPOSER_BIN" install --no-dev --optimize-autoloader --no-interaction
 
 echo "==> Running migrations ..."
-php artisan migrate --force
+"$PHP_BIN" artisan migrate --force
 REMOTE
 
 # --- ship the built assets -------------------------------------------------
@@ -181,12 +201,21 @@ set -euo pipefail
 APP_DIR="$1"
 cd "$APP_DIR"
 
+is84() { [ -x "$1" ] && "$1" -r 'exit(PHP_VERSION_ID >= 80400 ? 0 : 1);' 2>/dev/null; }
+PHP_BIN="$(command -v php)"
+if ! is84 "$PHP_BIN"; then
+    for cand in /opt/alt/php84/usr/bin/php /opt/alt/php85/usr/bin/php \
+                /usr/bin/php8.4 /usr/bin/php84; do
+        if is84 "$cand"; then PHP_BIN="$cand"; break; fi
+    done
+fi
+
 echo "==> Rebuilding caches ..."
-php artisan optimize:clear
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-php artisan queue:restart
+"$PHP_BIN" artisan optimize:clear
+"$PHP_BIN" artisan config:cache
+"$PHP_BIN" artisan route:cache
+"$PHP_BIN" artisan view:cache
+"$PHP_BIN" artisan queue:restart
 
 echo "==> Deployed $(git rev-parse --short HEAD)"
 REMOTE
