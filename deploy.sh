@@ -151,18 +151,33 @@ envval() {
 }
 
 echo "==> Backing up database ..."
-# mysqldump rejects a process substitution for --defaults-file, so use a real
-# file. mktemp creates it 0600; the trap removes it even if the dump fails.
-CNF="$(mktemp)"
-trap 'rm -f "$CNF"' EXIT
-chmod 600 "$CNF"
-printf '[client]\nuser=%s\npassword=%s\n' "$(envval DB_USERNAME)" "$(envval DB_PASSWORD)" > "$CNF"
+# Credentials go through MYSQL_PWD rather than an option file or -p. This
+# password contains a '#', which an option file would read as a comment
+# (silently blanking it), and -p would expose it in the process list.
+DB_USER="$(envval DB_USERNAME)"
+DB_NAME="$(envval DB_DATABASE)"
+# MySQL treats 'user'@'localhost' (unix socket) and 'user'@'127.0.0.1' (TCP) as
+# separate accounts, so the host from .env must be passed through explicitly —
+# omitting it authenticates as a different, ungranted account.
+DB_HOST="$(envval DB_HOST)"; DB_HOST="${DB_HOST:-127.0.0.1}"
+DB_PORT="$(envval DB_PORT)"; DB_PORT="${DB_PORT:-3306}"
+
+MYSQL_PWD="$(envval DB_PASSWORD)" \
+    mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -e 'SELECT 1;' "$DB_NAME" >/dev/null 2>&1 || {
+    echo "ERROR: cannot connect to database '$DB_NAME' as '$DB_USER'@'$DB_HOST'." >&2
+    echo "       Check DB_* values in .env." >&2
+    exit 1
+}
 
 BACKUP=~/backups/karmaa_db_$STAMP.sql.gz
-mysqldump --defaults-file="$CNF" --single-transaction --quick --no-tablespaces \
-    "$(envval DB_DATABASE)" | gzip > "$BACKUP"
-rm -f "$CNF"
-trap - EXIT
+MYSQL_PWD="$(envval DB_PASSWORD)" \
+    mysqldump -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" \
+    --single-transaction --quick --no-tablespaces \
+    "$DB_NAME" | gzip > "$BACKUP"
+
+# gzip sits at the end of a pipeline, so check mysqldump's own status.
+[ "${PIPESTATUS[0]}" -eq 0 ] || { echo "ERROR: mysqldump failed." >&2; exit 1; }
+[ -s "$BACKUP" ] || { echo "ERROR: backup file is empty." >&2; exit 1; }
 echo "    saved $BACKUP ($(du -h "$BACKUP" | cut -f1))"
 
 echo "==> Pulling latest code ..."
