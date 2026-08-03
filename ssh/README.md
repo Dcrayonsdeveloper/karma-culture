@@ -1,3 +1,10 @@
+> **⚠️ NOT FOR KARMAA KULTURE.** These are **ForeverKids** connection details — a
+> different live site sharing the same Hostinger account, left over from the codebase
+> this project was copied from. The paths below will overwrite that site.
+>
+> For Karmaa Kulture (https://palegreen-mouse-158092.hostingersite.com/),
+> use `deploy.sh` in the project root.
+
 # SSH Connection Details - ForeverKids
 
 ## Server Info

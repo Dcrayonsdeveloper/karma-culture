@@ -1,3 +1,14 @@
+> **⚠️ NOT FOR KARMAA KULTURE.** This file describes **ForeverKids**, a different
+> live site that happens to share the same Hostinger account. It survived from the
+> codebase this project was copied from. Following it deploys Karmaa Kulture on top
+> of ForeverKids and destroys that site.
+>
+> To deploy Karmaa Kulture (https://palegreen-mouse-158092.hostingersite.com/),
+> use `deploy.sh` in the project root.
+>
+> The database password below belongs to ForeverKids and should be rotated —
+> it has been committed to this repository in plaintext.
+
 # ForeverKids Deployment Guide — foreverkids.com on Hostinger
 
 ## Server Details

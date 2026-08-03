@@ -1,3 +1,10 @@
+> **⚠️ NOT FOR KARMAA KULTURE.** This guide targets **ForeverKids**, a separate live
+> site on the same Hostinger account, and survived from the codebase this project was
+> copied from. Its paths would overwrite that site.
+>
+> For Karmaa Kulture (https://palegreen-mouse-158092.hostingersite.com/),
+> use `deploy.sh` in the project root.
+
 # ForeverKids — Hostinger VPS Deployment Guide
 
 **Domain:** `forverkids.dcryaons.app`
