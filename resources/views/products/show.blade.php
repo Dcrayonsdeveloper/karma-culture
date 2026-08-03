@@ -767,9 +767,25 @@
         @if($product->aplusImages->isNotEmpty())
         <style>
             .kk-aplus { max-width: 1120px; margin: 48px auto 0; padding: 0; }
-            /* Banners stack edge-to-edge with no spacing between them; natural aspect ratio keeps original quality */
-            .kk-aplus__img { display: block; width: 100%; height: auto; margin: 0; border: 0; }
-            @media (max-width: 640px) { .kk-aplus { margin-top: 32px; } }
+            /* Banners stack edge-to-edge with no spacing between them; natural aspect ratio keeps original quality.
+               Size comes from per-image custom properties set in the admin panel, falling back to the responsive
+               default. Custom properties (not inline width/height) so the mobile rule below can still win —
+               an inline declaration would outrank any stylesheet rule and break narrow screens. */
+            .kk-aplus__img {
+                display: block;
+                width: var(--kk-aplus-w, 100%);
+                height: var(--kk-aplus-h, auto);
+                max-width: 100%;      /* a fixed px width must never overflow its container */
+                margin: 0 auto;       /* centred once narrower than the section */
+                border: 0;
+                object-fit: contain;  /* honours an explicit height without distorting the image */
+            }
+            @media (max-width: 640px) {
+                .kk-aplus { margin-top: 32px; }
+                /* Full width and natural height on phones: a desktop px size would
+                   otherwise letterbox or crop the banner on a narrow viewport. */
+                .kk-aplus__img { width: 100%; height: auto; }
+            }
         </style>
         <section class="kk-aplus" aria-label="Product information">
             @foreach($product->aplusImages as $aplus)
@@ -777,6 +793,7 @@
                      src="{{ $aplus->image_url }}"
                      alt="{{ $aplus->alt_text ?: $product->name }}"
                      @if($aplus->width && $aplus->height) width="{{ $aplus->width }}" height="{{ $aplus->height }}" @endif
+                     @if($style = $aplus->display_style) style="{{ $style }}" @endif
                      loading="lazy" decoding="async">
             @endforeach
         </section>

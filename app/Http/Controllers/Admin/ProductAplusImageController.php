@@ -38,16 +38,45 @@ class ProductAplusImageController extends Controller
         return response()->json(['success' => true, 'images' => $created]);
     }
 
-    /** Update an image's alt text. */
+    /** Update an image's alt text and/or its display size. */
     public function update(Request $request, ProductAplusImage $aplusImage): JsonResponse
     {
-        $data = $request->validate([
+        $sizeRule = ['nullable', 'string', 'max:20', 'regex:'.ProductAplusImage::DISPLAY_SIZE_REGEX];
+
+        $request->validate([
             'alt_text' => 'nullable|string|max:255',
+            'display_width' => $sizeRule,
+            'display_height' => $sizeRule,
+        ], [
+            'display_width.regex' => 'Width must be a number, a length like 600px or 50%, or "auto".',
+            'display_height.regex' => 'Height must be a number, a length like 400px or 50%, or "auto".',
         ]);
 
-        $aplusImage->update(['alt_text' => $data['alt_text'] ?? null]);
+        // Only touch fields the request actually carried: the admin UI PATCHes
+        // alt text and size independently, and a blanket assignment would wipe
+        // whichever field was not part of that particular request.
+        $updates = [];
 
-        return response()->json(['success' => true]);
+        foreach (['alt_text', 'display_width', 'display_height'] as $field) {
+            if (! $request->has($field)) {
+                continue;
+            }
+
+            $value = $request->input($field);
+            $value = is_string($value) ? trim($value) : $value;
+
+            // Empty clears the override, restoring the responsive default.
+            $updates[$field] = ($value === '' || $value === null) ? null : $value;
+        }
+
+        if ($updates) {
+            $aplusImage->update($updates);
+        }
+
+        return response()->json([
+            'success' => true,
+            'image' => $this->transform($aplusImage->fresh()),
+        ]);
     }
 
     /** Delete an A+ image (file + row). */
@@ -82,6 +111,9 @@ class ProductAplusImageController extends Controller
             'id' => $image->id,
             'url' => $image->image_url,
             'alt_text' => $image->alt_text,
+            // '' rather than null so Alpine binds them to empty text inputs.
+            'display_width' => $image->display_width ?? '',
+            'display_height' => $image->display_height ?? '',
         ];
     }
 

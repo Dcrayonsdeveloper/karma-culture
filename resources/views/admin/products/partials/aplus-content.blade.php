@@ -2,6 +2,8 @@
     $aplusImages = $product->aplusImages->map(fn ($i) => [
         'id' => $i->id,
         'url' => $i->image_url,
+        'display_width' => $i->display_width ?? '',
+        'display_height' => $i->display_height ?? '',
     ])->values();
 @endphp
 
@@ -38,7 +40,24 @@
                      @dragstart="onDragStart($event, index)" @dragover.prevent @drop.prevent="onDrop($event, index)" @dragend="onDragEnd()">
                     <span class="text-xs w-4 text-center shrink-0 select-none" style="color:#8a8a8a; cursor:grab;" x-text="index + 1"></span>
                     <img :src="img.url" alt="" class="rounded border shrink-0" style="width:72px; height:44px; object-fit:cover; border-color:#e3e3e3;">
-                    <span class="text-[11px] font-medium px-2 py-1 rounded" style="background:#f1f1f1; color:#616161;">Saved</span>
+
+                    {{-- Display size. Blank = responsive default (100% wide, auto height). --}}
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <label class="text-[11px] shrink-0" style="color:#8a8a8a;" :for="'aplus-w-' + img.id">W</label>
+                        <input type="text" class="aplus-size" :id="'aplus-w-' + img.id"
+                               placeholder="auto" title="Width — e.g. 600px, 50%, auto. Blank = full width."
+                               x-model="img.display_width"
+                               @change="saveSize(img)" @keydown.enter.prevent="$event.target.blur()">
+                        <label class="text-[11px] shrink-0" style="color:#8a8a8a;" :for="'aplus-h-' + img.id">H</label>
+                        <input type="text" class="aplus-size" :id="'aplus-h-' + img.id"
+                               placeholder="auto" title="Height — e.g. 400px, auto. Blank = keeps aspect ratio."
+                               x-model="img.display_height"
+                               @change="saveSize(img)" @keydown.enter.prevent="$event.target.blur()">
+                    </div>
+
+                    <span class="text-[11px] font-medium px-2 py-1 rounded shrink-0"
+                          style="background:#f1f1f1; color:#616161;"
+                          x-text="img.saving ? 'Saving…' : 'Saved'"></span>
                     <div class="flex items-center gap-1 ml-auto">
                         <button type="button" @click="move(index, -1)" :disabled="index === 0"
                                 class="aplus-btn" :class="index === 0 ? 'aplus-btn--off' : ''" title="Move up" aria-label="Move up">
@@ -80,6 +99,11 @@
     .aplus-drop:hover, .aplus-drop--active { border-color:#005bd3; background:#f5f9ff; }
     .aplus-tile { transition:box-shadow .12s, border-color .12s; }
     .aplus-tile:hover { border-color:#c9c9c9; }
+    .aplus-size { width:64px; padding:3px 6px; font-size:11px; border:1px solid #e3e3e3; border-radius:5px; color:#303030; background:#fff; }
+    .aplus-size:focus { outline:none; border-color:#005bd3; box-shadow:0 0 0 2px rgba(0,91,211,.12); }
+    .aplus-size.aplus-size--bad { border-color:#d72c0d; background:#fff5f4; }
+    /* Below the Shopify-ish admin breakpoint the row runs out of width, so let it wrap */
+    @media (max-width:900px) { .aplus-tile { flex-wrap:wrap; } }
 </style>
 
 <script>
@@ -93,6 +117,44 @@
             dragOver: false,
             dragIndex: null,
             csrf() { return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''; },
+            // Mirrors ProductAplusImage::DISPLAY_SIZE_REGEX — the server revalidates.
+            sizeOk(v) { return v === '' || /^(auto|\d{1,5}(\.\d{1,2})?(px|%|rem|em|vw|vh)?)$/i.test(v); },
+            async saveSize(img) {
+                const w = (img.display_width ?? '').toString().trim();
+                const h = (img.display_height ?? '').toString().trim();
+                img.display_width = w;
+                img.display_height = h;
+
+                const wEl = document.getElementById('aplus-w-' + img.id);
+                const hEl = document.getElementById('aplus-h-' + img.id);
+                const wBad = !this.sizeOk(w), hBad = !this.sizeOk(h);
+                if (wEl) wEl.classList.toggle('aplus-size--bad', wBad);
+                if (hEl) hEl.classList.toggle('aplus-size--bad', hBad);
+                if (wBad || hBad) {
+                    if (window.toastr) toastr.error('Use a number, a length like 600px or 50%, or "auto".');
+                    return;
+                }
+
+                img.saving = true;
+                try {
+                    const res = await fetch(this.itemBase + '/' + img.id, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrf(), 'Accept': 'application/json' },
+                        body: JSON.stringify({ display_width: w, display_height: h }),
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (res.ok && data.success) {
+                        if (data.image) { img.display_width = data.image.display_width; img.display_height = data.image.display_height; }
+                        if (window.toastr) toastr.success('Size saved');
+                    } else if (window.toastr) {
+                        toastr.error((data && data.message) || 'Could not save size');
+                    }
+                } catch (e) {
+                    if (window.toastr) toastr.error('Could not save size');
+                } finally {
+                    img.saving = false;
+                }
+            },
             async upload(files) {
                 if (!files || !files.length) return;
                 const fd = new FormData();
@@ -101,7 +163,7 @@
                 try {
                     const res = await fetch(this.storeUrl, { method: 'POST', headers: { 'X-CSRF-TOKEN': this.csrf(), 'Accept': 'application/json' }, body: fd });
                     const data = await res.json().catch(() => ({}));
-                    if (res.ok && data.success) { this.images.push(...data.images); if (window.toastr) toastr.success('Uploaded'); }
+                    if (res.ok && data.success) { this.images.push(...data.images.map(i => ({ display_width: '', display_height: '', saving: false, ...i }))); if (window.toastr) toastr.success('Uploaded'); }
                     else if (window.toastr) toastr.error((data && data.message) || 'Upload failed');
                 } catch (err) { if (window.toastr) toastr.error('Upload error'); }
                 finally { this.uploading = false; this.dragOver = false; if (this.$refs.aplusFile) this.$refs.aplusFile.value = ''; }
