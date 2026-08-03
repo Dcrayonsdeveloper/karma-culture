@@ -3,6 +3,7 @@
 # Karmaa Kulture — production deploy
 #
 # Live site : https://palegreen-mouse-158092.hostingersite.com/
+# App root  : ~/domains/palegreen-mouse-158092.hostingersite.com/karmaa_culture
 # Server    : u322703740@167.88.41.35:65002 (Hostinger, shared account)
 #
 # This account hosts several unrelated live sites (foreverkids, jikra, gryt,
@@ -19,8 +20,8 @@ SSH_ALIAS="${1:-karmaakulture}"
 
 echo "==> Locating Karmaa Kulture on ${SSH_ALIAS} ..."
 
-# Identify the app root by its session cookie name, which is unique to this
-# project. Nothing is written until a single unambiguous match is found.
+# Identify the app root by its .env, which is unique to this project. Nothing
+# is written until a single unambiguous match is found.
 APP_DIR="$(ssh "$SSH_ALIAS" 'bash -s' <<'REMOTE'
 set -euo pipefail
 shopt -s nullglob
@@ -52,28 +53,75 @@ echo "==> Found: $APP_DIR"
 read -rp "Deploy origin/main here? [y/N] " confirm
 [ "$confirm" = "y" ] || { echo "Aborted."; exit 1; }
 
-ssh "$SSH_ALIAS" "bash -s" <<REMOTE
+# APP_DIR is passed as a positional argument so the heredoc can stay quoted:
+# every variable below is expanded on the server, not here.
+ssh "$SSH_ALIAS" "bash -s -- '$APP_DIR'" <<'REMOTE'
 set -euo pipefail
+APP_DIR="$1"
 cd "$APP_DIR"
 
-echo "==> Backing up database ..."
+# --- preflight: fail before touching anything, not halfway through ----------
+
+for tool in git composer php npm; do
+    command -v "$tool" >/dev/null 2>&1 || {
+        echo "ERROR: '$tool' not available on the server. Aborting." >&2
+        exit 1
+    }
+done
+
+[ -d .git ] || {
+    echo "ERROR: $APP_DIR is not a git repository — this script pulls from" >&2
+    echo "       origin/main and cannot deploy a directory uploaded by FTP." >&2
+    exit 1
+}
+
 mkdir -p ~/backups
-php artisan db:backup 2>/dev/null || \
-  mysqldump --defaults-file=<(printf '[client]\nuser=%s\npassword=%s\n' \
-    "\$(grep -m1 '^DB_USERNAME=' .env | cut -d= -f2-)" \
-    "\$(grep -m1 '^DB_PASSWORD=' .env | cut -d= -f2-)") \
-    "\$(grep -m1 '^DB_DATABASE=' .env | cut -d= -f2-)" \
-    | gzip > ~/backups/karmaa_\$(date +%Y%m%d_%H%M%S).sql.gz
+STAMP="$(date +%Y%m%d_%H%M%S)"
+
+# Uncommitted server-side edits would be destroyed by the reset below. Keep
+# them as a patch rather than discarding them silently.
+if [ -n "$(git status --porcelain)" ]; then
+    PATCH=~/backups/server_local_changes_$STAMP.patch
+    git diff > "$PATCH" || true
+    echo "==> NOTE: server had uncommitted changes; saved to $PATCH"
+    git status --short | sed 's/^/    /'
+fi
+
+# --- database backup -------------------------------------------------------
+
+# Read a value from .env, stripping surrounding quotes and trailing whitespace.
+envval() {
+    sed -n "s/^$1=//p" .env | head -n1 \
+        | sed -e 's/[[:space:]]*$//' -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'\$/\1/"
+}
+
+echo "==> Backing up database ..."
+# mysqldump rejects a process substitution for --defaults-file, so use a real
+# file. mktemp creates it 0600; the trap removes it even if the dump fails.
+CNF="$(mktemp)"
+trap 'rm -f "$CNF"' EXIT
+chmod 600 "$CNF"
+printf '[client]\nuser=%s\npassword=%s\n' "$(envval DB_USERNAME)" "$(envval DB_PASSWORD)" > "$CNF"
+
+BACKUP=~/backups/karmaa_db_$STAMP.sql.gz
+mysqldump --defaults-file="$CNF" --single-transaction --quick --no-tablespaces \
+    "$(envval DB_DATABASE)" | gzip > "$BACKUP"
+rm -f "$CNF"
+trap - EXIT
+echo "    saved $BACKUP ($(du -h "$BACKUP" | cut -f1))"
+
+# --- deploy ----------------------------------------------------------------
 
 echo "==> Pulling latest code ..."
 git fetch origin
 git reset --hard origin/main
 
-echo "==> Installing dependencies ..."
+echo "==> Installing PHP dependencies ..."
 composer install --no-dev --optimize-autoloader --no-interaction
 
 echo "==> Building assets ..."
-npm ci && npm run build
+npm ci --no-audit --no-fund || npm install --no-audit --no-fund
+npm run build
 
 echo "==> Running migrations ..."
 php artisan migrate --force
@@ -85,9 +133,9 @@ php artisan route:cache
 php artisan view:cache
 php artisan queue:restart
 
-echo "==> Done."
+echo "==> Deployed $(git rev-parse --short HEAD)"
 REMOTE
 
 echo "==> Verifying site ..."
-curl -sS -o /dev/null -w "HTTP %{http_code}\n" \
-  https://palegreen-mouse-158092.hostingersite.com/
+curl -sS -o /dev/null -m 30 -w "    HTTP %{http_code}\n" \
+    https://palegreen-mouse-158092.hostingersite.com/
