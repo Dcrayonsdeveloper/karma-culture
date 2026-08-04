@@ -766,25 +766,32 @@
         {{-- ===== A+ CONTENT (Amazon-style banner images, admin-managed, stacked in saved order) ===== --}}
         @if($product->aplusImages->isNotEmpty())
         <style>
-            .kk-aplus { max-width: 1120px; margin: 48px auto 0; padding: 0; }
+            /* No max-width here: the 1120px cap lives on the image itself as the
+               default width. On the section it also clamped max-width:100%, so any
+               admin width above 1120px silently rendered as 1120px. */
+            .kk-aplus { margin: 48px auto 0; padding: 0; }
             /* Banners stack edge-to-edge with no spacing between them; natural aspect ratio keeps original quality.
                Size comes from per-image custom properties set in the admin panel, falling back to the responsive
                default. Custom properties (not inline width/height) so the mobile rule below can still win —
                an inline declaration would outrank any stylesheet rule and break narrow screens. */
             .kk-aplus__img {
                 display: block;
-                width: var(--kk-aplus-w, 100%);
+                /* Fallback reproduces the previous 1120px cap; an admin value replaces
+                   it outright, so sizes above 1120px now take effect. */
+                width: var(--kk-aplus-w, 1120px);
                 height: var(--kk-aplus-h, auto);
-                max-width: 100%;      /* a fixed px width must never overflow its container */
-                margin: 0 auto;       /* centred once narrower than the section */
+                max-width: 100%;      /* stays inside the page container and shrinks on narrow screens */
+                margin: 0 auto;       /* centred once narrower than the container */
                 border: 0;
-                object-fit: contain;  /* honours an explicit height without distorting the image */
+                /* Deliberately no object-fit: it made an explicit height letterbox the
+                   image rather than resize it, so the height control looked inert. */
             }
             @media (max-width: 640px) {
                 .kk-aplus { margin-top: 32px; }
-                /* Full width and natural height on phones: a desktop px size would
-                   otherwise letterbox or crop the banner on a narrow viewport. */
-                .kk-aplus__img { width: 100%; height: auto; }
+                /* Only the height is reset: max-width already scales the width down, and
+                   forcing width:100% here would override a deliberately narrow setting.
+                   A fixed px height against that reduced width would distort the image. */
+                .kk-aplus__img { height: auto; }
             }
         </style>
         <section class="kk-aplus" aria-label="Product information">
