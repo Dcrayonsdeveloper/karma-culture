@@ -16,6 +16,15 @@ use Illuminate\Support\Facades\Storage;
 
 class HomepageController extends Controller
 {
+    /**
+     * Upload ceiling for hero videos, in kilobytes.
+     *
+     * The existing hero clips are around 15 MB, so 64 MB leaves comfortable
+     * headroom. The server allows 256 MB per upload, so PHP will not reject a
+     * file before this rule can report a readable error.
+     */
+    private const MAX_VIDEO_KB = 65536;
+
     public function index()
     {
         $sections = HomepageSection::ordered()->get();
@@ -95,24 +104,34 @@ class HomepageController extends Controller
 
     public function storeHeroBanner(Request $request)
     {
+        // A banner needs a video or an image, not necessarily both. When a video
+        // is supplied the image becomes optional and acts as the poster frame.
         $request->validate([
             'name' => 'nullable|string|max:255',
-            'image' => 'required|image|max:5120',
+            'image' => 'required_without:video|nullable|image|max:5120',
+            'video' => 'nullable|file|mimetypes:video/mp4,video/webm,video/quicktime|max:'.self::MAX_VIDEO_KB,
             'link' => 'nullable|string|max:255',
             'title' => 'nullable|string|max:255',
             'subtitle' => 'nullable|string|max:500',
             'button_text' => 'nullable|string|max:100',
             'overlay_style' => 'nullable|string|in:' . implode(',', array_keys(Banner::OVERLAY_STYLES)),
+        ], [
+            'image.required_without' => 'Upload an image, or a video to use instead.',
+            'video.mimetypes' => 'The video must be an MP4, WebM or MOV file.',
+            'video.max' => 'The video may not be larger than '.(self::MAX_VIDEO_KB / 1024).' MB.',
         ]);
-
-        $imagePath = $request->file('image')->store('banners', 'public');
 
         Banner::create([
             'name' => $request->name,
             'title' => $request->title,
             'subtitle' => $request->subtitle,
             'button_text' => $request->button_text,
-            'image_url' => $imagePath,
+            'image_url' => $request->hasFile('image')
+                ? $request->file('image')->store('banners', 'public')
+                : null,
+            'video_url' => $request->hasFile('video')
+                ? $request->file('video')->store('banners/video', 'public')
+                : null,
             'link' => $request->link,
             'overlay_style' => $request->overlay_style ?? 'left-dark',
             'position' => 'hero',
@@ -130,11 +149,15 @@ class HomepageController extends Controller
         $request->validate([
             'name' => 'nullable|string|max:255',
             'image' => 'nullable|image|max:5120',
+            'video' => 'nullable|file|mimetypes:video/mp4,video/webm,video/quicktime|max:'.self::MAX_VIDEO_KB,
             'link' => 'nullable|string|max:255',
             'title' => 'nullable|string|max:255',
             'subtitle' => 'nullable|string|max:500',
             'button_text' => 'nullable|string|max:100',
             'overlay_style' => 'nullable|string|in:' . implode(',', array_keys(Banner::OVERLAY_STYLES)),
+        ], [
+            'video.mimetypes' => 'The video must be an MP4, WebM or MOV file.',
+            'video.max' => 'The video may not be larger than '.(self::MAX_VIDEO_KB / 1024).' MB.',
         ]);
 
         $data = $request->only(['name', 'title', 'subtitle', 'button_text', 'link', 'overlay_style']);
@@ -144,6 +167,17 @@ class HomepageController extends Controller
                 Storage::disk('public')->delete($banner->image_url);
             }
             $data['image_url'] = $request->file('image')->store('banners', 'public');
+        }
+
+        if ($request->hasFile('video')) {
+            if ($banner->video_url) {
+                Storage::disk('public')->delete($banner->video_url);
+            }
+            $data['video_url'] = $request->file('video')->store('banners/video', 'public');
+        } elseif ($request->boolean('remove_video') && $banner->video_url) {
+            // Explicit removal, so a banner can go back to being image-only.
+            Storage::disk('public')->delete($banner->video_url);
+            $data['video_url'] = null;
         }
 
         $banner->update($data);
@@ -156,6 +190,9 @@ class HomepageController extends Controller
     {
         if ($banner->image_url) {
             Storage::disk('public')->delete($banner->image_url);
+        }
+        if ($banner->video_url) {
+            Storage::disk('public')->delete($banner->video_url);
         }
         $banner->delete();
         Cache::flush();

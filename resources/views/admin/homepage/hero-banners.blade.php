@@ -30,10 +30,20 @@
                             <input type="text" name="name" class="form-input" placeholder="Banner name">
                         </div>
                         <div>
-                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Image <span style="color: #d72c0d;">*</span></label>
-                            <input type="file" name="image" accept="image/*" required class="form-input">
-                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Recommended: 1920x700px, JPG/PNG</p>
+                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Image</label>
+                            <input type="file" name="image" accept="image/*" class="form-input">
+                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Recommended: 1920x700px, JPG/PNG &middot; max 5MB</p>
                         </div>
+                        <div>
+                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Video</label>
+                            <input type="file" name="video" accept="video/mp4,video/webm,video/quicktime" class="form-input">
+                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">MP4, WebM or MOV &middot; max 64MB. Plays muted and looped, with no controls.</p>
+                        </div>
+                        <p style="font-size: 12px; color: #616161; margin: -0.35rem 0 0; padding: 0.5rem 0.65rem; background: #f6f6f7; border-radius: 6px; line-height: 1.5;">
+                            Provide an <strong>image or a video</strong> — at least one is required. Supplying both
+                            shows the image first while the video loads, and keeps it as the fallback where a video
+                            cannot autoplay.
+                        </p>
                         <div>
                             <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Heading Text</label>
                             <input type="text" name="title" class="form-input" placeholder="Banner heading">
@@ -96,9 +106,18 @@
                                     </button>
                                 </div>
 
-                                <!-- Thumbnail -->
-                                <div style="width: 11rem; height: 6rem; background: #f6f6f7; border-radius: 0.5rem; overflow: hidden; flex-shrink: 0;">
-                                    <img src="{{ asset('storage/' . $banner->image_url) }}" alt="{{ $banner->name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                <!-- Thumbnail: a banner may be video-only, so do not assume an image exists -->
+                                <div style="width: 11rem; height: 6rem; background: #f6f6f7; border-radius: 0.5rem; overflow: hidden; flex-shrink: 0; position: relative;">
+                                    @if($banner->image_url)
+                                        <img src="{{ $banner->image }}" alt="{{ $banner->name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                    @elseif($banner->video_url)
+                                        <video src="{{ $banner->video }}" muted playsinline preload="metadata" style="width: 100%; height: 100%; object-fit: cover;"></video>
+                                    @endif
+                                    @if($banner->video_url)
+                                        <span style="position: absolute; bottom: 0.25rem; left: 0.25rem; display: inline-flex; align-items: center; gap: 0.2rem; padding: 0.1rem 0.4rem; border-radius: 0.75rem; font-size: 11px; font-weight: 600; background: rgba(0,0,0,0.72); color: #fff;">
+                                            <svg style="width: 0.7rem; height: 0.7rem;" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Video
+                                        </span>
+                                    @endif
                                 </div>
 
                                 <!-- Info -->
@@ -186,10 +205,24 @@
                                             @endforeach
                                         </select>
                                     </div>
-                                    <div style="grid-column: span 2;">
+                                    <div>
                                         <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Replace Image</label>
                                         <input type="file" name="image" accept="image/*" class="form-input">
-                                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Leave empty to keep current image</p>
+                                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Leave empty to keep the current image</p>
+                                    </div>
+                                    <div>
+                                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Replace Video</label>
+                                        <input type="file" name="video" accept="video/mp4,video/webm,video/quicktime" class="form-input">
+                                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
+                                            MP4, WebM or MOV &middot; max 64MB.
+                                            @if($banner->video_url) Leave empty to keep the current video. @endif
+                                        </p>
+                                        @if($banner->video_url)
+                                            <label style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 12px; color: #616161; margin-top: 0.4rem; cursor: pointer;">
+                                                <input type="checkbox" name="remove_video" value="1" style="margin: 0;">
+                                                Remove the video and show the image instead
+                                            </label>
+                                        @endif
                                     </div>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem;">

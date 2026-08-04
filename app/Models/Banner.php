@@ -23,6 +23,7 @@ class Banner extends Model
         'position',
         'image_url',
         'mobile_image_url',
+        'video_url',
         'link',
         'overlay_style',
         'priority',
@@ -102,6 +103,27 @@ class Banner extends Model
         return $this->mobile_image_url
             ? asset('storage/' . $this->mobile_image_url)
             : $this->image;
+    }
+
+    /** Browser-usable video URL, or '' when this banner has no video. */
+    public function getVideoAttribute(): string
+    {
+        if (! $this->video_url) {
+            return '';
+        }
+        if (str_starts_with($this->video_url, 'http')) {
+            return $this->video_url;
+        }
+        if (str_starts_with($this->video_url, '/')) {
+            return asset(ltrim($this->video_url, '/'));
+        }
+
+        return asset('storage/' . $this->video_url);
+    }
+
+    public function getHasVideoAttribute(): bool
+    {
+        return (bool) $this->video_url;
     }
 
     public function getOverlayCssAttribute(): string

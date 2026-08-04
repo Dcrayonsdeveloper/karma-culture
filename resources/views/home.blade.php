@@ -538,18 +538,51 @@
         {{-- ============================================
              HERO BACKGROUND VIDEO
              ============================================ --}}
+        @php
+            // The hero used to hard-code a video file, so changing it meant editing
+            // this template. It now renders the first active hero banner from the
+            // admin panel, which may carry a video or an image. The hard-coded clip
+            // stays as the fallback for when no hero banner has been added yet.
+            $heroBanner = ($banners ?? collect())->first();
+            $heroName = $siteSettings['site_name'] ?? 'Karmaa Kulture';
+        @endphp
         <section class="kk-hero">
-            <div class="kk-hero-slide kk-hero-slide--video">
-                <video class="kk-hero-video"
-                       src="{{ asset('images/karmaa-kulture-web-banner-v3.mp4') }}"
-                       autoplay
-                       muted
-                       loop
-                       playsinline
-                       preload="auto"
-                       aria-label="{{ $siteSettings['site_name'] ?? 'Karmaa Kulture' }} hero video">
-                </video>
-            </div>
+            @if($heroBanner && $heroBanner->has_video)
+                <div class="kk-hero-slide kk-hero-slide--video">
+                    <video class="kk-hero-video"
+                           src="{{ $heroBanner->video }}"
+                           @if($heroBanner->image_url) poster="{{ $heroBanner->image }}" @endif
+                           autoplay
+                           muted
+                           loop
+                           playsinline
+                           preload="auto"
+                           aria-label="{{ $heroBanner->title ?: $heroName }} hero video">
+                    </video>
+                </div>
+            @elseif($heroBanner && $heroBanner->image_url)
+                <div class="kk-hero-slide">
+                    @if($heroBanner->link)
+                        <a href="{{ $heroBanner->link }}" aria-label="{{ $heroBanner->title ?: $heroName }}">
+                            <img src="{{ $heroBanner->image }}" alt="{{ $heroBanner->title ?: $heroName }}" fetchpriority="high">
+                        </a>
+                    @else
+                        <img src="{{ $heroBanner->image }}" alt="{{ $heroBanner->title ?: $heroName }}" fetchpriority="high">
+                    @endif
+                </div>
+            @else
+                <div class="kk-hero-slide kk-hero-slide--video">
+                    <video class="kk-hero-video"
+                           src="{{ asset('images/karmaa-kulture-web-banner-v3.mp4') }}"
+                           autoplay
+                           muted
+                           loop
+                           playsinline
+                           preload="auto"
+                           aria-label="{{ $heroName }} hero video">
+                    </video>
+                </div>
+            @endif
         </section>
 
         <style>
