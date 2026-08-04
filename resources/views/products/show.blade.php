@@ -787,6 +787,12 @@
                Size comes from per-image custom properties set in the admin panel, falling back to the responsive
                default. Custom properties (not inline width/height) so the mobile rule below can still win —
                an inline declaration would outrank any stylesheet rule and break narrow screens. */
+            /* One banner at a time. The slide is capped to a slice of the viewport
+               height and the image is contained inside it, so a whole banner is
+               always visible without scrolling the page. */
+            .kk-aplus__viewport { position: relative; overflow: hidden; }
+            .kk-aplus__track { display: flex; transition: transform .55s cubic-bezier(.4,.0,.2,1); will-change: transform; }
+            .kk-aplus__slide { flex: 0 0 100%; min-width: 100%; display: flex; align-items: center; justify-content: center; }
             .kk-aplus__img {
                 display: block;
                 /* Fallback reproduces the previous 1120px cap; an admin value replaces
@@ -795,28 +801,114 @@
                 height: var(--kk-aplus-h, auto);
                 max-width: 100%;      /* = viewport width now the section is full-bleed, so a very
                                          large value lands at the screen edges and never overflows */
+                /* The guarantee that a banner fits on screen. object-fit keeps the whole
+                   image visible inside that cap rather than cropping it. */
+                max-height: 78vh;
+                object-fit: contain;
                 margin: 0 auto;       /* centred whenever narrower than the viewport */
                 border: 0;
-                /* Deliberately no object-fit: it made an explicit height letterbox the
-                   image rather than resize it, so the height control looked inert. */
             }
+            /* Controls, positioned as in the reference: pause left, dots centre, arrows right */
+            .kk-aplus__bar { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 0 16px; }
+            .kk-aplus__dots { display: flex; align-items: center; justify-content: center; gap: 7px; flex: 1; }
+            .kk-aplus__dot { width: 9px; height: 9px; border-radius: 999px; border: 0; padding: 0; cursor: pointer;
+                background: #d6cbb6; transition: width .25s, background .25s; }
+            .kk-aplus__dot[aria-current="true"] { width: 26px; background: #2d1810; }
+            .kk-aplus__btn { width: 32px; height: 32px; border-radius: 999px; border: 1px solid #e3d2b3;
+                background: #fbf5e8; color: #2d1810; display: inline-flex; align-items: center; justify-content: center;
+                cursor: pointer; padding: 0; transition: background .15s, color .15s; }
+            .kk-aplus__btn:hover { background: #2d1810; color: #fbf5e8; }
+            .kk-aplus__btn:focus-visible { outline: 2px solid #8c5c34; outline-offset: 2px; }
+            .kk-aplus__btn svg { width: 15px; height: 15px; }
+            .kk-aplus__nav { display: flex; gap: 8px; }
             @media (max-width: 640px) {
                 .kk-aplus { margin-top: 32px; }
                 /* Only the height is reset: max-width already scales the width down, and
                    forcing width:100% here would override a deliberately narrow setting.
                    A fixed px height against that reduced width would distort the image. */
-                .kk-aplus__img { height: auto; }
+                .kk-aplus__img { height: auto; max-height: 62vh; }
+                .kk-aplus__bar { gap: 8px; padding: 0 10px; }
             }
+            @media (prefers-reduced-motion: reduce) { .kk-aplus__track { transition: none; } }
         </style>
-        <section class="kk-aplus" aria-label="Product information">
-            @foreach($product->aplusImages as $aplus)
-                <img class="kk-aplus__img"
-                     src="{{ $aplus->image_url }}"
-                     alt="{{ $aplus->alt_text ?: $product->name }}"
-                     @if($aplus->width && $aplus->height) width="{{ $aplus->width }}" height="{{ $aplus->height }}" @endif
-                     @if($style = $aplus->display_style) style="{{ $style }}" @endif
-                     loading="lazy" decoding="async">
-            @endforeach
+        @php $aplusCount = $product->aplusImages->count(); @endphp
+        <section class="kk-aplus"
+                 aria-label="Product information"
+                 aria-roledescription="carousel"
+                 x-data="{
+                    i: 0,
+                    n: {{ $aplusCount }},
+                    playing: true,
+                    timer: null,
+                    tx: 0,
+                    init() {
+                        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) this.playing = false;
+                        this.start();
+                    },
+                    start() { this.stop(); if (this.playing && this.n > 1) this.timer = setInterval(() => this.next(), 5000); },
+                    stop() { if (this.timer) { clearInterval(this.timer); this.timer = null; } },
+                    toggle() { this.playing = !this.playing; this.playing ? this.start() : this.stop(); },
+                    next() { this.i = (this.i + 1) % this.n; },
+                    prev() { this.i = (this.i - 1 + this.n) % this.n; },
+                    go(k) { this.i = k; this.start(); },
+                 }"
+                 @mouseenter="stop()"
+                 @mouseleave="start()"
+                 @keydown.arrow-right.prevent="next(); start()"
+                 @keydown.arrow-left.prevent="prev(); start()"
+                 tabindex="0">
+
+            <div class="kk-aplus__viewport"
+                 @touchstart.passive="tx = $event.changedTouches[0].clientX"
+                 @touchend.passive="
+                    const dx = $event.changedTouches[0].clientX - tx;
+                    if (Math.abs(dx) > 40) { dx < 0 ? next() : prev(); start(); }
+                 ">
+                <div class="kk-aplus__track" :style="'transform: translateX(-' + (i * 100) + '%)'">
+                    @foreach($product->aplusImages as $aplus)
+                        <div class="kk-aplus__slide"
+                             role="group"
+                             aria-roledescription="slide"
+                             aria-label="{{ $loop->iteration }} of {{ $aplusCount }}"
+                             :aria-hidden="i !== {{ $loop->index }}">
+                            <img class="kk-aplus__img"
+                                 src="{{ $aplus->image_url }}"
+                                 alt="{{ $aplus->alt_text ?: $product->name }}"
+                                 @if($aplus->width && $aplus->height) width="{{ $aplus->width }}" height="{{ $aplus->height }}" @endif
+                                 @if($style = $aplus->display_style) style="{{ $style }}" @endif
+                                 loading="{{ $loop->first ? 'eager' : 'lazy' }}" decoding="async">
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
+            @if($aplusCount > 1)
+            <div class="kk-aplus__bar">
+                <button type="button" class="kk-aplus__btn" @click="toggle()"
+                        :aria-label="playing ? 'Pause' : 'Play'" :title="playing ? 'Pause' : 'Play'">
+                    <svg x-show="playing" fill="currentColor" viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+                    <svg x-show="!playing" x-cloak fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </button>
+
+                <div class="kk-aplus__dots" role="tablist">
+                    @foreach($product->aplusImages as $aplus)
+                        <button type="button" class="kk-aplus__dot" role="tab"
+                                @click="go({{ $loop->index }})"
+                                :aria-current="i === {{ $loop->index }}"
+                                aria-label="Go to banner {{ $loop->iteration }}"></button>
+                    @endforeach
+                </div>
+
+                <div class="kk-aplus__nav">
+                    <button type="button" class="kk-aplus__btn" @click="prev(); start()" aria-label="Previous banner">
+                        <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                    </button>
+                    <button type="button" class="kk-aplus__btn" @click="next(); start()" aria-label="Next banner">
+                        <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </button>
+                </div>
+            </div>
+            @endif
         </section>
         @endif
 
