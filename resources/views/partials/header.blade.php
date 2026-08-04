@@ -66,8 +66,10 @@
                     </svg>
                 </button>
 
-                <!-- Logo (centered on mobile/tablet, left-aligned on desktop) -->
-                <a href="{{ url('/') }}" class="absolute inset-0 flex items-center justify-center pointer-events-none lg:static lg:inset-auto lg:justify-start lg:pointer-events-auto shrink-0 lg:mr-8">
+                {{-- Logo: centered (absolute) only below sm, where the search bar is
+                     collapsed to an icon. From sm up it must sit in normal flow on the
+                     left, otherwise the inline search bar overlaps it on tablets. --}}
+                <a href="{{ url('/') }}" class="absolute inset-0 flex items-center justify-center pointer-events-none sm:static sm:inset-auto sm:justify-start sm:pointer-events-auto shrink-0 sm:mr-3 lg:mr-8">
                     @php $siteLogo = \App\Models\Setting::get('site_logo', ''); @endphp
                     @if($siteLogo)
                         <img id="site-logo" src="{{ asset('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-16 lg:h-20 object-contain pointer-events-auto">
@@ -203,7 +205,7 @@
                 </a>
 
                 <!-- Inline Search Bar with Typewriter + Mic (hidden on mobile) -->
-                <div class="relative hidden sm:block flex-1 max-w-xs lg:max-w-sm mx-1 lg:mx-3"
+                <div class="relative hidden sm:block flex-1 min-w-0 max-w-xs lg:max-w-sm mx-1 lg:mx-3"
                      x-data="searchBar()"
                      @click.outside="showResults = false">
                     <form action="{{ route('search') }}" method="GET" class="relative flex items-center">
