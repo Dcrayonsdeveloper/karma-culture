@@ -1247,10 +1247,17 @@
                 padding: 14px 44px 14px 14px; max-width: 400px; }
             .kk-pnotif__thumb { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; flex-shrink: 0; background: #f3f4f6; }
             .kk-pnotif__body { flex: 1; min-width: 0; }
-            /* Three stacked lines: what happened, what was bought, when. */
-            .kk-pnotif__lead { font-size: 14px; color: #6b7280; margin: 0; line-height: 1.4; }
-            .kk-pnotif__name { font-size: 15px; font-weight: 700; color: #111827; margin: 4px 0 0; line-height: 1.35; overflow-wrap: anywhere; }
-            .kk-pnotif__time { font-size: 13px; color: #9ca3af; margin: 6px 0 0; line-height: 1.3; }
+            /* Three stacked lines: what happened, what was bought, when.
+               app.css forces `font-weight:700 !important` on every storefront <p>
+               via `body:not(.layout-admin) p`, which scores (0,1,2). !important
+               alone does not win that — a lone class is only (0,1,0) — so these
+               selectors add the parent class to reach (0,2,1) and take the
+               cascade. Without this all three lines render bold and the
+               hierarchy collapses. */
+            .kk-pnotif p.kk-pnotif__lead { font-size: 14px; font-weight: 400 !important; color: #4b5563; margin: 0; line-height: 1.45; letter-spacing: 0; }
+            .kk-pnotif p.kk-pnotif__name { font-size: 15px; font-weight: 600 !important; color: #111827; margin: 3px 0 0; line-height: 1.4; letter-spacing: -0.005em; overflow-wrap: anywhere; }
+            .kk-pnotif p.kk-pnotif__time { font-size: 13px; font-weight: 400 !important; color: #9ca3af; margin: 5px 0 0; line-height: 1.3; letter-spacing: 0; }
+            .kk-pnotif button.kk-pnotif__close { font-weight: 400 !important; }
             .kk-pnotif__close { position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; border-radius: 50%;
                 background: #eceef1; border: 0; color: #6b7280; cursor: pointer; font-size: 15px; line-height: 1; padding: 0;
                 display: flex; align-items: center; justify-content: center; transition: background .15s, color .15s; }
