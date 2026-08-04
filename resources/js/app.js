@@ -657,7 +657,7 @@ Alpine.data('offerPopup', () => ({
 }));
 
 Alpine.data('purchaseNotif', (items = [], productName = '', thumb = '') => ({
-    items, productName, thumb, idx: 0, current: { city: '', time: '' }, visible: false, reduced: false, _t: null,
+    items, productName, thumb, idx: 0, current: { time: '' }, visible: false, reduced: false, _t: null,
     init() {
         if (!this.items.length) return;
         // Always show the toast (social proof). For reduced-motion users we still

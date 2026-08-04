@@ -1228,35 +1228,36 @@
         @php
             $notifEnabled = (bool) \App\Models\Setting::get('purchase_notif_enabled', true);
             $notifThumb = $product->primary_image_url;
+            // No city is shown, so only the relative time travels to the front end.
             $notifItems = collect($recentPurchases ?? [])->map(fn ($p) => [
-                'city' => $p['city'] ?: 'India',
-                'time' => $p['minutes'] . ' ' . \Illuminate\Support\Str::plural('min', $p['minutes']) . ' ago',
+                'time' => $p['minutes'] . ' ' . \Illuminate\Support\Str::plural('minute', $p['minutes']) . ' ago',
             ])->values();
             if ($notifItems->isEmpty()) {
-                $demoCities = \App\Models\Setting::get('purchase_notif_cities', ['Mumbai', 'Delhi', 'Bengaluru', 'Pune', 'Hyderabad', 'Chennai', 'Jaipur', 'Surat']);
-                $demoCities = (is_array($demoCities) && $demoCities) ? $demoCities : ['Mumbai', 'Delhi', 'Bengaluru', 'Pune'];
                 $demoMinutes = \App\Models\Setting::get('purchase_notif_demo_minutes', [9, 14, 27, 6, 41]);
                 $demoMinutes = (is_array($demoMinutes) && $demoMinutes) ? $demoMinutes : [9, 14, 27, 6, 41];
-                $notifItems = collect($demoMinutes)->values()->map(fn ($m, $i) => [
-                    'city' => $demoCities[$i % count($demoCities)],
-                    'time' => (int) $m . ' min ago',
+                $notifItems = collect($demoMinutes)->values()->map(fn ($m) => [
+                    'time' => (int) $m . ' ' . \Illuminate\Support\Str::plural('minute', (int) $m) . ' ago',
                 ]);
             }
         @endphp
         @if($notifEnabled && $notifItems->isNotEmpty())
         <style>
-            .kk-pnotif { position: fixed; left: 18px; bottom: 18px; z-index: 55; display: flex; align-items: center; gap: 12px;
-                background: #fffdf8; border: 1px solid #eaddc4; border-radius: 14px; box-shadow: 0 12px 34px rgba(45,24,16,0.16);
-                padding: 10px 30px 10px 10px; max-width: 340px; }
-            .kk-pnotif__thumb { width: 46px; height: 46px; border-radius: 10px; object-fit: cover; flex-shrink: 0; background: #f3e9d4; }
+            .kk-pnotif { position: fixed; left: 18px; bottom: 18px; z-index: 55; display: flex; align-items: center; gap: 14px;
+                background: #ffffff; border: 2px solid #f26a21; border-radius: 16px; box-shadow: 0 10px 30px rgba(17,24,39,0.14);
+                padding: 14px 44px 14px 14px; max-width: 400px; }
+            .kk-pnotif__thumb { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; flex-shrink: 0; background: #f3f4f6; }
             .kk-pnotif__body { flex: 1; min-width: 0; }
-            .kk-pnotif__msg { font-size: 13px; color: #2d1810; margin: 0; line-height: 1.35; }
-            .kk-pnotif__meta { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #9b8a72; margin: 3px 0 0; }
-            .kk-pnotif__verified { display: inline-flex; align-items: center; gap: 3px; color: #2a7d3e; font-weight: 600; }
-            .kk-pnotif__verified svg { width: 11px; height: 11px; }
-            .kk-pnotif__dot { width: 3px; height: 3px; border-radius: 50%; background: #cbb998; }
-            .kk-pnotif__close { position: absolute; top: 7px; right: 9px; background: none; border: none; color: #b9a888; cursor: pointer; font-size: 16px; line-height: 1; }
-            @media (max-width: 480px) { .kk-pnotif { left: 10px; right: 10px; bottom: 10px; max-width: none; } }
+            /* Three stacked lines: what happened, what was bought, when. */
+            .kk-pnotif__lead { font-size: 14px; color: #6b7280; margin: 0; line-height: 1.4; }
+            .kk-pnotif__name { font-size: 15px; font-weight: 700; color: #111827; margin: 4px 0 0; line-height: 1.35; overflow-wrap: anywhere; }
+            .kk-pnotif__time { font-size: 13px; color: #9ca3af; margin: 6px 0 0; line-height: 1.3; }
+            .kk-pnotif__close { position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; border-radius: 50%;
+                background: #eceef1; border: 0; color: #6b7280; cursor: pointer; font-size: 15px; line-height: 1; padding: 0;
+                display: flex; align-items: center; justify-content: center; transition: background .15s, color .15s; }
+            .kk-pnotif__close:hover { background: #dfe2e7; color: #374151; }
+            .kk-pnotif__close:focus-visible { outline: 2px solid #f26a21; outline-offset: 2px; }
+            @media (max-width: 480px) { .kk-pnotif { left: 10px; right: 10px; bottom: 10px; max-width: none; }
+                .kk-pnotif__thumb { width: 60px; height: 60px; } }
         </style>
         <div x-data="purchaseNotif(@js($notifItems->all()), @js(\Illuminate\Support\Str::limit($product->name, 34)), @js($notifThumb))" x-cloak x-show="visible"
              x-transition:enter="transition ease-out duration-300"
@@ -1267,12 +1268,9 @@
              class="kk-pnotif" role="status" aria-live="polite">
             <img class="kk-pnotif__thumb" :src="thumb" :alt="productName">
             <div class="kk-pnotif__body">
-                <p class="kk-pnotif__msg">Someone in <strong x-text="current.city"></strong> bought <strong>{{ \Illuminate\Support\Str::limit($product->name, 28) }}</strong></p>
-                <p class="kk-pnotif__meta">
-                    <span class="kk-pnotif__verified"><svg fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>Verified</span>
-                    <span class="kk-pnotif__dot"></span>
-                    <span x-text="current.time"></span>
-                </p>
+                <p class="kk-pnotif__lead">Someone purchased</p>
+                <p class="kk-pnotif__name">{{ \Illuminate\Support\Str::limit($product->name, 40) }}</p>
+                <p class="kk-pnotif__time" x-text="current.time"></p>
             </div>
             <button type="button" class="kk-pnotif__close" @click="dismiss()" aria-label="Dismiss">&times;</button>
         </div>
