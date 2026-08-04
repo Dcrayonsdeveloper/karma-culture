@@ -1,4 +1,4 @@
-﻿<!-- Mobile Navigation Drawer -->
+<!-- Mobile Navigation Drawer -->
 <div x-data="{ open: false }"
      @toggle-mobile-nav.window="open = !open"
      @keydown.escape.window="open = false"

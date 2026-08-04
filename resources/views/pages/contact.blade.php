@@ -1,4 +1,4 @@
-﻿<x-layouts.app>
+<x-layouts.app>
     <x-slot name="title">Contact Us - {{ config('app.name') }}</x-slot>
 
     @push('meta')

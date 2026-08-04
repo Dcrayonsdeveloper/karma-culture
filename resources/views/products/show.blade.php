@@ -1,4 +1,4 @@
-﻿<x-layouts.app>
+<x-layouts.app>
     <x-slot name="title">{{ $product->name }} - {{ config('app.name') }}</x-slot>
 
     @push('meta')
