@@ -52,7 +52,10 @@
     </style>
     @endif
     <div class="w-full px-3 lg:px-4">
-        <div class="relative flex items-center justify-between h-20 lg:h-24">
+        {{-- Bar height matches the logo exactly (h-16 lg:h-20), so there is no
+             dead space above or below it. Previously h-20/h-24, which left 8px
+             of padding on each side of the logo. --}}
+        <div class="relative flex items-center justify-between h-16 lg:h-20">
 
             <!-- Left: Mobile menu + Desktop Nav -->
             <div class="flex items-center gap-3 lg:gap-0 flex-1">
