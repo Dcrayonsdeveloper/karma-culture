@@ -79,6 +79,21 @@
     {{-- Analytics are loaded after cookie consent (see cookie-consent component) --}}
 </head>
 <body class="font-sans antialiased bg-white text-[#222222] overflow-x-clip" style="font-family: 'Poppins', sans-serif;" x-data data-authenticated="{{ auth()->check() ? 'true' : 'false' }}">
+{{-- Full-bleed sections (the hero and A+ banners) need the viewport width
+     *excluding* the scrollbar. 100vw includes it, so a 100%-wide banner
+     overhangs by the scrollbar width and this body's overflow-x-clip silently
+     cuts that strip off the right edge — the banner looks cropped.
+     clientWidth excludes the scrollbar, so this measurement is exact. --}}
+<script>
+    (function () {
+        function kkViewportWidth() {
+            document.documentElement.style.setProperty('--kk-vw', document.documentElement.clientWidth + 'px');
+        }
+        kkViewportWidth();
+        window.addEventListener('resize', kkViewportWidth);
+        window.addEventListener('orientationchange', kkViewportWidth);
+    })();
+</script>
     <!-- Toast Notifications -->
     <div class="fixed top-4 right-4 z-50 flex flex-col gap-2" aria-live="polite">
         <template x-for="toast in $store.toast.items" :key="toast.id">

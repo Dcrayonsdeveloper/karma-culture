@@ -774,8 +774,15 @@
                default stays on the image and remains centred here, so banners with
                no width set look exactly as before. <html> already carries
                overflow-x-clip, which absorbs the scrollbar gutter 100vw includes. */
-            .kk-aplus { margin: 48px 0 0; padding: 0; width: 100vw; max-width: 100vw;
-                margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); }
+            /* --kk-vw is the viewport width without the scrollbar (set in the layout).
+               Plain 100vw includes the scrollbar, so a 100%-wide banner overhung the
+               right edge by that amount and <html>'s overflow-x:clip cut the strip
+               off — the image looked cropped. Falls back to 100vw if the script
+               has not run yet. */
+            .kk-aplus { margin: 48px 0 0; padding: 0;
+                width: var(--kk-vw, 100vw); max-width: var(--kk-vw, 100vw);
+                margin-left: calc(50% - var(--kk-vw, 100vw) / 2);
+                margin-right: calc(50% - var(--kk-vw, 100vw) / 2); }
             /* Banners stack edge-to-edge with no spacing between them; natural aspect ratio keeps original quality.
                Size comes from per-image custom properties set in the admin panel, falling back to the responsive
                default. Custom properties (not inline width/height) so the mobile rule below can still win —
