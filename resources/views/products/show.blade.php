@@ -766,10 +766,16 @@
         {{-- ===== A+ CONTENT (Amazon-style banner images, admin-managed, stacked in saved order) ===== --}}
         @if($product->aplusImages->isNotEmpty())
         <style>
-            /* No max-width here: the 1120px cap lives on the image itself as the
-               default width. On the section it also clamped max-width:100%, so any
-               admin width above 1120px silently rendered as 1120px. */
-            .kk-aplus { margin: 48px auto 0; padding: 0; }
+            /* Full-bleed. The section sits inside the page's .container, which tops
+               out around 1504px, and the image's max-width:100% resolves against it —
+               so a width like 3500px still stopped at the container edge and never
+               reached the screen. The negative margins pull the section out to the
+               full viewport so a large width can span edge to edge. The 1120px
+               default stays on the image and remains centred here, so banners with
+               no width set look exactly as before. <html> already carries
+               overflow-x-clip, which absorbs the scrollbar gutter 100vw includes. */
+            .kk-aplus { margin: 48px 0 0; padding: 0; width: 100vw; max-width: 100vw;
+                margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); }
             /* Banners stack edge-to-edge with no spacing between them; natural aspect ratio keeps original quality.
                Size comes from per-image custom properties set in the admin panel, falling back to the responsive
                default. Custom properties (not inline width/height) so the mobile rule below can still win —
@@ -780,8 +786,9 @@
                    it outright, so sizes above 1120px now take effect. */
                 width: var(--kk-aplus-w, 1120px);
                 height: var(--kk-aplus-h, auto);
-                max-width: 100%;      /* stays inside the page container and shrinks on narrow screens */
-                margin: 0 auto;       /* centred once narrower than the container */
+                max-width: 100%;      /* = viewport width now the section is full-bleed, so a very
+                                         large value lands at the screen edges and never overflows */
+                margin: 0 auto;       /* centred whenever narrower than the viewport */
                 border: 0;
                 /* Deliberately no object-fit: it made an explicit height letterbox the
                    image rather than resize it, so the height control looked inert. */
