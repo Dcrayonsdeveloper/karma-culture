@@ -58,7 +58,10 @@
         <div class="relative flex items-center justify-between h-16 lg:h-20">
 
             <!-- Left: Mobile menu + Desktop Nav -->
-            <div class="flex items-center gap-3 lg:gap-0 flex-1">
+            {{-- lg:min-w-fit + shrink-0 on the nav: Chrome miscomputes this nested
+                 flex row's automatic minimum (min-width:auto), so without explicit
+                 floors the nav links slide under the search bar at lg-xl widths. --}}
+            <div class="flex items-center gap-3 lg:gap-0 flex-1 lg:min-w-fit">
                 <!-- Mobile menu button -->
                 <button @click="$dispatch('toggle-mobile-nav')" class="lg:hidden p-1.5 -ml-1.5 text-kk-brown hover:text-kk-tan-dark" aria-label="Open menu">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -79,7 +82,7 @@
                 </a>
 
                 <!-- Desktop Navigation (Left side) -->
-                <nav class="hidden lg:flex items-center gap-1">
+                <nav class="hidden lg:flex items-center gap-1 shrink-0">
                     <a href="{{ route('new-arrivals') }}" class="px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">New In</a>
 
                     {{-- Categories: hover-triggered mega menu — clean text layout, data from admin --}}
