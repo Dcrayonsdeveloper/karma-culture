@@ -285,12 +285,15 @@ Alpine.store('wishlist', {
 
     async add(productId) {
         productId = parseInt(productId, 10);
-        if (!this.has(productId)) {
-            this.ids.push(productId);
-            this.saveCookie();
-            Alpine.store('toast').success('Added to wishlist');
-            await this.fetch();
-        }
+        if (this.has(productId)) return;
+
+        this.ids.push(productId);
+        this.saveCookie();
+        // Fetch first: the toast is cosmetic, and if it ever throws it must not
+        // stop the item's data loading — that left the id saved but the wishlist
+        // page rendering as empty.
+        await this.fetch();
+        try { Alpine.store('toast').success('Added to wishlist'); } catch (e) {}
     },
 
     remove(productId) {
@@ -606,10 +609,12 @@ function initStores() {
     // Always fetch cart (works for both guests and authenticated users)
     Alpine.store('cart').fetch();
 
-    // Wishlist only for authenticated users
-    if (document.body.dataset.authenticated === 'true') {
-        Alpine.store('wishlist').fetch();
-    }
+    // The wishlist lives in a cookie and works for guests too, so re-read it
+    // here as well as in the store's init(): whichever runs first wins, and a
+    // signed-out shopper is no longer left with an empty list.
+    const wishlist = Alpine.store('wishlist');
+    wishlist.ids = wishlist.readCookie();
+    if (wishlist.ids.length) wishlist.fetch();
 }
 
 // Handle timing: if DOM already loaded (module scripts can run late), init immediately

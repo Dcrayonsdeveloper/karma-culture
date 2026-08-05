@@ -45,11 +45,11 @@ class SearchController extends Controller
             $productsQuery->whereIn('id', $productIds);
         } else {
             $productsQuery->where(function ($q) use ($query) {
-                $q->where('name', 'like', "%{$query}%")
-                  ->orWhere('description', 'like', "%{$query}%")
-                  ->orWhere('sku', 'like', "%{$query}%")
-                  ->orWhereHas('category', fn ($cq) => $cq->where('name', 'like', "%{$query}%"))
-                  ->orWhereHas('brand', fn ($bq) => $bq->where('name', 'like', "%{$query}%"));
+                $q->where(fn ($w) => $this->matchTerms($w, 'name', $query))
+                  ->orWhere(fn ($w) => $this->matchTerms($w, 'description', $query))
+                  ->orWhere(fn ($w) => $this->matchTerms($w, 'sku', $query))
+                  ->orWhereHas('category', fn ($cq) => $this->matchTerms($cq, 'name', $query))
+                  ->orWhereHas('brand', fn ($bq) => $this->matchTerms($bq, 'name', $query));
             });
         }
 
@@ -105,6 +105,48 @@ class SearchController extends Controller
         return view('search.index', compact('products', 'query', 'categories', 'brands'));
     }
 
+    /**
+     * Match a phrase against a column, tolerating word order and punctuation.
+     *
+     * A single LIKE on the whole phrase only matched a literal substring, so
+     * "T shirt" and "tshirt" both found nothing while "T-Shirt" products
+     * existed. Two rules run together:
+     *   - every word must appear somewhere in the value, in any order
+     *   - or the value matches once spacing and punctuation are stripped
+     */
+    private function matchTerms($builder, string $column, string $query)
+    {
+        // The column is chosen in this class, never by the request, but keep the
+        // raw fragment below provably safe.
+        if (! preg_match('/^[a-z_]+$/', $column)) {
+            return $builder;
+        }
+
+        $terms = preg_split('/\s+/', trim($query), -1, PREG_SPLIT_NO_EMPTY);
+        $squashed = preg_replace('/[^\p{L}\p{N}]+/u', '', $query);
+
+        return $builder->where(function ($q) use ($terms, $squashed, $column) {
+            $q->where(function ($all) use ($terms, $column) {
+                foreach ($terms as $term) {
+                    $all->where($column, 'like', '%'.$this->escapeLike($term).'%');
+                }
+            });
+
+            if ($squashed !== '') {
+                $q->orWhereRaw(
+                    "REPLACE(REPLACE(REPLACE(REPLACE(LOWER(`{$column}`), '-', ''), ' ', ''), '.', ''), '_', '') LIKE ?",
+                    ['%'.mb_strtolower($this->escapeLike($squashed)).'%']
+                );
+            }
+        });
+    }
+
+    /** % and _ are LIKE wildcards; a shopper typing them means them literally. */
+    private function escapeLike(string $value): string
+    {
+        return addcslashes($value, '%_\\');
+    }
+
     public function suggestions(Request $request): JsonResponse
     {
         $query = $request->get('q', '');
@@ -116,7 +158,7 @@ class SearchController extends Controller
         // Product suggestions
         $products = Product::query()
             ->where('is_active', true)
-            ->where('name', 'like', "%{$query}%")
+            ->where(fn ($w) => $this->matchTerms($w, 'name', $query))
             ->with(['category', 'primaryImage'])
             ->orderBy('sales_count', 'desc')
             ->take(5)
@@ -134,7 +176,7 @@ class SearchController extends Controller
         // Category suggestions
         $categories = Category::query()
             ->where('is_active', true)
-            ->where('name', 'like', "%{$query}%")
+            ->where(fn ($w) => $this->matchTerms($w, 'name', $query))
             ->take(3)
             ->get()
             ->map(fn ($category) => [
@@ -148,7 +190,7 @@ class SearchController extends Controller
         // Brand suggestions
         $brands = Brand::query()
             ->where('is_active', true)
-            ->where('name', 'like', "%{$query}%")
+            ->where(fn ($w) => $this->matchTerms($w, 'name', $query))
             ->take(3)
             ->get()
             ->map(fn ($brand) => [
@@ -159,8 +201,18 @@ class SearchController extends Controller
                 'type' => 'brand',
             ]);
 
+        // Start from a base collection. ->map() only downgrades an Eloquent
+        // collection to a base one when it can see a non-model item, so a query
+        // that matched nothing stays an Eloquent collection — and Eloquent's
+        // merge() calls getKey() on every item, which throws on these arrays.
+        // That made any search with no product hits but a category hit return a
+        // 500 instead of results ("kurta" being one).
         return response()->json([
-            'suggestions' => $products->merge($categories)->merge($brands),
+            'suggestions' => collect()
+                ->merge($products)
+                ->merge($categories)
+                ->merge($brands)
+                ->values(),
         ]);
     }
 }
