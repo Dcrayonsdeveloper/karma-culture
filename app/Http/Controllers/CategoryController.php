@@ -115,8 +115,21 @@ class CategoryController extends Controller
         $products = $query->paginate(24)->withQueryString();
 
         // Sub-categories for the sidebar checkbox filter (the scope category's children).
-        $filterSubcategories = $scopeCategory->children()->where('is_active', true)->withCount('products')->get();
-        $subcategories = $filterSubcategories;
+        $subcategories = $scopeCategory->children()->where('is_active', true)->withCount('products')->get();
+
+        // A checkbox that can never match anything is worse than no checkbox: it
+        // reads as a broken filter. withCount('products') only counts products
+        // sitting directly on the sub-category, so total the whole subtree and
+        // drop the ones that would always return nothing.
+        $filterSubcategories = $subcategories
+            ->each(function ($sub) {
+                $sub->setAttribute('products_total', Product::query()
+                    ->where('is_active', true)
+                    ->whereIn('category_id', $sub->getAllDescendantIds())
+                    ->count());
+            })
+            ->filter(fn ($sub) => $sub->products_total > 0)
+            ->values();
 
         // Which sub-category checkboxes are active (default to the clicked category).
         $activeSubcategorySlugs = (array) $request->input('subcategory', $isSubPage ? [$category->slug] : []);

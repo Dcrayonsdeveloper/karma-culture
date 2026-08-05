@@ -22,6 +22,9 @@
                                    {{ in_array($sub->slug, $activeSubs) ? 'checked' : '' }}
                                    class="w-3.5 h-3.5 rounded border-neutral-300 text-[#6F9CA2] focus:ring-[#6F9CA2] focus:ring-offset-0">
                             <span class="text-sm text-neutral-600 group-hover:text-neutral-900 transition-colors">{{ $sub->name }}</span>
+                            @isset($sub->products_total)
+                                <span class="ml-auto text-xs text-neutral-400 tabular-nums">{{ $sub->products_total }}</span>
+                            @endisset
                         </label>
                     @endforeach
                 </div>
