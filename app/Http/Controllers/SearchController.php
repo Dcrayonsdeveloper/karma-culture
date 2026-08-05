@@ -183,7 +183,7 @@ class SearchController extends Controller
                 'id' => $category->id,
                 'name' => $category->name,
                 'url' => route('category.show', $category),
-                'image' => $category->image_url,
+                'image' => $category->image_src ?? asset('images/no-product-image.svg'),
                 'type' => 'category',
             ]);
 
@@ -197,7 +197,7 @@ class SearchController extends Controller
                 'id' => $brand->id,
                 'name' => $brand->name,
                 'url' => route('brands.show', $brand),
-                'image' => $brand->logo_url,
+                'image' => $brand->logo_src ?? asset('images/no-product-image.svg'),
                 'type' => 'brand',
             ]);
 

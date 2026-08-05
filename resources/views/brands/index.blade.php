@@ -15,7 +15,7 @@
                 <a href="{{ route('brands.show', $brand) }}" class="group card overflow-hidden">
                     <div class="aspect-square bg-neutral-100 overflow-hidden flex items-center justify-center p-4">
                         @if($brand->logo_url)
-                            <img src="{{ $brand->logo_url }}"
+                            <img src="{{ $brand->logo_src }}"
                                  alt="{{ $brand->name }}"
                                  class="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300">
                         @else

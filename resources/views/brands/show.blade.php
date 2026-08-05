@@ -18,7 +18,7 @@
             <div class="flex items-center gap-6">
                 @if($brand->logo_url)
                     <div class="w-24 h-24 bg-neutral-100 rounded-lg p-4 flex items-center justify-center">
-                        <img src="{{ $brand->logo_url }}" alt="{{ $brand->name }}" class="max-w-full max-h-full object-contain">
+                        <img src="{{ $brand->logo_src }}" alt="{{ $brand->name }}" class="max-w-full max-h-full object-contain">
                     </div>
                 @endif
                 <div>

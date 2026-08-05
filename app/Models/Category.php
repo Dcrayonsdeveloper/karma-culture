@@ -118,4 +118,26 @@ class Category extends Model
 
         return $ids;
     }
+
+    /**
+     * Browser-ready URL for the category image, or null when none is set.
+     * image_url holds a storage-relative path (admin upload), but may also be
+     * a full URL or an absolute path — resolve all three like Banner does.
+     */
+    public function getImageSrcAttribute(): ?string
+    {
+        $path = $this->image_url;
+
+        if (! $path) {
+            return null;
+        }
+        if (str_starts_with($path, 'http')) {
+            return $path;
+        }
+        if (str_starts_with($path, '/')) {
+            return asset(ltrim($path, '/'));
+        }
+
+        return asset('storage/'.$path);
+    }
 }

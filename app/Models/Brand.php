@@ -53,4 +53,26 @@ class Brand extends Model
     {
         return $query->where('is_featured', true);
     }
+
+    /**
+     * Browser-ready URL for the brand logo, or null when none is set.
+     * logo_url holds a storage-relative path (admin upload), but may also be
+     * a full URL or an absolute path — resolve all three like Banner does.
+     */
+    public function getLogoSrcAttribute(): ?string
+    {
+        $path = $this->logo_url;
+
+        if (! $path) {
+            return null;
+        }
+        if (str_starts_with($path, 'http')) {
+            return $path;
+        }
+        if (str_starts_with($path, '/')) {
+            return asset(ltrim($path, '/'));
+        }
+
+        return asset('storage/'.$path);
+    }
 }
