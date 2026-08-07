@@ -33,8 +33,11 @@
             .kk-home { background: var(--kk-cream); color: var(--kk-text); font-family: var(--kk-body); }
             .kk-display { font-family: var(--kk-display); font-weight: 500; letter-spacing: -0.01em; }
             .kk-eyebrow { font-family: var(--kk-body); font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--kk-tan-dark); font-weight: 700; }
-            .kk-section { padding: 56px 0; }
-            .kk-section--tight { padding: 32px 0; }
+            /* Consecutive sections stack their paddings, so each side stays
+               small — the visible gap between two sections is roughly double
+               these values. */
+            .kk-section { padding: 24px 0; }
+            .kk-section--tight { padding: 16px 0; }
             .kk-section-title { font-family: var(--kk-display); font-size: 28px; line-height: 1.1; color: var(--kk-text); margin: 0; font-weight: 700; }
             .kk-section-title--lg { font-size: 38px; }
             .kk-view-all { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--kk-brown); text-decoration: none; font-weight: 700; }
@@ -125,7 +128,7 @@
 
 
             /* ===== Shop It Your Way — Rail of hangers ===== */
-            .kk-shop-your-way { background: var(--kk-cream-light); padding: 32px 0 64px; }
+            .kk-shop-your-way { background: var(--kk-cream-light); padding: 24px 0 28px; }
             .kk-syw-heading {
                 font-family: var(--kk-display);
                 font-size: 44px;
@@ -284,7 +287,7 @@
                 .kk-shirt-hanger { max-width: 120px; }
             }
             @media (max-width: 767px) {
-                .kk-shop-your-way { padding: 24px 0 40px; }
+                .kk-shop-your-way { padding: 16px 0 20px; }
                 .kk-syw-heading { font-size: 28px; }
                 .kk-syw-tabs { padding: 4px; gap: 2px; margin-top: 24px; }
                 .kk-syw-tab { padding: 10px 16px; min-width: 100px; }
@@ -316,7 +319,7 @@
             .kk-product__cta .kk-btn-brown { padding: 8px 14px; font-size: 10.5px; letter-spacing: 0.1em; }
 
             /* About Us — video-led, minimal copy */
-            .kk-about { background: var(--kk-cream); padding: 88px 0; text-align: center; }
+            .kk-about { background: var(--kk-cream); padding: 40px 0; text-align: center; }
             .kk-about p.intro { max-width: 480px; margin: 14px auto 0; color: var(--kk-text-muted); font-size: 15px; line-height: 1.65; }
             /* Three reel-style (9:16) videos, Instagram-reels grid */
             .kk-about-reels {
@@ -350,13 +353,13 @@
             }
             .kk-about-cta { margin-top: 36px; }
             @media (max-width: 640px) {
-                .kk-about { padding: 56px 0; }
+                .kk-about { padding: 28px 0; }
                 .kk-about-reels { margin-top: 28px; gap: 10px; }
                 .kk-about-reel { border-radius: 8px; }
             }
 
             /* Qualities (dark) — video-background cards */
-            .kk-qualities { background: var(--kk-brown-dark); color: var(--kk-cream); padding: 48px 0; text-align: center; }
+            .kk-qualities { background: var(--kk-brown-dark); color: var(--kk-cream); padding: 28px 0; text-align: center; }
             .kk-qualities h2 { font-family: var(--kk-display); font-size: 32px; color: var(--kk-cream); margin: 10px 0 8px; }
             .kk-qualities p.sub { color: rgba(239,226,203,.7); font-size: 13px; max-width: 520px; margin: 0 auto; }
 
@@ -439,7 +442,7 @@
             }
 
             /* Newsletter */
-            .kk-newsletter { background: var(--kk-cream-light); color: var(--kk-text); padding: 72px 0; text-align: center; }
+            .kk-newsletter { background: var(--kk-cream-light); color: var(--kk-text); padding: 36px 0; text-align: center; }
             .kk-newsletter h2 { font-family: var(--kk-display); font-size: 32px; color: var(--kk-text); margin: 8px 0 8px; }
             .kk-newsletter p { color: var(--kk-text-muted); font-size: 13px; margin-bottom: 28px; }
             .kk-newsletter-form { display: flex; max-width: 480px; margin: 0 auto; background: #fff; border: 1px solid var(--kk-cream-dark); border-radius: 999px; padding: 4px; }
@@ -452,10 +455,10 @@
             .kk-section-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 28px; gap: 16px; }
             .kk-section-header .left { display: flex; flex-direction: column; gap: 6px; }
             @media (max-width: 640px) {
-                .kk-section { padding: 40px 0; }
+                .kk-section { padding: 20px 0; }
                 .kk-section-title { font-size: 22px; }
                 .kk-section-title--lg { font-size: 28px; }
-                .kk-about, .kk-qualities { padding: 48px 0; }
+                .kk-about, .kk-qualities { padding: 24px 0; }
                 .kk-qualities h2, .kk-newsletter h2 { font-size: 26px; }
             }
         </style>
