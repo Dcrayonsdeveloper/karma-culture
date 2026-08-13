@@ -67,6 +67,9 @@ class SettingController extends Controller
                 ['key' => $key],
                 ['value' => $request->boolean($key) ? '1' : '0', 'group' => 'payment']
             );
+            // Setting::get() caches each key for an hour; without this forget
+            // the storefront kept offering stale payment methods after saving.
+            Cache::forget("setting.{$key}");
         }
 
         // Credential / text fields
@@ -75,7 +78,9 @@ class SettingController extends Controller
                 ['key' => $key],
                 ['value' => $value ?? '', 'group' => 'payment']
             );
+            Cache::forget("setting.{$key}");
         }
+        Cache::forget('settings.group.payment');
 
         return back()->with('success', 'Payment settings updated successfully.');
     }
@@ -109,6 +114,7 @@ class SettingController extends Controller
                 ['key' => $key],
                 ['value' => $request->boolean($key) ? '1' : '0', 'group' => 'shipping']
             );
+            Cache::forget("setting.{$key}");
         }
 
         foreach ($validated as $key => $value) {
@@ -116,7 +122,9 @@ class SettingController extends Controller
                 ['key' => $key],
                 ['value' => $value ?? '', 'group' => 'shipping']
             );
+            Cache::forget("setting.{$key}");
         }
+        Cache::forget('settings.group.shipping');
 
         // Clear cached Shiprocket token if credentials changed
         if ($request->filled('shiprocket_api_token') || $request->filled('shiprocket_email') || $request->filled('shiprocket_password')) {
@@ -149,7 +157,9 @@ class SettingController extends Controller
                 ['key' => $key],
                 ['value' => $value ?? '', 'group' => 'tax']
             );
+            Cache::forget("setting.{$key}");
         }
+        Cache::forget('settings.group.tax');
 
         return back()->with('success', 'Tax settings updated successfully.');
     }
@@ -179,7 +189,9 @@ class SettingController extends Controller
                 ['key' => $key],
                 ['value' => $value ?? '', 'group' => 'email']
             );
+            Cache::forget("setting.{$key}");
         }
+        Cache::forget('settings.group.email');
 
         return back()->with('success', 'Email settings updated successfully.');
     }
