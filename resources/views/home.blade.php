@@ -311,11 +311,16 @@
             .kk-product__tag { position: absolute; top: 9px; left: 9px; background: var(--kk-brown-dark); color: var(--kk-cream); padding: 3px 8px; border-radius: 999px; font-size: 8px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; }
             .kk-product__discount { position: absolute; top: 9px; right: 9px; background: var(--kk-tan-dark); color: var(--kk-cream); padding: 3px 8px; border-radius: 999px; font-size: 9px; font-weight: 700; letter-spacing: 0.04em; }
             .kk-product__body { padding: 12px 12px 14px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
-            .kk-product__label { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--kk-text-muted); font-weight: 600; }
-            .kk-product__name { font-family: var(--kk-display); font-size: 14px; color: var(--kk-text); line-height: 1.25; margin: 0; }
-            .kk-product__price { font-size: 13px; color: var(--kk-text); font-weight: 600; }
-            .kk-product__price del { color: var(--kk-text-muted); font-weight: 400; margin-right: 6px; font-size: 12px; }
-            .kk-product__cta { margin-top: 8px; }
+            /* Card text uses the body font (not the display serif) so home-page
+               cards match the listing-page cards, and label/name reserve fixed
+               heights so brand, name and price line up across every card even
+               when a product has no brand. */
+            .kk-product__label { font-family: var(--kk-body); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--kk-text-muted); font-weight: 500; display: block; min-height: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .kk-product__name { font-family: var(--kk-body); font-size: 13px; font-weight: 600; color: var(--kk-text); line-height: 1.35; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 35px; }
+            .kk-product__price { font-size: 13px; color: var(--kk-text); font-weight: 700; }
+            .kk-product__price del { color: var(--kk-text-muted); font-weight: 400; margin: 0 4px 0 6px; font-size: 12px; }
+            .kk-product__off { font-size: 11px; font-weight: 600; color: var(--kk-tan-dark); }
+            .kk-product__cta { margin-top: auto; padding-top: 8px; }
             .kk-product__cta .kk-btn-brown { padding: 8px 14px; font-size: 10.5px; letter-spacing: 0.1em; }
 
             /* About Us — video-led, minimal copy */
