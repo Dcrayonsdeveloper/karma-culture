@@ -112,7 +112,7 @@
                             <option value="">All categories</option>
                             @foreach($categories as $category)
                                 <option value="{{ $category->id }}" {{ request('category') == $category->id ? 'selected' : '' }}>
-                                    {{ $category->name }}
+                                    {{ $category->path_label ?? $category->name }}
                                 </option>
                             @endforeach
                         </select>

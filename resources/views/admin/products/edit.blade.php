@@ -374,7 +374,7 @@
                             <select name="category_id" id="category_id" required class="form-input w-full @error('category_id') form-input-error @enderror">
                                 <option value="">Select</option>
                                 @foreach($categories as $category)
-                                    <option value="{{ $category->id }}" {{ old('category_id', $product->category_id) == $category->id ? 'selected' : '' }}>{{ $category->name }}</option>
+                                    <option value="{{ $category->id }}" {{ old('category_id', $product->category_id) == $category->id ? 'selected' : '' }}>{{ $category->path_label ?? $category->name }}</option>
                                 @endforeach
                             </select>
                             @error('category_id') <p class="form-error">{{ $message }}</p> @enderror
