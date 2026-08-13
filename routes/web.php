@@ -118,6 +118,10 @@ Route::prefix('checkout')->name('checkout.')->group(function () {
     Route::get('/failed', [App\Http\Controllers\CheckoutController::class, 'failed'])->name('failed');
 });
 
+// PayU initiate lives outside the auth group because checkout is guest-friendly;
+// ownership (user id or guest session) is enforced inside the controller.
+Route::get('/payu/initiate/{order}', [App\Http\Controllers\PayUController::class, 'initiate'])->name('payu.initiate');
+
 // Wishlist page — client-side (localStorage) wishlist, works for guests
 Route::get('/wishlist', [App\Http\Controllers\WishlistController::class, 'index'])->name('wishlist');
 // Product data for the favourited IDs (guest-accessible; used to render the wishlist page)
@@ -149,9 +153,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/email/verify', [App\Http\Controllers\Auth\VerificationController::class, 'show'])->name('verification.notice');
     Route::get('/email/verify/{id}/{hash}', [App\Http\Controllers\Auth\VerificationController::class, 'verify'])->middleware('signed')->name('verification.verify');
     Route::post('/email/resend', [App\Http\Controllers\Auth\VerificationController::class, 'resend'])->name('verification.resend');
-
-    // PayU Payment Gateway (initiate requires auth)
-    Route::get('/payu/initiate/{order}', [App\Http\Controllers\PayUController::class, 'initiate'])->name('payu.initiate');
 
     // Account Routes
     Route::prefix('account')->name('account.')->group(function () {

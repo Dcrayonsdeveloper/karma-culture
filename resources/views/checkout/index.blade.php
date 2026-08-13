@@ -19,7 +19,13 @@
                 $states = ['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Andaman and Nicobar Islands','Chandigarh','Dadra and Nagar Haveli and Daman and Diu','Delhi','Jammu and Kashmir','Ladakh','Lakshadweep','Puducherry'];
             @endphp
 
-            <form action="{{ route('checkout.process') }}" method="POST">
+            @php
+                $codAvailable    = in_array('cod', $paymentMethods, true);
+                $onlineAvailable = in_array('online', $paymentMethods, true);
+                $defaultMethod   = old('payment_method', $codAvailable ? 'cod' : 'online');
+            @endphp
+
+            <form action="{{ route('checkout.process') }}" method="POST" x-data="{ pm: '{{ $defaultMethod }}' }">
                 @csrf
 
                 <div class="flex flex-col lg:flex-row lg:items-start gap-5">
@@ -98,6 +104,51 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Payment Method -->
+                        <div class="bg-white rounded-lg border border-neutral-100">
+                            <div class="flex items-center gap-2.5 px-4 py-3 border-b border-neutral-100">
+                                <div class="w-6 h-6 rounded-full bg-primary-600 text-white text-xs font-bold flex items-center justify-center">2</div>
+                                <h2 class="text-sm font-semibold text-neutral-900">Payment Method</h2>
+                            </div>
+                            <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                @if($codAvailable)
+                                    <label class="flex items-start gap-3 border rounded-lg px-4 py-3 cursor-pointer transition-colors"
+                                           :class="pm === 'cod' ? 'border-primary-500 ring-1 ring-primary-200 bg-primary-50' : 'border-neutral-200 hover:border-neutral-300'">
+                                        <input type="radio" name="payment_method" value="cod" x-model="pm" class="mt-1 accent-primary-600">
+                                        <span class="min-w-0">
+                                            <span class="flex items-center gap-1.5 text-sm font-semibold text-neutral-900">
+                                                <svg class="w-4 h-4 text-neutral-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                                                Cash on Delivery
+                                            </span>
+                                            <span class="block text-xs text-neutral-600 mt-0.5">Pay in cash when your order is delivered.</span>
+                                        </span>
+                                    </label>
+                                @endif
+
+                                @if($onlineAvailable)
+                                    <label class="flex items-start gap-3 border rounded-lg px-4 py-3 cursor-pointer transition-colors"
+                                           :class="pm === 'online' ? 'border-primary-500 ring-1 ring-primary-200 bg-primary-50' : 'border-neutral-200 hover:border-neutral-300'">
+                                        <input type="radio" name="payment_method" value="online" x-model="pm" class="mt-1 accent-primary-600">
+                                        <span class="min-w-0">
+                                            <span class="flex items-center gap-1.5 text-sm font-semibold text-neutral-900">
+                                                <svg class="w-4 h-4 text-neutral-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                                                Pay Online
+                                            </span>
+                                            <span class="block text-xs text-neutral-600 mt-0.5">UPI, Cards, Net Banking &amp; Wallets — secure payment.</span>
+                                        </span>
+                                    </label>
+                                @else
+                                    <div class="flex items-start gap-3 border border-neutral-200 rounded-lg px-4 py-3 opacity-60 cursor-not-allowed">
+                                        <span class="min-w-0">
+                                            <span class="block text-sm font-semibold text-neutral-500">Pay Online</span>
+                                            <span class="block text-xs text-neutral-500 mt-0.5">Temporarily unavailable — please use Cash on Delivery.</span>
+                                        </span>
+                                    </div>
+                                @endif
+                            </div>
+                            @error('payment_method')<p class="px-4 pb-3 -mt-2 text-xs text-error-500">{{ $message }}</p>@enderror
                         </div>
 
                         <!-- Order Notes -->
@@ -197,7 +248,8 @@
                             <div class="p-4 pt-0">
                                 <button type="submit"
                                         class="block w-full py-3 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold text-center rounded-lg transition-colors shadow-sm">
-                                    PLACE ORDER
+                                    <span x-show="pm !== 'online'">PLACE ORDER</span>
+                                    <span x-show="pm === 'online'" x-cloak>CONTINUE TO PAYMENT</span>
                                 </button>
                             </div>
 

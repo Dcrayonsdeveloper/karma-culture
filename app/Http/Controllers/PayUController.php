@@ -79,17 +79,25 @@ class PayUController extends Controller
      */
     public function initiate(Order $order)
     {
-        abort_unless($order->user_id === auth()->id(), 403);
+        // Checkout is guest-friendly: the owner is either the logged-in user
+        // or the guest session that placed the order (same scheme as
+        // CheckoutController::success). A bare null === null comparison would
+        // have let any guest initiate payment for any guest order.
+        $ownsAsUser  = auth()->check() && $order->user_id === auth()->id();
+        $ownsAsGuest = in_array($order->id, session('guest_order_ids', []), true);
+        abort_unless($ownsAsUser || $ownsAsGuest, 403);
         abort_unless($order->payment_status === 'pending', 400, 'Order already paid.');
 
         $config = $this->getConfig();
 
-        if (empty($config['key']) || empty($config['salt'])) {
+        if (empty($config['key']) || empty($config['salt']) || Setting::get('payu_enabled', '0') !== '1') {
             return redirect()->route('checkout.failed')
                 ->with('error', 'Payment gateway not configured. Please contact support.');
         }
 
-        $user = auth()->user();
+        // Customer details come from the order's own address snapshot, which
+        // exists for guests and users alike.
+        $snap = $order->shipping_address_snapshot ?? [];
         $txnid = 'TXN-' . $order->order_number . '-' . time();
 
         $params = [
@@ -97,9 +105,9 @@ class PayUController extends Controller
             'txnid'       => $txnid,
             'amount'      => number_format($order->total, 2, '.', ''),
             'productinfo' => 'Order #' . $order->order_number,
-            'firstname'   => $user->first_name ?? $user->name ?? 'Customer',
-            'email'       => $user->email,
-            'phone'       => $user->phone ?? '',
+            'firstname'   => $snap['name'] ?? 'Customer',
+            'email'       => $snap['email'] ?? auth()->user()?->email ?? '',
+            'phone'       => $snap['phone'] ?? '',
             'surl'        => route('payu.success'),
             'furl'        => route('payu.failure'),
             'udf1'        => (string) $order->id,
@@ -248,7 +256,7 @@ class PayUController extends Controller
         $errorMsg = $params['error_Message'] ?? 'Payment was not successful.';
 
         return redirect()->route('checkout.failed')
-            ->with('error', $errorMsg . ' Your cart items have been preserved. Please try again.');
+            ->with('error', $errorMsg . ' No money was captured. Please place your order again.');
     }
 
     /**

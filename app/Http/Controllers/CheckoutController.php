@@ -8,6 +8,7 @@ use App\Models\Coupon;
 use App\Models\CouponUsage;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -29,6 +30,22 @@ class CheckoutController extends Controller
             : $query->where('session_id', session()->getId())->first();
     }
 
+    /**
+     * Which payment methods can currently be offered.
+     * Online needs the PayU toggle plus both credentials; COD follows its
+     * admin toggle but is forced on when online is unavailable, so checkout
+     * can never end up with no way to pay.
+     */
+    public static function availablePaymentMethods(): array
+    {
+        $onlineReady = Setting::get('payu_enabled', '0') === '1'
+            && Setting::get('payu_merchant_key', '') !== ''
+            && Setting::get('payu_merchant_salt', '') !== '';
+        $codEnabled = Setting::get('cod_enabled', '1') === '1' || ! $onlineReady;
+
+        return array_keys(array_filter(['cod' => $codEnabled, 'online' => $onlineReady]));
+    }
+
     public function index(): View|RedirectResponse
     {
         $cart = $this->currentCart(['items.product', 'items.variant', 'coupon']);
@@ -37,7 +54,10 @@ class CheckoutController extends Controller
             return redirect()->route('cart.index')->with('error', 'Your cart is empty.');
         }
 
-        return view('checkout.index', compact('cart'));
+        return view('checkout.index', [
+            'cart'           => $cart,
+            'paymentMethods' => self::availablePaymentMethods(),
+        ]);
     }
 
     public function process(Request $request): RedirectResponse
@@ -52,9 +72,11 @@ class CheckoutController extends Controller
             'state'          => ['required', 'string', 'max:80'],
             'postal_code'    => ['required', 'regex:/^\d{6}$/'],
             'notes'          => ['nullable', 'string', 'max:500'],
+            'payment_method' => ['required', 'in:'.implode(',', self::availablePaymentMethods())],
         ], [
             'phone.regex'       => 'Please enter a valid 10-digit mobile number.',
             'postal_code.regex' => 'Please enter a valid 6-digit PIN code.',
+            'payment_method.in' => 'Please choose an available payment method.',
         ]);
 
         $cart = $this->currentCart(['items.product', 'items.variant', 'coupon']);
@@ -124,6 +146,7 @@ class CheckoutController extends Controller
                         'guest_phone'     => $validated['phone'],
                         'guest_checkout'  => ! auth()->check(),
                         'payment_pending' => true,
+                        'payment_method'  => $validated['payment_method'],
                     ],
                 ]);
 
@@ -191,11 +214,13 @@ class CheckoutController extends Controller
 
         OrderPlaced::dispatch($order, 'web');
 
-        // ── Shiprocket integration point ───────────────────────────────────
-        // No payment/shipping API is wired up yet. When Shiprocket is added,
-        // hand the order off here instead of going straight to confirmation —
-        // e.g. `return redirect()->away($shiprocket->checkoutUrl($order));`
-        // ───────────────────────────────────────────────────────────────────
+        // Online payments hand off to PayU (order stays payment_status=pending
+        // until the gateway callback confirms). COD goes straight to the
+        // confirmation page.
+        if ($validated['payment_method'] === 'online') {
+            return redirect()->route('payu.initiate', $order);
+        }
+
         return redirect()->route('checkout.success', $order);
     }
 
