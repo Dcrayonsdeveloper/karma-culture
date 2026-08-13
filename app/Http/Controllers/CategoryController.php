@@ -37,14 +37,6 @@ class CategoryController extends Controller
         // filed under deeper subcategories are still included.
         $categoryIds = $scopeCategory->getAllDescendantIds();
 
-        // Does this section's category tree hold any products right now? When it's empty
-        // (catalogue not categorised yet) the default view falls back to the full
-        // catalogue so Men's/Women's aren't blank — but any explicit filter the shopper
-        // applies below (sub-category, price, availability) still narrows the results.
-        $sectionHasProducts = Product::where('is_active', true)
-            ->whereIn('category_id', $categoryIds)
-            ->exists();
-
         $query = Product::query()
             ->where('is_active', true)
             ->with(['category', 'brand', 'primaryImage']);
@@ -60,15 +52,13 @@ class CategoryController extends Controller
             $subIds = $subIds->unique()->values();
             // Force an empty result (not "no filter") if the slugs resolve to nothing.
             $query->whereIn('category_id', $subIds->isNotEmpty() ? $subIds->all() : [0]);
-        } elseif ($sectionHasProducts) {
-            // No explicit pick, but this section has products — scope to it. A sub-page
-            // defaults to the clicked category (and its descendants).
-            $query->whereIn('category_id', $categoryIds);
-            if ($isSubPage) {
-                $query->whereIn('category_id', $category->getAllDescendantIds());
-            }
+        } else {
+            // Always scope strictly to the clicked category (and its descendants).
+            // An empty category renders the view's "No products found" state —
+            // never products from elsewhere in the catalogue: the old full-catalogue
+            // fallback made every empty category page show unrelated products.
+            $query->whereIn('category_id', $isSubPage ? $category->getAllDescendantIds() : $categoryIds);
         }
-        // else: section empty and nothing ticked → show the full catalogue (fallback).
 
         // Price filter
         if ($request->filled('min_price')) {
