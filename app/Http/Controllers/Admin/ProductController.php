@@ -59,7 +59,7 @@ class ProductController extends Controller
         $perPage = min((int) $request->input('per_page', 10), 100);
         $products = $query->latest()->paginate($perPage)->withQueryString();
 
-        $categories = Category::orderBy('name')->get();
+        $categories = Category::optionsWithPath();
         $sellers = Seller::with('user')->orderBy('store_name')->get();
 
         // Stats
@@ -108,7 +108,7 @@ class ProductController extends Controller
 
     public function create(): View
     {
-        $categories = Category::orderBy('name')->get();
+        $categories = Category::optionsWithPath();
         $sellers = Seller::with('user')->orderBy('store_name')->get();
         $brands = Brand::where('is_active', true)->orderBy('name')->get();
         $attributes = Attribute::with('values')->orderBy('name')->get();
@@ -218,7 +218,7 @@ class ProductController extends Controller
 
     public function edit(Product $product): View
     {
-        $categories = Category::orderBy('name')->get();
+        $categories = Category::optionsWithPath();
         $sellers = Seller::with('user')->orderBy('store_name')->get();
         $brands = Brand::where('is_active', true)->orderBy('name')->get();
         $attributes = Attribute::with('values')->orderBy('name')->get();

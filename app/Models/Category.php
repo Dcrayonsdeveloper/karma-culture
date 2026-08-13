@@ -120,6 +120,31 @@ class Category extends Model
     }
 
     /**
+     * All categories labelled with their full tree path ("Men's › Kurtas") and
+     * sorted by it, for admin dropdowns. Bare names collide there: Kurtas
+     * exists under Men's, under Women's, and as a legacy root, and a flat
+     * name-sorted list shows them as indistinguishable duplicates.
+     */
+    public static function optionsWithPath()
+    {
+        $all = static::orderBy('name')->get();
+        $byId = $all->keyBy('id');
+
+        return $all->map(function ($category) use ($byId) {
+            $label = $category->name;
+            $parentId = $category->parent_id;
+            $depth = 0;
+            while ($parentId && isset($byId[$parentId]) && $depth++ < 6) {
+                $label = $byId[$parentId]->name.' › '.$label;
+                $parentId = $byId[$parentId]->parent_id;
+            }
+            $category->setAttribute('path_label', $label.($category->is_active ? '' : ' (inactive)'));
+
+            return $category;
+        })->sortBy('path_label', SORT_NATURAL | SORT_FLAG_CASE)->values();
+    }
+
+    /**
      * Browser-ready URL for the category image, or null when none is set.
      * image_url holds a storage-relative path (admin upload), but may also be
      * a full URL or an absolute path — resolve all three like Banner does.
