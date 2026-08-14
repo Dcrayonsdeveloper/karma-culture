@@ -334,12 +334,22 @@ body {
     max-width: 100%;
 }
 
-/* Storefront paragraph baseline — bumps all <p> to 20px.
-   Scoped with :not(.layout-admin) so admin keeps its 13px compact base.
-   !important wins over the many inline/component font-size overrides. */
-body:not(.layout-admin) p {
-    font-size: 18px !important;
-    line-height: 1.6;
+/* Storefront paragraph baseline. Scoped with :not(.layout-admin) so admin
+   keeps its 13px compact base.
+
+   Declared inside @layer base so Tailwind's utilities layer still wins. As an
+   unlayered `!important` rule this beat every text-* utility on a <p> — an
+   unlayered declaration outranks any layered one regardless of specificity —
+   which silently forced 29 distinct paragraph styles sitewide (text-xs
+   through text-3xl) to 18px. Most visibly it broke the product card: the
+   brand line is a <p> and rendered at 18px, while the category variant is an
+   <a> and correctly rendered at 10px, so cards with a brand looked like a
+   different template. */
+@layer base {
+    body:not(.layout-admin) p {
+        font-size: 18px;
+        line-height: 1.6;
+    }
 }
 
 /* Hide storefront breadcrumbs (Home > X chain) per design.
