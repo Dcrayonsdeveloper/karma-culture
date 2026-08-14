@@ -49,11 +49,11 @@
             {{-- Eyebrow: brand first, category as fallback — always rendered so
                  names and prices align across the row. --}}
             @if($product->brand)
-                <p class="text-[10px] text-neutral-600 uppercase tracking-wide mb-0.5 leading-[15px] min-h-[15px] truncate">{{ $product->brand->name }}</p>
+                <p class="text-[10px] text-kk-text uppercase tracking-wide mb-0.5 leading-[15px] min-h-[15px] truncate">{{ $product->brand->name }}</p>
             @elseif($product->category)
-                <p class="text-[10px] text-neutral-600 uppercase tracking-wide mb-0.5 leading-[15px] min-h-[15px] truncate">{{ $product->category->name }}</p>
+                <p class="text-[10px] text-kk-text uppercase tracking-wide mb-0.5 leading-[15px] min-h-[15px] truncate">{{ $product->category->name }}</p>
             @else
-                <p class="text-[10px] uppercase tracking-wide mb-0.5 leading-[15px] min-h-[15px]" aria-hidden="true">&nbsp;</p>
+                <p class="text-[10px] text-kk-text uppercase tracking-wide mb-0.5 leading-[15px] min-h-[15px]" aria-hidden="true">&nbsp;</p>
             @endif
             <h3 class="text-xs text-[#222] line-clamp-1 mb-1 group-hover:text-[#6F9CA2] leading-snug font-medium">
                 {{ $product->name }}
@@ -169,13 +169,13 @@
                  the name and price sit at the same height on every card, even
                  for products with neither. --}}
             @if($product->brand)
-                <p class="text-[10px] text-neutral-600 uppercase tracking-wider mb-0.5 leading-[15px] min-h-[15px] truncate">{{ $product->brand->name }}</p>
+                <p class="text-[10px] text-kk-text uppercase tracking-wider mb-0.5 leading-[15px] min-h-[15px] truncate">{{ $product->brand->name }}</p>
             @elseif($product->category)
-                <a href="{{ route('category.show', $product->category) }}" class="text-[10px] text-neutral-600 uppercase tracking-wider mb-0.5 leading-[15px] min-h-[15px] truncate block hover:text-[#6F9CA2]">
+                <a href="{{ route('category.show', $product->category) }}" class="text-[10px] text-kk-text uppercase tracking-wider mb-0.5 leading-[15px] min-h-[15px] truncate block hover:text-[#6F9CA2]">
                     {{ $product->category->name }}
                 </a>
             @else
-                <p class="text-[10px] uppercase tracking-wider mb-0.5 leading-[15px] min-h-[15px]" aria-hidden="true">&nbsp;</p>
+                <p class="text-[10px] text-kk-text uppercase tracking-wider mb-0.5 leading-[15px] min-h-[15px]" aria-hidden="true">&nbsp;</p>
             @endif
 
             {{-- Product Name --}}
