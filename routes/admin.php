@@ -13,7 +13,6 @@ use App\Http\Controllers\Admin\CreditNoteController;
 use App\Http\Controllers\Admin\CurrencyController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\DeliveryPartnerController;
 use App\Http\Controllers\Admin\EnquiryController;
 use App\Http\Controllers\Admin\FlashSaleController;
 use App\Http\Controllers\Admin\FraudController;
@@ -33,7 +32,6 @@ use App\Http\Controllers\Admin\ReturnController;
 use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SearchController;
-use App\Http\Controllers\Admin\SellerController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\ShippingRateController;
 use App\Http\Controllers\Admin\ShippingZoneController;
@@ -153,30 +151,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/customers/{customer}/orders', [CustomerController::class, 'orders'])->name('customers.orders');
         });
 
-        // Sellers
-        Route::middleware('admin.section:sellers')->group(function () {
-            Route::prefix('sellers')->name('sellers.')->group(function () {
-                Route::get('/', [SellerController::class, 'index'])->name('index');
-                Route::get('/pending', [SellerController::class, 'pending'])->name('pending');
-                Route::get('/{seller}', [SellerController::class, 'show'])->name('show');
-                Route::put('/{seller}', [SellerController::class, 'update'])->name('update');
-                Route::post('/{seller}/approve', [SellerController::class, 'approve'])->name('approve');
-                Route::post('/{seller}/reject', [SellerController::class, 'reject'])->name('reject');
-                Route::post('/{seller}/suspend', [SellerController::class, 'suspend'])->name('suspend');
-                Route::get('/{seller}/products', [SellerController::class, 'products'])->name('products');
-                Route::get('/{seller}/payouts', [SellerController::class, 'payouts'])->name('payouts');
-            });
-        });
-
         // Staff (admin-only)
         Route::middleware('admin.section:staff')->group(function () {
             Route::resource('staff', StaffController::class);
-        });
-
-        // Delivery Partners
-        Route::middleware('admin.section:delivery_partners')->group(function () {
-            Route::resource('delivery-partners', DeliveryPartnerController::class);
-            Route::put('/delivery-partners/{deliveryPartner}/toggle-status', [DeliveryPartnerController::class, 'toggleStatus'])->name('delivery-partners.toggle-status');
         });
 
         // Marketing
@@ -236,7 +213,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/analytics', [ReportController::class, 'analytics'])->name('analytics');
                 Route::get('/products', [ReportController::class, 'products'])->name('products');
                 Route::get('/customers', [ReportController::class, 'customers'])->name('customers');
-                Route::get('/sellers', [ReportController::class, 'sellers'])->name('sellers');
                 Route::get('/inventory', [InventoryReportController::class, 'index'])->name('inventory');
                 Route::get('/export/{type}', [ReportController::class, 'export'])->name('export');
                 Route::get('/export-excel/{type}', [ReportController::class, 'exportExcel'])->name('export-excel');

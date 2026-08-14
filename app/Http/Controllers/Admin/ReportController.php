@@ -10,7 +10,6 @@ use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductView;
-use App\Models\Seller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -298,58 +297,6 @@ class ReportController extends Controller
             ->get();
 
         return view('admin.reports.customers', compact('stats', 'topCustomers', 'growth', 'period'));
-    }
-
-    public function sellers(Request $request): View
-    {
-        $period = $request->input('period', '30');
-        $startDate = now()->subDays($period);
-        $excludedStatuses = ['cancelled', 'returned'];
-
-        // Top sellers by order revenue (using DB query to avoid N+1)
-        $topSellersData = DB::table('orders')
-            ->join('sellers', 'orders.seller_id', '=', 'sellers.id')
-            ->where('orders.created_at', '>=', $startDate)
-            ->where('orders.payment_status', 'paid')
-            ->whereNotIn('orders.status', $excludedStatuses)
-            ->where('sellers.status', 'active')
-            ->select('sellers.id', DB::raw('SUM(orders.total) as total_sales'))
-            ->groupBy('sellers.id')
-            ->orderByDesc('total_sales')
-            ->take(10)
-            ->get();
-
-        $topSellers = collect();
-        if ($topSellersData->isNotEmpty()) {
-            $sellerModels = Seller::with('user')->withCount('products')
-                ->whereIn('id', $topSellersData->pluck('id'))
-                ->get()
-                ->keyBy('id');
-
-            foreach ($topSellersData as $ts) {
-                $seller = $sellerModels->get($ts->id);
-                if ($seller) {
-                    $seller->total_sales = $ts->total_sales;
-                    $topSellers->push($seller);
-                }
-            }
-        }
-
-        // Seller stats
-        $stats = [
-            'total_sellers' => Seller::count(),
-            'active_sellers' => Seller::where('status', 'active')->count(),
-            'pending_sellers' => Seller::where('status', 'pending')->count(),
-            'new_sellers' => Seller::where('created_at', '>=', $startDate)->count(),
-        ];
-
-        // Seller performance (all active sellers)
-        $sellers = Seller::where('status', 'active')
-            ->withCount('products')
-            ->with('user')
-            ->paginate($request->input('per_page', 10))->withQueryString();
-
-        return view('admin.reports.sellers', compact('topSellers', 'stats', 'sellers', 'period'));
     }
 
     public function export(Request $request, string $type): StreamedResponse

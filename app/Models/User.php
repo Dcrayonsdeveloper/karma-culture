@@ -230,7 +230,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public static function getDefaultStaffPermissions(string $role): array
     {
         return match ($role) {
-            'manager' => ['dashboard', 'orders', 'catalog', 'customers', 'sellers', 'delivery_partners', 'marketing', 'content', 'reports'],
+            'manager' => ['dashboard', 'orders', 'catalog', 'customers', 'marketing', 'content', 'reports'],
             'cashier' => ['dashboard', 'orders', 'customers'],
             'support' => ['dashboard', 'orders', 'customers', 'content'],
             'warehouse' => ['dashboard', 'catalog', 'orders'],
@@ -244,7 +244,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function getAccessibleSections(): array
     {
         if ($this->isAdmin()) {
-            return ['dashboard', 'orders', 'catalog', 'customers', 'sellers', 'staff', 'delivery_partners', 'marketing', 'storefront', 'content', 'reports', 'settings'];
+            return ['dashboard', 'orders', 'catalog', 'customers', 'staff', 'marketing', 'storefront', 'content', 'reports', 'settings'];
         }
 
         if ($this->isStaff()) {

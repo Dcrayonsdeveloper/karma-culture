@@ -324,11 +324,6 @@
                             <a href="{{ route('account.dashboard') }}" class="block px-4 py-2 text-sm text-kk-brown hover:bg-kk-cream hover:text-kk-tan-dark">Dashboard</a>
                             <a href="{{ route('account.orders.index') }}" class="block px-4 py-2 text-sm text-kk-brown hover:bg-kk-cream hover:text-kk-tan-dark">My Orders</a>
                             <a href="{{ route('account.profile') }}" class="block px-4 py-2 text-sm text-kk-brown hover:bg-kk-cream hover:text-kk-tan-dark">Profile Settings</a>
-                            @if(auth()->user()->deliveryPartner)
-                                <a href="{{ route('delivery.login') }}" class="block px-4 py-2 text-sm text-kk-tan-dark hover:bg-kk-cream font-medium">Delivery Panel</a>
-                            @else
-                                <a href="{{ route('account.become-delivery-partner') }}" class="block px-4 py-2 text-sm text-kk-tan-dark hover:bg-kk-cream font-medium">Become a Delivery Partner</a>
-                            @endif
                             <form action="{{ route('logout') }}" method="POST">
                                 @csrf
                                 <button type="submit" class="w-full text-left px-4 py-2 text-sm text-kk-brown hover:bg-kk-cream hover:text-kk-tan-dark">Logout</button>

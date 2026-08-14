@@ -182,21 +182,6 @@
                             Settings
                         </a>
 
-                        @if(auth()->user()->deliveryPartner)
-                            <a href="{{ route('delivery.login') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-[#2D1810] hover:bg-[#2D1810]/5 font-medium">
-                                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
-                                </svg>
-                                Delivery Panel
-                            </a>
-                        @else
-                            <a href="{{ route('account.become-delivery-partner') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-[#2D1810] hover:bg-[#2D1810]/5 font-medium">
-                                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
-                                </svg>
-                                Become Delivery Partner
-                            </a>
-                        @endif
                     </div>
 
                     <!-- Logout -->

@@ -20,8 +20,6 @@ class RedirectIfAuthenticated
                 // Only redirect if the user actually belongs to this guard's panel
                 $redirect = match ($guard) {
                     'admin' => $user->role === 'admin' || $user->role === 'staff' ? route('admin.dashboard') : null,
-                    'delivery' => $user->role === 'delivery_partner' ? route('delivery.dashboard') : null,
-                    'seller' => $user->role === 'seller' ? route('seller.dashboard') : null,
                     default => '/',
                 };
 

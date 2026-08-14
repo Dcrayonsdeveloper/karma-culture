@@ -21,7 +21,6 @@ Route::get('/robots.txt', function () {
     $sitemap = url('/sitemap.xml');
     $content = "User-agent: *\n";
     $content .= "Disallow: /admin/\n";
-    $content .= "Disallow: /seller/\n";
     $content .= "Disallow: /pos/\n";
     $content .= "Disallow: /cart\n";
     $content .= "Disallow: /checkout\n";
@@ -82,9 +81,6 @@ Route::prefix('brands')->name('brands.')->group(function () {
     Route::get('/', [App\Http\Controllers\BrandController::class, 'index'])->name('index');
     Route::get('/{brand:slug}', [App\Http\Controllers\BrandController::class, 'show'])->name('show');
 });
-
-// Sellers
-Route::get('/sellers/{seller:slug}', [App\Http\Controllers\SellerController::class, 'show'])->name('sellers.show');
 
 // Search
 Route::get('/search', [App\Http\Controllers\SearchController::class, 'index'])->name('search');
@@ -197,17 +193,8 @@ Route::middleware('auth')->group(function () {
         // Notification Preferences
         Route::get('/notification-preferences', [App\Http\Controllers\Account\NotificationPreferenceController::class, 'edit'])->name('notification-preferences');
         Route::put('/notification-preferences', [App\Http\Controllers\Account\NotificationPreferenceController::class, 'update'])->name('notification-preferences.update');
-
-        // Become a Delivery Partner
-        Route::get('/become-delivery-partner', [App\Http\Controllers\Account\DeliveryPartnerRegistrationController::class, 'create'])->name('become-delivery-partner');
-        Route::post('/become-delivery-partner', [App\Http\Controllers\Account\DeliveryPartnerRegistrationController::class, 'store'])->name('become-delivery-partner.store');
-        Route::post('/become-delivery-partner/documents', [App\Http\Controllers\Account\DeliveryPartnerRegistrationController::class, 'uploadDocuments'])->name('become-delivery-partner.documents');
     });
 });
-
-// Seller Registration (Guest)
-Route::get('/sell', [App\Http\Controllers\Seller\RegistrationController::class, 'index'])->name('seller.register');
-Route::post('/sell/register', [App\Http\Controllers\Seller\RegistrationController::class, 'store'])->name('seller.register.store');
 
 // Newsletter
 Route::post('/newsletter/subscribe', [App\Http\Controllers\NewsletterController::class, 'subscribe'])->middleware('throttle:5,1')->name('newsletter.subscribe');
@@ -254,12 +241,6 @@ Route::post('/webhooks/shiprocket', [App\Http\Controllers\ShiprocketWebhookContr
 
 // Load Admin Routes
 require __DIR__.'/admin.php';
-
-// Load Seller Routes
-require __DIR__.'/seller.php';
-
-// Load Delivery Partner Routes
-require __DIR__.'/delivery.php';
 
 // Load POS Routes
 require __DIR__.'/pos.php';

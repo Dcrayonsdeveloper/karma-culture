@@ -129,9 +129,6 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::get('search', [\App\Http\Controllers\Api\V1\Search\SearchController::class, 'search'])->name('search');
     Route::get('search/suggestions', [\App\Http\Controllers\Api\V1\Search\SearchController::class, 'suggestions'])->name('search.suggestions');
 
-    // Sellers (public storefront)
-    Route::get('sellers/{seller:slug}', [\App\Http\Controllers\Api\V1\Seller\SellerController::class, 'show'])->name('sellers.show');
-    Route::get('sellers/{seller:slug}/products', [\App\Http\Controllers\Api\V1\Seller\SellerController::class, 'products'])->name('sellers.products');
 
     // Pages (CMS)
     Route::get('pages/{page:slug}', [\App\Http\Controllers\Api\V1\PageController::class, 'show'])->name('pages.show');
