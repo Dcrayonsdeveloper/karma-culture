@@ -356,8 +356,14 @@ body {
    Also hides the outer container div so the empty light-grey strip
    doesn't show as a white ribbon below the header.
    JSON-LD <script> tag stays in the DOM for SEO. */
-body:not(.layout-admin) nav[aria-label="Breadcrumb"],
-body:not(.layout-admin) div.container:has(> nav[aria-label="Breadcrumb"]) {
+body:not(.layout-admin) nav[aria-label="Breadcrumb"] {
+    display: none !important;
+}
+/* Collapse the breadcrumb wrapper ONLY when it holds nothing else. Several
+   account pages (orders, addresses, reviews, profile) open their page
+   container and put the breadcrumb inside it, so the unqualified rule hid
+   the entire page body and rendered those screens blank. */
+body:not(.layout-admin) div.container:has(> nav[aria-label="Breadcrumb"]):not(:has(> :not(nav[aria-label="Breadcrumb"]):not(script))) {
     display: none !important;
 }
 
