@@ -402,16 +402,79 @@
                     .kk-sizeguide__size { flex: 1 0 auto; min-width: 58px; text-align: center; padding: 11px 10px; font-size: 13px; }
                 }
                 </style>
+                @php
+                    // Sizes are per product now. Any attribute whose name contains "size"
+                    // supplies them — define the values under Products → Attributes, then
+                    // tick the ones this product actually comes in. A product with no sizes
+                    // configured shows no size selector, so non-apparel items stop offering
+                    // shirt sizes.
+                    $kkSizes = collect($product->attributes ?? [])
+                        ->filter(fn ($v, $k) => \Illuminate\Support\Str::contains(\Illuminate\Support\Str::lower($k), 'size'))
+                        ->flatMap(fn ($v) => is_array($v) ? $v : [$v])
+                        ->map(fn ($v) => trim((string) $v))
+                        ->filter()
+                        ->unique()
+                        ->values();
+                @endphp
+                @if($kkSizes->isNotEmpty())
                 <section class="kk-sizeguide" id="kk-size-select" aria-label="Select size">
                     <h2 class="kk-sizeguide__title">Select Size<span class="kk-sizeguide__sel" x-show="selectedSize" x-cloak> — <span x-text="selectedSize"></span></span></h2>
                     <div class="kk-sizeguide__row">
-                        @foreach(['XS-36','S-38','M-40','L-42','XL-44','XXL-46','3XL-48'] as $sz)
+                        @foreach($kkSizes as $sz)
                             <button type="button" class="kk-sizeguide__size"
                                     :class="selectedSize === '{{ $sz }}' ? 'is-selected' : ''"
                                     @click="selectedSize = '{{ $sz }}'">{{ $sz }}</button>
                         @endforeach
                     </div>
                 </section>
+                @endif
+
+                @php
+                    // Colours work exactly like sizes: the product stores which values it
+                    // comes in, and each value's hex is read back off the attribute value so
+                    // the real colour is painted into the swatch.
+                    $kkColours = collect($product->attributes ?? [])
+                        ->filter(fn ($v, $k) => \Illuminate\Support\Str::contains(\Illuminate\Support\Str::lower($k), ['colour', 'color']))
+                        ->flatMap(fn ($v) => is_array($v) ? $v : [$v])
+                        ->map(fn ($v) => trim((string) $v))
+                        ->filter()
+                        ->unique()
+                        ->values();
+
+                    $kkColourHex = $kkColours->isEmpty()
+                        ? collect()
+                        : \App\Models\AttributeValue::whereIn('value', $kkColours)
+                            ->whereNotNull('color_code')
+                            ->pluck('color_code', 'value');
+                @endphp
+                @if($kkColours->isNotEmpty())
+                <style>
+                    .kk-colorpick__row { display: flex; flex-wrap: wrap; gap: 8px; }
+                    .kk-colorpick__btn { display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+                        background: #fff; border: 1px solid #c9b393; border-radius: 6px; padding: 6px 10px 6px 7px;
+                        font-family: inherit; font-size: 12px; font-weight: 600; color: #2d1810; letter-spacing: .01em;
+                        white-space: nowrap; transition: all .15s ease; }
+                    .kk-colorpick__btn:hover { border-color: #8c5c34; }
+                    .kk-colorpick__btn.is-selected { border-color: #2d1810; box-shadow: inset 0 0 0 1px #2d1810; }
+                    .kk-colorpick__dot { width: 18px; height: 18px; border-radius: 50%; flex: 0 0 auto;
+                        border: 1px solid rgba(45,24,16,.18); box-shadow: inset 0 0 0 1px rgba(255,255,255,.55); }
+                    @media (max-width: 640px) { .kk-colorpick__btn { flex: 1 0 auto; justify-content: center; padding: 9px 10px; font-size: 13px; } }
+                </style>
+                <section class="kk-sizeguide" id="kk-color-select" aria-label="Select colour">
+                    <h2 class="kk-sizeguide__title">Select Colour<span class="kk-sizeguide__sel" x-show="selectedColor" x-cloak> — <span x-text="selectedColor"></span></span></h2>
+                    <div class="kk-colorpick__row">
+                        @foreach($kkColours as $kkC)
+                            <button type="button" class="kk-colorpick__btn"
+                                    :class="selectedColor === '{{ $kkC }}' ? 'is-selected' : ''"
+                                    @click="selectedColor = '{{ $kkC }}'"
+                                    aria-label="{{ $kkC }}">
+                                <span class="kk-colorpick__dot" style="background-color: {{ $kkColourHex[$kkC] ?? '#dddddd' }};"></span>
+                                <span>{{ $kkC }}</span>
+                            </button>
+                        @endforeach
+                    </div>
+                </section>
+                @endif
 
                 @if(!empty($variantGroups))
                     @foreach($variantGroups as $attrName => $values)
@@ -1486,6 +1549,7 @@
             touchStartX: 0,
             quantity: 1,
             selectedSize: null,
+            selectedColor: null,
             selectedVariant: null,
             selectedAttributes: {},
             variants: @json($variantData),

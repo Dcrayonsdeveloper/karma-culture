@@ -322,23 +322,28 @@
                                                value="{{ old('product_attributes.' . $attribute->name, $productAttrs[$attribute->name] ?? '') }}"
                                                class="form-input w-full text-sm" placeholder="Enter {{ strtolower($attribute->name) }}">
                                     @else
-                                        <select name="product_attributes[{{ $attribute->name }}]" class="form-input w-full text-sm">
-                                            <option value="">Select</option>
-                                            @foreach($attribute->values as $value)
-                                                <option value="{{ $value->value }}" {{ old('product_attributes.' . $attribute->name, $productAttrs[$attribute->name] ?? '') === $value->value ? 'selected' : '' }}>
-                                                    {{ $value->value }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                        @if($attribute->type === 'color' && $attribute->values->count())
-                                            <div class="flex flex-wrap gap-1 mt-2">
-                                                @foreach($attribute->values->take(10) as $value)
-                                                    @if($value->color_code)
-                                                        <div style="width: 1.25rem; height: 1.25rem; border-radius: 9999px; border: 1px solid #e5e5e5; background-color: {{ $value->color_code }}; {{ isset($productAttrs[$attribute->name]) && $productAttrs[$attribute->name] === $value->value ? 'box-shadow: 0 0 0 2px white, 0 0 0 4px #005bd3;' : '' }}" title="{{ $value->value }}"></div>
+                                        @php
+                                            // Multi-select: a product can offer several sizes/colours.
+                                            // Older records stored a single string, so cast to array.
+                                            $selectedVals = old('product_attributes.' . $attribute->name, $productAttrs[$attribute->name] ?? []);
+                                            $selectedVals = array_map('strval', (array) $selectedVals);
+                                        @endphp
+                                        <div class="border rounded-lg p-2 space-y-1" style="border-color:#e5e5e5; max-height: 11rem; overflow-y: auto;">
+                                            @forelse($attribute->values as $value)
+                                                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                                    <input type="checkbox"
+                                                           name="product_attributes[{{ $attribute->name }}][]"
+                                                           value="{{ $value->value }}"
+                                                           {{ in_array((string) $value->value, $selectedVals, true) ? 'checked' : '' }}>
+                                                    @if($attribute->type === 'color' && $value->color_code)
+                                                        <span style="width:1rem;height:1rem;border-radius:9999px;border:1px solid #e5e5e5;background-color: {{ $value->color_code }};"></span>
                                                     @endif
-                                                @endforeach
-                                            </div>
-                                        @endif
+                                                    <span>{{ $value->value }}</span>
+                                                </label>
+                                            @empty
+                                                <p class="text-xs" style="color:#616161;">No values yet — add them under Attributes.</p>
+                                            @endforelse
+                                        </div>
                                     @endif
                                 </div>
                             @endforeach
