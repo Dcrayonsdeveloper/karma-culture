@@ -27,7 +27,7 @@ class DashboardController extends Controller
             'total' => Order::where('user_id', $user->id)->count(),
             'confirmed' => Order::where('user_id', $user->id)->where('status', 'confirmed')->count(),
             'processing' => Order::where('user_id', $user->id)->where('status', 'processing')->count(),
-            'completed' => Order::where('user_id', $user->id)->where('status', 'completed')->count(),
+            'completed' => Order::where('user_id', $user->id)->where('status', 'delivered')->count(),
         ];
 
         // Wishlist count

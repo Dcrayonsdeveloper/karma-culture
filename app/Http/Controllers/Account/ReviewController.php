@@ -26,7 +26,7 @@ class ReviewController extends Controller
     {
         // Check if user has purchased this product
         $hasPurchased = $request->user()->orders()
-            ->where('status', 'completed')
+            ->where('status', 'delivered')
             ->whereHas('items', function ($q) use ($product) {
                 $q->where('product_id', $product->id);
             })
@@ -51,7 +51,7 @@ class ReviewController extends Controller
         }
 
         $hasPurchased = $request->user()->orders()
-            ->where('status', 'completed')
+            ->where('status', 'delivered')
             ->whereHas('items', fn ($q) => $q->where('product_id', $product->id))
             ->exists();
 
