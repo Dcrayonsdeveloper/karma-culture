@@ -87,22 +87,15 @@
 
                     {{-- Categories: hover-triggered mega menu — clean text layout, data from admin --}}
                     @php
-                        [$kkMegaMens, $kkMegaWomens] = \Illuminate\Support\Facades\Cache::remember('kk_mega_menu_v4', 300, function () {
-                            $loader = fn($q) => $q->where('is_active', true)->orderBy('position')
-                                ->with(['children' => fn($qq) => $qq->where('is_active', true)->orderBy('position')]);
-                            $mens = \App\Models\Category::whereNull('parent_id')->where('is_active', true)
-                                ->where(function ($q) { $q->where('slug', 'mens')->orWhere('slug', 'men')->orWhere('name', "Men's")->orWhere('name', 'Men'); })
-                                ->with(['children' => $loader])->first();
-                            $womens = \App\Models\Category::whereNull('parent_id')->where('is_active', true)
-                                ->where(function ($q) { $q->where('slug', 'womens')->orWhere('slug', 'women')->orWhere('name', "Women's")->orWhere('name', 'Women'); })
-                                ->with(['children' => $loader])->first();
-                            // Men's is rendered exactly like Women's: exclude any "T-Shirts" category, take up to 7.
-                            $shape = fn ($cat) => $cat
-                                ? $cat->children
-                                    ->reject(fn ($c) => \Illuminate\Support\Str::contains(strtolower($c->name), ['t-shirt', 'tshirt', 't shirt']))
-                                    ->take(7)->values()
-                                : collect();
-                            return [$shape($mens), $shape($womens)];
+                        // Every active top-level category from admin, each with its active
+                        // children. Previously this matched only the two slugs "mens" and
+                        // "womens", so any other category an admin created never appeared.
+                        $kkMegaGroups = \Illuminate\Support\Facades\Cache::remember('kk_mega_menu_v5', 300, function () {
+                            return \App\Models\Category::whereNull('parent_id')
+                                ->where('is_active', true)
+                                ->orderBy('position')
+                                ->with(['children' => fn ($q) => $q->where('is_active', true)->orderBy('position')])
+                                ->get();
                         });
                     @endphp
                     <div class="kk-mega"
@@ -122,20 +115,19 @@
                              x-transition:leave-start="opacity-100"
                              x-transition:leave-end="opacity-0"
                              class="kk-dd">
-                            @if($kkMegaMens->count())
-                                <div class="kk-dd__label">Men's</div>
-                                @foreach($kkMegaMens as $cat)
-                                    <a href="{{ route('category.show', $cat) }}" class="kk-dd__item">{{ $cat->name }}</a>
-                                @endforeach
-                            @endif
-
-                            @if($kkMegaWomens->count())
-                                @if($kkMegaMens->count())<div class="kk-dd__divider"></div>@endif
-                                <div class="kk-dd__label">Women's</div>
-                                @foreach($kkMegaWomens as $cat)
-                                    <a href="{{ route('category.show', $cat) }}" class="kk-dd__item">{{ $cat->name }}</a>
-                                @endforeach
-                            @endif
+                            @php $kkRendered = false; @endphp
+                            @foreach($kkMegaGroups as $group)
+                                @if($group->children->isNotEmpty())
+                                    @if($kkRendered)<div class="kk-dd__divider"></div>@endif
+                                    <div class="kk-dd__label">{{ $group->name }}</div>
+                                    @foreach($group->children as $child)
+                                        <a href="{{ route('category.show', $child) }}" class="kk-dd__item">{{ $child->name }}</a>
+                                    @endforeach
+                                @else
+                                    <a href="{{ route('category.show', $group) }}" class="kk-dd__item">{{ $group->name }}</a>
+                                @endif
+                                @php $kkRendered = true; @endphp
+                            @endforeach
                         </div>
                     </div>
 
@@ -158,6 +150,10 @@
                         box-shadow: 0 12px 32px rgba(45, 24, 16, 0.14);
                         padding: 8px 0;
                         z-index: 60;
+                        /* All active categories now render here, so cap the height and scroll. */
+                        max-height: min(70vh, 520px);
+                        overflow-y: auto;
+                        overscroll-behavior: contain;
                     }
                     .kk-dd__label {
                         font-family: 'Cormorant Garamond', Georgia, serif;
