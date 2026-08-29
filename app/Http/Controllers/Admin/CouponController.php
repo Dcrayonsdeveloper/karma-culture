@@ -95,6 +95,13 @@ class CouponController extends Controller
         $validated['is_active'] = $request->boolean('is_active');
         $validated['auto_apply'] = $request->boolean('auto_apply');
 
+        // min_order_amount and usage_per_user are NOT NULL in the schema but are
+        // optional on the form. A blank field arrives as null (ConvertEmptyStringsToNull)
+        // and passes `nullable` validation, so fall back to the column defaults rather
+        // than letting the insert fail with a 1048 integrity-constraint error.
+        $validated['min_order_amount'] = $validated['min_order_amount'] ?? 0;
+        $validated['usage_per_user']   = $validated['usage_per_user'] ?? 1;
+
         // Build conditions for BOGO
         if ($request->input('type') === 'buy_x_get_y') {
             $validated['conditions'] = [
@@ -149,6 +156,13 @@ class CouponController extends Controller
         // Ensure boolean defaults
         $validated['is_active'] = $request->boolean('is_active');
         $validated['auto_apply'] = $request->boolean('auto_apply');
+
+        // min_order_amount and usage_per_user are NOT NULL in the schema but are
+        // optional on the form. A blank field arrives as null (ConvertEmptyStringsToNull)
+        // and passes `nullable` validation, so fall back to the column defaults rather
+        // than letting the insert fail with a 1048 integrity-constraint error.
+        $validated['min_order_amount'] = $validated['min_order_amount'] ?? 0;
+        $validated['usage_per_user']   = $validated['usage_per_user'] ?? 1;
 
         // Build conditions for BOGO
         if ($request->input('type') === 'buy_x_get_y') {
