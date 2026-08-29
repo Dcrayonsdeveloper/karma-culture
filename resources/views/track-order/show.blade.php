@@ -220,6 +220,30 @@
                 </div>
             @endif
 
+            {{-- Return request. Offered only while the order is inside the return
+                 window; the form itself hides items already under a request. --}}
+            @php
+                $kkWindowDays = (int) \App\Models\Setting::get('return_window_days', 7);
+                $kkMinHours   = (int) \App\Models\Setting::get('return_min_hours', 24);
+                $kkCanReturn  = $order->status === 'delivered'
+                    && $order->delivered_at
+                    && $order->delivered_at->gte(now()->subDays($kkWindowDays))
+                    && $order->delivered_at->lte(now()->subHours($kkMinHours));
+            @endphp
+            @if($kkCanReturn)
+                <div class="bg-white border border-neutral-100 rounded-xl p-5 mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                        <h2 class="text-[15px] font-semibold text-neutral-900">Not quite right?</h2>
+                        <p class="text-[13px] text-neutral-600 mt-0.5">You can request a return or exchange until {{ $order->delivered_at->addDays($kkWindowDays)->format('d M Y') }}.</p>
+                    </div>
+                    <a href="{{ route('track-order.return', $order) }}"
+                       class="shrink-0 inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold text-white rounded-lg transition-colors"
+                       style="background:#2D1810;">
+                        Request a Return
+                    </a>
+                </div>
+            @endif
+
             {{-- Order summary: what was paid and where it is going. Guest orders keep
                  their contact and address on the snapshot rather than on a user. --}}
             @php

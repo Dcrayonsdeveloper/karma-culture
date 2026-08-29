@@ -214,6 +214,11 @@ Route::post('/chatbot/message', [App\Http\Controllers\ChatbotController::class, 
 Route::get('/track-order', [App\Http\Controllers\TrackOrderController::class, 'index'])->name('track-order');
 Route::post('/track-order', [App\Http\Controllers\TrackOrderController::class, 'track'])->middleware('throttle:10,1')->name('track-order.track');
 
+// Guest return requests. Reachable only after the order has been verified on
+// the tracking page above, which records it in the session.
+Route::get('/track-order/{order}/return', [App\Http\Controllers\GuestReturnController::class, 'create'])->name('track-order.return');
+Route::post('/track-order/{order}/return', [App\Http\Controllers\GuestReturnController::class, 'store'])->middleware('throttle:5,1')->name('track-order.return.store');
+
 // Static/CMS Pages
 Route::get('/about', [App\Http\Controllers\PageController::class, 'about'])->name('about');
 Route::get('/contact', [App\Http\Controllers\PageController::class, 'contact'])->name('contact');
