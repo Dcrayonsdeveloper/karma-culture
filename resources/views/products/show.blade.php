@@ -411,6 +411,19 @@
 
                     $kkSizes = $kkRows->pluck('name')->map(fn ($n) => trim((string) $n))->filter()->unique()->values();
 
+                    // Fallback for products still holding sizes as free text on the old
+                    // Size attribute (e.g. "CX   M   XL"), so each size still gets its own
+                    // button until the product is given proper size rows.
+                    if ($kkSizes->isEmpty()) {
+                        $kkSizes = collect($product->attributes ?? [])
+                            ->filter(fn ($v, $k) => \Illuminate\Support\Str::contains(\Illuminate\Support\Str::lower($k), 'size'))
+                            ->flatMap(fn ($v) => is_array($v) ? $v : preg_split('/[,\/|]+|\s{2,}/', (string) $v))
+                            ->map(fn ($v) => trim((string) $v))
+                            ->filter()
+                            ->unique()
+                            ->values();
+                    }
+
                     $kkColours = $kkRows
                         ->map(fn ($v) => trim((string) data_get($v->attributes, 'Colour', '')))
                         ->filter()->unique()->values();
