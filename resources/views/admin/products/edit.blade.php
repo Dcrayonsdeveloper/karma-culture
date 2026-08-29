@@ -245,111 +245,126 @@
                     </div>
 
                     <!-- Variants -->
-                    @if($product->variants->count())
-                    <div class="card p-5">
-                        <div class="flex items-center justify-between mb-4">
-                            <div>
-                                <h2 class="text-[13px] font-semibold" style="color: #303030;">Variants</h2>
-                                <p class="text-xs" style="color: #616161;">{{ $product->variants->count() }} variants</p>
-                            </div>
+                    @php
+                        // Existing sizes, shaped for the Alpine table above.
+                        $kkSizeRows = $product->variants->map(fn ($v) => [
+                            'id' => $v->id,
+                            'name' => $v->name,
+                            'colour' => data_get($v->attributes, 'Colour', ''),
+                            'colour_hex' => data_get($v->attributes, 'colour_hex', '#000000'),
+                            'price' => (string) $v->price,
+                            'mrp' => (string) $v->mrp,
+                            'stock_quantity' => (int) $v->stock_quantity,
+                            'sku' => $v->sku,
+                            'is_active' => (bool) $v->is_active,
+                        ])->values();
+                    @endphp
+                    <!-- Sizes & pricing -->
+                    <div class="card p-5" x-data="kkSizes()">
+                        <div class="flex items-center justify-between mb-1">
+                            <h2 class="text-[13px] font-semibold" style="color: #303030;">Sizes &amp; pricing</h2>
+                            <button type="button" @click="add()" class="btn btn-secondary" style="font-size:12px; padding:4px 10px;">+ Add size</button>
                         </div>
-                        <div style="overflow-x: auto;">
-                            <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+                        <p class="text-xs mb-4" style="color: #616161;">Each row is one size a customer can buy, with its own price and stock. Give a colour to show a swatch on the product page. Leave SKU blank and one is generated.</p>
+
+                        <p class="text-xs" style="color:#616161; padding:10px 0;" x-show="visibleCount() === 0" x-cloak>No sizes yet &mdash; click &ldquo;Add size&rdquo;.</p>
+
+                        <div style="overflow-x:auto;" x-show="visibleCount() > 0" x-cloak>
+                            <table style="width:100%; font-size:13px; border-collapse:collapse;">
                                 <thead>
-                                    <tr style="border-bottom: 1px solid #e3e3e3;">
-                                        <th style="text-align: left; padding: 0.5rem; font-weight: 500; color: #616161;">Variant</th>
-                                        <th style="text-align: left; padding: 0.5rem; font-weight: 500; color: #616161;">SKU</th>
-                                        <th style="text-align: right; padding: 0.5rem; font-weight: 500; color: #616161;">Price</th>
-                                        <th style="text-align: right; padding: 0.5rem; font-weight: 500; color: #616161;">MRP</th>
-                                        <th style="text-align: right; padding: 0.5rem; font-weight: 500; color: #616161;">Stock</th>
-                                        <th style="text-align: center; padding: 0.5rem; font-weight: 500; color: #616161;">Active</th>
+                                    <tr style="border-bottom:1px solid #e3e3e3;">
+                                        <th style="text-align:left;padding:.5rem;font-weight:500;color:#616161;">Size</th>
+                                        <th style="text-align:left;padding:.5rem;font-weight:500;color:#616161;">Colour</th>
+                                        <th style="text-align:right;padding:.5rem;font-weight:500;color:#616161;">Price</th>
+                                        <th style="text-align:right;padding:.5rem;font-weight:500;color:#616161;">MRP</th>
+                                        <th style="text-align:right;padding:.5rem;font-weight:500;color:#616161;">Stock</th>
+                                        <th style="text-align:left;padding:.5rem;font-weight:500;color:#616161;">SKU</th>
+                                        <th style="text-align:center;padding:.5rem;font-weight:500;color:#616161;">Active</th>
+                                        <th></th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach($product->variants as $i => $variant)
-                                    <tr style="border-bottom: 1px solid #f1f1f1;">
-                                        <input type="hidden" name="variants[{{ $i }}][id]" value="{{ $variant->id }}">
-                                        <td style="padding: 0.5rem;">
-                                            <span style="font-weight: 500; color: #303030;">{{ $variant->name }}</span>
-                                            @if($variant->attributes)
-                                                <span class="text-xs" style="color: #616161;">
-                                                    ({{ collect($variant->attributes)->map(fn($v, $k) => "$v")->join(', ') }})
-                                                </span>
-                                            @endif
-                                        </td>
-                                        <td style="padding: 0.5rem;">
-                                            <input type="text" name="variants[{{ $i }}][sku]" value="{{ old("variants.$i.sku", $variant->sku) }}"
-                                                   style="width: 100px; font-size: 12px; border: 1px solid #d4d4d4; border-radius: 0.375rem; padding: 0.25rem 0.5rem;">
-                                        </td>
-                                        <td style="padding: 0.5rem; text-align: right;">
-                                            <input type="number" name="variants[{{ $i }}][price]" value="{{ old("variants.$i.price", $variant->price) }}"
-                                                   step="0.01" min="0"
-                                                   style="width: 90px; font-size: 12px; border: 1px solid #d4d4d4; border-radius: 0.375rem; padding: 0.25rem 0.5rem; text-align: right;">
-                                        </td>
-                                        <td style="padding: 0.5rem; text-align: right;">
-                                            <input type="number" name="variants[{{ $i }}][mrp]" value="{{ old("variants.$i.mrp", $variant->mrp) }}"
-                                                   step="0.01" min="0"
-                                                   style="width: 90px; font-size: 12px; border: 1px solid #d4d4d4; border-radius: 0.375rem; padding: 0.25rem 0.5rem; text-align: right;">
-                                        </td>
-                                        <td style="padding: 0.5rem; text-align: right;">
-                                            <input type="number" name="variants[{{ $i }}][stock_quantity]" value="{{ old("variants.$i.stock_quantity", $variant->stock_quantity) }}"
-                                                   min="0"
-                                                   style="width: 70px; font-size: 12px; border: 1px solid #d4d4d4; border-radius: 0.375rem; padding: 0.25rem 0.5rem; text-align: right;">
-                                        </td>
-                                        <td style="padding: 0.5rem; text-align: center;">
-                                            <input type="checkbox" name="variants[{{ $i }}][is_active]" value="1" {{ old("variants.$i.is_active", $variant->is_active) ? 'checked' : '' }} class="form-checkbox">
-                                        </td>
-                                    </tr>
-                                    @endforeach
+                                    <template x-for="(r, i) in rows" :key="r.uid">
+                                        <tr style="border-bottom:1px solid #f1f1f1;" x-show="!r.remove">
+                                            <td style="padding:.4rem;">
+                                                <input type="hidden" x-bind:name="'variants[' + i + '][id]'" x-bind:value="r.id || ''">
+                                                <input type="hidden" x-bind:name="'variants[' + i + '][delete]'" x-bind:value="r.remove ? 1 : ''">
+                                                <input type="text" x-bind:name="'variants[' + i + '][name]'" x-model="r.name" placeholder="M-40"
+                                                       style="width:92px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;">
+                                            </td>
+                                            <td style="padding:.4rem;">
+                                                <div style="display:flex;align-items:center;gap:5px;">
+                                                    <input type="color" x-bind:name="'variants[' + i + '][colour_hex]'" x-model="r.colour_hex"
+                                                           style="width:28px;height:26px;border:1px solid #d4d4d4;border-radius:.375rem;padding:0;background:none;">
+                                                    <input type="text" x-bind:name="'variants[' + i + '][colour]'" x-model="r.colour" placeholder="Navy"
+                                                           style="width:86px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;">
+                                                </div>
+                                            </td>
+                                            <td style="padding:.4rem;text-align:right;">
+                                                <input type="number" step="0.01" min="0" x-bind:name="'variants[' + i + '][price]'" x-model="r.price"
+                                                       style="width:88px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;text-align:right;">
+                                            </td>
+                                            <td style="padding:.4rem;text-align:right;">
+                                                <input type="number" step="0.01" min="0" x-bind:name="'variants[' + i + '][mrp]'" x-model="r.mrp"
+                                                       style="width:88px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;text-align:right;">
+                                            </td>
+                                            <td style="padding:.4rem;text-align:right;">
+                                                <input type="number" min="0" x-bind:name="'variants[' + i + '][stock_quantity]'" x-model="r.stock_quantity"
+                                                       style="width:68px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;text-align:right;">
+                                            </td>
+                                            <td style="padding:.4rem;">
+                                                <input type="text" x-bind:name="'variants[' + i + '][sku]'" x-model="r.sku" placeholder="auto"
+                                                       style="width:104px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;">
+                                            </td>
+                                            <td style="padding:.4rem;text-align:center;">
+                                                <input type="hidden" x-bind:name="'variants[' + i + '][is_active]'" value="0">
+                                                <input type="checkbox" x-bind:name="'variants[' + i + '][is_active]'" value="1" x-model="r.is_active" class="form-checkbox">
+                                            </td>
+                                            <td style="padding:.4rem;text-align:center;">
+                                                <button type="button" @click="drop(i)" title="Remove"
+                                                        style="color:#d72c0d;background:none;border:0;cursor:pointer;font-size:16px;line-height:1;">&times;</button>
+                                            </td>
+                                        </tr>
+                                    </template>
                                 </tbody>
                             </table>
                         </div>
-                    </div>
-                    @endif
 
-                    <!-- Attributes -->
-                    @if($attributes->count())
-                    <div class="card p-5">
-                        <h2 class="text-[13px] font-semibold mb-1" style="color: #303030;">Attributes</h2>
-                        <p class="text-xs mb-4" style="color: #616161;">Product specifications and variants</p>
-                        @php $productAttrs = $product->attributes ?? []; @endphp
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            @foreach($attributes as $attribute)
-                                <div>
-                                    <label class="form-label">{{ $attribute->name }}</label>
-                                    @if($attribute->type === 'text')
-                                        <input type="text" name="product_attributes[{{ $attribute->name }}]"
-                                               value="{{ old('product_attributes.' . $attribute->name, $productAttrs[$attribute->name] ?? '') }}"
-                                               class="form-input w-full text-sm" placeholder="Enter {{ strtolower($attribute->name) }}">
-                                    @else
-                                        @php
-                                            // Multi-select: a product can offer several sizes/colours.
-                                            // Older records stored a single string, so cast to array.
-                                            $selectedVals = old('product_attributes.' . $attribute->name, $productAttrs[$attribute->name] ?? []);
-                                            $selectedVals = array_map('strval', (array) $selectedVals);
-                                        @endphp
-                                        <div class="border rounded-lg p-2 space-y-1" style="border-color:#e5e5e5; max-height: 11rem; overflow-y: auto;">
-                                            @forelse($attribute->values as $value)
-                                                <label class="flex items-center gap-2 text-sm cursor-pointer">
-                                                    <input type="checkbox"
-                                                           name="product_attributes[{{ $attribute->name }}][]"
-                                                           value="{{ $value->value }}"
-                                                           {{ in_array((string) $value->value, $selectedVals, true) ? 'checked' : '' }}>
-                                                    @if($attribute->type === 'color' && $value->color_code)
-                                                        <span style="width:1rem;height:1rem;border-radius:9999px;border:1px solid #e5e5e5;background-color: {{ $value->color_code }};"></span>
-                                                    @endif
-                                                    <span>{{ $value->value }}</span>
-                                                </label>
-                                            @empty
-                                                <p class="text-xs" style="color:#616161;">No values yet — add them under Attributes.</p>
-                                            @endforelse
-                                        </div>
-                                    @endif
-                                </div>
-                            @endforeach
-                        </div>
+                        {{-- Rows removed from the table still post their id so the server deletes them. --}}
+                        <template x-for="(r, i) in rows" :key="'del-' + r.uid">
+                            <span>
+                                <template x-if="r.remove && r.id">
+                                    <span>
+                                        <input type="hidden" x-bind:name="'variants[' + i + '][id]'" x-bind:value="r.id">
+                                        <input type="hidden" x-bind:name="'variants[' + i + '][delete]'" value="1">
+                                    </span>
+                                </template>
+                            </span>
+                        </template>
                     </div>
-                    @endif
+                    <script>
+                        function kkSizes() {
+                            return {
+                                seq: 0,
+                                rows: [],
+                                init() {
+                                    this.rows = (@json($kkSizeRows)).map(r => ({ ...r, uid: ++this.seq, remove: false }));
+                                },
+                                visibleCount() { return this.rows.filter(r => !r.remove).length; },
+                                add() {
+                                    this.rows.push({
+                                        uid: ++this.seq, id: null, name: '', colour: '', colour_hex: '#000000',
+                                        price: @json((string) $product->price), mrp: @json((string) $product->mrp),
+                                        stock_quantity: 0, sku: '', is_active: true, remove: false,
+                                    });
+                                },
+                                drop(i) {
+                                    if (this.rows[i].id) { this.rows[i].remove = true; } else { this.rows.splice(i, 1); }
+                                },
+                            };
+                        }
+                    </script>
+
 
                     {{-- A+ Content (Amazon-style banner images) — replaces the old Feature Highlights --}}
                     @include('admin.products.partials.aplus-content')

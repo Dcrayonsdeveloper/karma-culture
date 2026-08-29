@@ -168,48 +168,6 @@
                         </div>
                     </div>
 
-                    <!-- Attributes -->
-                    @if($attributes->count())
-                    <div class="card p-5">
-                        <h2 class="text-[13px] font-semibold mb-1" style="color: #303030;">Attributes</h2>
-                        <p class="text-xs mb-4" style="color: #616161;">Product specifications and variants</p>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            @foreach($attributes as $attribute)
-                                <div>
-                                    <label class="form-label">{{ $attribute->name }}</label>
-                                    @if($attribute->type === 'text')
-                                        <input type="text" name="product_attributes[{{ $attribute->name }}]"
-                                               value="{{ old('product_attributes.' . $attribute->name) }}"
-                                               class="form-input w-full text-sm" placeholder="Enter {{ strtolower($attribute->name) }}">
-                                    @else
-                                        @php
-                                            // Multi-select: a product can offer several sizes/colours.
-                                            // Older records stored a single string, so cast to array.
-                                            $selectedVals = old('product_attributes.' . $attribute->name, $productAttrs[$attribute->name] ?? []);
-                                            $selectedVals = array_map('strval', (array) $selectedVals);
-                                        @endphp
-                                        <div class="border rounded-lg p-2 space-y-1" style="border-color:#e5e5e5; max-height: 11rem; overflow-y: auto;">
-                                            @forelse($attribute->values as $value)
-                                                <label class="flex items-center gap-2 text-sm cursor-pointer">
-                                                    <input type="checkbox"
-                                                           name="product_attributes[{{ $attribute->name }}][]"
-                                                           value="{{ $value->value }}"
-                                                           {{ in_array((string) $value->value, $selectedVals, true) ? 'checked' : '' }}>
-                                                    @if($attribute->type === 'color' && $value->color_code)
-                                                        <span style="width:1rem;height:1rem;border-radius:9999px;border:1px solid #e5e5e5;background-color: {{ $value->color_code }};"></span>
-                                                    @endif
-                                                    <span>{{ $value->value }}</span>
-                                                </label>
-                                            @empty
-                                                <p class="text-xs" style="color:#616161;">No values yet — add them under Attributes.</p>
-                                            @endforelse
-                                        </div>
-                                    @endif
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                    @endif
                 </div>
 
                 <!-- RIGHT COLUMN (1/3) - Sidebar -->
