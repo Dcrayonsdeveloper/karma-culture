@@ -212,7 +212,7 @@ Route::post('/chatbot/message', [App\Http\Controllers\ChatbotController::class, 
 
 // Track Order (Public with order number)
 Route::get('/track-order', [App\Http\Controllers\TrackOrderController::class, 'index'])->name('track-order');
-Route::post('/track-order', [App\Http\Controllers\TrackOrderController::class, 'track'])->name('track-order.track');
+Route::post('/track-order', [App\Http\Controllers\TrackOrderController::class, 'track'])->middleware('throttle:10,1')->name('track-order.track');
 
 // Static/CMS Pages
 Route::get('/about', [App\Http\Controllers\PageController::class, 'about'])->name('about');
