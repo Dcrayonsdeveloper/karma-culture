@@ -273,11 +273,18 @@ class ProductController extends Controller
             'product_attributes.*' => 'nullable',
             'product_attributes.*.*' => 'nullable|string|max:255',
             'variants' => 'nullable|array',
-            'variants.*.id' => 'required|integer|exists:product_variants,id',
+            // id is absent on rows added with the "Add size" button, so a new row
+            // is created rather than rejected by validation.
+            'variants.*.id' => 'nullable|integer|exists:product_variants,id',
+            'variants.*.name' => 'nullable|string|max:100',
+            'variants.*.colour' => 'nullable|string|max:60',
+            'variants.*.colour_hex' => 'nullable|string|max:7',
             'variants.*.sku' => 'nullable|string|max:100',
             'variants.*.price' => 'nullable|numeric|min:0',
             'variants.*.mrp' => 'nullable|numeric|min:0',
             'variants.*.stock_quantity' => 'nullable|integer|min:0',
+            'variants.*.delete' => 'nullable',
+            'variants.*.is_active' => 'nullable',
             'model_glb' => 'nullable|file|mimetypes:model/gltf-binary,application/octet-stream|max:10240',
             'model_usdz' => 'nullable|file|max:10240',
             'delete_model_glb' => 'nullable|boolean',
@@ -340,18 +347,53 @@ class ProductController extends Controller
 
         $product->update($validated);
 
-        // Update variants (inline edit from table)
-        if ($variantsData) {
+        // Sizes & pricing rows. Each row is one purchasable size of this product,
+        // optionally in a specific colour, with its own price and stock. Rows
+        // without an id are new, rows flagged `delete` are removed.
+        if (is_array($variantsData)) {
             foreach ($variantsData as $variantData) {
-                $variant = $product->variants()->find($variantData['id']);
+                $id = $variantData['id'] ?? null;
+                $variant = $id ? $product->variants()->find($id) : null;
+
+                if (filter_var($variantData['delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                    $variant?->delete();
+                    continue;
+                }
+
+                $size = trim((string) ($variantData['name'] ?? ''));
+                if ($size === '' && ! $variant) {
+                    continue; // blank new row — nothing to save
+                }
+
+                $colour = trim((string) ($variantData['colour'] ?? ''));
+                $hex = trim((string) ($variantData['colour_hex'] ?? ''));
+                $attributes = array_filter([
+                    'Colour' => $colour !== '' ? $colour : null,
+                    'colour_hex' => $colour !== '' && $hex !== '' ? $hex : null,
+                ]);
+
+                $payload = [
+                    'name' => $size !== '' ? $size : $variant->name,
+                    'price' => $variantData['price'] ?? $variant?->price ?? $product->price,
+                    'mrp' => $variantData['mrp'] ?? $variant?->mrp ?? $product->mrp,
+                    'stock_quantity' => $variantData['stock_quantity'] ?? $variant?->stock_quantity ?? 0,
+                    'is_active' => filter_var($variantData['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN),
+                    'attributes' => $attributes ?: null,
+                ];
+
+                // sku is NOT NULL and unique, so derive one when left blank.
+                $sku = trim((string) ($variantData['sku'] ?? ''));
+                if ($sku === '') {
+                    $sku = $variant?->sku ?: Str::upper(Str::slug(
+                        ($product->sku ?: 'P' . $product->id) . '-' . $payload['name'] . ($colour !== '' ? '-' . $colour : '')
+                    ));
+                }
+                $payload['sku'] = $sku;
+
                 if ($variant) {
-                    $variant->update([
-                        'sku' => $variantData['sku'] ?? $variant->sku,
-                        'price' => $variantData['price'] ?? $variant->price,
-                        'mrp' => $variantData['mrp'] ?? $variant->mrp,
-                        'stock_quantity' => $variantData['stock_quantity'] ?? $variant->stock_quantity,
-                        'is_active' => isset($variantData['is_active']),
-                    ]);
+                    $variant->update($payload);
+                } else {
+                    $product->variants()->create($payload);
                 }
             }
         }

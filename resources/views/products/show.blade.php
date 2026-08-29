@@ -403,18 +403,38 @@
                 }
                 </style>
                 @php
-                    // Sizes are per product now. Any attribute whose name contains "size"
-                    // supplies them — define the values under Products → Attributes, then
-                    // tick the ones this product actually comes in. A product with no sizes
-                    // configured shows no size selector, so non-apparel items stop offering
-                    // shirt sizes.
-                    $kkSizes = collect($product->attributes ?? [])
-                        ->filter(fn ($v, $k) => \Illuminate\Support\Str::contains(\Illuminate\Support\Str::lower($k), 'size'))
-                        ->flatMap(fn ($v) => is_array($v) ? $v : [$v])
-                        ->map(fn ($v) => trim((string) $v))
-                        ->filter()
-                        ->unique()
-                        ->values();
+                    // Sizes, colours and per-size pricing all come from the product's own
+                    // "Sizes & pricing" rows in admin. One row = one buyable size, optionally
+                    // in a colour, with its own price. A product with no rows shows neither
+                    // selector, so non-apparel items stop offering sizes.
+                    $kkRows = $product->variants->where('is_active', true)->values();
+
+                    $kkSizes = $kkRows->pluck('name')->map(fn ($n) => trim((string) $n))->filter()->unique()->values();
+
+                    // Fallback for products still holding sizes as free text on the old
+                    // Size attribute (e.g. "CX   M   XL"), so each size still gets its own
+                    // button until the product is given proper size rows.
+                    if ($kkSizes->isEmpty()) {
+                        $kkSizes = collect($product->attributes ?? [])
+                            ->filter(fn ($v, $k) => \Illuminate\Support\Str::contains(\Illuminate\Support\Str::lower($k), 'size'))
+                            ->flatMap(fn ($v) => is_array($v) ? $v : preg_split('/[,\/|]+|\s{2,}/', (string) $v))
+                            ->map(fn ($v) => trim((string) $v))
+                            ->filter()
+                            ->unique()
+                            ->values();
+                    }
+
+                    $kkColours = $kkRows
+                        ->map(fn ($v) => trim((string) data_get($v->attributes, 'Colour', '')))
+                        ->filter()->unique()->values();
+
+                    $kkColourHex = $kkRows->mapWithKeys(fn ($v) => [
+                        trim((string) data_get($v->attributes, 'Colour', '')) => data_get($v->attributes, 'colour_hex'),
+                    ])->filter(fn ($hex, $name) => $name !== '' && $hex);
+
+                    // size => variant id. Selecting a size points the page at that row so
+                    // the existing currentPrice/currentMrp getters show its price.
+                    $kkSizeVariant = $kkRows->reverse()->mapWithKeys(fn ($v) => [trim((string) $v->name) => $v->id])->filter(fn ($id, $n) => $n !== '');
                 @endphp
                 @if($kkSizes->isNotEmpty())
                 <section class="kk-sizeguide" id="kk-size-select" aria-label="Select size">
@@ -423,30 +443,12 @@
                         @foreach($kkSizes as $sz)
                             <button type="button" class="kk-sizeguide__size"
                                     :class="selectedSize === '{{ $sz }}' ? 'is-selected' : ''"
-                                    @click="selectedSize = '{{ $sz }}'">{{ $sz }}</button>
+                                    @click="selectedSize = '{{ $sz }}'@if(isset($kkSizeVariant[$sz])); selectedVariant = {{ $kkSizeVariant[$sz] }}@endif">{{ $sz }}</button>
                         @endforeach
                     </div>
                 </section>
                 @endif
 
-                @php
-                    // Colours work exactly like sizes: the product stores which values it
-                    // comes in, and each value's hex is read back off the attribute value so
-                    // the real colour is painted into the swatch.
-                    $kkColours = collect($product->attributes ?? [])
-                        ->filter(fn ($v, $k) => \Illuminate\Support\Str::contains(\Illuminate\Support\Str::lower($k), ['colour', 'color']))
-                        ->flatMap(fn ($v) => is_array($v) ? $v : [$v])
-                        ->map(fn ($v) => trim((string) $v))
-                        ->filter()
-                        ->unique()
-                        ->values();
-
-                    $kkColourHex = $kkColours->isEmpty()
-                        ? collect()
-                        : \App\Models\AttributeValue::whereIn('value', $kkColours)
-                            ->whereNotNull('color_code')
-                            ->pluck('color_code', 'value');
-                @endphp
                 @if($kkColours->isNotEmpty())
                 <style>
                     .kk-colorpick__row { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -476,20 +478,6 @@
                 </section>
                 @endif
 
-                @if(!empty($variantGroups))
-                    @foreach($variantGroups as $attrName => $values)
-                    <div class="kk-pdp__variant-group">
-                        <h3 class="kk-pdp__variant-label">{{ $attrName }}: <span class="kk-pdp__variant-sel" x-text="selectedAttributes['{{ $attrName }}'] || ''"></span></h3>
-                        <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                            @foreach($values as $val)
-                                <button type="button" class="kk-pdp__variant-btn"
-                                        :class="selectedAttributes['{{ $attrName }}'] === '{{ $val }}' ? 'is-active' : ''"
-                                        @click="selectAttribute('{{ $attrName }}', '{{ $val }}')">{{ $val }}</button>
-                            @endforeach
-                        </div>
-                    </div>
-                    @endforeach
-                @endif
 
                 <div style="display:flex; align-items:flex-end; gap:24px; flex-wrap:wrap; margin:0 0 8px;">
                     <div class="kk-pdp__variant-group" style="margin:0;">
