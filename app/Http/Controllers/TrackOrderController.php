@@ -15,39 +15,87 @@ class TrackOrderController extends Controller
 
     public function track(Request $request): View
     {
-        if (auth()->check()) {
-            // Logged-in user: only needs the order number
-            $validated = $request->validate([
-                'order_number' => 'required|string',
-            ]);
+        $rules = [
+            'order_number' => ['required', 'string', 'max:40'],
+            // Signed-in customers can look up their own orders with just the
+            // number; everyone else proves ownership with the mobile number.
+            'phone' => [auth()->check() ? 'nullable' : 'required', 'string', 'max:20'],
+        ];
 
-            $order = Order::where('order_number', $validated['order_number'])
-                ->where('user_id', auth()->id())
-                ->with(['items.product', 'shipments', 'statusHistory', 'deliveryPartner.user'])
-                ->first();
+        $validated = $request->validate($rules, [
+            'phone.required' => 'Please enter the mobile number used for the order.',
+        ]);
 
-            $errorMsg = 'Order not found. Please check your order number.';
-        } else {
-            // Guest: needs order number + email
-            $validated = $request->validate([
-                'order_number' => 'required|string',
-                'email'        => 'required|email',
-            ]);
+        $order = Order::where('order_number', trim($validated['order_number']))
+            ->with(['items.product', 'shipments', 'statusHistory', 'deliveryPartner.user'])
+            ->first();
 
-            $order = Order::where('order_number', $validated['order_number'])
-                ->whereHas('user', fn($q) => $q->where('email', $validated['email']))
-                ->with(['items.product', 'shipments', 'statusHistory', 'deliveryPartner.user'])
-                ->first();
-
-            $errorMsg = 'Order not found. Please check your order number and email.';
+        if ($order && ! $this->canView($order, $validated['phone'] ?? null)) {
+            $order = null;
         }
 
-        if (!$order) {
-            return view('track-order.index', ['error' => $errorMsg]);
+        if (! $order) {
+            // Deliberately the same message whether the order does not exist or
+            // the mobile number does not match, so this cannot be used to probe
+            // which order numbers are real.
+            return view('track-order.index', [
+                'error' => 'We could not find that order. Check the order number and the mobile number used when ordering.',
+            ]);
         }
 
-        $latestShipment = $order->shipments->first();
+        return view('track-order.show', [
+            'order' => $order,
+            'latestShipment' => $order->shipments->first(),
+        ]);
+    }
 
-        return view('track-order.show', compact('order', 'latestShipment'));
+    /**
+     * An order is viewable when it belongs to the signed-in customer, or when
+     * the supplied mobile number matches the one the order was placed with.
+     */
+    private function canView(Order $order, ?string $phone): bool
+    {
+        if (auth()->check() && $order->user_id === auth()->id()) {
+            return true;
+        }
+
+        $given = $this->normalisePhone($phone);
+
+        if ($given === '') {
+            return false;
+        }
+
+        foreach ($this->orderPhones($order) as $candidate) {
+            if ($this->normalisePhone($candidate) === $given) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Every phone number associated with an order. Guest checkout stores the
+     * contact details on the address snapshots rather than against a user.
+     */
+    private function orderPhones(Order $order): array
+    {
+        return array_filter([
+            data_get($order->shipping_address_snapshot, 'phone'),
+            data_get($order->billing_address_snapshot, 'phone'),
+            $order->shippingAddress?->phone,
+            $order->user?->phone,
+        ]);
+    }
+
+    /**
+     * Compare on the last 10 digits so spacing, dashes and a +91 country code
+     * do not stop a customer finding their own order.
+     */
+    private function normalisePhone(?string $phone): string
+    {
+        $digits = preg_replace('/\D+/', '', (string) $phone);
+
+        return strlen($digits) > 10 ? substr($digits, -10) : $digits;
     }
 }

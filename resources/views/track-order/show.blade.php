@@ -220,6 +220,71 @@
                 </div>
             @endif
 
+            {{-- Order summary: what was paid and where it is going. Guest orders keep
+                 their contact and address on the snapshot rather than on a user. --}}
+            @php
+                $ship = $order->shipping_address_snapshot;
+                $addrLines = array_filter([
+                    data_get($ship, 'name'),
+                    trim(implode(', ', array_filter([data_get($ship, 'address_line_1'), data_get($ship, 'address_line_2')]))),
+                    trim(implode(' ', array_filter([data_get($ship, 'city'), data_get($ship, 'state'), data_get($ship, 'postal_code')]))),
+                    data_get($ship, 'phone'),
+                ]);
+                $payLabel = $order->payment_method
+                    ? \Illuminate\Support\Str::of($order->payment_method)->replace('_', ' ')->title()
+                    : 'Not recorded';
+            @endphp
+            <div class="bg-white border border-neutral-100 rounded-xl overflow-hidden mb-4">
+                <div class="px-5 py-4 border-b border-neutral-100">
+                    <h2 class="text-[15px] font-semibold text-neutral-900">Order Summary</h2>
+                </div>
+                <div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                        <dl class="space-y-1.5 text-[13px]">
+                            <div class="flex justify-between gap-4">
+                                <dt class="text-neutral-600">Subtotal</dt>
+                                <dd class="text-neutral-900">@price($order->subtotal)</dd>
+                            </div>
+                            @if($order->discount_amount > 0)
+                                <div class="flex justify-between gap-4">
+                                    <dt class="text-neutral-600">Discount</dt>
+                                    <dd class="text-success-600">-@price($order->discount_amount)</dd>
+                                </div>
+                            @endif
+                            @if($order->shipping_amount > 0)
+                                <div class="flex justify-between gap-4">
+                                    <dt class="text-neutral-600">Shipping</dt>
+                                    <dd class="text-neutral-900">@price($order->shipping_amount)</dd>
+                                </div>
+                            @endif
+                            @if($order->tax_amount > 0)
+                                <div class="flex justify-between gap-4">
+                                    <dt class="text-neutral-600">Tax</dt>
+                                    <dd class="text-neutral-900">@price($order->tax_amount)</dd>
+                                </div>
+                            @endif
+                            <div class="flex justify-between gap-4 pt-1.5 border-t border-neutral-100">
+                                <dt class="font-semibold text-neutral-900">Total</dt>
+                                <dd class="font-semibold text-neutral-900">@price($order->total)</dd>
+                            </div>
+                            <div class="flex justify-between gap-4">
+                                <dt class="text-neutral-600">Payment</dt>
+                                <dd class="text-neutral-900">{{ $payLabel }} &middot; {{ ucfirst($order->payment_status ?? 'pending') }}</dd>
+                            </div>
+                        </dl>
+                    </div>
+                    @if(!empty($addrLines))
+                        <div>
+                            <h3 class="text-[13px] font-medium text-neutral-900 mb-1.5">Delivery Address</h3>
+                            <address class="not-italic text-[13px] text-neutral-600 leading-relaxed">
+                                @foreach($addrLines as $line)
+                                    {{ $line }}<br>
+                                @endforeach
+                            </address>
+                        </div>
+                    @endif
+                </div>
+            </div>
             {{-- Order Items --}}
             <div class="bg-white border border-neutral-100 rounded-xl overflow-hidden">
                 <div class="px-5 py-4 border-b border-neutral-100">

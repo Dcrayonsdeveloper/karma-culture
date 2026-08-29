@@ -60,11 +60,12 @@
 
                     @guest
                         <div>
-                            <label class="block text-[13px] font-medium text-neutral-700 mb-1.5">Email Address</label>
-                            <input type="email" name="email" value="{{ old('email') }}" required
+                            <label class="block text-[13px] font-medium text-neutral-700 mb-1.5">Mobile Number</label>
+                            <input type="tel" name="phone" value="{{ old('phone') }}" required
+                                   inputmode="numeric" autocomplete="tel"
                                    class="w-full px-3.5 py-2.5 text-sm border border-neutral-200 rounded-lg bg-white text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
-                                   placeholder="Enter the email used for the order">
-                            @error('email')
+                                   placeholder="Mobile number used for the order">
+                            @error('phone')
                                 <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
