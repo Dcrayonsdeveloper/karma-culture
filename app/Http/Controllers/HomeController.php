@@ -42,6 +42,28 @@ class HomeController extends Controller
             ->take(10)
             ->get();
 
+        // Trending: what customers are actually looking at right now, over the
+        // last 30 days. Distinct from Bestsellers, which is all-time sales.
+        // Falls back to recent sellers so the row is never empty on a quiet week.
+        $trending = Product::query()
+            ->where('is_active', true)
+            ->with(['category', 'brand', 'primaryImage'])
+            ->withCount(['views as recent_views' => fn ($q) => $q->where('product_views.created_at', '>=', now()->subDays(30))])
+            ->having('recent_views', '>', 0)
+            ->orderByDesc('recent_views')
+            ->take(10)
+            ->get();
+
+        if ($trending->count() < 4) {
+            $trending = Product::query()
+                ->where('is_active', true)
+                ->with(['category', 'brand', 'primaryImage'])
+                ->orderByDesc('sales_count')
+                ->orderByDesc('created_at')
+                ->take(10)
+                ->get();
+        }
+
         // Deal products (where price < mrp)
         $deals = Product::query()
             ->where('is_active', true)
@@ -96,6 +118,7 @@ class HomeController extends Controller
             'featuredProducts',
             'newArrivals',
             'bestsellers',
+            'trending',
             'deals',
             'categories',
             'banners',

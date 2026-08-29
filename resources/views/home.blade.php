@@ -814,6 +814,27 @@
         @endif
 
         {{-- ============================================
+             TRENDING NOW — most viewed in the last 30 days.
+             Sits alongside Bestsellers (all-time sales), not instead of it.
+             ============================================ --}}
+        @php $tr = ($trending ?? collect())->take(4); @endphp
+        @if($tr->count())
+        <section class="kk-section">
+            <div class="container mx-auto px-4">
+                <div class="kk-section-header">
+                    <h2 class="kk-section-title">Trending Now</h2>
+                    <a href="{{ route('new-arrivals') }}" class="kk-view-all">View All <span aria-hidden="true">&rarr;</span></a>
+                </div>
+                <div class="kk-product-grid">
+                    @foreach($tr as $product)
+                        <x-product-card :product="$product" :show-quick-view="false" />
+                    @endforeach
+                </div>
+            </div>
+        </section>
+        @endif
+
+        {{-- ============================================
              ABOUT US — video-led, minimal text
              ============================================ --}}
         @php
