@@ -142,7 +142,10 @@ class ProductController extends Controller
             'videos' => 'nullable|array|max:5',
             'videos.*' => 'mimetypes:video/mp4,video/webm,video/quicktime|max:51200',
             'product_attributes' => 'nullable|array',
-            'product_attributes.*' => 'nullable|string|max:255',
+            // A value may be a single string (text attributes) or an array of
+            // checked values (size, colour, …) so one product can offer several.
+            'product_attributes.*' => 'nullable',
+            'product_attributes.*.*' => 'nullable|string|max:255',
         ]);
 
         $validated['slug'] = $validated['slug'] ?? Str::slug($validated['name']);
@@ -156,7 +159,12 @@ class ProductController extends Controller
 
         // Save attributes as JSON
         $productAttributes = collect($request->input('product_attributes', []))
-            ->filter(fn ($value) => $value !== null && $value !== '')
+            ->map(fn ($value) => is_array($value)
+                ? array_values(array_filter($value, fn ($v) => $v !== null && $v !== ''))
+                : $value)
+            ->filter(fn ($value) => is_array($value)
+                ? count($value) > 0
+                : ($value !== null && $value !== ''))
             ->toArray();
         $validated['attributes'] = ! empty($productAttributes) ? $productAttributes : null;
 
@@ -260,7 +268,10 @@ class ProductController extends Controller
             'delete_images' => 'nullable|array',
             'delete_images.*' => 'integer|exists:product_images,id',
             'product_attributes' => 'nullable|array',
-            'product_attributes.*' => 'nullable|string|max:255',
+            // A value may be a single string (text attributes) or an array of
+            // checked values (size, colour, …) so one product can offer several.
+            'product_attributes.*' => 'nullable',
+            'product_attributes.*.*' => 'nullable|string|max:255',
             'variants' => 'nullable|array',
             'variants.*.id' => 'required|integer|exists:product_variants,id',
             'variants.*.sku' => 'nullable|string|max:100',
@@ -282,7 +293,12 @@ class ProductController extends Controller
 
         // Save attributes as JSON
         $productAttributes = collect($request->input('product_attributes', []))
-            ->filter(fn ($value) => $value !== null && $value !== '')
+            ->map(fn ($value) => is_array($value)
+                ? array_values(array_filter($value, fn ($v) => $v !== null && $v !== ''))
+                : $value)
+            ->filter(fn ($value) => is_array($value)
+                ? count($value) > 0
+                : ($value !== null && $value !== ''))
             ->toArray();
         $validated['attributes'] = ! empty($productAttributes) ? $productAttributes : null;
 
