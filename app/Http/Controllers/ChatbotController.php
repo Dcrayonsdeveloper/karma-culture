@@ -42,9 +42,10 @@ class ChatbotController extends Controller
         $products = $this->findRelevantProducts($userMessage);
         $orders   = $this->fetchUserOrders($request);
         $coupons  = $this->fetchActiveCoupons();
+        $goesWith = $this->complementaryTo($products);
 
         // Build the system prompt and message history
-        $systemPrompt = $this->buildSystemPrompt($products, $orders, $coupons);
+        $systemPrompt = $this->buildSystemPrompt($products, $orders, $coupons, $goesWith);
         $messages     = $this->buildMessageHistory($rawHistory, $userMessage);
 
         if (! AiChatService::isConfigured()) {
@@ -202,7 +203,7 @@ class ChatbotController extends Controller
     // System Prompt
     // ─────────────────────────────────────────────────────────────────────────
 
-    private function buildSystemPrompt(array $products, array $orders, array $coupons): string
+    private function buildSystemPrompt(array $products, array $orders, array $coupons, array $goesWith = []): string
     {
         $storeName = Setting::get('site_name', config('app.name', 'Karmaa Kulture'));
 
@@ -288,6 +289,19 @@ class ChatbotController extends Controller
                 }
                 $line .= " | Link: {$p['url']}";
                 $prompt .= $line . "\n";
+            }
+            $prompt .= "\n";
+        }
+
+        if (!empty($goesWith)) {
+            $prompt .= "## Goes Well With\n";
+            $prompt .= "Products from other categories that complete the look. Suggest one or two only when it helps, and only from this list.\n";
+            foreach ($goesWith as $g) {
+                $prompt .= "- {$g['name']} — " . format_price($g['price']);
+                if (!empty($g['category'])) {
+                    $prompt .= " | {$g['category']}";
+                }
+                $prompt .= " | Link: {$g['url']}\n";
             }
             $prompt .= "\n";
         }
@@ -418,6 +432,13 @@ class ChatbotController extends Controller
 
         $topTerms = array_slice($searchTerms, 0, 8);
 
+        // "under 1500", "below ₹2000", "budget 800" — a price ceiling is a
+        // filter, not a search word, and matters more than any keyword.
+        $maxPrice = null;
+        if (preg_match('/(?:under|below|less than|upto|up to|within|budget(?: of)?|max)\s*(?:rs\.?|inr|₹)?\s*(\d{2,6})/u', $lower, $pm)) {
+            $maxPrice = (float) $pm[1];
+        }
+
         $products = Product::query()
             // Match the storefront, which lists on is_active alone. The active()
             // scope also demands status=approved, and no live product has it, so the
@@ -433,11 +454,39 @@ class ChatbotController extends Controller
                       ->orWhereHas('brand', fn ($bq) => $bq->where('name', 'like', "%{$term}%"));
                 }
             })
+            ->when($maxPrice, fn ($q) => $q->where('price', '<=', $maxPrice))
             ->orderBy('sales_count', 'desc')
             ->limit(self::MAX_PRODUCTS)
             ->get();
 
         return $products->map(fn ($p) => $this->mapProduct($p))->toArray();
+    }
+
+    /**
+     * Products from *other* categories, so a shirt is paired with trousers
+     * rather than with five more shirts. Without this the assistant can only
+     * cross-sell by inventing products, which it must never do.
+     */
+    private function complementaryTo(array $products): array
+    {
+        if (empty($products)) {
+            return [];
+        }
+
+        $categoryIds = array_values(array_filter(array_map(fn ($p) => $p['category_id'] ?? null, $products)));
+        $productIds  = array_map(fn ($p) => $p['id'], $products);
+
+        return Product::query()
+            ->where('is_active', true)
+            ->inStock()
+            ->with(['category:id,name', 'brand:id,name', 'primaryImage', 'variants'])
+            ->whereNotIn('id', $productIds)
+            ->when($categoryIds, fn ($q) => $q->whereNotIn('category_id', $categoryIds))
+            ->orderBy('sales_count', 'desc')
+            ->limit(3)
+            ->get()
+            ->map(fn ($p) => $this->mapProduct($p))
+            ->toArray();
     }
 
     private function fetchBestsellers(): array
@@ -466,6 +515,7 @@ class ChatbotController extends Controller
             'mrp'      => (float) ($product->mrp ?? $product->price),
             'in_stock' => $product->isInStock(),
             'category' => $product->category?->name,
+            'category_id' => $product->category_id,
             'brand'    => $product->brand?->name,
             'image'    => $product->primary_image_url,
             'url'      => route('product.show', $product),
