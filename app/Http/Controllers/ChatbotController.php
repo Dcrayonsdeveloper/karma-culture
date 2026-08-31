@@ -71,7 +71,13 @@ class ChatbotController extends Controller
                 ? $result['reply']
                 : 'Sorry, I didn\'t catch that. Could you rephrase your question?';
 
+            // The model marks intent inline; the customer must never see it.
+            $isLead    = str_contains($reply, '[LEAD]');
+            $isHandoff = str_contains($reply, '[HANDOFF]');
+            $reply     = trim(str_replace(['[LEAD]', '[HANDOFF]'], '', $reply));
+
             $this->record($conversation, $userMessage, $reply, $products, $startedAt);
+            $this->flagIntent($conversation, $isLead, $isHandoff);
 
             return response()->json([
                 'reply'          => $reply,
@@ -148,6 +154,26 @@ class ChatbotController extends Controller
     }
 
     /**
+     * Record what the assistant judged about this conversation, so the
+     * dashboard can separate browsing from buying intent and surface the
+     * conversations a human still needs to pick up.
+     */
+    private function flagIntent(?ChatbotConversation $conversation, bool $isLead, bool $isHandoff): void
+    {
+        if (! $conversation || (! $isLead && ! $isHandoff)) {
+            return;
+        }
+
+        try {
+            $conversation->forceFill([
+                'is_lead' => $conversation->is_lead || $isLead,
+                'last_intent' => $isHandoff ? 'handoff' : 'lead',
+            ])->save();
+        } catch (\Throwable $e) {
+            Log::error('Chatbot: could not flag intent', ['message' => $e->getMessage()]);
+        }
+    }
+    /**
      * A click on a suggested product — the clearest signal the assistant moved
      * someone towards a purchase.
      *
@@ -195,10 +221,34 @@ class ChatbotController extends Controller
         $prompt .= "## Store Policies\n";
         $freeShipping = (int) Setting::get('free_shipping_threshold', 999);
         $prompt .= "- **Shipping**: Free on orders above ₹{$freeShipping}. Standard delivery in 3–7 business days. Express delivery available at checkout for select cities.\n";
-        $prompt .= "- **Returns**: 7-day return window from delivery. Items must be unused with original tags. Initiate via Account → Returns on the website.\n";
+        $returnDays = (int) Setting::get('return_window_days', 7);
+        $prompt .= "- **Returns**: {$returnDays}-day return window from delivery. Items must be unused with original tags. Initiate via Account → Returns on the website.\n";
         $prompt .= "- **Payments**: UPI, credit/debit cards, net banking, digital wallets, and Cash on Delivery (COD up to ₹5,000).\n";
         $prompt .= "- **Size Guide**: Available at /size-guide. Sizes and colours differ per product. Where a product below lists them, those are the real in-stock options — quote them exactly. Where it lists none, say the options are shown on the product page rather than guessing.\n";
         $prompt .= "- **Order Tracking**: Available at Account → Orders, or use the Track Order page with your order number.\n\n";
+
+        // Indian shoppers routinely mix languages in one sentence; answering in
+        // the language they used matters more than answering in English.
+        $prompt .= "## Language\n";
+        $prompt .= "Reply in whatever language the customer writes in — English, Hindi, or Hinglish. ";
+        $prompt .= "If they mix, mirror the mix. Keep product names, sizes and coupon codes exactly as written.\n\n";
+
+        $prompt .= "## Selling\n";
+        $prompt .= "- Suggest a complete look when it fits: pair a shirt with trousers, a kurta with bottoms. Only ever suggest products listed below — never invent one.\n";
+        $prompt .= "- Mention a coupon when the customer hesitates on price or asks about offers. Do not open with a discount.\n";
+        $prompt .= "- When someone shows real buying intent but is not ready today, offer to save their email so the team can follow up, and end that reply with [LEAD].\n";
+        $prompt .= "- If you cannot answer, or the customer is upset or asking about a specific order problem you have no data for, say a human will help and end that reply with [HANDOFF].\n";
+        $prompt .= "- [LEAD] and [HANDOFF] are stripped before the customer sees the message. Use them sparingly and never both at once.\n\n";
+
+        if ($voice = trim((string) Setting::get('chatbot_brand_voice', ''))) {
+            $prompt .= "## Brand Voice\n" . $voice . "\n\n";
+        }
+
+        // Appended last so it overrides anything above it.
+        if ($custom = trim((string) Setting::get('chatbot_extra_instructions', ''))) {
+            $prompt .= "## Additional Instructions From The Store Owner\n";
+            $prompt .= "These take priority over everything above.\n" . $custom . "\n\n";
+        }
 
         if (!empty($coupons)) {
             $prompt .= "## Active Offers & Coupons\n";

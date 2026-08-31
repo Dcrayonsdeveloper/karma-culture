@@ -274,6 +274,8 @@ class SettingController extends Controller
             // any plausible token rather than rejecting a valid key on its prefix.
             'gemini_api_key'                     => ['nullable', 'string', 'max:500', 'regex:/^[A-Za-z0-9._\-]*$/'],
             'gemini_model'                       => 'nullable|in:gemini-3.6-flash,gemini-3.5-flash,gemini-3.1-flash-lite,',
+            'chatbot_brand_voice'                => 'nullable|string|max:2000',
+            'chatbot_extra_instructions'         => 'nullable|string|max:4000',
         ]);
 
         // Remove blank anthropic_model sentinel
