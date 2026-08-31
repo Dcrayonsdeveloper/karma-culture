@@ -4,6 +4,12 @@
     Z-index z-[75] — above quick-view modal (z-70).
     Alpine.js: chatbotWidget() — defined in <script> below.
 --}}
+
+@php
+    $kkBotLogo = \App\Models\Setting::get('site_logo', '')
+        ? asset('storage/' . \App\Models\Setting::get('site_logo'))
+        : asset('images/karmaa-kulture-logo.png');
+@endphp
 <style>
     .chatbot-widget-root { bottom: 73px !important; right: 1rem !important; }
     @media (min-width: 640px) { .chatbot-widget-root { bottom: 1.5rem !important; right: 1.5rem !important; } }
@@ -37,17 +43,7 @@
         <div class="px-4 py-3 flex items-center justify-between shrink-0" style="background: linear-gradient(to right, #8C5C34, #2D1810);">
             <div class="flex items-center gap-2.5">
                 <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm" style="background: white;">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none">
-                        <rect x="3" y="8" width="18" height="12" rx="3" fill="#8C5C34"/>
-                        <circle cx="8.5" cy="14" r="1.8" fill="white"/>
-                        <circle cx="15.5" cy="14" r="1.8" fill="white"/>
-                        <circle cx="8.5" cy="14" r="0.8" fill="#333"/>
-                        <circle cx="15.5" cy="14" r="0.8" fill="#333"/>
-                        <path d="M10 17.5c0-.28.45-.5 1-.5h2c.55 0 1 .22 1 .5s-.45.5-1 .5h-2c-.55 0-1-.22-1-.5z" fill="#333"/>
-                        <rect x="10" y="4" width="4" height="4" rx="1" fill="#8C5C34"/>
-                        <line x1="12" y1="4" x2="12" y2="2" stroke="#8C5C34" stroke-width="2" stroke-linecap="round"/>
-                        <circle cx="12" cy="1.5" r="1" fill="#8C5C34"/>
-                    </svg>
+                    <img src="{{ $kkBotLogo }}" alt="Karmaa Kulture" class="w-5 h-5 object-contain">
                 </div>
                 <div>
                     <p class="font-semibold text-sm leading-tight" style="color: #111;">Shopping Assistant</p>
@@ -80,17 +76,7 @@
             <template x-if="messages.length === 0">
                 <div class="flex flex-col items-center justify-center h-full text-center px-4 py-6">
                     <div class="w-14 h-14 rounded-full bg-[#8C5C34]/10 flex items-center justify-center mb-3">
-                        <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none">
-                            <rect x="3" y="8" width="18" height="12" rx="3" fill="#8C5C34"/>
-                            <circle cx="8.5" cy="14" r="1.8" fill="white"/>
-                            <circle cx="15.5" cy="14" r="1.8" fill="white"/>
-                            <circle cx="8.5" cy="14" r="0.8" fill="#333"/>
-                            <circle cx="15.5" cy="14" r="0.8" fill="#333"/>
-                            <path d="M10 17.5c0-.28.45-.5 1-.5h2c.55 0 1 .22 1 .5s-.45.5-1 .5h-2c-.55 0-1-.22-1-.5z" fill="#333"/>
-                            <rect x="10" y="4" width="4" height="4" rx="1" fill="#8C5C34"/>
-                            <line x1="12" y1="4" x2="12" y2="2" stroke="#8C5C34" stroke-width="2" stroke-linecap="round"/>
-                            <circle cx="12" cy="1.5" r="1" fill="#8C5C34"/>
-                        </svg>
+                        <img src="{{ $kkBotLogo }}" alt="Karmaa Kulture" class="w-9 h-9 object-contain">
                     </div>
                     <p class="text-sm font-semibold text-neutral-800 mb-1">Hi there! 👋</p>
                     <p class="text-xs text-neutral-600 leading-relaxed mb-4">I'm your shopping assistant. Ask me about products, orders, sizes, offers, or anything about the store!</p>
@@ -124,12 +110,7 @@
                     <template x-if="msg.role === 'assistant'">
                         <div class="flex items-start gap-2">
                             <div class="w-7 h-7 rounded-full bg-[#8C5C34] flex items-center justify-center shrink-0 mt-0.5">
-                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none">
-                                    <rect x="4" y="9" width="16" height="10" rx="2.5" fill="white"/>
-                                    <circle cx="9" cy="14" r="1.3" fill="#333"/>
-                                    <circle cx="15" cy="14" r="1.3" fill="#333"/>
-                                    <path d="M10.5 17c0-.2.3-.4.7-.4h1.6c.4 0 .7.2.7.4s-.3.4-.7.4h-1.6c-.4 0-.7-.2-.7-.4z" fill="#333"/>
-                                </svg>
+                                <img src="{{ $kkBotLogo }}" alt="Karmaa Kulture" class="w-4 h-4 object-contain">
                             </div>
                             <div class="flex-1 min-w-0">
                                 <div
@@ -185,11 +166,7 @@
             <template x-if="isTyping">
                 <div class="flex items-start gap-2">
                     <div class="w-7 h-7 rounded-full bg-[#8C5C34] flex items-center justify-center shrink-0 mt-0.5">
-                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none">
-                            <rect x="4" y="9" width="16" height="10" rx="2.5" fill="white"/>
-                            <circle cx="9" cy="14" r="1.3" fill="#333"/>
-                            <circle cx="15" cy="14" r="1.3" fill="#333"/>
-                        </svg>
+                        <img src="{{ $kkBotLogo }}" alt="Karmaa Kulture" class="w-4 h-4 object-contain">
                     </div>
                     <div class="px-4 py-3 rounded-2xl rounded-tl-sm bg-white border border-neutral-100 shadow-sm flex items-center gap-1">
                         <span class="w-1.5 h-1.5 rounded-full bg-neutral-400 animate-bounce" style="animation-delay: 0ms; animation-duration: 0.9s;"></span>
@@ -269,12 +246,9 @@
             </template>
             <template x-if="!isOpen">
                 <div class="flex flex-col items-center gap-0.5">
-                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2C6.48 2 2 5.58 2 10c0 2.24 1.12 4.26 2.92 5.7-.18 1.28-.8 2.42-1.74 3.3a.5.5 0 00.36.85c1.73-.04 3.36-.6 4.7-1.56.88.24 1.8.37 2.76.37 5.52 0 10-3.58 10-8S17.52 2 12 2z"/>
-                        <circle cx="8.5" cy="10" r="1.2" fill="white"/>
-                        <circle cx="12" cy="10" r="1.2" fill="white"/>
-                        <circle cx="15.5" cy="10" r="1.2" fill="white"/>
-                    </svg>
+                    <span class="w-7 h-7 rounded-full bg-white flex items-center justify-center">
+                        <img src="{{ $kkBotLogo }}" alt="" class="w-5 h-5 object-contain">
+                    </span>
                     <span class="text-[7px] font-bold tracking-wider uppercase leading-none">Ask AI</span>
                 </div>
             </template>
