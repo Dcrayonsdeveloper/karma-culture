@@ -227,6 +227,22 @@
                             @endforeach
                         </select>
                     </div>
+
+                    <div style="border-top: 1px solid #e3e3e3; padding-top: 1rem;">
+                        <label class="form-label">Brand Voice</label>
+                        <textarea name="chatbot_brand_voice" rows="4" class="form-input"
+                                  placeholder="How the assistant should sound. e.g. Warm and confident. Speak like a knowledgeable friend, never pushy. Use short sentences.">{{ old('chatbot_brand_voice', $settings['chatbot_brand_voice'] ?? '') }}</textarea>
+                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Tone and personality. Leave blank for the default friendly style.</p>
+                    </div>
+
+                    <div>
+                        <label class="form-label">Additional Instructions</label>
+                        <textarea name="chatbot_extra_instructions" rows="5" class="form-input"
+                                  placeholder="Rules the assistant must follow. e.g. Never promise next-day delivery. Always mention our 7-day returns when someone hesitates. Do not discuss competitors.">{{ old('chatbot_extra_instructions', $settings['chatbot_extra_instructions'] ?? '') }}</textarea>
+                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
+                            These override everything else, including the built-in rules. Changes apply to the next message &mdash; no deploy needed.
+                        </p>
+                    </div>
                 </div>
             </div>
 
