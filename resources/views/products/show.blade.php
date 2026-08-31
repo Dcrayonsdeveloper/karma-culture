@@ -1228,6 +1228,8 @@
             .kk-revform__file { font-size: 12px; color: #7a6555; }
             .kk-revform__file span { display: block; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #2d1810; margin-bottom: 6px; }
             .kk-revform__file input[type="file"] { width: 100%; font-size: 12px; color: #2d1810; }
+            /* Photos and videos are never required, so say so beside the label. */
+            .kk-revform__file span em { font-style: normal; font-weight: 400; text-transform: none; letter-spacing: 0; color: #9b8a72; }
             .kk-revform__hint { font-size: 11px; color: #9b8a72; margin-top: 4px; }
             </style>
             <div id="write-review-form" x-show="showForm" x-collapse x-cloak class="kk-revform">
@@ -1273,12 +1275,12 @@
                     {{-- Photo & video uploads (Task 10) --}}
                     <div class="kk-revform__uploads">
                         <label class="kk-revform__file">
-                            <span>Add Photos</span>
+                            <span>Add Photos <em>(optional)</em></span>
                             <input type="file" name="images[]" accept="image/jpeg,image/png,image/webp" multiple>
                             <p class="kk-revform__hint">Up to 5 images (JPG/PNG/WEBP, max 5MB each).</p>
                         </label>
                         <label class="kk-revform__file">
-                            <span>Add Videos</span>
+                            <span>Add Videos <em>(optional)</em></span>
                             <input type="file" name="videos[]" accept="video/mp4,video/webm,video/quicktime" multiple>
                             <p class="kk-revform__hint">Up to 2 short videos (MP4/WEBM/MOV, max 20MB each).</p>
                         </label>
