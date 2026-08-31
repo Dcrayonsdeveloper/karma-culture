@@ -424,13 +424,28 @@
                             ->values();
                     }
 
-                    $kkColours = $kkRows
-                        ->map(fn ($v) => trim((string) data_get($v->attributes, 'Colour', '')))
-                        ->filter()->unique()->values();
+                    // Colours are a product-level list set in its own admin section, so a
+                    // product can come in any colour without one size row per combination.
+                    $kkColourList = collect(data_get($product->attributes, 'Colours', []))
+                        ->map(fn ($c) => is_array($c)
+                            ? ['name' => trim((string) ($c['name'] ?? '')), 'hex' => $c['hex'] ?? null]
+                            : ['name' => trim((string) $c), 'hex' => null])
+                        ->filter(fn ($c) => $c['name'] !== '');
 
-                    $kkColourHex = $kkRows->mapWithKeys(fn ($v) => [
-                        trim((string) data_get($v->attributes, 'Colour', '')) => data_get($v->attributes, 'colour_hex'),
-                    ])->filter(fn ($hex, $name) => $name !== '' && $hex);
+                    // Fall back to colours stored on the size rows, so products set up
+                    // before colours moved out of that table still show their swatches.
+                    if ($kkColourList->isEmpty()) {
+                        $kkColourList = $kkRows
+                            ->map(fn ($v) => [
+                                'name' => trim((string) data_get($v->attributes, 'Colour', '')),
+                                'hex' => data_get($v->attributes, 'colour_hex'),
+                            ])
+                            ->filter(fn ($c) => $c['name'] !== '');
+                    }
+
+                    $kkColourList = $kkColourList->unique('name')->values();
+                    $kkColours = $kkColourList->pluck('name');
+                    $kkColourHex = $kkColourList->pluck('hex', 'name')->filter();
 
                     // size => variant id. Selecting a size points the page at that row so
                     // the existing currentPrice/currentMrp getters show its price.
@@ -743,7 +758,14 @@
                         @if($product->category)<dt>Category</dt><dd>{{ $product->category->name }}</dd>@endif
                         @if($product->attributes && count($product->attributes) > 0)
                             @foreach($product->attributes as $key => $value)
-                                <dt>{{ $key }}</dt><dd>{{ is_array($value) ? implode(', ', $value) : $value }}</dd>
+                                {{-- Colours render as swatches above, so they are not repeated here. --}}
+                                @continue($key === 'Colours')
+                                @php
+                                    $kkVal = is_array($value)
+                                        ? collect($value)->map(fn ($v) => is_array($v) ? ($v['name'] ?? implode(' ', $v)) : $v)->filter()->implode(', ')
+                                        : $value;
+                                @endphp
+                                <dt>{{ $key }}</dt><dd>{{ $kkVal }}</dd>
                             @endforeach
                         @endif
                         @if($product->specifications && count($product->specifications) > 0)

@@ -265,7 +265,7 @@
                             <h2 class="text-[13px] font-semibold" style="color: #303030;">Sizes &amp; pricing</h2>
                             <button type="button" @click="add()" class="btn btn-secondary" style="font-size:12px; padding:4px 10px;">+ Add size</button>
                         </div>
-                        <p class="text-xs mb-4" style="color: #616161;">Each row is one size a customer can buy, with its own price and stock. Give a colour to show a swatch on the product page. Leave SKU blank and one is generated.</p>
+                        <p class="text-xs mb-4" style="color: #616161;">Each row is one size a customer can buy, with its own price and stock. Leave SKU blank and one is generated. Colours are set separately below.</p>
 
                         <p class="text-xs" style="color:#616161; padding:10px 0;" x-show="visibleCount() === 0" x-cloak>No sizes yet &mdash; click &ldquo;Add size&rdquo;.</p>
 
@@ -274,7 +274,6 @@
                                 <thead>
                                     <tr style="border-bottom:1px solid #e3e3e3;">
                                         <th style="text-align:left;padding:.5rem;font-weight:500;color:#616161;">Size</th>
-                                        <th style="text-align:left;padding:.5rem;font-weight:500;color:#616161;">Colour</th>
                                         <th style="text-align:right;padding:.5rem;font-weight:500;color:#616161;">Price</th>
                                         <th style="text-align:right;padding:.5rem;font-weight:500;color:#616161;">MRP</th>
                                         <th style="text-align:right;padding:.5rem;font-weight:500;color:#616161;">Stock</th>
@@ -291,14 +290,6 @@
                                                 <input type="hidden" x-bind:name="'variants[' + i + '][delete]'" x-bind:value="r.remove ? 1 : ''">
                                                 <input type="text" x-bind:name="'variants[' + i + '][name]'" x-model="r.name" placeholder="M-40"
                                                        style="width:92px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;">
-                                            </td>
-                                            <td style="padding:.4rem;">
-                                                <div style="display:flex;align-items:center;gap:5px;">
-                                                    <input type="color" x-bind:name="'variants[' + i + '][colour_hex]'" x-model="r.colour_hex"
-                                                           style="width:28px;height:26px;border:1px solid #d4d4d4;border-radius:.375rem;padding:0;background:none;">
-                                                    <input type="text" x-bind:name="'variants[' + i + '][colour]'" x-model="r.colour" placeholder="Navy"
-                                                           style="width:86px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;">
-                                                </div>
                                             </td>
                                             <td style="padding:.4rem;text-align:right;">
                                                 <input type="number" step="0.01" min="0" x-bind:name="'variants[' + i + '][price]'" x-model="r.price"
@@ -361,6 +352,52 @@
                                 drop(i) {
                                     if (this.rows[i].id) { this.rows[i].remove = true; } else { this.rows.splice(i, 1); }
                                 },
+                            };
+                        }
+                    </script>
+
+                    <!-- Colours -->
+                    @php
+                        // Colours live on the product, not on a size row, so a product can
+                        // offer any colour in any size without one row per combination.
+                        $kkColourRows = collect(data_get($product->attributes, 'Colours', []))
+                            ->map(fn ($c) => is_array($c)
+                                ? ['name' => $c['name'] ?? '', 'hex' => $c['hex'] ?? '#000000']
+                                : ['name' => (string) $c, 'hex' => '#000000'])
+                            ->filter(fn ($c) => $c['name'] !== '')
+                            ->values();
+                    @endphp
+                    <div class="card p-5" x-data="kkColours()">
+                        <div class="flex items-center justify-between mb-1">
+                            <h2 class="text-[13px] font-semibold" style="color: #303030;">Colours</h2>
+                            <button type="button" @click="add()" class="btn btn-secondary" style="font-size:12px; padding:4px 10px;">+ Add colour</button>
+                        </div>
+                        <p class="text-xs mb-4" style="color: #616161;">The colours this product comes in. They show as swatches on the product page, under the sizes.</p>
+
+                        <p class="text-xs" style="color:#616161; padding:6px 0;" x-show="rows.length === 0" x-cloak>No colours yet &mdash; click &ldquo;Add colour&rdquo;.</p>
+
+                        <div x-show="rows.length > 0" x-cloak style="display:flex;flex-direction:column;gap:8px;">
+                            <template x-for="(c, i) in rows" :key="c.uid">
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <input type="color" x-bind:name="'colours[' + i + '][hex]'" x-model="c.hex"
+                                           style="width:34px;height:32px;border:1px solid #d4d4d4;border-radius:.375rem;padding:0;background:none;flex:0 0 auto;">
+                                    <input type="text" x-bind:name="'colours[' + i + '][name]'" x-model="c.name" placeholder="Navy"
+                                           style="flex:1 1 auto;max-width:240px;font-size:13px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.4rem .6rem;">
+                                    <button type="button" @click="rows.splice(i, 1)" title="Remove"
+                                            style="color:#d72c0d;background:none;border:0;cursor:pointer;font-size:16px;line-height:1;">&times;</button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    <script>
+                        function kkColours() {
+                            return {
+                                seq: 0,
+                                rows: [],
+                                init() {
+                                    this.rows = (@json($kkColourRows)).map(c => ({ ...c, uid: ++this.seq }));
+                                },
+                                add() { this.rows.push({ uid: ++this.seq, name: '', hex: '#000000' }); },
                             };
                         }
                     </script>
