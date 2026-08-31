@@ -43,6 +43,10 @@ class TrackOrderController extends Controller
             ]);
         }
 
+        // Remember that this visitor proved ownership of the order, so the guest
+        // return form can trust them without asking for the details again.
+        $request->session()->push('tracked_orders', $order->id);
+
         return view('track-order.show', [
             'order' => $order,
             'latestShipment' => $order->shipments->first(),

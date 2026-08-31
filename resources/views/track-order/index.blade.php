@@ -25,6 +25,16 @@
                 </p>
             </div>
 
+            @if(session('success'))
+                <div class="mb-4 p-3.5 rounded-lg bg-green-50 border border-green-100">
+                    <p class="text-[13px] text-green-800">{{ session('success') }}</p>
+                </div>
+            @endif
+            @if(session('error'))
+                <div class="mb-4 p-3.5 rounded-lg bg-red-50 border border-red-100">
+                    <p class="text-[13px] text-red-700">{{ session('error') }}</p>
+                </div>
+            @endif
             @if(isset($error))
                 <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-6">
                     <div class="flex items-center gap-2">
