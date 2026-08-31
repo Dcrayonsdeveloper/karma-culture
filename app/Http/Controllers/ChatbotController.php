@@ -6,6 +6,7 @@ use App\Models\ChatbotConversation;
 use App\Models\ChatbotMessage;
 use App\Models\ChatbotProductClick;
 use App\Models\Coupon;
+use App\Models\Lead;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Setting;
@@ -14,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class ChatbotController extends Controller
 {
@@ -79,6 +81,7 @@ class ChatbotController extends Controller
 
             $this->record($conversation, $userMessage, $reply, $products, $startedAt);
             $this->flagIntent($conversation, $isLead, $isHandoff);
+            $this->captureLead($conversation, $userMessage, $isLead, $products);
 
             return response()->json([
                 'reply'          => $reply,
@@ -172,6 +175,62 @@ class ChatbotController extends Controller
             ])->save();
         } catch (\Throwable $e) {
             Log::error('Chatbot: could not flag intent', ['message' => $e->getMessage()]);
+        }
+    }
+    /**
+     * Turn a chat into a followable lead.
+     *
+     * A contact detail typed into the chat is the customer volunteering it, so
+     * it is captured whenever it appears. Without one there is nothing to
+     * follow up with, so an intent flag alone does not create a lead.
+     */
+    private function captureLead(?ChatbotConversation $conversation, string $message, bool $isLead, array $products): void
+    {
+        if (! $conversation) {
+            return;
+        }
+
+        preg_match('/[\w.+-]+@[\w-]+\.[\w.]{2,}/', $message, $emailMatch);
+
+        // Indian mobiles, written with or without +91 and with any spacing.
+        // Matched on the original text: collapsing the whitespace first glues
+        // the number to the next word and loses the boundary.
+        $phone = null;
+        if (preg_match('/(?:\+?91[\s.-]?)?\b([6-9](?:[\s.-]?\d){9})\b/', $message, $phoneMatch)) {
+            $digits = preg_replace('/\D/', '', $phoneMatch[1]);
+            $phone = strlen($digits) === 10 ? $digits : null;
+        }
+
+        $email = $emailMatch[0] ?? null;
+
+        if (! $email && ! $phone) {
+            return;
+        }
+
+        try {
+            $user = $conversation->user;
+
+            $lead = Lead::updateOrCreate(
+                [
+                    'platform' => 'website_chat',
+                    'platform_id' => $email ?: $phone,
+                ],
+                [
+                    'name' => $user?->full_name,
+                    'email' => $email ?: $user?->email,
+                    'phone' => $phone ?: $user?->phone,
+                    'stage' => $isLead ? 'qualified' : 'new',
+                    'notes' => Str::limit('From the shopping assistant. Last message: ' . $message, 480),
+                    'tags' => array_values(array_filter(array_map(fn ($p) => $p['name'] ?? null, $products))) ?: null,
+                ]
+            );
+
+            $conversation->forceFill([
+                'lead_id' => $lead->id,
+                'is_lead' => true,
+            ])->save();
+        } catch (\Throwable $e) {
+            Log::error('Chatbot: could not capture lead', ['message' => $e->getMessage()]);
         }
     }
     /**
