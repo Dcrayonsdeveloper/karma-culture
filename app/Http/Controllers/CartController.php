@@ -18,6 +18,15 @@ class CartController extends Controller
     public function index(): View
     {
         $cart = $this->getOrCreateCart();
+
+        // Auto-apply only ran when the cart last changed, so a coupon created
+        // or activated afterwards never reached a cart that was already sitting
+        // there. Re-evaluate on view — unless the customer removed the coupon
+        // themselves, which must not spring back.
+        if ($cart->items()->exists() && ! session('coupon_dismissed', false)) {
+            $cart->recalculate();
+        }
+
         $cart->load(['items.product.primaryImage', 'items.variant']);
 
         // "You May Also Like" — products related to the cart's items (else popular).
@@ -287,6 +296,9 @@ class CartController extends Controller
             'code' => ['required', 'string'],
         ]);
 
+        // Entering a code is a fresh decision: stop suppressing auto-apply.
+        session()->forget('coupon_dismissed');
+
         $cart = $this->getOrCreateCart();
         $cart->load(['items.product', 'coupon']);
 
@@ -391,6 +403,10 @@ class CartController extends Controller
             'coupon_id' => null,
             'discount' => 0,
         ]);
+        // Remember the removal for this session, so viewing the cart does not
+        // silently put the coupon back.
+        session(['coupon_dismissed' => true]);
+
         $cart->recalculate(skipAutoApply: true);
         $cart->refresh();
         $cart->load('coupon');
