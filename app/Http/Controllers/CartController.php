@@ -70,6 +70,7 @@ class CartController extends Controller
                 'product_id' => $item->product_id,
                 'variant_id' => $item->variant_id,
                 'size' => $item->size,
+                'colour' => $item->colour,
                 'quantity' => $item->quantity,
                 'price' => (float) $item->price,
                 'product_name' => $item->product->name ?? '',
@@ -94,6 +95,7 @@ class CartController extends Controller
             'product_id' => ['required', 'exists:products,id'],
             'variant_id' => ['nullable', 'exists:product_variants,id'],
             'size' => ['nullable', 'string', 'max:50'],
+            'colour' => ['nullable', 'string', 'max:60'],
             'quantity' => ['required', 'integer', 'min:1', 'max:99'],
         ]);
 
@@ -102,6 +104,7 @@ class CartController extends Controller
         // Check stock
         $variantId = $validated['variant_id'] ?? null;
         $size = $validated['size'] ?? null;
+        $colour = $validated['colour'] ?? null;
         $stockQuantity = $variantId
             ? $product->variants()->find($variantId)->stock_quantity
             : $product->stock_quantity;
@@ -119,11 +122,12 @@ class CartController extends Controller
 
         $cart = $this->getOrCreateCart();
 
-        // Check if item already in cart (same product + variant + size = same line)
+        // Check if item already in cart (same product + variant + size + colour = same line)
         $existingItem = $cart->items()
             ->where('product_id', $validated['product_id'])
             ->where('variant_id', $variantId)
             ->where('size', $size)
+            ->where('colour', $colour)
             ->first();
 
         if ($existingItem) {
@@ -150,6 +154,7 @@ class CartController extends Controller
                 'product_id' => $validated['product_id'],
                 'variant_id' => $variantId,
                 'size' => $size,
+                'colour' => $colour,
                 'quantity' => $validated['quantity'],
                 'price' => $price,
             ]);

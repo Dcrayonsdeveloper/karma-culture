@@ -1564,6 +1564,9 @@
             quantity: 1,
             selectedSize: null,
             selectedColor: null,
+            // Only enforce a choice for options this product actually offers.
+            hasSizes: {{ $kkSizes->isNotEmpty() ? 'true' : 'false' }},
+            hasColours: {{ $kkColours->isNotEmpty() ? 'true' : 'false' }},
             selectedVariant: null,
             selectedAttributes: {},
             variants: @json($variantData),
@@ -1647,23 +1650,31 @@
                 }
             },
 
-            requireSize() {
-                if (!this.selectedSize) {
+            // A product that offers sizes or colours cannot be bought without
+            // picking one — otherwise the order reaches packing with no idea
+            // which variant the customer actually wanted.
+            requireSelection() {
+                if (this.hasSizes && !this.selectedSize) {
                     Alpine.store('toast').error('Please select a size');
                     document.getElementById('kk-size-select')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return false;
+                }
+                if (this.hasColours && !this.selectedColor) {
+                    Alpine.store('toast').error('Please select a colour');
+                    document.getElementById('kk-color-select')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     return false;
                 }
                 return true;
             },
 
             async addToCart() {
-                if (!this.requireSize()) return;
-                await Alpine.store('cart').add({{ $product->id }}, this.quantity, this.selectedVariant, this.selectedSize);
+                if (!this.requireSelection()) return;
+                await Alpine.store('cart').add({{ $product->id }}, this.quantity, this.selectedVariant, this.selectedSize, this.selectedColor);
             },
 
             async buyNow() {
-                if (!this.requireSize()) return;
-                await Alpine.store('cart').add({{ $product->id }}, this.quantity, this.selectedVariant, this.selectedSize);
+                if (!this.requireSelection()) return;
+                await Alpine.store('cart').add({{ $product->id }}, this.quantity, this.selectedVariant, this.selectedSize, this.selectedColor);
                 Alpine.store('cart').close();
                 window.location.href = '{{ route("checkout.index") }}';
             },

@@ -395,6 +395,9 @@
                                 <template x-if="item.size">
                                     <p class="text-xs mt-0.5" style="color:#777;">Size: <span class="font-medium" style="color:#444;" x-text="item.size"></span></p>
                                 </template>
+                                <template x-if="item.colour">
+                                    <p class="text-xs mt-0.5" style="color:#777;">Colour: <span class="font-medium" style="color:#444;" x-text="item.colour"></span></p>
+                                </template>
                                 <p class="text-sm font-bold mt-1" style="color:#222;" x-text="formatCurrency(item.price)"></p>
                                 <div class="flex items-center gap-2 mt-1.5">
                                     <div class="flex items-center rounded overflow-hidden" style="border:1px solid #ddd;">
