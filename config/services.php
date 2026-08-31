@@ -40,6 +40,11 @@ return [
         'model' => env('ANTHROPIC_MODEL', 'claude-haiku-4-5-20251001'),
     ],
 
+    'gemini' => [
+        'key'   => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-2.5-flash'),
+    ],
+
     'ga4' => [
         'measurement_id' => env('GA4_MEASUREMENT_ID'),
         'api_secret' => env('GA4_API_SECRET'),

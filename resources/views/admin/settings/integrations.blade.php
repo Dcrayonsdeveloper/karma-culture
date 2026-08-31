@@ -156,11 +156,19 @@
             {{-- AI Chatbot (Anthropic) --}}
             <div class="card">
                 <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;">
-                    <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">AI Chatbot (Anthropic)</h2>
-                    <p style="font-size: 12px; color: #616161; margin: 0.125rem 0 0 0;">Powers the customer support chatbot on the website</p>
+                    <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">AI Chatbot</h2>
+                    <p style="font-size: 12px; color: #616161; margin: 0.125rem 0 0 0;">Powers the shopping assistant on the website. The bubble appears once a key is saved, and disappears if you clear it.</p>
                 </div>
-                <div style="padding: 1rem; display: flex; flex-direction: column; gap: 1rem;">
-                    <div x-data="secretField('anthropic_api_key')">
+                <div style="padding: 1rem; display: flex; flex-direction: column; gap: 1rem;"
+                     x-data="{ provider: '{{ old('ai_provider', $settings['ai_provider'] ?? 'anthropic') }}' }">
+                    <div>
+                        <label class="form-label">Provider</label>
+                        <select name="ai_provider" x-model="provider" class="form-select">
+                            <option value="anthropic">Anthropic (Claude)</option>
+                            <option value="gemini">Google (Gemini)</option>
+                        </select>
+                    </div>
+                    <div x-show="provider === 'anthropic'" x-cloak x-data="secretField('anthropic_api_key')">
                         <label class="form-label">Anthropic API Key</label>
                         <div style="position: relative;">
                             <input type="password" id="anthropic_api_key" name="anthropic_api_key"
@@ -177,7 +185,7 @@
                         </p>
                     </div>
 
-                    <div>
+                    <div x-show="provider === 'anthropic'" x-cloak>
                         <label class="form-label">Model</label>
                         <select name="anthropic_model" class="form-select">
                             @foreach([
@@ -186,6 +194,36 @@
                                 'claude-opus-4-6'           => 'Claude Opus 4.6 (most capable)',
                             ] as $val => $label)
                                 <option value="{{ $val }}" @selected(old('anthropic_model', $settings['anthropic_model'] ?? 'claude-haiku-4-5-20251001') === $val)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div x-show="provider === 'gemini'" x-cloak x-data="secretField('gemini_api_key')">
+                        <label class="form-label">Gemini API Key</label>
+                        <div style="position: relative;">
+                            <input type="password" id="gemini_api_key" name="gemini_api_key"
+                                   value="{{ old('gemini_api_key', $settings['gemini_api_key'] ?? '') }}"
+                                   autocomplete="new-password"
+                                   placeholder="AIzaSy..."
+                                   class="form-input" style="padding-right: 4rem; font-family: monospace; font-size: 13px;">
+                            <button type="button" @click="toggle()"
+                                    style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); font-size: 12px; color: #616161; background: none; border: none; cursor: pointer;"
+                                    x-text="show ? 'Hide' : 'Show'"></button>
+                        </div>
+                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
+                            Create one at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style="color: #005bd3; text-decoration: underline;">aistudio.google.com/apikey</a>. It starts with <code>AIzaSy</code> &mdash; an <code>AQ.</code> value is a short-lived token and will not work.
+                        </p>
+                    </div>
+
+                    <div x-show="provider === 'gemini'" x-cloak>
+                        <label class="form-label">Model</label>
+                        <select name="gemini_model" class="form-select">
+                            @foreach([
+                                'gemini-2.5-flash' => 'Gemini 2.5 Flash (fastest, lowest cost)',
+                                'gemini-2.0-flash' => 'Gemini 2.0 Flash',
+                                'gemini-2.5-pro'   => 'Gemini 2.5 Pro (most capable)',
+                            ] as $val => $label)
+                                <option value="{{ $val }}" @selected(old('gemini_model', $settings['gemini_model'] ?? 'gemini-2.5-flash') === $val)>{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>

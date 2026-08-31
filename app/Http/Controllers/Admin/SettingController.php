@@ -269,6 +269,10 @@ class SettingController extends Controller
             // AI Chatbot
             'anthropic_api_key'                  => ['nullable', 'string', 'max:500', 'regex:/^(sk-ant-[A-Za-z0-9\-_]*)?$/'],
             'anthropic_model'                    => 'nullable|in:claude-haiku-4-5-20251001,claude-sonnet-4-6,claude-opus-4-6,',
+            'ai_provider'                        => 'nullable|in:anthropic,gemini',
+            // Google keys are AIzaSy + 33 chars; an AQ. value is a short-lived token.
+            'gemini_api_key'                     => ['nullable', 'string', 'max:500', 'regex:/^(AIza[A-Za-z0-9\-_]*)?$/'],
+            'gemini_model'                       => 'nullable|in:gemini-2.5-flash,gemini-2.0-flash,gemini-2.5-pro,',
         ]);
 
         // Remove blank anthropic_model sentinel
