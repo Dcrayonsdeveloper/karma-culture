@@ -105,7 +105,7 @@ class ChatbotController extends Controller
         $prompt .= "- **Shipping**: Free on orders above ₹{$freeShipping}. Standard delivery in 3–7 business days. Express delivery available at checkout for select cities.\n";
         $prompt .= "- **Returns**: 7-day return window from delivery. Items must be unused with original tags. Initiate via Account → Returns on the website.\n";
         $prompt .= "- **Payments**: UPI, credit/debit cards, net banking, digital wallets, and Cash on Delivery (COD up to ₹5,000).\n";
-        $prompt .= "- **Size Guide**: Available at /size-guide. Sizes and colours vary by product — the exact options are shown on each product page. Never guess which sizes or colours a product comes in.\n";
+        $prompt .= "- **Size Guide**: Available at /size-guide. Sizes and colours differ per product. Where a product below lists them, those are the real in-stock options — quote them exactly. Where it lists none, say the options are shown on the product page rather than guessing.\n";
         $prompt .= "- **Order Tracking**: Available at Account → Orders, or use the Track Order page with your order number.\n\n";
 
         if (!empty($coupons)) {
@@ -131,6 +131,18 @@ class ChatbotController extends Controller
                 $line .= " | {$stock}";
                 if (!empty($p['category'])) {
                     $line .= " | {$p['category']}";
+                }
+                if (!empty($p['sizes'])) {
+                    // Name the per-size price only where it differs from the base.
+                    $sizes = array_map(function ($sz) use ($p) {
+                        return abs($sz['price'] - $p['price']) < 0.01
+                            ? $sz['name']
+                            : $sz['name'] . ' ' . format_price($sz['price']);
+                    }, $p['sizes']);
+                    $line .= ' | Sizes in stock: ' . implode(', ', $sizes);
+                }
+                if (!empty($p['colours'])) {
+                    $line .= ' | Colours: ' . implode(', ', $p['colours']);
                 }
                 $line .= " | Link: {$p['url']}";
                 $prompt .= $line . "\n";
@@ -243,7 +255,7 @@ class ChatbotController extends Controller
         $products = Product::query()
             ->active()
             ->inStock()
-            ->with(['category:id,name', 'brand:id,name', 'primaryImage'])
+            ->with(['category:id,name', 'brand:id,name', 'primaryImage', 'variants'])
             ->where(function ($q) use ($topTerms) {
                 foreach ($topTerms as $term) {
                     $q->orWhere('name', 'like', "%{$term}%")
@@ -264,7 +276,7 @@ class ChatbotController extends Controller
         return Product::query()
             ->active()
             ->inStock()
-            ->with(['category:id,name', 'brand:id,name', 'primaryImage'])
+            ->with(['category:id,name', 'brand:id,name', 'primaryImage', 'variants'])
             ->orderBy('sales_count', 'desc')
             ->limit(4)
             ->get()
@@ -285,7 +297,39 @@ class ChatbotController extends Controller
             'brand'    => $product->brand?->name,
             'image'    => $product->primary_image_url,
             'url'      => route('product.show', $product),
+            'sizes'    => $this->sizesFor($product),
+            'colours'  => $this->coloursFor($product),
         ];
+    }
+
+    /**
+     * Sizes come from the active variants, each of which carries its own price
+     * and stock. Only in-stock sizes are listed: offering a sold-out size is
+     * worse than saying nothing.
+     */
+    private function sizesFor(Product $product): array
+    {
+        return $product->variants
+            ->where('is_active', true)
+            ->filter(fn ($v) => trim((string) $v->name) !== '' && $v->stock_quantity > 0)
+            ->map(fn ($v) => [
+                'name'  => trim((string) $v->name),
+                'price' => (float) ($v->price ?: $product->price),
+            ])
+            ->unique('name')
+            ->values()
+            ->all();
+    }
+
+    /** Colours are a product-level list set in its own admin section. */
+    private function coloursFor(Product $product): array
+    {
+        return collect(data_get($product->attributes, 'Colours', []))
+            ->map(fn ($c) => is_array($c) ? trim((string) ($c['name'] ?? '')) : trim((string) $c))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function formatProductCards(array $products): array
