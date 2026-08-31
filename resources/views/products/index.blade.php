@@ -20,7 +20,7 @@
         <meta name="twitter:card" content="summary">
         <meta name="twitter:title" content="{{ $metaCat ?? ($metaBrand ?? 'Kids Clothing & Accessories') }} - {{ config('app.name') }}">
         <meta name="twitter:description" content="{{ $metaDesc }}">
-        @if(request()->anyFilled(['category', 'brand', 'min_price', 'max_price', 'rating', 'in_stock', 'on_sale', 'sort']))
+        @if(request()->anyFilled(['category', 'brand', 'size', 'colour', 'min_price', 'max_price', 'rating', 'in_stock', 'on_sale', 'sort']))
         <meta name="robots" content="noindex, follow">
         @endif
     @endpush
@@ -43,7 +43,7 @@
 
     <div class="container mx-auto px-4 py-6">
         <!-- Active Filters -->
-        @if(request()->hasAny(['category', 'brand', 'min_price', 'max_price', 'rating', 'in_stock', 'on_sale']))
+        @if(request()->hasAny(['category', 'brand', 'size', 'colour', 'min_price', 'max_price', 'rating', 'in_stock', 'on_sale']))
             <div class="flex flex-wrap items-center gap-2 mb-5">
                 <span class="text-xs font-medium text-neutral-600 uppercase tracking-wide">Active Filters:</span>
                 @if(request('category'))
@@ -94,7 +94,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
                     </svg>
                     Filters
-                    @if(request()->hasAny(['category', 'brand', 'min_price', 'max_price', 'rating', 'in_stock', 'on_sale']))
+                    @if(request()->hasAny(['category', 'brand', 'size', 'colour', 'min_price', 'max_price', 'rating', 'in_stock', 'on_sale']))
                         <span class="w-5 h-5 bg-[#F8931D] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                             {{ count(array_filter([request('category'), request('brand'), request('min_price'), request('max_price'), request('rating'), request('in_stock'), request('on_sale')])) }}
                         </span>

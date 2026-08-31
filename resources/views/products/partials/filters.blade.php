@@ -55,6 +55,87 @@
         <div class="border-t border-neutral-100"></div>
     @endif
 
+    {{-- Size --}}
+    @php
+        $kkAllSizes = \Illuminate\Support\Facades\Cache::remember('kk_filter_sizes', 600, function () {
+            return \App\Models\ProductVariant::where('is_active', true)
+                ->where('stock_quantity', '>', 0)
+                ->pluck('name')
+                ->map(fn ($n) => trim((string) $n))
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values();
+        });
+    @endphp
+    @if($kkAllSizes->isNotEmpty())
+        <div x-data="{ open: true }">
+            <button type="button" @click="open = !open" class="flex items-center justify-between w-full py-2 text-sm font-semibold text-neutral-900">
+                Size
+                <svg class="w-4 h-4 text-neutral-600 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </button>
+            <div x-show="open" x-collapse>
+                <div class="flex flex-wrap gap-1.5 pt-1 pb-2">
+                    @foreach($kkAllSizes as $kkSize)
+                        @php $kkOn = in_array($kkSize, (array) request('size', []), true); @endphp
+                        <label class="cursor-pointer">
+                            <input type="checkbox" name="size[]" value="{{ $kkSize }}" @checked($kkOn) class="sr-only peer">
+                            <span class="inline-block px-2.5 py-1 text-xs rounded-md border transition-colors
+                                         {{ $kkOn ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-200 text-neutral-700 hover:border-neutral-400' }}">
+                                {{ $kkSize }}
+                            </span>
+                        </label>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+        <div class="border-t border-neutral-100"></div>
+    @endif
+
+    {{-- Colour --}}
+    @php
+        $kkAllColours = \Illuminate\Support\Facades\Cache::remember('kk_filter_colours', 600, function () {
+            return \App\Models\Product::where('is_active', true)
+                ->pluck('attributes')
+                ->flatMap(fn ($a) => collect(data_get($a, 'Colours', []))
+                    ->map(fn ($c) => is_array($c)
+                        ? ['name' => trim((string) ($c['name'] ?? '')), 'hex' => $c['hex'] ?? null]
+                        : ['name' => trim((string) $c), 'hex' => null]))
+                ->filter(fn ($c) => $c['name'] !== '')
+                ->unique('name')
+                ->sortBy('name')
+                ->values();
+        });
+    @endphp
+    @if($kkAllColours->isNotEmpty())
+        <div x-data="{ open: true }">
+            <button type="button" @click="open = !open" class="flex items-center justify-between w-full py-2 text-sm font-semibold text-neutral-900">
+                Colour
+                <svg class="w-4 h-4 text-neutral-600 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </button>
+            <div x-show="open" x-collapse>
+                <div class="flex flex-wrap gap-1.5 pt-1 pb-2">
+                    @foreach($kkAllColours as $kkC)
+                        @php $kkOn = in_array($kkC['name'], (array) request('colour', []), true); @endphp
+                        <label class="cursor-pointer" title="{{ $kkC['name'] }}">
+                            <input type="checkbox" name="colour[]" value="{{ $kkC['name'] }}" @checked($kkOn) class="sr-only peer">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded-md border transition-colors
+                                         {{ $kkOn ? 'border-neutral-900 bg-neutral-50' : 'border-neutral-200 hover:border-neutral-400' }}">
+                                <span style="width:12px;height:12px;border-radius:50%;background-color: {{ $kkC['hex'] ?: '#ddd' }}; border:1px solid rgba(0,0,0,.15);"></span>
+                                <span class="text-neutral-700">{{ $kkC['name'] }}</span>
+                            </span>
+                        </label>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+        <div class="border-t border-neutral-100"></div>
+    @endif
+
     {{-- Price Range --}}
     <div x-data="{ open: true }">
         <button type="button" @click="open = !open" class="flex items-center justify-between w-full py-2 text-sm font-semibold text-neutral-900">
