@@ -123,6 +123,7 @@
                                         <template x-for="product in msg.products" :key="product.id">
                                             <a
                                                 :href="product.url"
+                                                @click="trackProductClick(product.id)"
                                                 class="shrink-0 w-[108px] bg-white rounded-xl border border-neutral-100 overflow-hidden hover:shadow-md hover:border-[#6F9CA2]/30 transition-all block"
                                             >
                                                 <div class="relative w-full aspect-square bg-neutral-50 overflow-hidden">
@@ -303,6 +304,27 @@
 <script>
 function chatbotWidget() {
     return {
+            // Set from the first reply; ties later clicks to this conversation.
+            conversationId: null,
+
+            trackProductClick(productId) {
+                // Fire and forget: a failed beacon must never block the link.
+                try {
+                    const body = JSON.stringify({
+                        product_id: productId,
+                        conversation_id: this.conversationId,
+                    });
+                    fetch('/chatbot/product-click', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+                        },
+                        body,
+                        keepalive: true,
+                    }).catch(() => {});
+                } catch (e) {}
+            },
         isOpen:       false,
         isTyping:     false,
         hasBeenOpened: false,
@@ -361,6 +383,9 @@ function chatbotWidget() {
                 });
 
                 const data = response.data;
+
+                // Ties any later product click to this conversation.
+                if (data && data.conversation_id) this.conversationId = data.conversation_id;
                 this.messages.push({
                     role:     'assistant',
                     content:  data.reply || 'Sorry, I didn\'t get a response. Please try again.',
