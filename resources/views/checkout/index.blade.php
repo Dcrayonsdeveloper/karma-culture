@@ -36,24 +36,41 @@
                                 <div class="w-6 h-6 rounded-full bg-primary-600 text-white text-xs font-bold flex items-center justify-center">1</div>
                                 <h2 class="text-sm font-semibold text-neutral-900">Shipping Details</h2>
                             </div>
-                            <div class="p-4 space-y-3">
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div>
-                                        <label class="block text-[11px] font-medium text-neutral-600 mb-1">Full Name *</label>
-                                        <input type="text" name="full_name" value="{{ old('full_name', $prefill->name ?? '') }}"
-                                               class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
-                                               placeholder="Full name" required>
-                                        @error('full_name')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
+                            @php
+                                $kkDefaultAddr = $addresses->firstWhere('is_default', true)?->id ?? $addresses->first()?->id;
+                            @endphp
+                            <div class="p-4 space-y-3" x-data="{ addrId: '{{ old('address_id', $addresses->isNotEmpty() ? $kkDefaultAddr : '') }}' }">
+                                @if($addresses->isNotEmpty())
+                                    {{-- Saved addresses, so a returning customer does not retype
+                                         details the account already holds. --}}
+                                    <div class="space-y-2">
+                                        @foreach($addresses as $kkAddr)
+                                            <label class="flex items-start gap-3 border rounded-lg px-4 py-3 cursor-pointer transition-colors"
+                                                   :class="addrId === '{{ $kkAddr->id }}' ? 'border-primary-500 ring-1 ring-primary-200 bg-primary-50' : 'border-neutral-200 hover:border-neutral-300'">
+                                                <input type="radio" name="address_id" value="{{ $kkAddr->id }}" x-model="addrId" class="mt-1 accent-primary-600">
+                                                <span class="min-w-0 flex-1">
+                                                    <span class="flex items-center gap-2 text-sm font-semibold text-neutral-900">
+                                                        {{ $kkAddr->label ?: 'Address' }}
+                                                        @if($kkAddr->is_default)
+                                                            <span class="text-[10px] font-medium text-primary-700 bg-primary-100 rounded px-1.5 py-0.5">Default</span>
+                                                        @endif
+                                                    </span>
+                                                    <span class="block text-xs text-neutral-700 mt-0.5">{{ trim($kkAddr->first_name . ' ' . $kkAddr->last_name) }} &middot; {{ $kkAddr->phone }}</span>
+                                                    <span class="block text-xs text-neutral-600">{{ collect([$kkAddr->address_line_1, $kkAddr->address_line_2, $kkAddr->city, $kkAddr->state, $kkAddr->postal_code])->filter()->join(', ') }}</span>
+                                                </span>
+                                            </label>
+                                        @endforeach
+                                        <label class="flex items-center gap-3 border rounded-lg px-4 py-3 cursor-pointer transition-colors"
+                                               :class="addrId === '' ? 'border-primary-500 ring-1 ring-primary-200 bg-primary-50' : 'border-neutral-200 hover:border-neutral-300'">
+                                            <input type="radio" name="address_id" value="" x-model="addrId" class="accent-primary-600">
+                                            <span class="text-sm font-semibold text-neutral-900">Use a new address</span>
+                                        </label>
                                     </div>
-                                    <div>
-                                        <label class="block text-[11px] font-medium text-neutral-600 mb-1">Phone *</label>
-                                        <input type="tel" name="phone" value="{{ old('phone') }}" maxlength="10"
-                                               class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
-                                               placeholder="10-digit mobile number" required>
-                                        @error('phone')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
-                                    </div>
-                                </div>
+                                    @error('address_id')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
+                                @endif
 
+                                {{-- Only the typed form is hidden; email is always needed for the
+                                     order confirmation, so it stays visible below. --}}
                                 <div>
                                     <label class="block text-[11px] font-medium text-neutral-600 mb-1">Email *</label>
                                     <input type="email" name="email" value="{{ old('email', $prefill->email ?? '') }}"
@@ -62,11 +79,30 @@
                                     @error('email')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
                                 </div>
 
+                                <div x-show="addrId === ''" x-cloak class="space-y-3">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-[11px] font-medium text-neutral-600 mb-1">Full Name *</label>
+                                        <input type="text" name="full_name" value="{{ old('full_name', $prefill->name ?? '') }}"
+                                               class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
+                                               placeholder="Full name" :required="addrId === ''">
+                                        @error('full_name')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-medium text-neutral-600 mb-1">Phone *</label>
+                                        <input type="tel" name="phone" value="{{ old('phone') }}" maxlength="10"
+                                               class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
+                                               placeholder="10-digit mobile number" :required="addrId === ''">
+                                        @error('phone')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
+                                    </div>
+                                </div>
+
+
                                 <div>
                                     <label class="block text-[11px] font-medium text-neutral-600 mb-1">Address Line 1 *</label>
                                     <input type="text" name="address_line_1" value="{{ old('address_line_1') }}"
                                            class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
-                                           placeholder="House no., Building, Street" required>
+                                           placeholder="House no., Building, Street" :required="addrId === ''">
                                     @error('address_line_1')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
                                 </div>
 
@@ -82,12 +118,12 @@
                                         <label class="block text-[11px] font-medium text-neutral-600 mb-1">City *</label>
                                         <input type="text" name="city" value="{{ old('city') }}"
                                                class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
-                                               placeholder="City" required>
+                                               placeholder="City" :required="addrId === ''">
                                         @error('city')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
                                     </div>
                                     <div>
                                         <label class="block text-[11px] font-medium text-neutral-600 mb-1">State *</label>
-                                        <select name="state" class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100" required>
+                                        <select name="state" class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100" :required="addrId === ''">
                                             <option value="">Select state</option>
                                             @foreach($states as $s)
                                                 <option value="{{ $s }}" {{ old('state') === $s ? 'selected' : '' }}>{{ $s }}</option>
@@ -99,9 +135,10 @@
                                         <label class="block text-[11px] font-medium text-neutral-600 mb-1">PIN Code *</label>
                                         <input type="text" name="postal_code" value="{{ old('postal_code') }}" maxlength="6"
                                                class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
-                                               placeholder="400001" required>
+                                               placeholder="400001" :required="addrId === ''">
                                         @error('postal_code')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
                                     </div>
+                                </div>
                                 </div>
                             </div>
                         </div>
