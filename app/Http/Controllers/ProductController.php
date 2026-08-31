@@ -40,6 +40,29 @@ class ProductController extends Controller
         }
 
         // Price filter
+        // Sizes live on the variants, colours on the product's Colours list, so
+        // each needs its own lookup rather than a column on products.
+        if ($request->filled('size')) {
+            $sizes = array_filter((array) $request->input('size'));
+            $query->whereHas('variants', function ($q) use ($sizes) {
+                $q->where('is_active', true)
+                  ->where('stock_quantity', '>', 0)
+                  ->whereIn('name', $sizes);
+            });
+        }
+
+        if ($request->filled('colour')) {
+            $colours = array_filter((array) $request->input('colour'));
+            $query->where(function ($q) use ($colours) {
+                foreach ($colours as $colour) {
+                    // Matches the name inside the Colours JSON, and the legacy
+                    // colour stored on a variant for older products.
+                    $q->orWhere('attributes', 'like', '%"' . $colour . '"%')
+                      ->orWhereHas('variants', fn ($vq) => $vq->where('attributes', 'like', '%"' . $colour . '"%'));
+                }
+            });
+        }
+
         if ($request->filled('min_price')) {
             $query->where('price', '>=', $request->min_price);
         }
