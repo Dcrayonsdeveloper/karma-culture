@@ -1177,14 +1177,16 @@
                         <p class="kk-rev__item-body">{{ $review->content }}</p>
                         @if($review->relationLoaded('images') && $review->images->isNotEmpty())
                             <div class="kk-rev__media">
-                                @foreach($review->images as $media)
-                                    @if($media->is_video)
-                                        <video class="kk-rev__media-item" controls preload="metadata" playsinline @if($media->display_thumbnail) poster="{{ $media->display_thumbnail }}" @endif>
-                                            <source src="{{ $media->display_url }}">
+                                {{-- Named $reviewMedia, not $media: the page gallery uses $media and a foreach --}}
+                                {{-- would leak the last row into it, breaking the lightbox below. --}}
+                                @foreach($review->images as $reviewMedia)
+                                    @if($reviewMedia->is_video)
+                                        <video class="kk-rev__media-item" controls preload="metadata" playsinline @if($reviewMedia->display_thumbnail) poster="{{ $reviewMedia->display_thumbnail }}" @endif>
+                                            <source src="{{ $reviewMedia->display_url }}">
                                         </video>
                                     @else
-                                        <a href="{{ $media->display_url }}" target="_blank" rel="noopener" class="kk-rev__media-item kk-rev__media-item--img">
-                                            <img src="{{ $media->display_url }}" alt="{{ $media->alt_text ?? 'Customer review photo' }}" loading="lazy">
+                                        <a href="{{ $reviewMedia->display_url }}" target="_blank" rel="noopener" class="kk-rev__media-item kk-rev__media-item--img">
+                                            <img src="{{ $reviewMedia->display_url }}" alt="{{ $reviewMedia->alt_text ?? 'Customer review photo' }}" loading="lazy">
                                         </a>
                                     @endif
                                 @endforeach
