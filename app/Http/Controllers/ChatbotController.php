@@ -253,7 +253,10 @@ class ChatbotController extends Controller
         $topTerms = array_slice($searchTerms, 0, 5);
 
         $products = Product::query()
-            ->active()
+            // Match the storefront, which lists on is_active alone. The active()
+            // scope also demands status=approved, and no live product has it, so the
+            // assistant could never surface a product the customer can actually buy.
+            ->where('is_active', true)
             ->inStock()
             ->with(['category:id,name', 'brand:id,name', 'primaryImage', 'variants'])
             ->where(function ($q) use ($topTerms) {
@@ -274,7 +277,10 @@ class ChatbotController extends Controller
     private function fetchBestsellers(): array
     {
         return Product::query()
-            ->active()
+            // Match the storefront, which lists on is_active alone. The active()
+            // scope also demands status=approved, and no live product has it, so the
+            // assistant could never surface a product the customer can actually buy.
+            ->where('is_active', true)
             ->inStock()
             ->with(['category:id,name', 'brand:id,name', 'primaryImage', 'variants'])
             ->orderBy('sales_count', 'desc')
