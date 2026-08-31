@@ -196,7 +196,9 @@
         {{-- Sidebar --}}
         <div style="display: flex; flex-direction: column; gap: 1rem;">
             {{-- Update Status --}}
-            <div class="card" x-data="{ status: '{{ $order->status }}' }">
+            {{-- Start on the first legal move, not the current status: the current
+                 status is deliberately not one of the options. --}}
+            <div class="card" x-data="{ status: '{{ $order->allowedNextStatuses()[0] ?? '' }}' }">
                 <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;">
                     <h2 style="font-size: 13px; font-weight: 600; color: #303030;">Update status</h2>
                 </div>
@@ -206,15 +208,15 @@
                         @method('PUT')
                         <div style="margin-bottom: 0.75rem;">
                             <label style="font-size: 13px; font-weight: 500; color: #303030; display: block; margin-bottom: 0.25rem;">Status</label>
-                            <select name="status" x-model="status" style="width: 100%; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; padding: 0.375rem 0.5rem;">
-                                <option value="confirmed">Confirmed</option>
-                                <option value="processing">Processing</option>
-                                <option value="packed">Packed</option>
-                                <option value="shipped">Shipped</option>
-                                <option value="out_for_delivery">Out for Delivery</option>
-                                <option value="delivered">Delivered</option>
-                                <option value="cancelled">Cancelled</option>
-                                <option value="returned">Returned</option>
+                            {{-- Only offer the moves this order can actually make, so an
+                                 admin never picks a status the server will reject. --}}
+                            @php $kkNext = $order->allowedNextStatuses(); @endphp
+                            <select name="status" x-model="status" @disabled(empty($kkNext)) style="width: 100%; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; padding: 0.375rem 0.5rem;">
+                                @forelse($kkNext as $kkStatus)
+                                    <option value="{{ $kkStatus }}">{{ ucwords(str_replace('_', ' ', $kkStatus)) }}</option>
+                                @empty
+                                    <option value="">No further changes possible</option>
+                                @endforelse
                             </select>
                         </div>
 
@@ -256,7 +258,7 @@
                             <label style="font-size: 13px; font-weight: 500; color: #303030; display: block; margin-bottom: 0.25rem;">Note (optional)</label>
                             <textarea name="comment" rows="2" style="width: 100%; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; padding: 0.375rem 0.5rem; resize: vertical;" placeholder="Add a note..."></textarea>
                         </div>
-                        <button type="submit" class="btn btn-primary" style="width: 100%; font-size: 13px;">Update status</button>
+                        <button type="submit" class="btn btn-primary" @disabled(empty($kkNext)) style="width: 100%; font-size: 13px;">Update status</button>
                     </form>
                 </div>
             </div>
