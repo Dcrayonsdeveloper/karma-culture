@@ -93,6 +93,9 @@
                                                 <template x-if="item.size">
                                                     <p class="text-[11px] text-neutral-600 mt-0.5">Size: <span class="font-medium text-neutral-800" x-text="item.size"></span></p>
                                                 </template>
+                                                <template x-if="item.colour">
+                                                    <p class="text-[11px] text-neutral-600 mt-0.5">Colour: <span class="font-medium text-neutral-800" x-text="item.colour"></span></p>
+                                                </template>
 
                                                 <!-- Price -->
                                                 <div class="flex items-center gap-1.5 mt-1">
@@ -328,6 +331,7 @@
                 'product_url' => route('product.show', $item->product),
                 'variant_label' => $item->variant ? $item->variant->attributeValues->pluck('value')->join(' / ') : null,
                 'size' => $item->size,
+                'colour' => $item->colour,
                 'price' => (float) $item->price,
                 'mrp' => (float) $item->product->mrp,
                 'discount_pct' => $item->product->discount_percentage ?? 0,

@@ -194,6 +194,9 @@
                                                  class="w-12 h-12 rounded border border-neutral-100 bg-neutral-50 object-contain shrink-0">
                                             <div class="flex-1 min-w-0">
                                                 <p class="text-[13px] font-medium text-neutral-800 line-clamp-1">{{ $item->product->name }}</p>
+                                                @if($item->size || $item->colour)
+                                                    <p class="text-[11px] text-neutral-600 mt-0.5">{{ collect([$item->size ? 'Size: ' . $item->size : null, $item->colour ? 'Colour: ' . $item->colour : null])->filter()->join(' · ') }}</p>
+                                                @endif
                                                 <div class="flex items-center justify-between mt-0.5">
                                                     <span class="text-[11px] text-neutral-600">Qty: {{ $item->quantity }}</span>
                                                     <span class="text-[13px] font-semibold text-neutral-900">@price($item->price * $item->quantity)</span>

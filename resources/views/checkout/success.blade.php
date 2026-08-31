@@ -56,6 +56,9 @@
                                     @if($item->variant_name)
                                         <p class="text-[12px] text-neutral-600 mt-0.5">{{ $item->variant_name }}</p>
                                     @endif
+                                    @if($item->size || $item->colour)
+                                        <p class="text-[12px] text-neutral-600 mt-0.5">{{ collect([$item->size ? 'Size: ' . $item->size : null, $item->colour ? 'Colour: ' . $item->colour : null])->filter()->join(' · ') }}</p>
+                                    @endif
                                     <p class="text-[12px] text-neutral-600 mt-0.5">Qty: {{ $item->quantity }}</p>
                                 </div>
                                 <div class="text-right shrink-0">

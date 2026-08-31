@@ -165,6 +165,7 @@ class CheckoutController extends Controller
                         'sku'          => $item->product->sku ?? '',
                         'variant_name' => $item->variant?->attributeValues->pluck('value')->join(' / '),
                         'size'         => $item->size,
+                        'colour'       => $item->colour,
                         'quantity'     => $item->quantity,
                         'mrp'          => $item->product->mrp ?? $currentPrice,
                         'price'        => $currentPrice,

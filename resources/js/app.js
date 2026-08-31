@@ -142,14 +142,15 @@ Alpine.store('cart', {
         }
     },
 
-    async add(productId, quantity = 1, variantId = null, size = null) {
+    async add(productId, quantity = 1, variantId = null, size = null, colour = null) {
         this.isLoading = true;
         try {
             const response = await axios.post('/cart/add', {
                 product_id: productId,
                 variant_id: variantId,
                 quantity: quantity,
-                size: size
+                size: size,
+                colour: colour
             });
             Alpine.store('toast').success(response.data.message || 'Added to cart');
             // Update count immediately from response

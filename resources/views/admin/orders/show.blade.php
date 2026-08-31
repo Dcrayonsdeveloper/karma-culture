@@ -121,6 +121,9 @@
                             @if($item->size)
                                 <p style="font-size: 12px; color: #616161;">Size: <strong>{{ $item->size }}</strong></p>
                             @endif
+                            @if($item->colour)
+                                <p style="font-size: 12px; color: #616161;">Colour: <strong>{{ $item->colour }}</strong></p>
+                            @endif
                             <p style="font-size: 12px; color: #999; font-family: monospace;">SKU: {{ $item->sku }}</p>
                         </div>
                         <div style="text-align: right; flex-shrink: 0;">
