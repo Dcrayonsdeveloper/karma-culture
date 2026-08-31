@@ -35,14 +35,14 @@
 
     {{-- Size --}}
     @php
-        $kkAllSizes = \Illuminate\Support\Facades\Cache::remember('kk_filter_sizes', 600, function () {
+        $kkAllSizes = \Illuminate\Support\Facades\Cache::remember('kk_filter_sizes_v2', 600, function () {
             return \App\Models\ProductVariant::where('is_active', true)
                 ->where('stock_quantity', '>', 0)
                 ->pluck('name')
-                ->map(fn ($n) => trim((string) $n))
+                ->map(fn ($n) => \App\Models\ProductVariant::sizeLabel($n))
                 ->filter()
                 ->unique()
-                ->sort()
+                ->sortBy(fn ($s) => \App\Models\ProductVariant::sizeRank($s))
                 ->values();
         });
     @endphp
