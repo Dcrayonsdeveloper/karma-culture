@@ -256,6 +256,7 @@
                             'mrp' => (string) $v->mrp,
                             'stock_quantity' => (int) $v->stock_quantity,
                             'sku' => $v->sku,
+                            'measurements' => data_get($v->attributes, 'measurements', ''),
                             'is_active' => (bool) $v->is_active,
                         ])->values();
                     @endphp
@@ -265,7 +266,7 @@
                             <h2 class="text-[13px] font-semibold" style="color: #303030;">Sizes &amp; pricing</h2>
                             <button type="button" @click="add()" class="btn btn-secondary" style="font-size:12px; padding:4px 10px;">+ Add size</button>
                         </div>
-                        <p class="text-xs mb-4" style="color: #616161;">Each row is one size a customer can buy, with its own price and stock. Leave SKU blank and one is generated. Colours are set separately below.</p>
+                        <p class="text-xs mb-4" style="color: #616161;">Each row is one size a customer can buy, with its own price and stock. Measurements are optional and let the assistant advise on fit. Leave SKU blank and one is generated. Colours are set separately below.</p>
 
                         <p class="text-xs" style="color:#616161; padding:10px 0;" x-show="visibleCount() === 0" x-cloak>No sizes yet &mdash; click &ldquo;Add size&rdquo;.</p>
 
@@ -277,6 +278,7 @@
                                         <th style="text-align:right;padding:.5rem;font-weight:500;color:#616161;">Price</th>
                                         <th style="text-align:right;padding:.5rem;font-weight:500;color:#616161;">MRP</th>
                                         <th style="text-align:right;padding:.5rem;font-weight:500;color:#616161;">Stock</th>
+                                        <th style="text-align:left;padding:.5rem;font-weight:500;color:#616161;">Measurements</th>
                                         <th style="text-align:left;padding:.5rem;font-weight:500;color:#616161;">SKU</th>
                                         <th style="text-align:center;padding:.5rem;font-weight:500;color:#616161;">Active</th>
                                         <th></th>
@@ -302,6 +304,11 @@
                                             <td style="padding:.4rem;text-align:right;">
                                                 <input type="number" min="0" x-bind:name="'variants[' + i + '][stock_quantity]'" x-model="r.stock_quantity"
                                                        style="width:68px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;text-align:right;">
+                                            </td>
+                                            <td style="padding:.4rem;">
+                                                <input type="text" x-bind:name="'variants[' + i + '][measurements]'" x-model="r.measurements"
+                                                       placeholder="Chest 40in, Length 28in"
+                                                       style="width:170px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;">
                                             </td>
                                             <td style="padding:.4rem;">
                                                 <input type="text" x-bind:name="'variants[' + i + '][sku]'" x-model="r.sku" placeholder="auto"
@@ -346,7 +353,7 @@
                                     this.rows.push({
                                         uid: ++this.seq, id: null, name: '', colour: '', colour_hex: '#000000',
                                         price: @json((string) $product->price), mrp: @json((string) $product->mrp),
-                                        stock_quantity: 0, sku: '', is_active: true, remove: false,
+                                        stock_quantity: 0, sku: '', measurements: '', is_active: true, remove: false,
                                     });
                                 },
                                 drop(i) {

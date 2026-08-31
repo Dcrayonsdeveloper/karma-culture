@@ -289,6 +289,10 @@ class ChatbotController extends Controller
 
         // Indian shoppers routinely mix languages in one sentence; answering in
         // the language they used matters more than answering in English.
+        $prompt .= "## Fit Advice\n";
+        $prompt .= "Some sizes below list measurements in brackets. When a customer gives their own measurement, chest, waist, or the size they usually wear, compare it against those and recommend one size, saying briefly why. ";
+        $prompt .= "If a product lists no measurements, point them to the size guide rather than guessing. Never invent a measurement.\n\n";
+
         $prompt .= "## Language\n";
         $prompt .= "Reply in whatever language the customer writes in — English, Hindi, or Hinglish. ";
         $prompt .= "If they mix, mirror the mix. Keep product names, sizes and coupon codes exactly as written.\n\n";
@@ -337,9 +341,15 @@ class ChatbotController extends Controller
                 if (!empty($p['sizes'])) {
                     // Name the per-size price only where it differs from the base.
                     $sizes = array_map(function ($sz) use ($p) {
-                        return abs($sz['price'] - $p['price']) < 0.01
+                        $label = abs($sz['price'] - $p['price']) < 0.01
                             ? $sz['name']
                             : $sz['name'] . ' ' . format_price($sz['price']);
+
+                        // Measurements let the assistant advise on fit rather
+                        // than only listing which sizes exist.
+                        return $sz['measurements'] !== ''
+                            ? $label . ' (' . $sz['measurements'] . ')'
+                            : $label;
                     }, $p['sizes']);
                     $line .= ' | Sizes in stock: ' . implode(', ', $sizes);
                 }
@@ -596,6 +606,7 @@ class ChatbotController extends Controller
             ->map(fn ($v) => [
                 'name'  => trim((string) $v->name),
                 'price' => (float) ($v->price ?: $product->price),
+                'measurements' => trim((string) data_get($v->attributes, 'measurements', '')),
             ])
             ->unique('name')
             ->values()

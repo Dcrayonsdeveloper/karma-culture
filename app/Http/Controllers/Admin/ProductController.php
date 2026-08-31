@@ -293,6 +293,7 @@ class ProductController extends Controller
             // is created rather than rejected by validation.
             'variants.*.id' => 'nullable|integer|exists:product_variants,id',
             'variants.*.name' => 'nullable|string|max:100',
+            'variants.*.measurements' => 'nullable|string|max:160',
             'variants.*.colour' => 'nullable|string|max:60',
             'variants.*.colour_hex' => 'nullable|string|max:7',
             'variants.*.sku' => 'nullable|string|max:100',
@@ -405,9 +406,13 @@ class ProductController extends Controller
 
                 $colour = trim((string) ($variantData['colour'] ?? ''));
                 $hex = trim((string) ($variantData['colour_hex'] ?? ''));
+                // Measurements ride in the variant attributes so the assistant can
+                // advise on fit without a schema change per garment type.
+                $measurements = trim((string) ($variantData['measurements'] ?? ''));
                 $attributes = array_filter([
                     'Colour' => $colour !== '' ? $colour : null,
                     'colour_hex' => $colour !== '' && $hex !== '' ? $hex : null,
+                    'measurements' => $measurements !== '' ? $measurements : null,
                 ]);
 
                 $payload = [
