@@ -209,6 +209,7 @@ Route::prefix('recommendations')->name('recommendations.')->group(function () {
 
 // AI Chatbot
 Route::post('/chatbot/message', [App\Http\Controllers\ChatbotController::class, 'message'])->middleware('throttle:20,1')->name('chatbot.message');
+Route::post('/chatbot/product-click', [App\Http\Controllers\ChatbotController::class, 'productClick'])->middleware('throttle:60,1')->name('chatbot.product-click');
 
 // Track Order (Public with order number)
 Route::get('/track-order', [App\Http\Controllers\TrackOrderController::class, 'index'])->name('track-order');

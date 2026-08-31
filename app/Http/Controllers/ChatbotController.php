@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ChatbotConversation;
+use App\Models\ChatbotMessage;
+use App\Models\ChatbotProductClick;
 use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Product;
@@ -51,6 +54,9 @@ class ChatbotController extends Controller
             ], 503);
         }
 
+        $conversation = $this->conversationFor($request);
+        $startedAt = microtime(true);
+
         try {
             $result = AiChatService::reply($systemPrompt, $messages);
 
@@ -65,9 +71,12 @@ class ChatbotController extends Controller
                 ? $result['reply']
                 : 'Sorry, I didn\'t catch that. Could you rephrase your question?';
 
+            $this->record($conversation, $userMessage, $reply, $products, $startedAt);
+
             return response()->json([
-                'reply'    => $reply,
-                'products' => $this->formatProductCards($products),
+                'reply'          => $reply,
+                'products'       => $this->formatProductCards($products),
+                'conversation_id' => $conversation?->id,
             ]);
 
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
@@ -80,6 +89,87 @@ class ChatbotController extends Controller
                 'products' => [],
             ]);
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Conversation logging
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * One conversation per browser session, so a visitor's whole exchange stays
+     * together rather than fragmenting into one row per message.
+     */
+    private function conversationFor(Request $request): ?ChatbotConversation
+    {
+        try {
+            return ChatbotConversation::firstOrCreate(
+                ['session_id' => $request->session()->getId()],
+                ['user_id' => $request->user()?->id]
+            );
+        } catch (\Throwable $e) {
+            // Logging must never cost the customer their answer.
+            Log::error('Chatbot: could not open conversation', ['message' => $e->getMessage()]);
+
+            return null;
+        }
+    }
+
+    private function record(?ChatbotConversation $conversation, string $question, string $reply, array $products, float $startedAt): void
+    {
+        if (! $conversation) {
+            return;
+        }
+
+        try {
+            $productIds = array_values(array_map(fn ($p) => $p['id'], $products));
+
+            ChatbotMessage::create([
+                'conversation_id' => $conversation->id,
+                'role' => 'user',
+                'content' => $question,
+            ]);
+
+            ChatbotMessage::create([
+                'conversation_id' => $conversation->id,
+                'role' => 'assistant',
+                'content' => $reply,
+                'product_ids' => $productIds ?: null,
+                'response_ms' => min(65535, (int) ((microtime(true) - $startedAt) * 1000)),
+            ]);
+
+            $conversation->forceFill([
+                'message_count' => $conversation->messages()->count(),
+                'last_message_at' => now(),
+                'user_id' => $conversation->user_id ?? request()->user()?->id,
+            ])->save();
+        } catch (\Throwable $e) {
+            Log::error('Chatbot: could not record messages', ['message' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * A click on a suggested product — the clearest signal the assistant moved
+     * someone towards a purchase.
+     *
+     * POST /chatbot/product-click
+     */
+    public function productClick(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'product_id' => ['required', 'integer', 'exists:products,id'],
+            'conversation_id' => ['nullable', 'integer', 'exists:chatbot_conversations,id'],
+        ]);
+
+        try {
+            ChatbotProductClick::create([
+                'conversation_id' => $validated['conversation_id'] ?? null,
+                'product_id' => $validated['product_id'],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Chatbot: could not record click', ['message' => $e->getMessage()]);
+        }
+
+        return response()->json(['ok' => true]);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
