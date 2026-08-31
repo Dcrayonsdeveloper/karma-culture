@@ -90,20 +90,9 @@ class OrderController extends Controller
 
         $oldStatus = $order->status;
 
-        // Validate state transitions
-        $allowedTransitions = [
-            'confirmed' => ['processing', 'cancelled'],
-            'processing' => ['packed', 'cancelled'],
-            'packed' => ['shipped', 'cancelled'],
-            'shipped' => ['out_for_delivery', 'returned'],
-            'out_for_delivery' => ['delivered', 'returned'],
-            'delivered' => ['returned'],
-            'cancelled' => [],
-            'returned' => [],
-        ];
-
-        $allowed = $allowedTransitions[$oldStatus] ?? [];
-        if (!in_array($validated['status'], $allowed)) {
+        // Validate state transitions against the workflow on the model, so the
+        // dropdown and this guard can never drift apart.
+        if (! $order->canTransitionTo($validated['status'])) {
             return back()->with('error', "Cannot change status from \"{$oldStatus}\" to \"{$validated['status']}\".");
         }
 

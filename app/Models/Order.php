@@ -9,6 +9,33 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Order extends Model
 {
+    /**
+     * Which status an order may move to next. Orders are created as "pending",
+     * so that key has to exist or every new order is frozen: an empty allow
+     * list rejects every transition, including cancelling.
+     */
+    public const STATUS_TRANSITIONS = [
+        'pending' => ['confirmed', 'cancelled'],
+        'confirmed' => ['processing', 'cancelled'],
+        'processing' => ['packed', 'cancelled'],
+        'packed' => ['shipped', 'cancelled'],
+        'shipped' => ['out_for_delivery', 'returned'],
+        'out_for_delivery' => ['delivered', 'returned'],
+        'delivered' => ['returned'],
+        'cancelled' => [],
+        'returned' => [],
+    ];
+
+    /** The statuses this order can legally move to right now. */
+    public function allowedNextStatuses(): array
+    {
+        return self::STATUS_TRANSITIONS[$this->status] ?? [];
+    }
+
+    public function canTransitionTo(string $status): bool
+    {
+        return in_array($status, $this->allowedNextStatuses(), true);
+    }
     protected $fillable = [
         'order_number',
         'user_id',
