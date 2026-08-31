@@ -28,6 +28,7 @@ class SupportTicketReply extends Model
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        // withTrashed: a reply must stay readable after its author deletes their account.
+        return $this->belongsTo(User::class)->withTrashed();
     }
 }

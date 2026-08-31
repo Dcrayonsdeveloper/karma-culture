@@ -49,11 +49,11 @@
                 <div style="padding: 1rem;">
                     <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
                         <div style="width: 2rem; height: 2rem; background: #d4edfc; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            <span style="font-size: 11px; font-weight: 600; color: #0064a4;">{{ strtoupper(substr($supportTicket->user->first_name, 0, 1)) }}</span>
+                            <span style="font-size: 11px; font-weight: 600; color: #0064a4;">{{ strtoupper(substr($supportTicket->user?->first_name ?? "?", 0, 1)) }}</span>
                         </div>
                         <div style="flex: 1;">
                             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-                                <span style="font-size: 13px; font-weight: 500; color: #303030;">{{ $supportTicket->user->full_name }}</span>
+                                <span style="font-size: 13px; font-weight: 500; color: #303030;">{{ $supportTicket->user?->full_name ?? "Deleted customer" }}</span>
                                 <span style="font-size: 12px; color: #616161;">{{ $supportTicket->created_at->diffForHumans() }}</span>
                             </div>
                             <div style="font-size: 13px; color: #303030; line-height: 1.6;">
@@ -123,14 +123,18 @@
                 <div style="padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
                     <div style="display: flex; align-items: center; gap: 0.75rem;">
                         <div style="width: 2.5rem; height: 2.5rem; background: #d4edfc; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            <span style="font-size: 13px; font-weight: 600; color: #0064a4;">{{ strtoupper(substr($supportTicket->user->first_name, 0, 1)) }}</span>
+                            <span style="font-size: 13px; font-weight: 600; color: #0064a4;">{{ strtoupper(substr($supportTicket->user?->first_name ?? "?", 0, 1)) }}</span>
                         </div>
                         <div>
-                            <p style="font-size: 13px; font-weight: 500; color: #303030; margin: 0;">{{ $supportTicket->user->full_name }}</p>
-                            <p style="font-size: 12px; color: #616161; margin: 0;">{{ $supportTicket->user->email }}</p>
+                            <p style="font-size: 13px; font-weight: 500; color: #303030; margin: 0;">{{ $supportTicket->user?->full_name ?? "Deleted customer" }}</p>
+                            <p style="font-size: 12px; color: #616161; margin: 0;">{{ $supportTicket->user?->email ?? "—" }}</p>
                         </div>
                     </div>
-                    <a href="{{ route('admin.customers.show', $supportTicket->user) }}" style="font-size: 12px; color: #005bd3; text-decoration: none;">View Customer Profile</a>
+                    @if($supportTicket->user && ! $supportTicket->user->trashed())
+                        <a href="{{ route('admin.customers.show', $supportTicket->user) }}" style="font-size: 12px; color: #005bd3; text-decoration: none;">View Customer Profile</a>
+                    @else
+                        <p style="font-size: 12px; color: #616161; margin: 0;">This customer account has been deleted.</p>
+                    @endif
                 </div>
             </div>
 
