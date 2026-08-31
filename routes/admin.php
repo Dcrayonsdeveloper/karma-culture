@@ -97,6 +97,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/{return}/assign-partner', [ReturnController::class, 'assignPartner'])->name('assign-partner');
             });
 
+            // Chat analytics
+            Route::get('chatbot/analytics', [App\Http\Controllers\Admin\ChatbotAnalyticsController::class, 'index'])->name('chatbot.analytics');
+            Route::get('chatbot/conversations/{conversation}', [App\Http\Controllers\Admin\ChatbotAnalyticsController::class, 'show'])->name('chatbot.conversation');
+
             // Credit Notes
             Route::prefix('credit-notes')->name('credit-notes.')->group(function () {
                 Route::get('/', [CreditNoteController::class, 'index'])->name('index');
