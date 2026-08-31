@@ -222,12 +222,23 @@ class Order extends Model
         return in_array($this->status, ['pending', 'confirmed', 'processing']);
     }
 
+    /**
+     * The Request Return button, the account returns list and the guest return
+     * page must agree. The other two read these settings, so this one does too
+     * rather than hardcoding the defaults and disagreeing whenever the window
+     * is changed in admin.
+     */
     public function canBeReturned(): bool
     {
-        return $this->status === 'delivered'
-            && $this->delivered_at
-            && $this->delivered_at->addHours(24)->isPast()
-            && $this->delivered_at->diffInDays(now()) <= 7;
+        if ($this->status !== 'delivered' || ! $this->delivered_at) {
+            return false;
+        }
+
+        $windowDays = (int) Setting::get('return_window_days', 7);
+        $minHours   = (int) Setting::get('return_min_hours', 24);
+
+        return $this->delivered_at->gte(now()->subDays($windowDays))
+            && $this->delivered_at->lte(now()->subHours($minHours));
     }
 
     public function updateStatus(string $status, ?int $userId = null, ?string $comment = null): void
