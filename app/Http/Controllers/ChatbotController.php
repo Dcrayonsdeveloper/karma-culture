@@ -6,6 +6,7 @@ use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Setting;
+use App\Services\AiChatService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -43,9 +44,7 @@ class ChatbotController extends Controller
         $systemPrompt = $this->buildSystemPrompt($products, $orders, $coupons);
         $messages     = $this->buildMessageHistory($rawHistory, $userMessage);
 
-        $apiKey = config('services.anthropic.key');
-
-        if (empty($apiKey)) {
+        if (! AiChatService::isConfigured()) {
             return response()->json([
                 'reply'    => 'The shopping assistant is temporarily unavailable. Please contact our support team for help.',
                 'products' => [],
@@ -53,33 +52,18 @@ class ChatbotController extends Controller
         }
 
         try {
-            $response = Http::timeout(25)
-                ->withHeaders([
-                    'x-api-key'         => $apiKey,
-                    'anthropic-version' => '2023-06-01',
-                    'content-type'      => 'application/json',
-                ])
-                ->post('https://api.anthropic.com/v1/messages', [
-                    'model'      => config('services.anthropic.model', 'claude-haiku-4-5-20251001'),
-                    'max_tokens' => 1024,
-                    'system'     => $systemPrompt,
-                    'messages'   => $messages,
-                ]);
+            $result = AiChatService::reply($systemPrompt, $messages);
 
-            if ($response->failed()) {
-                Log::error('Anthropic API error', [
-                    'status' => $response->status(),
-                    'body'   => $response->body(),
-                ]);
-
+            if (! $result['ok']) {
                 return response()->json([
                     'reply'    => 'I\'m having a bit of trouble right now. Please try again in a moment, or contact our support team.',
                     'products' => [],
                 ]);
             }
 
-            $data  = $response->json();
-            $reply = $data['content'][0]['text'] ?? 'Sorry, I didn\'t catch that. Could you rephrase your question?';
+            $reply = $result['reply'] !== ''
+                ? $result['reply']
+                : 'Sorry, I didn\'t catch that. Could you rephrase your question?';
 
             return response()->json([
                 'reply'    => $reply,
@@ -87,7 +71,7 @@ class ChatbotController extends Controller
             ]);
 
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            Log::warning('Anthropic connection timeout', ['message' => $e->getMessage()]);
+            Log::warning('Chatbot connection timeout', ['message' => $e->getMessage()]);
 
             return response()->json([
                 'reply'    => 'The assistant is a little slow right now. Please try your question again.',
@@ -102,9 +86,9 @@ class ChatbotController extends Controller
 
     private function buildSystemPrompt(array $products, array $orders, array $coupons): string
     {
-        $storeName = Setting::get('site_name', config('app.name', 'ForeverKids'));
+        $storeName = Setting::get('site_name', config('app.name', 'Karmaa Kulture'));
 
-        $prompt  = "You are the official AI Shopping Assistant for {$storeName}, a premium kids' clothing e-commerce store in India.\n\n";
+        $prompt  = "You are the official AI Shopping Assistant for {$storeName}, a premium fashion e-commerce store in India.\n\n";
 
         $prompt .= "## Your Personality\n";
         $prompt .= "- Warm, friendly, and enthusiastic about children's fashion.\n";
@@ -219,13 +203,15 @@ class ChatbotController extends Controller
     private function findRelevantProducts(string $message): array
     {
         $intentKeywords = [
-            'dress', 'shirt', 't-shirt', 'tshirt', 'pant', 'jeans', 'skirt', 'frock',
-            'jacket', 'sweater', 'hoodie', 'romper', 'onesie', 'uniform', 'shoe', 'shoes',
-            'sandal', 'sock', 'socks', 'kurta', 'leggings', 'shorts', 'pajama', 'nightwear',
-            'party wear', 'newborn', 'baby', 'toddler', 'infant',
+            // Matched against the live catalogue: shirts, t-shirts, kurtas,
+            // trousers, tops, jumpsuits, co-ord sets and one pieces.
+            'shirt', 't-shirt', 'tshirt', 'tee', 'polo', 'henley', 'mandarin', 'oversized',
+            'round neck', 'slim fit', 'regular fit', 'kurta', 'trouser', 'pant', 'jeans',
+            'denim', 'top', 'jumpsuit', 'co-ord', 'coord', 'one piece', 'dress', 'skirt',
+            'shorts', 'jacket', 'sweater', 'hoodie', 'ethnic', 'formal', 'casual',
             'show', 'find', 'buy', 'search', 'looking for', 'recommend', 'suggest',
             'product', 'cloth', 'wear', 'outfit', 'clothes', 'clothing', 'apparel',
-            'boys', 'girls', 'kids', 'children', 'child', 'size', 'age',
+            'men', 'mens', 'women', 'womens', 'size', 'colour', 'color',
         ];
 
         $lower = strtolower($message);

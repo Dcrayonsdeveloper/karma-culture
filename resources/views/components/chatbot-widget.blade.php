@@ -1,5 +1,5 @@
 {{--
-    ForeverKids AI Shopping Assistant Widget
+    Karmaa Kulture AI Shopping Assistant Widget
     Floating chatbot in the bottom-right corner.
     Z-index z-[75] — above quick-view modal (z-70).
     Alpine.js: chatbotWidget() — defined in <script> below.
@@ -34,19 +34,19 @@
         aria-label="Shopping Assistant"
     >
         {{-- ── Header ──────────────────────────────────────────────────── --}}
-        <div class="px-4 py-3 flex items-center justify-between shrink-0" style="background: linear-gradient(to right, #E91E63, #C2185B);">
+        <div class="px-4 py-3 flex items-center justify-between shrink-0" style="background: linear-gradient(to right, #8C5C34, #2D1810);">
             <div class="flex items-center gap-2.5">
                 <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm" style="background: white;">
                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none">
-                        <rect x="3" y="8" width="18" height="12" rx="3" fill="#E91E63"/>
+                        <rect x="3" y="8" width="18" height="12" rx="3" fill="#8C5C34"/>
                         <circle cx="8.5" cy="14" r="1.8" fill="white"/>
                         <circle cx="15.5" cy="14" r="1.8" fill="white"/>
                         <circle cx="8.5" cy="14" r="0.8" fill="#333"/>
                         <circle cx="15.5" cy="14" r="0.8" fill="#333"/>
                         <path d="M10 17.5c0-.28.45-.5 1-.5h2c.55 0 1 .22 1 .5s-.45.5-1 .5h-2c-.55 0-1-.22-1-.5z" fill="#333"/>
-                        <rect x="10" y="4" width="4" height="4" rx="1" fill="#E91E63"/>
-                        <line x1="12" y1="4" x2="12" y2="2" stroke="#E91E63" stroke-width="2" stroke-linecap="round"/>
-                        <circle cx="12" cy="1.5" r="1" fill="#E91E63"/>
+                        <rect x="10" y="4" width="4" height="4" rx="1" fill="#8C5C34"/>
+                        <line x1="12" y1="4" x2="12" y2="2" stroke="#8C5C34" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="12" cy="1.5" r="1" fill="#8C5C34"/>
                     </svg>
                 </div>
                 <div>
@@ -79,17 +79,17 @@
             {{-- Empty / Welcome state --}}
             <template x-if="messages.length === 0">
                 <div class="flex flex-col items-center justify-center h-full text-center px-4 py-6">
-                    <div class="w-14 h-14 rounded-full bg-[#E91E63]/10 flex items-center justify-center mb-3">
+                    <div class="w-14 h-14 rounded-full bg-[#8C5C34]/10 flex items-center justify-center mb-3">
                         <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none">
-                            <rect x="3" y="8" width="18" height="12" rx="3" fill="#E91E63"/>
+                            <rect x="3" y="8" width="18" height="12" rx="3" fill="#8C5C34"/>
                             <circle cx="8.5" cy="14" r="1.8" fill="white"/>
                             <circle cx="15.5" cy="14" r="1.8" fill="white"/>
                             <circle cx="8.5" cy="14" r="0.8" fill="#333"/>
                             <circle cx="15.5" cy="14" r="0.8" fill="#333"/>
                             <path d="M10 17.5c0-.28.45-.5 1-.5h2c.55 0 1 .22 1 .5s-.45.5-1 .5h-2c-.55 0-1-.22-1-.5z" fill="#333"/>
-                            <rect x="10" y="4" width="4" height="4" rx="1" fill="#E91E63"/>
-                            <line x1="12" y1="4" x2="12" y2="2" stroke="#E91E63" stroke-width="2" stroke-linecap="round"/>
-                            <circle cx="12" cy="1.5" r="1" fill="#E91E63"/>
+                            <rect x="10" y="4" width="4" height="4" rx="1" fill="#8C5C34"/>
+                            <line x1="12" y1="4" x2="12" y2="2" stroke="#8C5C34" stroke-width="2" stroke-linecap="round"/>
+                            <circle cx="12" cy="1.5" r="1" fill="#8C5C34"/>
                         </svg>
                     </div>
                     <p class="text-sm font-semibold text-neutral-800 mb-1">Hi there! 👋</p>
@@ -114,7 +114,7 @@
                         <div class="flex justify-end">
                             <div
                                 class="max-w-[82%] px-3.5 py-2.5 rounded-2xl rounded-br-sm text-sm text-white leading-relaxed"
-                                style="background-color: #E91E63;"
+                                style="background-color: #8C5C34;"
                                 x-text="msg.content"
                             ></div>
                         </div>
@@ -123,7 +123,7 @@
                     {{-- Bot bubble --}}
                     <template x-if="msg.role === 'assistant'">
                         <div class="flex items-start gap-2">
-                            <div class="w-7 h-7 rounded-full bg-[#E91E63] flex items-center justify-center shrink-0 mt-0.5">
+                            <div class="w-7 h-7 rounded-full bg-[#8C5C34] flex items-center justify-center shrink-0 mt-0.5">
                                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none">
                                     <rect x="4" y="9" width="16" height="10" rx="2.5" fill="white"/>
                                     <circle cx="9" cy="14" r="1.3" fill="#333"/>
@@ -153,7 +153,7 @@
                                                         onerror="this.src='/images/no-product-image.svg'"
                                                     >
                                                     <template x-if="product.has_discount">
-                                                        <span class="absolute top-1 left-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full text-white" style="background-color: #E91E63;">SALE</span>
+                                                        <span class="absolute top-1 left-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full text-white" style="background-color: #8C5C34;">SALE</span>
                                                     </template>
                                                     <template x-if="!product.in_stock">
                                                         <div class="absolute inset-0 bg-white/75 flex items-center justify-center">
@@ -184,7 +184,7 @@
             {{-- Typing indicator --}}
             <template x-if="isTyping">
                 <div class="flex items-start gap-2">
-                    <div class="w-7 h-7 rounded-full bg-[#E91E63] flex items-center justify-center shrink-0 mt-0.5">
+                    <div class="w-7 h-7 rounded-full bg-[#8C5C34] flex items-center justify-center shrink-0 mt-0.5">
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none">
                             <rect x="4" y="9" width="16" height="10" rx="2.5" fill="white"/>
                             <circle cx="9" cy="14" r="1.3" fill="#333"/>
@@ -224,13 +224,13 @@
                     placeholder="Ask about products, orders, offers..."
                     :disabled="isTyping"
                     @keydown.enter.prevent="sendMessage()"
-                    class="flex-1 px-3.5 py-2 text-sm bg-neutral-100 rounded-full border-0 text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#E91E63]/30 disabled:opacity-50 transition-all"
+                    class="flex-1 px-3.5 py-2 text-sm bg-neutral-100 rounded-full border-0 text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#8C5C34]/30 disabled:opacity-50 transition-all"
                     autocomplete="off"
                 >
                 <button
                     @click="sendMessage()"
                     :disabled="!inputText.trim() || isTyping"
-                    class="w-9 h-9 rounded-full bg-[#E91E63] hover:bg-[#C2185B] flex items-center justify-center text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                    class="w-9 h-9 rounded-full bg-[#8C5C34] hover:bg-[#2D1810] flex items-center justify-center text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                     aria-label="Send message"
                 >
                     <svg class="w-4 h-4 -mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -258,7 +258,7 @@
         <button
             @click="toggle()"
             class="w-14 h-14 rounded-full text-white shadow-lg hover:shadow-xl flex flex-col items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 relative z-10"
-            :style="isOpen ? 'background:#525252' : 'background:linear-gradient(135deg, #E91E63, #C2185B)'"
+            :style="isOpen ? 'background:#525252' : 'background:linear-gradient(135deg, #8C5C34, #2D1810)'"
             :aria-label="isOpen ? 'Close shopping assistant' : 'Open shopping assistant'"
             :aria-expanded="isOpen.toString()"
         >
@@ -284,7 +284,7 @@
         <template x-if="!isOpen && unreadCount > 0">
             <span
                 class="absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center text-white font-bold pointer-events-none z-20"
-                style="background-color: #E91E63; font-size: 8px;"
+                style="background-color: #8C5C34; font-size: 8px;"
                 x-text="unreadCount > 9 ? '9+' : unreadCount"
             ></span>
         </template>
@@ -297,8 +297,8 @@
         inset: -6px;
         border-radius: 50%;
         border: 2.5px solid transparent;
-        border-top-color: #E91E63;
-        border-right-color: #E91E63;
+        border-top-color: #8C5C34;
+        border-right-color: #8C5C34;
         opacity: 0.6;
     }
     .chatbot-wave-ring-1 {
@@ -307,8 +307,8 @@
     .chatbot-wave-ring-2 {
         inset: -12px;
         border-width: 2px;
-        border-top-color: #F06292;
-        border-right-color: #F06292;
+        border-top-color: #B08050;
+        border-right-color: #B08050;
         opacity: 0.4;
         animation: chatbot-orbit 3.5s linear infinite reverse;
     }
