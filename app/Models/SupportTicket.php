@@ -19,7 +19,8 @@ class SupportTicket extends Model
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        // withTrashed: the ticket must stay readable after the customer deletes their account.
+        return $this->belongsTo(User::class)->withTrashed();
     }
 
     public function replies(): HasMany
