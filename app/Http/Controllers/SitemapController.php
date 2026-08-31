@@ -31,8 +31,14 @@ class SitemapController extends Controller
         $urls->push(['loc' => url('/'), 'changefreq' => 'daily', 'priority' => '1.0']);
 
         // Static pages
+        // /products was removed when the all-products page went; leaving it here
+        // submitted a 404 to Google on every crawl. The shopping pages below are
+        // real, indexable, and were never listed.
         $staticPages = [
-            ['url' => url('/products'), 'freq' => 'daily', 'priority' => '0.9'],
+            ['url' => url('/new-arrivals'), 'freq' => 'daily', 'priority' => '0.9'],
+            ['url' => url('/bestsellers'), 'freq' => 'daily', 'priority' => '0.9'],
+            ['url' => url('/deals'), 'freq' => 'daily', 'priority' => '0.8'],
+            ['url' => url('/track-order'), 'freq' => 'monthly', 'priority' => '0.5'],
             ['url' => url('/blog'), 'freq' => 'weekly', 'priority' => '0.7'],
             ['url' => url('/about'), 'freq' => 'monthly', 'priority' => '0.5'],
             ['url' => url('/contact'), 'freq' => 'monthly', 'priority' => '0.5'],
