@@ -211,7 +211,7 @@
                                     x-text="show ? 'Hide' : 'Show'"></button>
                         </div>
                         <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
-                            Create one at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style="color: #005bd3; text-decoration: underline;">aistudio.google.com/apikey</a>. It starts with <code>AIzaSy</code> &mdash; an <code>AQ.</code> value is a short-lived token and will not work.
+                            Create one at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style="color: #005bd3; text-decoration: underline;">aistudio.google.com/apikey</a>. Use the <strong>Copy key</strong> button rather than retyping it &mdash; the characters are easy to misread.
                         </p>
                     </div>
 
@@ -219,11 +219,11 @@
                         <label class="form-label">Model</label>
                         <select name="gemini_model" class="form-select">
                             @foreach([
-                                'gemini-2.5-flash' => 'Gemini 2.5 Flash (fastest, lowest cost)',
-                                'gemini-2.0-flash' => 'Gemini 2.0 Flash',
-                                'gemini-2.5-pro'   => 'Gemini 2.5 Pro (most capable)',
+                                'gemini-3.6-flash'     => 'Gemini 3.6 Flash (recommended)',
+                                'gemini-3.5-flash'     => 'Gemini 3.5 Flash',
+                                'gemini-3.1-flash-lite' => 'Gemini 3.1 Flash Lite (cheapest)',
                             ] as $val => $label)
-                                <option value="{{ $val }}" @selected(old('gemini_model', $settings['gemini_model'] ?? 'gemini-2.5-flash') === $val)>{{ $label }}</option>
+                                <option value="{{ $val }}" @selected(old('gemini_model', $settings['gemini_model'] ?? 'gemini-3.6-flash') === $val)>{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>

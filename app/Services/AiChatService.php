@@ -104,7 +104,7 @@ class AiChatService
             'parts' => [['text' => $m['content']]],
         ], $messages);
 
-        $model = $model ?: 'gemini-2.5-flash';
+        $model = $model ?: 'gemini-3.6-flash';
 
         $response = Http::timeout(25)
             ->withHeaders([
