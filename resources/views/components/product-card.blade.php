@@ -93,6 +93,8 @@
             @endphp
             <div class="flex flex-wrap gap-1 mt-1 px-1">
                 @foreach($product->attributes as $name => $value)
+                    {{-- Skip structured values such as the colour list; the card shows simple tags only. --}}
+                    @continue(is_array($value) || is_object($value))
                     <span class="text-[9px] text-neutral-600 bg-neutral-50 border border-neutral-100 rounded-full px-1.5 py-0.5 inline-flex items-center gap-0.5">
                         @if(isset($colorMap[$name][$value]))
                             <span class="w-2.5 h-2.5 rounded-full border border-neutral-200 shrink-0" style="background-color: {{ $colorMap[$name][$value] }}"></span>
@@ -220,6 +222,8 @@
                     $colorAttrs = [];
                     $textAttrs = [];
                     foreach ($product->attributes as $name => $value) {
+                        // Skip structured values such as the colour list.
+                        if (is_array($value) || is_object($value)) { continue; }
                         if (isset($colorMap[$name][$value])) {
                             $colorAttrs[] = ['name' => $name, 'value' => $value, 'code' => $colorMap[$name][$value]];
                         } else {

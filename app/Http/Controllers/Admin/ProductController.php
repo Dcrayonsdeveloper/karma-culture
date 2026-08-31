@@ -166,6 +166,22 @@ class ProductController extends Controller
                 ? count($value) > 0
                 : ($value !== null && $value !== ''))
             ->toArray();
+        // Colour list lives alongside any other product attributes.
+        $colours = collect($request->input('colours', []))
+            ->map(fn ($c) => [
+                'name' => trim((string) ($c['name'] ?? '')),
+                'hex' => trim((string) ($c['hex'] ?? '')) ?: '#000000',
+            ])
+            ->filter(fn ($c) => $c['name'] !== '')
+            ->unique('name')
+            ->values()
+            ->all();
+        if ($colours) {
+            $productAttributes['Colours'] = $colours;
+        } else {
+            unset($productAttributes['Colours']);
+        }
+
         $validated['attributes'] = ! empty($productAttributes) ? $productAttributes : null;
 
         unset($validated['images'], $validated['videos'], $validated['main_image'], $validated['product_attributes']);
@@ -285,6 +301,11 @@ class ProductController extends Controller
             'variants.*.stock_quantity' => 'nullable|integer|min:0',
             'variants.*.delete' => 'nullable',
             'variants.*.is_active' => 'nullable',
+            // Colours are a product-level list, not a per-size value, so one
+            // colour is entered once instead of on every size row.
+            'colours' => 'nullable|array',
+            'colours.*.name' => 'nullable|string|max:60',
+            'colours.*.hex' => 'nullable|string|max:7',
             'model_glb' => 'nullable|file|mimetypes:model/gltf-binary,application/octet-stream|max:10240',
             'model_usdz' => 'nullable|file|max:10240',
             'delete_model_glb' => 'nullable|boolean',
@@ -307,6 +328,22 @@ class ProductController extends Controller
                 ? count($value) > 0
                 : ($value !== null && $value !== ''))
             ->toArray();
+        // Colour list lives alongside any other product attributes.
+        $colours = collect($request->input('colours', []))
+            ->map(fn ($c) => [
+                'name' => trim((string) ($c['name'] ?? '')),
+                'hex' => trim((string) ($c['hex'] ?? '')) ?: '#000000',
+            ])
+            ->filter(fn ($c) => $c['name'] !== '')
+            ->unique('name')
+            ->values()
+            ->all();
+        if ($colours) {
+            $productAttributes['Colours'] = $colours;
+        } else {
+            unset($productAttributes['Colours']);
+        }
+
         $validated['attributes'] = ! empty($productAttributes) ? $productAttributes : null;
 
         // Extract variants data before unsetting
@@ -316,6 +353,7 @@ class ProductController extends Controller
             $validated['main_image'],
             $validated['delete_images'],
             $validated['product_attributes'],
+            $validated['colours'],
             $validated['variants'],
             $validated['model_glb'],
             $validated['model_usdz'],
