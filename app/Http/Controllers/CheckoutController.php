@@ -12,6 +12,7 @@ use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class CheckoutController extends Controller
@@ -54,23 +55,35 @@ class CheckoutController extends Controller
             return redirect()->route('cart.index')->with('error', 'Your cart is empty.');
         }
 
+        $user = request()->user();
+
         return view('checkout.index', [
             'cart'           => $cart,
             'paymentMethods' => self::availablePaymentMethods(),
+            // Saved addresses are the whole point of the account Addresses page;
+            // without these the customer retypes the same details every order.
+            'addresses'      => $user
+                ? $user->addresses()->orderBy('is_default', 'desc')->orderBy('id')->get()
+                : collect(),
+            'prefill'        => $user,
         ]);
     }
 
     public function process(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'full_name'      => ['required', 'string', 'max:120'],
+            // Scoped to the signed-in user so a guessed id cannot ship an order
+            // to somebody else's saved address.
+            'address_id'     => ['nullable', 'integer', Rule::exists('user_addresses', 'id')
+                                    ->where('user_id', $request->user()?->id ?? 0)],
+            'full_name'      => ['required_without:address_id', 'nullable', 'string', 'max:120'],
             'email'          => ['required', 'email', 'max:160'],
-            'phone'          => ['required', 'regex:/^[6-9]\d{9}$/'],
-            'address_line_1' => ['required', 'string', 'max:200'],
+            'phone'          => ['required_without:address_id', 'nullable', 'regex:/^[6-9]\d{9}$/'],
+            'address_line_1' => ['required_without:address_id', 'nullable', 'string', 'max:200'],
             'address_line_2' => ['nullable', 'string', 'max:200'],
-            'city'           => ['required', 'string', 'max:80'],
-            'state'          => ['required', 'string', 'max:80'],
-            'postal_code'    => ['required', 'regex:/^\d{6}$/'],
+            'city'           => ['required_without:address_id', 'nullable', 'string', 'max:80'],
+            'state'          => ['required_without:address_id', 'nullable', 'string', 'max:80'],
+            'postal_code'    => ['required_without:address_id', 'nullable', 'regex:/^\d{6}$/'],
             'notes'          => ['nullable', 'string', 'max:500'],
             'payment_method' => ['required', 'in:'.implode(',', self::availablePaymentMethods())],
         ], [
@@ -93,7 +106,21 @@ class CheckoutController extends Controller
                 ->with('error', 'Your coupon "' . $cart->coupon->code . '" is no longer valid and has been removed. Please review your order.');
         }
 
-        $addressSnapshot = [
+        $savedAddress = ! empty($validated['address_id']) && $request->user()
+            ? $request->user()->addresses()->find($validated['address_id'])
+            : null;
+
+        $addressSnapshot = $savedAddress ? [
+            'name'           => trim($savedAddress->first_name . ' ' . $savedAddress->last_name),
+            'email'          => $validated['email'],
+            'phone'          => $savedAddress->phone,
+            'address_line_1' => $savedAddress->address_line_1,
+            'address_line_2' => $savedAddress->address_line_2,
+            'city'           => $savedAddress->city,
+            'state'          => $savedAddress->state,
+            'postal_code'    => $savedAddress->postal_code,
+            'country'        => $savedAddress->country ?: 'IN',
+        ] : [
             'name'           => $validated['full_name'],
             'email'          => $validated['email'],
             'phone'          => $validated['phone'],
@@ -106,7 +133,7 @@ class CheckoutController extends Controller
         ];
 
         try {
-            $order = DB::transaction(function () use ($cart, $addressSnapshot, $validated, $request) {
+            $order = DB::transaction(function () use ($cart, $addressSnapshot, $savedAddress, $validated, $request) {
                 // Re-validate stock inside the transaction with row locks.
                 foreach ($cart->items as $item) {
                     $locked = $item->variant_id
@@ -133,8 +160,8 @@ class CheckoutController extends Controller
                     'tax'                      => 0,
                     'total'                    => $cart->subtotal - $cart->discount,
                     'coupon_id'                => $cart->coupon_id,
-                    'shipping_address_id'      => null,
-                    'billing_address_id'       => null,
+                    'shipping_address_id'      => $savedAddress?->id,
+                    'billing_address_id'       => $savedAddress?->id,
                     'shipping_address_snapshot' => $addressSnapshot,
                     'billing_address_snapshot'  => $addressSnapshot,
                     'notes'                    => strip_tags($validated['notes'] ?? ''),
