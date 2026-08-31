@@ -236,21 +236,45 @@ class ChatbotController extends Controller
             return [];
         }
 
+        // Everything a shopper says around the product name. Without the second
+        // row a question like "tell me the price, size and colour of X" spends
+        // its whole term budget on the question itself and never reaches X.
         $stopWords = [
             'i', 'want', 'need', 'looking', 'for', 'a', 'an', 'the', 'please',
             'show', 'me', 'find', 'some', 'any', 'do', 'you', 'have', 'is', 'are',
             'what', 'which', 'how', 'much', 'my', 'can', 'could', 'would', 'like',
             'to', 'in', 'on', 'at', 'under', 'over', 'below', 'above', 'get', 'buy',
+            'tell', 'about', 'available', 'availability', 'this', 'that', 'these',
+            'those', 'and', 'or', 'with', 'your', 'our', 'there', 'does', 'did',
+            'come', 'comes', 'coming', 'price', 'prices', 'cost', 'size', 'sizes',
+            'color', 'colors', 'colour', 'colours', 'product', 'products', 'item',
+            'items', 'stock', 'know', 'give', 'name', 'inside', 'from', 'also',
+            'hi', 'hey', 'hello', 'thanks', 'thank', 'yes', 'not', 'but', 'all',
         ];
 
-        $words       = preg_split('/\s+/', $lower);
-        $searchTerms = array_values(array_filter($words, fn ($w) => !in_array($w, $stopWords) && strlen($w) > 2));
+        // A quoted phrase is the customer naming a product outright, so those
+        // words go first and are never crowded out by the rest of the sentence.
+        $quoted = [];
+        if (preg_match_all('/["\x{201C}\x{201D}\']([^"\x{201C}\x{201D}\']{3,60})["\x{201C}\x{201D}\']/u', $lower, $m)) {
+            foreach ($m[1] as $phrase) {
+                foreach (preg_split('/\s+/', trim($phrase)) as $w) {
+                    if (strlen($w) > 2 && !in_array($w, $stopWords, true)) {
+                        $quoted[] = $w;
+                    }
+                }
+            }
+        }
+
+        $words = preg_split('/\s+/', $lower);
+        $rest  = array_filter($words, fn ($w) => !in_array($w, $stopWords, true) && strlen($w) > 2);
+
+        $searchTerms = array_values(array_unique(array_merge($quoted, $rest)));
 
         if (empty($searchTerms)) {
             return $this->fetchBestsellers();
         }
 
-        $topTerms = array_slice($searchTerms, 0, 5);
+        $topTerms = array_slice($searchTerms, 0, 8);
 
         $products = Product::query()
             // Match the storefront, which lists on is_active alone. The active()
