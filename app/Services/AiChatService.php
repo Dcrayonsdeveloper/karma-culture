@@ -68,7 +68,7 @@ class AiChatService
 
     private static function callAnthropic(string $apiKey, string $model, string $system, array $messages): array
     {
-        $response = Http::timeout(25)
+        $response = Http::timeout(60)
             ->withHeaders([
                 'x-api-key'         => $apiKey,
                 'anthropic-version' => '2023-06-01',
@@ -106,7 +106,7 @@ class AiChatService
 
         $model = $model ?: 'gemini-3.6-flash';
 
-        $response = Http::timeout(25)
+        $response = Http::timeout(60)
             ->withHeaders([
                 'x-goog-api-key' => $apiKey,
                 'content-type'   => 'application/json',

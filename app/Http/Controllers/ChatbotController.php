@@ -71,7 +71,9 @@ class ChatbotController extends Controller
             ]);
 
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            Log::warning('Chatbot connection timeout', ['message' => $e->getMessage()]);
+            // error, not warning: LOG_LEVEL is error in production, so a warning
+            // here is discarded and the timeout leaves no trace to diagnose.
+            Log::error('Chatbot connection timeout', ['message' => $e->getMessage()]);
 
             return response()->json([
                 'reply'    => 'The assistant is a little slow right now. Please try your question again.',
