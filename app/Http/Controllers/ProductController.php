@@ -47,7 +47,7 @@ class ProductController extends Controller
             $query->whereHas('variants', function ($q) use ($sizes) {
                 $q->where('is_active', true)
                   ->where('stock_quantity', '>', 0)
-                  ->whereIn('name', $sizes);
+                  ->whereSizeIn($sizes);
             });
         }
 

@@ -604,7 +604,7 @@ class ChatbotController extends Controller
             ->where('is_active', true)
             ->filter(fn ($v) => trim((string) $v->name) !== '' && $v->stock_quantity > 0)
             ->map(fn ($v) => [
-                'name'  => trim((string) $v->name),
+                'name'  => \App\Models\ProductVariant::sizeLabel($v->name),
                 'price' => (float) ($v->price ?: $product->price),
                 'measurements' => trim((string) data_get($v->attributes, 'measurements', '')),
             ])

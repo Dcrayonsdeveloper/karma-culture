@@ -8,6 +8,57 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProductVariant extends Model
 {
+    /**
+     * The size a shopper recognises.
+     *
+     * Variants created in the sizes editor store just the size ("M", "XL").
+     * Older ones carry the whole variant name — "Block Print Kurti - Indigo - L"
+     * — and the size is the last segment. Showing those raw turned the size
+     * filter into a list of 115 product names.
+     */
+    public static function sizeLabel(?string $name): string
+    {
+        $name = trim((string) $name);
+
+        if (str_contains($name, ' - ')) {
+            $parts = explode(' - ', $name);
+            $name = trim((string) end($parts));
+        }
+
+        return $name;
+    }
+
+    /**
+     * Match a variant against a size label, covering both storage styles.
+     */
+    public function scopeWhereSizeIn($query, array $sizes)
+    {
+        return $query->where(function ($q) use ($sizes) {
+            foreach ($sizes as $size) {
+                $q->orWhere('name', $size)
+                  ->orWhere('name', 'like', '% - ' . $size);
+            }
+        });
+    }
+
+    /**
+     * Sort order a shopper expects, rather than alphabetical, which puts
+     * L before M and XL before XS.
+     */
+    public static function sizeRank(string $size): array
+    {
+        $order = ['XXS', 'XS', 'S', 'SM', 'M', 'MD', 'L', 'LG', 'XL', 'XXL', '2XL', '3XL', 'XXXL'];
+        $upper = strtoupper($size);
+        $index = array_search($upper, $order, true);
+
+        // Numeric sizes (UK 7, 32, 40) sort after letters, by their number.
+        if ($index === false && preg_match('/(\d+)/', $size, $m)) {
+            return [1, (int) $m[1], $upper];
+        }
+
+        return $index === false ? [2, 0, $upper] : [0, $index, $upper];
+    }
+
     protected $fillable = [
         'product_id',
         'name',
