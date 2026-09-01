@@ -69,6 +69,21 @@ class ChatbotController extends Controller
         $conversation = $this->conversationFor($request);
         $startedAt = microtime(true);
 
+        // Turn away obvious off-topic asks before calling the model. The reply
+        // still gets recorded so the dashboard shows what people try to use it
+        // for, but it costs nothing.
+        if ($this->isOffTopic($userMessage)) {
+            $reply = "I can only help with things about this store — products, sizes, colours, prices, orders, delivery, returns and offers. Ask me anything along those lines and I'll do my best.";
+
+            $this->record($conversation, $userMessage, $reply, [], $startedAt);
+
+            return response()->json([
+                'reply' => $reply,
+                'products' => [],
+                'conversation_id' => $conversation?->id,
+            ]);
+        }
+
         try {
             $result = AiChatService::reply($systemPrompt, $messages);
 
@@ -108,6 +123,54 @@ class ChatbotController extends Controller
                 'products' => [],
             ]);
         }
+    }
+
+    /**
+     * Is this clearly not a question about the shop?
+     *
+     * Deliberately narrow. Blocking on the absence of shop words would refuse
+     * perfectly good questions like "will this suit a wedding?", so this only
+     * fires on unmistakable signals — homework, code, general knowledge and the
+     * like — and anything ambiguous is allowed through to the model.
+     */
+    private function isOffTopic(string $message): bool
+    {
+        $lower = mb_strtolower(trim($message));
+
+        // Shop vocabulary present: always allow, even alongside a blocked word.
+        $shopWords = [
+            'product', 'order', 'size', 'sizes', 'fit', 'colour', 'color', 'price', 'cost',
+            'discount', 'coupon', 'offer', 'sale', 'delivery', 'ship', 'shipping', 'return',
+            'refund', 'exchange', 'stock', 'available', 'track', 'cart', 'checkout', 'payment',
+            'cod', 'upi', 'kurta', 'shirt', 'polo', 'trouser', 'top', 'jumpsuit', 'wear',
+            'buy', 'shop', 'store', 'karmaa', 'kulture', 'measurement', 'wedding', 'occasion',
+            'gift', 'material', 'fabric', 'wash', 'care',
+        ];
+
+        foreach ($shopWords as $w) {
+            if (str_contains($lower, $w)) {
+                return false;
+            }
+        }
+
+        // Unmistakably something else.
+        $offTopic = [
+            'write a poem', 'write a song', 'write an essay', 'write code', 'write a script',
+            'python', 'javascript', 'java ', 'sql query', 'html', 'css ', 'algorithm',
+            'homework', 'assignment', 'solve this', 'calculate', 'equation', 'integral',
+            'capital of', 'who is the president', 'prime minister', 'population of',
+            'translate', 'recipe', 'weather', 'stock market', 'bitcoin', 'crypto',
+            'football', 'cricket score', 'movie', 'song lyrics', 'joke', 'story about',
+            'medical', 'diagnose', 'symptom', 'lawyer', 'legal advice', 'invest',
+        ];
+
+        foreach ($offTopic as $w) {
+            if (str_contains($lower, $w)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -303,6 +366,11 @@ class ChatbotController extends Controller
 
         // Indian shoppers routinely mix languages in one sentence; answering in
         // the language they used matters more than answering in English.
+        $prompt .= "## Staying On Topic\n";
+        $prompt .= "You only answer questions about this store: its products, sizes, colours, prices, stock, offers, delivery, returns, payments and orders. ";
+        $prompt .= "If someone asks about anything else — coding, homework, general knowledge, news, medical or legal questions, or asks you to write something unrelated — politely say you can only help with the store, and offer an example of what you can answer. ";
+        $prompt .= "Do not attempt the request, even partially.\n\n";
+
         $prompt .= "## Fit Advice\n";
         $prompt .= "Some sizes below list measurements in brackets. When a customer gives their own measurement, chest, waist, or the size they usually wear, compare it against those and recommend one size, saying briefly why. ";
         $prompt .= "If a product lists no measurements, point them to the size guide rather than guessing. Never invent a measurement.\n\n";
