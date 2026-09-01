@@ -41,11 +41,21 @@ class FlashSaleController extends Controller
         return redirect()->route('admin.flash-sales.index')->with('success', 'Flash sale created');
     }
 
+    /** Products a sale can include: live and sellable, cheapest name-first. */
+    private function selectableProducts()
+    {
+        return \App\Models\Product::where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'sku', 'price']);
+    }
+
     public function edit(FlashSale $flashSale): View
     {
         $flashSale->load('products');
 
-        return view('admin.flash-sales.edit', compact('flashSale'));
+        $flashSale->load('products');
+
+        return view('admin.flash-sales.edit', compact('flashSale'))->with('allProducts', $this->selectableProducts());
     }
 
     public function update(Request $request, FlashSale $flashSale): RedirectResponse
@@ -56,13 +66,43 @@ class FlashSaleController extends Controller
             'starts_at' => 'required|date',
             'ends_at' => 'required|date|after:starts_at',
             'is_active' => 'boolean',
+            'products' => 'nullable|array',
+            'products.*.product_id' => 'nullable|integer|exists:products,id',
+            'products.*.sale_price' => 'nullable|numeric|min:0',
+            'products.*.stock_limit' => 'nullable|integer|min:0',
         ]);
 
-        $validated['slug'] = Str::slug($validated['name']);
+        $flashSale->update([
+            'name' => $validated['name'],
+            'slug' => Str::slug($validated['name']),
+            'description' => $validated['description'] ?? null,
+            'starts_at' => $validated['starts_at'],
+            'ends_at' => $validated['ends_at'],
+            'is_active' => $request->boolean('is_active'),
+        ]);
 
-        $flashSale->update($validated);
+        // Rebuild the line-up from the form. sold_count is preserved for rows
+        // that survive, so a running sale does not reset its stock limits.
+        $existing = $flashSale->products->keyBy('id');
+        $sync = [];
 
-        return redirect()->route('admin.flash-sales.index')->with('success', 'Flash sale updated');
+        foreach ($request->input('products', []) as $row) {
+            $productId = (int) ($row['product_id'] ?? 0);
+
+            if ($productId <= 0 || isset($sync[$productId])) {
+                continue;
+            }
+
+            $sync[$productId] = [
+                'sale_price' => (float) ($row['sale_price'] ?? 0),
+                'stock_limit' => ($row['stock_limit'] ?? '') === '' ? null : (int) $row['stock_limit'],
+                'sold_count' => $existing[$productId]->pivot->sold_count ?? 0,
+            ];
+        }
+
+        $flashSale->products()->sync($sync);
+
+        return redirect()->route('admin.flash-sales.edit', $flashSale)->with('success', 'Flash sale updated');
     }
 
     public function destroy(FlashSale $flashSale): RedirectResponse

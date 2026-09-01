@@ -159,6 +159,13 @@ class CartController extends Controller
                 ? $product->variants()->find($variantId)->price ?? $product->price
                 : $product->price;
 
+            // A running flash sale beats the shelf price, including a variant's
+            // own price — otherwise the countdown promises a discount the
+            // customer never receives.
+            if ($flash = $product->flashSalePrice()) {
+                $price = min((float) $price, $flash);
+            }
+
             $cart->items()->create([
                 'product_id' => $validated['product_id'],
                 'variant_id' => $variantId,

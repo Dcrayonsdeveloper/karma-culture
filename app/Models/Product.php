@@ -209,6 +209,37 @@ class Product extends Model
     }
 
     // Scopes
+    /**
+     * The price this product sells at right now because of a running flash
+     * sale, or null when none applies.
+     *
+     * A sale that lists a product but charges the normal price is worse than
+     * no sale at all, so cart, checkout and the product page all read this.
+     */
+    public function flashSalePrice(): ?float
+    {
+        $sale = \App\Models\FlashSale::active()
+            ->whereHas('products', fn ($q) => $q->where('products.id', $this->id))
+            ->with(['products' => fn ($q) => $q->where('products.id', $this->id)])
+            ->first();
+
+        $pivot = $sale?->products->first()?->pivot;
+
+        if (! $pivot || $pivot->sale_price === null) {
+            return null;
+        }
+
+        // A limit that has been reached ends the discount for later buyers.
+        if ($pivot->stock_limit !== null && (int) $pivot->sold_count >= (int) $pivot->stock_limit) {
+            return null;
+        }
+
+        $price = (float) $pivot->sale_price;
+
+        // Never let a misconfigured sale raise the price.
+        return $price > 0 && $price < (float) $this->price ? $price : null;
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true)->where('status', 'approved');
