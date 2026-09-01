@@ -43,10 +43,10 @@
                                 @endif
                             </div>
                             <div style="font-size: 12px; color: #616161; margin-top: 2px;">
-                                {{ $c->user?->email ?? '—' }}
+                                {{ $c->user?->email ?? '-' }}
                                 @if($c->user?->phone) &middot; {{ $c->user->phone }} @endif
                                 &middot; {{ $c->message_count }} messages
-                                &middot; {{ $c->last_message_at?->diffForHumans() ?? '—' }}
+                                &middot; {{ $c->last_message_at?->diffForHumans() ?? '-' }}
                             </div>
                         </div>
                         <div style="display: flex; gap: 0.5rem; flex-shrink: 0;">

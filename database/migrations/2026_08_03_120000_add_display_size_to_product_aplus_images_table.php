@@ -15,7 +15,7 @@ return new class extends Migration
      * CLS). Overloading them with CSS values would break that.
      *
      * Stored as short strings because a value may be a length with any unit or
-     * the keyword "auto" — e.g. "800px", "50%", "auto". Format is enforced by
+     * the keyword "auto" - e.g. "800px", "50%", "auto". Format is enforced by
      * validation in the controller and re-checked before rendering.
      */
     public function up(): void

@@ -14,7 +14,7 @@ return new class extends Migration
      * the matching row so the current hero is visible and editable.
      *
      * video_url keeps the leading slash so Banner::getVideoAttribute() resolves
-     * it against public/ rather than the storage disk — the file stays exactly
+     * it against public/ rather than the storage disk - the file stays exactly
      * where it is and where deploy.sh already ships it. Nothing is copied, so
      * the homepage renders the same file it did before.
      */

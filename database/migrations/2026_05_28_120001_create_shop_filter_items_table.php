@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('shop_filter_items', function (Blueprint $table) {
             $table->id();
             $table->enum('type', ['size', 'price', 'shade']);
-            $table->string('label');                  // e.g. 'M', '₹1k – 2k', 'Cinnamon'
+            $table->string('label');                  // e.g. 'M', '₹1k - 2k', 'Cinnamon'
             $table->string('sub_label')->nullable(); // e.g. '210 Styles'
             $table->string('shade_hex', 9)->nullable(); // hex for shirt tint, e.g. #b8895a
             $table->string('query_string')->nullable(); // e.g. 'size=M' or 'price_min=1000&price_max=2000'

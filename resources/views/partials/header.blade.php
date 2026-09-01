@@ -8,7 +8,7 @@
 
 <header id="main-header"
        class="bg-kk-cream sticky top-0 left-0 right-0 z-40 shadow-sm">
-    <!-- Announcement Bar (seamless marquee — two identical groups, translateX(-50%) loop) -->
+    <!-- Announcement Bar (seamless marquee - two identical groups, translateX(-50%) loop) -->
     @if($announcement)
     <div style="background:#2d1810;" class="kk-marquee text-kk-text-on-dark py-1.5 text-[11px] sm:text-xs font-medium tracking-[0.18em] uppercase">
         <div class="kk-marquee__track" aria-hidden="true">
@@ -85,7 +85,7 @@
                 <nav class="hidden lg:flex items-center gap-1 shrink-0">
                     <a href="{{ route('new-arrivals') }}" class="px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">New In</a>
 
-                    {{-- Categories: hover-triggered mega menu — clean text layout, data from admin --}}
+                    {{-- Categories: hover-triggered mega menu - clean text layout, data from admin --}}
                     @php
                         // Every active top-level category from admin, each with its active
                         // children. Previously this matched only the two slugs "mens" and
@@ -137,7 +137,7 @@
 
                 <style>
                     .kk-mega { position: relative; }
-                    /* Normal compact dropdown — categories listed in sequence */
+                    /* Normal compact dropdown - categories listed in sequence */
                     .kk-dd {
                         position: absolute;
                         top: 100%;
@@ -243,7 +243,7 @@
                         {{-- Voice search panel. Shown while the browser's own
                              permission prompt is open, so the customer can see
                              what is being asked for and why, and again if the
-                             microphone is unavailable — a bare alert() gave no
+                             microphone is unavailable - a bare alert() gave no
                              context and no way back. --}}
                         <template x-if="micPanel">
                             <div class="fixed inset-0 z-[80] flex items-center justify-center p-4"
@@ -455,7 +455,7 @@
 
 @guest
 {{-- ====================================================
-     LOGIN / SIGNUP MODAL — opens via $dispatch('open-login-modal')
+     LOGIN / SIGNUP MODAL - opens via $dispatch('open-login-modal')
      AJAX-wired to LoginController@login and RegisterController@register
      ==================================================== --}}
 <div x-data="kkAuthModal()"
@@ -590,7 +590,7 @@
                 By continuing you agree to our
                 <a href="{{ route('privacy') }}" class="kk-loginmodal__legal-link">Privacy Policy</a>
                 <span> &amp; </span>
-                <a href="{{ route('terms') }}" class="kk-loginmodal__legal-link">T&amp;Cs.</a>
+                <a href="{{ route('terms') }}" class="kk-loginmodal__legal-link">Terms &amp; Service</a>
             </p>
 
             <div class="kk-loginmodal__fallback">

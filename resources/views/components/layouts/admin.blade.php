@@ -25,7 +25,7 @@
     @stack('styles')
 
     <style>
-    /* Admin table defaults — consistent spacing across all pages */
+    /* Admin table defaults - consistent spacing across all pages */
     .layout-admin table { width: 100%; border-collapse: collapse; }
     .layout-admin table th {
         padding: 0.5rem 0.75rem;

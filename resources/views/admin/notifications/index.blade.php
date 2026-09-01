@@ -14,7 +14,7 @@
         @if($notifications->total() > 0)
             <div style="padding: 0.625rem 1rem; border-bottom: 1px solid #e3e3e3; background: #f6f6f7;">
                 <p style="font-size: 12px; color: #616161; margin: 0;">
-                    Showing <span style="font-weight: 600; color: #303030;">{{ $notifications->firstItem() }}</span>&ndash;<span style="font-weight: 600; color: #303030;">{{ $notifications->lastItem() }}</span> of <span style="font-weight: 600; color: #303030;">{{ $notifications->total() }}</span> notifications
+                    Showing <span style="font-weight: 600; color: #303030;">{{ $notifications->firstItem() }}</span>-<span style="font-weight: 600; color: #303030;">{{ $notifications->lastItem() }}</span> of <span style="font-weight: 600; color: #303030;">{{ $notifications->total() }}</span> notifications
                 </p>
             </div>
         @endif

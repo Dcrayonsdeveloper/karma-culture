@@ -19,7 +19,7 @@
                     <p class="text-kk-text-muted text-sm mb-4 leading-relaxed max-w-sm">
                         {{ $footerAbout }}
                     </p>
-                    <!-- Follow Us — Instagram, Facebook, Twitter, LinkedIn (admin-configurable) -->
+                    <!-- Follow Us - Instagram, Facebook, Twitter, LinkedIn (admin-configurable) -->
                     @php
                         $kkSocials = [
                             'instagram' => \App\Models\Setting::get('social_instagram', '') ?: 'https://www.instagram.com/',

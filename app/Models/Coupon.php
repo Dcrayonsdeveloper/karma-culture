@@ -165,7 +165,7 @@ class Coupon extends Model
         $sets = (int) floor($totalQty / $setSize);
         $freeCount = $sets * $getQty;
 
-        // Sort ascending — cheapest items are the "free" ones
+        // Sort ascending - cheapest items are the "free" ones
         sort($unitPrices);
 
         $discount = 0;

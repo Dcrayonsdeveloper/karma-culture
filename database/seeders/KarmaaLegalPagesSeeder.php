@@ -26,17 +26,17 @@ class KarmaaLegalPagesSeeder extends Seeder
 <h2>1. Information We Collect</h2>
 <p>We collect the following categories of information:</p>
 <ul>
-    <li><strong>Account &amp; order information</strong> &mdash; name, email, phone number, shipping &amp; billing addresses, password (hashed), and order history.</li>
-    <li><strong>Payment information</strong> &mdash; processed by our PCI-compliant payment partners; we do not store full card numbers on our servers.</li>
-    <li><strong>Usage data</strong> &mdash; pages viewed, products browsed, items added to cart, device type, IP address, and referrer.</li>
-    <li><strong>Marketing preferences</strong> &mdash; whether you've subscribed to our newsletter or opted in to promotional SMS.</li>
+    <li><strong>Account &amp; order information</strong> - name, email, phone number, shipping &amp; billing addresses, password (hashed), and order history.</li>
+    <li><strong>Payment information</strong> - processed by our PCI-compliant payment partners; we do not store full card numbers on our servers.</li>
+    <li><strong>Usage data</strong> - pages viewed, products browsed, items added to cart, device type, IP address, and referrer.</li>
+    <li><strong>Marketing preferences</strong> - whether you've subscribed to our newsletter or opted in to promotional SMS.</li>
 </ul>
 
 <h2>2. How We Use Your Information</h2>
 <ul>
     <li>To fulfil orders, send shipping updates, and handle returns.</li>
     <li>To provide customer support and respond to enquiries.</li>
-    <li>To send you marketing emails (only if you've opted in &mdash; you can unsubscribe at any time).</li>
+    <li>To send you marketing emails (only if you've opted in - you can unsubscribe at any time).</li>
     <li>To improve our products, site, and shopping experience.</li>
     <li>To detect fraud and comply with legal obligations.</li>
 </ul>
@@ -101,7 +101,7 @@ HTML,
 <p>See our <a href="/returns">Returns &amp; Refunds policy</a> for full details. In short: most items are returnable within 14 days of delivery in unused, original-tag condition. Sale items are final sale unless defective.</p>
 
 <h2>7. Intellectual Property</h2>
-<p>All content on the Site &mdash; including logos, designs, photography, product descriptions, and code &mdash; is owned by {$brand} or our licensors and is protected by copyright and trademark law. You may not copy, reproduce, or use any content commercially without written permission.</p>
+<p>All content on the Site - including logos, designs, photography, product descriptions, and code - is owned by {$brand} or our licensors and is protected by copyright and trademark law. You may not copy, reproduce, or use any content commercially without written permission.</p>
 
 <h2>8. Prohibited Use</h2>
 <p>You may not use the Site to: violate any law; harass, abuse, or harm any person; submit false information; attempt to access another user's account; or interfere with the Site's operation.</p>
@@ -136,7 +136,7 @@ HTML,
 <h2>2. Types of Cookies We Use</h2>
 
 <h3>Strictly Necessary Cookies</h3>
-<p>Required for the Site to function &mdash; shopping cart, checkout, login session, and CSRF protection. The Site cannot work properly without these and they cannot be disabled.</p>
+<p>Required for the Site to function - shopping cart, checkout, login session, and CSRF protection. The Site cannot work properly without these and they cannot be disabled.</p>
 
 <h3>Functional Cookies</h3>
 <p>Remember choices like language, currency, recently viewed products, and wishlist contents so you don't have to set them on every visit.</p>
@@ -153,7 +153,7 @@ HTML,
 <h2>4. Managing Cookies</h2>
 <ul>
     <li>Use the cookie banner on the Site to accept or reject non-essential categories.</li>
-    <li>Most browsers let you block or delete cookies in their settings &mdash; check the Help section of your browser.</li>
+    <li>Most browsers let you block or delete cookies in their settings - check the Help section of your browser.</li>
     <li>Disabling strictly necessary cookies will break checkout and account features.</li>
 </ul>
 
@@ -180,10 +180,10 @@ HTML,
 
 <h2>2. Legal Bases for Processing</h2>
 <ul>
-    <li><strong>Contract</strong> &mdash; processing your order, arranging delivery, handling returns and refunds.</li>
-    <li><strong>Legitimate interests</strong> &mdash; preventing fraud, securing our site, and improving our products and service.</li>
-    <li><strong>Consent</strong> &mdash; marketing emails and non-essential cookies. You may withdraw consent at any time.</li>
-    <li><strong>Legal obligation</strong> &mdash; retaining tax, accounting and invoicing records for the period the law requires.</li>
+    <li><strong>Contract</strong> - processing your order, arranging delivery, handling returns and refunds.</li>
+    <li><strong>Legitimate interests</strong> - preventing fraud, securing our site, and improving our products and service.</li>
+    <li><strong>Consent</strong> - marketing emails and non-essential cookies. You may withdraw consent at any time.</li>
+    <li><strong>Legal obligation</strong> - retaining tax, accounting and invoicing records for the period the law requires.</li>
 </ul>
 
 <h2>3. Your Rights</h2>

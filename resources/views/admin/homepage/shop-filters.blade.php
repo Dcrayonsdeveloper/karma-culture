@@ -1,5 +1,5 @@
 <x-layouts.admin>
-    <x-slot name="title">Shop It Your Way — Filter Items</x-slot>
+    <x-slot name="title">Shop It Your Way - Filter Items</x-slot>
 
     <x-slot name="header">
         <div class="page-header">
@@ -84,7 +84,7 @@
                     <input type="hidden" name="type" value="{{ $type }}">
                     <div>
                         <label class="form-label" style="font-size: 11px; color: #616161;">Label *</label>
-                        <input type="text" name="label" required class="form-input" style="font-size: 13px;" placeholder="@if($type==='size')M @elseif($type==='price')₹1k – 2k @else Tan @endif">
+                        <input type="text" name="label" required class="form-input" style="font-size: 13px;" placeholder="@if($type==='size')M @elseif($type==='price')₹1k - 2k @else Tan @endif">
                     </div>
                     <div>
                         <label class="form-label" style="font-size: 11px; color: #616161;">Sub-label</label>

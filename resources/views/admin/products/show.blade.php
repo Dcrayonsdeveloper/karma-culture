@@ -185,11 +185,11 @@
                     <dl style="display: flex; flex-direction: column; gap: 0.625rem;">
                         <div style="display: flex; justify-content: space-between; font-size: 13px;">
                             <dt style="color: #6d7175;">Category</dt>
-                            <dd style="font-weight: 500; color: #303030;">{{ $product->category?->name ?? '—' }}</dd>
+                            <dd style="font-weight: 500; color: #303030;">{{ $product->category?->name ?? '-' }}</dd>
                         </div>
                         <div style="display: flex; justify-content: space-between; font-size: 13px;">
                             <dt style="color: #6d7175;">Seller</dt>
-                            <dd style="font-weight: 500; color: #303030;">{{ $product->seller?->store_name ?? '—' }}</dd>
+                            <dd style="font-weight: 500; color: #303030;">{{ $product->seller?->store_name ?? '-' }}</dd>
                         </div>
                         <div style="display: flex; justify-content: space-between; font-size: 13px;">
                             <dt style="color: #6d7175;">Created</dt>

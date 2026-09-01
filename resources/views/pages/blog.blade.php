@@ -30,7 +30,7 @@
                 </svg>
             </div>
             <h1 class="text-xl sm:text-2xl font-bold text-neutral-900">Our Blog</h1>
-            <p class="text-[13px] text-neutral-600 mt-2 max-w-md mx-auto">Parenting tips, kids' fashion guides, and the latest trends — straight from our experts.</p>
+            <p class="text-[13px] text-neutral-600 mt-2 max-w-md mx-auto">Parenting tips, kids' fashion guides, and the latest trends - straight from our experts.</p>
         </div>
 
         {{-- Search & Filters --}}

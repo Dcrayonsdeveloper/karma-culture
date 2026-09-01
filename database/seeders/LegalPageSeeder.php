@@ -19,12 +19,12 @@ class LegalPageSeeder extends Seeder
 <h2>Information We Collect</h2>
 <p>When you use our website, we may collect the following types of personal information:</p>
 <ul>
-    <li><strong>Contact details</strong> — name, email address, phone number, and delivery address</li>
-    <li><strong>Account information</strong> — username, password (encrypted), and preferences</li>
-    <li><strong>Order history</strong> — products purchased, order status, and transaction records</li>
-    <li><strong>Payment information</strong> — processed securely via our payment provider; we do not store full card details</li>
-    <li><strong>Device and usage data</strong> — IP address, browser type, pages visited, and time on site (via cookies)</li>
-    <li><strong>Communications</strong> — enquiries, support messages, and feedback you send us</li>
+    <li><strong>Contact details</strong> - name, email address, phone number, and delivery address</li>
+    <li><strong>Account information</strong> - username, password (encrypted), and preferences</li>
+    <li><strong>Order history</strong> - products purchased, order status, and transaction records</li>
+    <li><strong>Payment information</strong> - processed securely via our payment provider; we do not store full card details</li>
+    <li><strong>Device and usage data</strong> - IP address, browser type, pages visited, and time on site (via cookies)</li>
+    <li><strong>Communications</strong> - enquiries, support messages, and feedback you send us</li>
 </ul>
 
 <h2>How We Use Your Information</h2>
@@ -34,7 +34,7 @@ class LegalPageSeeder extends Seeder
     <li>Send order confirmations, shipping updates, and receipts</li>
     <li>Manage your account and provide customer support</li>
     <li>Personalise your experience and show relevant product recommendations</li>
-    <li>Send marketing emails (only with your consent — you can unsubscribe at any time)</li>
+    <li>Send marketing emails (only with your consent - you can unsubscribe at any time)</li>
     <li>Improve our website, detect fraud, and maintain security</li>
     <li>Comply with legal obligations</li>
 </ul>
@@ -42,10 +42,10 @@ class LegalPageSeeder extends Seeder
 <h2>Sharing Your Information</h2>
 <p>We do not sell your personal information. We may share it with:</p>
 <ul>
-    <li><strong>Delivery partners</strong> — to fulfil your orders</li>
-    <li><strong>Payment processors</strong> — to complete transactions securely</li>
-    <li><strong>Analytics providers</strong> — to understand website usage (anonymised where possible)</li>
-    <li><strong>Law enforcement or regulators</strong> — where required by law</li>
+    <li><strong>Delivery partners</strong> - to fulfil your orders</li>
+    <li><strong>Payment processors</strong> - to complete transactions securely</li>
+    <li><strong>Analytics providers</strong> - to understand website usage (anonymised where possible)</li>
+    <li><strong>Law enforcement or regulators</strong> - where required by law</li>
 </ul>
 <p>All third parties we share data with are bound by appropriate data protection agreements.</p>
 
@@ -55,12 +55,12 @@ class LegalPageSeeder extends Seeder
 <h2>Your Rights</h2>
 <p>Under applicable data protection law, you have the right to:</p>
 <ul>
-    <li><strong>Access</strong> — request a copy of your personal data</li>
-    <li><strong>Rectification</strong> — correct inaccurate or incomplete data</li>
-    <li><strong>Erasure</strong> — request deletion of your data ("right to be forgotten")</li>
-    <li><strong>Restriction</strong> — limit how we process your data in certain circumstances</li>
-    <li><strong>Portability</strong> — receive your data in a structured, machine-readable format</li>
-    <li><strong>Object</strong> — opt out of direct marketing or processing based on legitimate interests</li>
+    <li><strong>Access</strong> - request a copy of your personal data</li>
+    <li><strong>Rectification</strong> - correct inaccurate or incomplete data</li>
+    <li><strong>Erasure</strong> - request deletion of your data ("right to be forgotten")</li>
+    <li><strong>Restriction</strong> - limit how we process your data in certain circumstances</li>
+    <li><strong>Portability</strong> - receive your data in a structured, machine-readable format</li>
+    <li><strong>Object</strong> - opt out of direct marketing or processing based on legitimate interests</li>
 </ul>
 <p>To exercise any of these rights, please <a href="/contact">contact us</a> and we will respond within 30 days.</p>
 
@@ -110,7 +110,7 @@ HTML,
 <p>All orders are subject to availability and confirmation. We reserve the right to refuse or cancel any order for any reason, including pricing errors or suspected fraudulent activity. Full payment is required before items are dispatched. Prices are inclusive of applicable taxes unless stated otherwise.</p>
 
 <h2>Intellectual Property</h2>
-<p>All content on this website — including text, images, logos, product descriptions, and design — is our property and is protected by copyright and trademark laws. Unauthorised use or reproduction of any content is strictly prohibited.</p>
+<p>All content on this website - including text, images, logos, product descriptions, and design - is our property and is protected by copyright and trademark laws. Unauthorised use or reproduction of any content is strictly prohibited.</p>
 
 <h2>Product Information</h2>
 <p>We strive for accuracy in all product descriptions and pricing. However, we do not warrant that all information is error-free. We reserve the right to correct any errors and update information at any time without prior notice.</p>
@@ -139,15 +139,15 @@ HTML,
                 'published_at' => now(),
                 'content' => <<<'HTML'
 <h2>What Are Cookies?</h2>
-<p>Cookies are small text files that are placed on your device when you visit a website. They are widely used to make websites work, improve user experience, and provide information to the website owner. Cookies are not harmful — they cannot carry viruses or install malware. They simply store small pieces of information that help the website remember your preferences and activity.</p>
+<p>Cookies are small text files that are placed on your device when you visit a website. They are widely used to make websites work, improve user experience, and provide information to the website owner. Cookies are not harmful - they cannot carry viruses or install malware. They simply store small pieces of information that help the website remember your preferences and activity.</p>
 
 <h2>Essential Cookies</h2>
 <p>These cookies are required for the website to function properly and cannot be disabled:</p>
 <ul>
-    <li><strong>Session cookies</strong> — keep you logged in during your visit</li>
-    <li><strong>Shopping cart</strong> — preserve your selected items between pages</li>
-    <li><strong>CSRF security tokens</strong> — protect you from cross-site request forgery attacks</li>
-    <li><strong>Cookie consent preference</strong> — remember your cookie choices</li>
+    <li><strong>Session cookies</strong> - keep you logged in during your visit</li>
+    <li><strong>Shopping cart</strong> - preserve your selected items between pages</li>
+    <li><strong>CSRF security tokens</strong> - protect you from cross-site request forgery attacks</li>
+    <li><strong>Cookie consent preference</strong> - remember your cookie choices</li>
 </ul>
 
 <h2>Functional Cookies</h2>
@@ -175,7 +175,7 @@ HTML,
 </ul>
 
 <h2>Third-Party Cookies</h2>
-<p>Some cookies are set by third-party services embedded on our pages (such as analytics tools, payment processors, or social media widgets). We do not control these cookies — please refer to each third party's privacy policy for details on how they collect and use your data.</p>
+<p>Some cookies are set by third-party services embedded on our pages (such as analytics tools, payment processors, or social media widgets). We do not control these cookies - please refer to each third party's privacy policy for details on how they collect and use your data.</p>
 
 <h2>Managing Cookies</h2>
 <p>You can control and manage cookies through your browser settings. Most browsers allow you to view, block, or delete cookies at any time. You can also browse in private or incognito mode to prevent cookies being saved after your session ends.</p>
@@ -204,36 +204,36 @@ HTML,
 <h2>Legal Basis for Processing</h2>
 <p>We process your personal data on the following legal bases:</p>
 <ul>
-    <li><strong>Contract</strong> — processing is necessary to fulfil your orders and manage your account</li>
-    <li><strong>Legal obligation</strong> — processing is required to comply with tax, financial, and regulatory requirements</li>
-    <li><strong>Legitimate interests</strong> — processing is necessary for fraud prevention, security, and improving our services, where your fundamental rights do not override these interests</li>
-    <li><strong>Consent</strong> — for marketing communications and optional cookies; you may withdraw consent at any time</li>
+    <li><strong>Contract</strong> - processing is necessary to fulfil your orders and manage your account</li>
+    <li><strong>Legal obligation</strong> - processing is required to comply with tax, financial, and regulatory requirements</li>
+    <li><strong>Legitimate interests</strong> - processing is necessary for fraud prevention, security, and improving our services, where your fundamental rights do not override these interests</li>
+    <li><strong>Consent</strong> - for marketing communications and optional cookies; you may withdraw consent at any time</li>
 </ul>
 
 <h2>Your Rights Under GDPR</h2>
 <p>As a data subject, you have the following rights:</p>
 <ul>
-    <li><strong>Right of access</strong> — request a copy of the personal data we hold about you</li>
-    <li><strong>Right to rectification</strong> — request correction of inaccurate or incomplete data</li>
-    <li><strong>Right to erasure</strong> — request deletion of your personal data ("right to be forgotten"), subject to legal obligations</li>
-    <li><strong>Right to restriction</strong> — request that we limit how we process your data in certain circumstances</li>
-    <li><strong>Right to data portability</strong> — receive your data in a structured, commonly used, machine-readable format</li>
-    <li><strong>Right to object</strong> — object to processing based on legitimate interests or direct marketing</li>
-    <li><strong>Rights related to automated decision-making</strong> — not be subject to decisions made solely by automated processing that significantly affects you</li>
+    <li><strong>Right of access</strong> - request a copy of the personal data we hold about you</li>
+    <li><strong>Right to rectification</strong> - request correction of inaccurate or incomplete data</li>
+    <li><strong>Right to erasure</strong> - request deletion of your personal data ("right to be forgotten"), subject to legal obligations</li>
+    <li><strong>Right to restriction</strong> - request that we limit how we process your data in certain circumstances</li>
+    <li><strong>Right to data portability</strong> - receive your data in a structured, commonly used, machine-readable format</li>
+    <li><strong>Right to object</strong> - object to processing based on legitimate interests or direct marketing</li>
+    <li><strong>Rights related to automated decision-making</strong> - not be subject to decisions made solely by automated processing that significantly affects you</li>
 </ul>
 <p>To exercise any of your rights, please <a href="/contact">contact us</a>. We will respond within 30 days of receiving your request.</p>
 
 <h2>Data Retention</h2>
 <p>We retain personal data only as long as necessary for the purposes it was collected:</p>
 <ul>
-    <li><strong>Account data</strong> — retained for the duration of your account, plus 12 months after closure</li>
-    <li><strong>Order records</strong> — retained for 7 years for accounting and legal compliance</li>
-    <li><strong>Marketing data</strong> — retained until you withdraw consent or unsubscribe</li>
-    <li><strong>Support communications</strong> — retained for 3 years</li>
+    <li><strong>Account data</strong> - retained for the duration of your account, plus 12 months after closure</li>
+    <li><strong>Order records</strong> - retained for 7 years for accounting and legal compliance</li>
+    <li><strong>Marketing data</strong> - retained until you withdraw consent or unsubscribe</li>
+    <li><strong>Support communications</strong> - retained for 3 years</li>
 </ul>
 
 <h2>International Data Transfers</h2>
-<p>Where we transfer personal data outside your country, we ensure appropriate safeguards are in place — such as standard contractual clauses approved by the relevant data protection authority — to protect your data to an equivalent standard.</p>
+<p>Where we transfer personal data outside your country, we ensure appropriate safeguards are in place - such as standard contractual clauses approved by the relevant data protection authority - to protect your data to an equivalent standard.</p>
 
 <h2>Cookies &amp; Tracking</h2>
 <p>Our use of cookies is detailed in our <a href="/cookie-policy">Cookie Policy</a>. We use a consent management approach to ensure we obtain valid consent before placing non-essential cookies on your device.</p>

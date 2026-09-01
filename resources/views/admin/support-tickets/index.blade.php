@@ -104,7 +104,7 @@
                             <td style="padding: 0.625rem 1rem; color: #616161;">#{{ $ticket->id }}</td>
                             <td style="padding: 0.625rem 1rem;">
                                 <div style="font-weight: 500; color: #303030;">{{ $ticket->user?->full_name ?? "Deleted customer" }}</div>
-                                <div style="font-size: 12px; color: #616161;">{{ $ticket->user?->email ?? "—" }}</div>
+                                <div style="font-size: 12px; color: #616161;">{{ $ticket->user?->email ?? "-" }}</div>
                             </td>
                             <td style="padding: 0.625rem 1rem; color: #303030;">
                                 {{ Str::limit($ticket->subject, 40) }}

@@ -35,7 +35,7 @@
                         </div>
                         <div>
                             <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Description <span style="color: #d72c0d;">*</span></label>
-                            <textarea name="description" rows="4" required class="form-textarea" placeholder="Short 1–2 sentence description that appears under the title."></textarea>
+                            <textarea name="description" rows="4" required class="form-textarea" placeholder="Short 1-2 sentence description that appears under the title."></textarea>
                         </div>
                         <button type="submit" class="btn btn-primary" style="font-size: 13px; width: 100%;">Add Quality</button>
                     </div>

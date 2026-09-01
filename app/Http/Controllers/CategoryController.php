@@ -28,7 +28,7 @@ class CategoryController extends Controller
 
         // Any category that sits UNDER a gender root (Men's/Women's) is browsed within
         // its parent's scope, so the sidebar "Sub-categories" filter always lists the
-        // top-level categories (e.g. T-Shirts, Shirts, Kurtas, Trousers) — never the
+        // top-level categories (e.g. T-Shirts, Shirts, Kurtas, Trousers) - never the
         // clicked category's own deeper subcategories. Root pages scope to themselves.
         $isSubPage = $category->parent !== null;
         $scopeCategory = $isSubPage ? $category->parent : $category;
@@ -42,7 +42,7 @@ class CategoryController extends Controller
             ->with(['category', 'brand', 'primaryImage']);
 
         if ($request->filled('subcategory')) {
-            // Explicit sub-category selection ALWAYS filters — even in fallback mode — so
+            // Explicit sub-category selection ALWAYS filters - even in fallback mode - so
             // ticking a box narrows the products to that category (and its descendants).
             $subSlugs = (array) $request->subcategory;
             $subIds = collect();
@@ -54,7 +54,7 @@ class CategoryController extends Controller
             $query->whereIn('category_id', $subIds->isNotEmpty() ? $subIds->all() : [0]);
         } else {
             // Always scope strictly to the clicked category (and its descendants).
-            // An empty category renders the view's "No products found" state —
+            // An empty category renders the view's "No products found" state -
             // never products from elsewhere in the catalogue: the old full-catalogue
             // fallback made every empty category page show unrelated products.
             $query->whereIn('category_id', $isSubPage ? $category->getAllDescendantIds() : $categoryIds);

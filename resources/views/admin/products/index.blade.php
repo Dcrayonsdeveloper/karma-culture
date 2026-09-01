@@ -233,10 +233,10 @@
                                 @endif
                             </td>
                             <td>
-                                <span style="font-size: 13px; color: #616161;">{{ $product->category->name ?? '—' }}</span>
+                                <span style="font-size: 13px; color: #616161;">{{ $product->category->name ?? '-' }}</span>
                             </td>
                             <td>
-                                <span style="font-size: 13px; color: #616161;">{{ $product->seller->store_name ?? '—' }}</span>
+                                <span style="font-size: 13px; color: #616161;">{{ $product->seller->store_name ?? '-' }}</span>
                             </td>
                         </tr>
                     @empty

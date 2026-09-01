@@ -15,7 +15,7 @@ It looks like you left some items in your cart. Here's what's waiting for you:
 
 **Cart Total: ₹{{ number_format($cart->total, 2) }}**
 
-These items may sell out soon — complete your purchase before they're gone!
+These items may sell out soon - complete your purchase before they're gone!
 
 @component('mail::button', ['url' => url('/cart'), 'color' => 'success'])
 Complete Your Purchase

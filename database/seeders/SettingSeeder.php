@@ -52,7 +52,7 @@ class SettingSeeder extends Seeder
             ['group' => 'seo', 'key' => 'meta_description', 'value' => 'Shop premium tailored essentials at Karmaa Kulture. Curated fashion for the modern individual, crafted with care.', 'type' => 'string'],
             ['group' => 'seo', 'key' => 'meta_keywords', 'value' => 'fashion, clothing, premium, tailored, karmaa kulture', 'type' => 'string'],
 
-            // Offer popup (Task 1) — placeholder content, admin-editable
+            // Offer popup (Task 1) - placeholder content, admin-editable
             ['group' => 'offer_popup', 'key' => 'offer_popup_enabled', 'value' => '1', 'type' => 'boolean'],
             ['group' => 'offer_popup', 'key' => 'offer_popup_title', 'value' => 'Unlock Exciting Offers!', 'type' => 'string'],
             ['group' => 'offer_popup', 'key' => 'offer_popup_subtitle', 'value' => 'Join our list and be the first to hear about exclusive deals and new drops.', 'type' => 'string'],

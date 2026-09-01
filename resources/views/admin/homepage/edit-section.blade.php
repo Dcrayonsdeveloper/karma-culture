@@ -22,25 +22,25 @@
             <div style="font-size: 13px; color: #303030;">
                 @switch($section->type)
                     @case('products')
-                        <strong>Product Section</strong> &mdash; Controls the title and visibility of the "{{ $section->title }}" product slider on the homepage. Products are automatically loaded from the database.
+                        <strong>Product Section</strong> - Controls the title and visibility of the "{{ $section->title }}" product slider on the homepage. Products are automatically loaded from the database.
                         @break
                     @case('benefits')
-                        <strong>Benefits Section</strong> &mdash; Displays feature cards highlighting your brand's strengths. Add, edit, or remove benefit items below.
+                        <strong>Benefits Section</strong> - Displays feature cards highlighting your brand's strengths. Add, edit, or remove benefit items below.
                         @break
                     @case('cta')
-                        <strong>Promo Banner</strong> &mdash; A full-width promotional call-to-action banner displayed between product sections. Upload a background image for a visual banner, or set a background color.
+                        <strong>Promo Banner</strong> - A full-width promotional call-to-action banner displayed between product sections. Upload a background image for a visual banner, or set a background color.
                         @break
                     @case('testimonials')
-                        <strong>Testimonials Section</strong> &mdash; Controls the heading and subtitle of the testimonials carousel. To manage individual reviews, go to <a href="{{ route('admin.homepage.testimonials') }}" style="color: #005bd3; text-decoration: underline; font-weight: 500;">Testimonials Management</a>.
+                        <strong>Testimonials Section</strong> - Controls the heading and subtitle of the testimonials carousel. To manage individual reviews, go to <a href="{{ route('admin.homepage.testimonials') }}" style="color: #005bd3; text-decoration: underline; font-weight: 500;">Testimonials Management</a>.
                         @break
                     @case('newsletter')
-                        <strong>Newsletter Section</strong> &mdash; Controls the heading and subtitle of the email subscription section at the bottom of the homepage.
+                        <strong>Newsletter Section</strong> - Controls the heading and subtitle of the email subscription section at the bottom of the homepage.
                         @break
                     @case('categories')
-                        <strong>Categories Section</strong> &mdash; Controls visibility of the category collection grids on the homepage. Category names and images are managed from <a href="{{ route('admin.categories.index') }}" style="color: #005bd3; text-decoration: underline; font-weight: 500;">Categories Management</a>.
+                        <strong>Categories Section</strong> - Controls visibility of the category collection grids on the homepage. Category names and images are managed from <a href="{{ route('admin.categories.index') }}" style="color: #005bd3; text-decoration: underline; font-weight: 500;">Categories Management</a>.
                         @break
                     @default
-                        <strong>Content Section</strong> &mdash; Controls the display of this content block on the homepage.
+                        <strong>Content Section</strong> - Controls the display of this content block on the homepage.
                 @endswitch
             </div>
         </div>

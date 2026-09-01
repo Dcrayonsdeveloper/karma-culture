@@ -171,7 +171,7 @@ class CheckoutController extends Controller
                     'metadata'                 => [
                         'guest_email'     => $validated['email'],
                         // phone is required_without:address_id, so it is absent
-                        // from $validated whenever a saved address is chosen —
+                        // from $validated whenever a saved address is chosen -
                         // reading it directly 500'd every saved-address order.
                         // Fall back to the phone on the address snapshot.
                         'guest_phone'     => $validated['phone'] ?? $addressSnapshot['phone'] ?? null,
@@ -216,7 +216,7 @@ class CheckoutController extends Controller
 
                 // Count the redemption for guests too. Checkout is guest-first,
                 // so incrementing only for logged-in users left usage_limit
-                // unenforceable — a single-use code could be redeemed forever.
+                // unenforceable - a single-use code could be redeemed forever.
                 // The per-user CouponUsage row still needs a user_id, so that
                 // part stays gated; the global counter does not.
                 if ($cart->coupon_id) {

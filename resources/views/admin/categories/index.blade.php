@@ -84,7 +84,7 @@
                                 @if($category->parent)
                                     <span style="font-size: 13px; color: #616161;">{{ $category->parent->name }}</span>
                                 @else
-                                    <span style="font-size: 13px; color: #999;">—</span>
+                                    <span style="font-size: 13px; color: #999;">-</span>
                                 @endif
                             </td>
                             <td style="text-align: right;">

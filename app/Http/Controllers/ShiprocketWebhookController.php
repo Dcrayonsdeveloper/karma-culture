@@ -17,7 +17,7 @@ class ShiprocketWebhookController extends Controller
         // This endpoint is CSRF-exempt and can move an order to "delivered" or
         // "cancelled", so the token is mandatory. The old check was
         // `if ($token && $token !== '...')`, which let a request carrying NO
-        // token through the guard entirely — an open endpoint in practice.
+        // token through the guard entirely - an open endpoint in practice.
         $expected = (string) config('services.shiprocket.webhook_token');
         $token = (string) ($request->header('X-Webhook-Token') ?? $request->input('token') ?? '');
 

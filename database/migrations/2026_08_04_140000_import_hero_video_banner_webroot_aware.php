@@ -10,8 +10,8 @@ return new class extends Migration
      *
      * That migration guarded on is_file(public_path(...)). Under CLI that
      * resolves to <app>/public/images, but this host serves the site from a
-     * sibling public_html/ directory — the same wrapper deploy.sh already works
-     * around — and the media only exists there. The check failed, the migration
+     * sibling public_html/ directory - the same wrapper deploy.sh already works
+     * around - and the media only exists there. The check failed, the migration
      * returned early, and Hero Banners still read "No hero banners yet" while
      * the video played on the homepage.
      *

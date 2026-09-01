@@ -21,7 +21,7 @@ class CartController extends Controller
 
         // Auto-apply only ran when the cart last changed, so a coupon created
         // or activated afterwards never reached a cart that was already sitting
-        // there. Re-evaluate on view — unless the customer removed the coupon
+        // there. Re-evaluate on view - unless the customer removed the coupon
         // themselves, which must not spring back.
         if ($cart->items()->exists() && ! session('coupon_dismissed', false)) {
             $cart->recalculate();
@@ -29,14 +29,14 @@ class CartController extends Controller
 
         $cart->load(['items.product.primaryImage', 'items.variant']);
 
-        // "You May Also Like" — products related to the cart's items (else popular).
+        // "You May Also Like" - products related to the cart's items (else popular).
         $recommended = $this->recommendedForCart($cart);
 
         return view('cart.index', compact('cart', 'recommended'));
     }
 
     /**
-     * Recommended products for the cart page — same category as cart items,
+     * Recommended products for the cart page - same category as cart items,
      * topped up with other active products so the section always shows 4.
      */
     private function recommendedForCart(Cart $cart): Collection
@@ -171,7 +171,7 @@ class CartController extends Controller
             $price = $variant ? ($variant->price ?? $product->price) : $product->price;
 
             // A running flash sale beats the shelf price, including a variant's
-            // own price — otherwise the countdown promises a discount the
+            // own price - otherwise the countdown promises a discount the
             // customer never receives.
             if ($flash = $product->flashSalePrice()) {
                 $price = min((float) $price, $flash);
@@ -320,7 +320,7 @@ class CartController extends Controller
         $cart = $this->getOrCreateCart();
         $cart->load(['items.product', 'coupon']);
 
-        // Prevent stacking — if a coupon is already applied, reject
+        // Prevent stacking - if a coupon is already applied, reject
         if ($cart->coupon_id) {
             $message = 'A coupon is already applied. Remove it first to apply a different one.';
             if ($request->wantsJson()) {
@@ -346,7 +346,7 @@ class CartController extends Controller
             return back()->with('error', 'Invalid or expired coupon code.');
         }
 
-        // Check minimum order amount (not for BOGO — BOGO checks quantity instead)
+        // Check minimum order amount (not for BOGO - BOGO checks quantity instead)
         if ($coupon->type !== 'buy_x_get_y' && $coupon->min_order_amount && $cart->subtotal < $coupon->min_order_amount) {
             $message = 'This coupon requires a minimum order of '.format_price($coupon->min_order_amount);
             if ($request->wantsJson()) {
@@ -507,7 +507,7 @@ class CartController extends Controller
             );
         }
 
-        // Remove orphaned items whose product was deleted — otherwise the cart
+        // Remove orphaned items whose product was deleted - otherwise the cart
         // page crashes on route('product.show', null) / null property reads.
         $cart->items()->whereDoesntHave('product')->delete();
 

@@ -57,7 +57,7 @@ return [
     ],
 
     // The tracking webhook can move an order to delivered/cancelled, so this
-    // token is required — an unset value rejects every request rather than
+    // token is required - an unset value rejects every request rather than
     // leaving the endpoint open.
     'shiprocket' => [
         'webhook_token' => env('SHIPROCKET_WEBHOOK_TOKEN'),

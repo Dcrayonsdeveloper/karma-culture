@@ -84,7 +84,7 @@ class HomepageController extends Controller
             Setting::set('site_logo', $path, 'string', 'homepage');
         }
 
-        // About Us video upload — saved path overrides the URL field.
+        // About Us video upload - saved path overrides the URL field.
         if ($request->hasFile('about_us_video_file')) {
             $videoPath = $request->file('about_us_video_file')->store('storefront/about', 'public');
             Setting::set('about_us_video_url', 'storage/' . $videoPath, 'string', 'homepage');
@@ -368,7 +368,7 @@ class HomepageController extends Controller
     }
 
     // ============================================================
-    // Shop It Your Way — Size / Price / Shade filter items
+    // Shop It Your Way - Size / Price / Shade filter items
     // ============================================================
     public function shopFilters()
     {
@@ -421,7 +421,7 @@ class HomepageController extends Controller
     }
 
     // ============================================================
-    // Our Qualities — 6 quality blocks on home page dark section
+    // Our Qualities - 6 quality blocks on home page dark section
     // ============================================================
     public function qualities()
     {

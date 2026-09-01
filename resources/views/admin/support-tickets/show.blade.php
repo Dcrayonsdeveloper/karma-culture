@@ -127,7 +127,7 @@
                         </div>
                         <div>
                             <p style="font-size: 13px; font-weight: 500; color: #303030; margin: 0;">{{ $supportTicket->user?->full_name ?? "Deleted customer" }}</p>
-                            <p style="font-size: 12px; color: #616161; margin: 0;">{{ $supportTicket->user?->email ?? "—" }}</p>
+                            <p style="font-size: 12px; color: #616161; margin: 0;">{{ $supportTicket->user?->email ?? "-" }}</p>
                         </div>
                     </div>
                     @if($supportTicket->user && ! $supportTicket->user->trashed())

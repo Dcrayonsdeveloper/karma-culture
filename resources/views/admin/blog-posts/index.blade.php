@@ -102,7 +102,7 @@
                                 @if($post->published_at)
                                     {{ $post->published_at->format('M d, Y') }}
                                 @else
-                                    <span style="color: #8a8a8a;">&mdash;</span>
+                                    <span style="color: #8a8a8a;">-</span>
                                 @endif
                             </td>
 

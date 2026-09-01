@@ -23,7 +23,7 @@
                     </svg>
                 </div>
                 <h1 class="text-lg sm:text-xl font-bold text-neutral-900">GDPR Compliance</h1>
-                <p class="text-[13px] text-neutral-600 mt-2">General Data Protection Regulation — Your rights under EU/UK law.</p>
+                <p class="text-[13px] text-neutral-600 mt-2">General Data Protection Regulation - Your rights under EU/UK law.</p>
             </div>
 
             {{-- What is GDPR --}}
@@ -40,27 +40,27 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div class="flex items-start gap-2 text-[13px] text-neutral-600">
                         <svg class="w-4 h-4 text-success-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                        <span><strong>Identification data</strong> — name, email, phone number</span>
+                        <span><strong>Identification data</strong> - name, email, phone number</span>
                     </div>
                     <div class="flex items-start gap-2 text-[13px] text-neutral-600">
                         <svg class="w-4 h-4 text-success-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                        <span><strong>Address data</strong> — billing and shipping addresses</span>
+                        <span><strong>Address data</strong> - billing and shipping addresses</span>
                     </div>
                     <div class="flex items-start gap-2 text-[13px] text-neutral-600">
                         <svg class="w-4 h-4 text-success-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                        <span><strong>Transaction data</strong> — order history, payment records</span>
+                        <span><strong>Transaction data</strong> - order history, payment records</span>
                     </div>
                     <div class="flex items-start gap-2 text-[13px] text-neutral-600">
                         <svg class="w-4 h-4 text-success-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                        <span><strong>Technical data</strong> — IP address, browser type, cookies</span>
+                        <span><strong>Technical data</strong> - IP address, browser type, cookies</span>
                     </div>
                     <div class="flex items-start gap-2 text-[13px] text-neutral-600">
                         <svg class="w-4 h-4 text-success-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                        <span><strong>Communications</strong> — support tickets, enquiry messages</span>
+                        <span><strong>Communications</strong> - support tickets, enquiry messages</span>
                     </div>
                     <div class="flex items-start gap-2 text-[13px] text-neutral-600">
                         <svg class="w-4 h-4 text-success-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                        <span><strong>Preference data</strong> — wishlist, product preferences</span>
+                        <span><strong>Preference data</strong> - wishlist, product preferences</span>
                     </div>
                 </div>
             </div>
@@ -99,27 +99,27 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                     <div class="flex items-start gap-2 text-[13px] text-neutral-600">
                         <svg class="w-4 h-4 text-success-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                        <span><strong>Right to Access</strong> — request a copy of all personal data we hold about you</span>
+                        <span><strong>Right to Access</strong> - request a copy of all personal data we hold about you</span>
                     </div>
                     <div class="flex items-start gap-2 text-[13px] text-neutral-600">
                         <svg class="w-4 h-4 text-success-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                        <span><strong>Right to Rectification</strong> — correct inaccurate or incomplete data</span>
+                        <span><strong>Right to Rectification</strong> - correct inaccurate or incomplete data</span>
                     </div>
                     <div class="flex items-start gap-2 text-[13px] text-neutral-600">
                         <svg class="w-4 h-4 text-success-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                        <span><strong>Right to Erasure</strong> — request deletion ("right to be forgotten")</span>
+                        <span><strong>Right to Erasure</strong> - request deletion ("right to be forgotten")</span>
                     </div>
                     <div class="flex items-start gap-2 text-[13px] text-neutral-600">
                         <svg class="w-4 h-4 text-success-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                        <span><strong>Right to Restrict</strong> — limit how we process your data</span>
+                        <span><strong>Right to Restrict</strong> - limit how we process your data</span>
                     </div>
                     <div class="flex items-start gap-2 text-[13px] text-neutral-600">
                         <svg class="w-4 h-4 text-success-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                        <span><strong>Right to Portability</strong> — receive your data in a machine-readable format</span>
+                        <span><strong>Right to Portability</strong> - receive your data in a machine-readable format</span>
                     </div>
                     <div class="flex items-start gap-2 text-[13px] text-neutral-600">
                         <svg class="w-4 h-4 text-success-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                        <span><strong>Right to Object</strong> — object to processing for direct marketing or legitimate interests</span>
+                        <span><strong>Right to Object</strong> - object to processing for direct marketing or legitimate interests</span>
                     </div>
                 </div>
                 <p class="text-[13px] text-neutral-600">To exercise any right, contact us via the form below. We will respond within <strong>30 days</strong>. You also have the right to lodge a complaint with your local data protection authority.</p>
@@ -167,11 +167,11 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div class="bg-white border border-neutral-100 rounded-xl p-5 sm:p-6">
                     <h2 class="text-[15px] font-bold text-neutral-900 mb-2">Third-Party Processors</h2>
-                    <p class="text-[13px] text-neutral-600 leading-relaxed">We use carefully selected service providers bound by GDPR-compliant data processing agreements — including payment gateways, shipping carriers, email providers, analytics services, and cloud infrastructure.</p>
+                    <p class="text-[13px] text-neutral-600 leading-relaxed">We use carefully selected service providers bound by GDPR-compliant data processing agreements - including payment gateways, shipping carriers, email providers, analytics services, and cloud infrastructure.</p>
                 </div>
                 <div class="bg-white border border-neutral-100 rounded-xl p-5 sm:p-6">
                     <h2 class="text-[15px] font-bold text-neutral-900 mb-2">International Transfers</h2>
-                    <p class="text-[13px] text-neutral-600 leading-relaxed">Where we transfer data outside the EEA or UK, we ensure appropriate safeguards are in place — such as standard contractual clauses or adequacy decisions.</p>
+                    <p class="text-[13px] text-neutral-600 leading-relaxed">Where we transfer data outside the EEA or UK, we ensure appropriate safeguards are in place - such as standard contractual clauses or adequacy decisions.</p>
                 </div>
             </div>
 

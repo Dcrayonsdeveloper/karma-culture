@@ -38,7 +38,7 @@ class ImportProductsFromExcel extends Command
             return self::FAILURE;
         }
 
-        $this->info($dryRun ? '🔍 DRY RUN — no changes will be made' : '📦 Starting product import...');
+        $this->info($dryRun ? '🔍 DRY RUN - no changes will be made' : '📦 Starting product import...');
         $this->newLine();
 
         try {

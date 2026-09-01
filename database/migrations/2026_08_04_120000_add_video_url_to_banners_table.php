@@ -16,7 +16,7 @@ return new class extends Migration
      * the admin panel like any other.
      *
      * Kept separate from image_url rather than overloading it: a banner may
-     * legitimately have both — the image doubles as the poster frame shown
+     * legitimately have both - the image doubles as the poster frame shown
      * while the video loads, and as the fallback on connections where
      * autoplaying a large file is wasteful.
      */
@@ -25,7 +25,7 @@ return new class extends Migration
         Schema::table('banners', function (Blueprint $table) {
             $table->string('video_url')->nullable()->after('mobile_image_url');
             // image_url was NOT NULL, which makes a video-only banner impossible to
-            // save — inserting one fails with "Field 'image_url' doesn't have a
+            // save - inserting one fails with "Field 'image_url' doesn't have a
             // default value". A banner now needs an image or a video, not both.
             $table->string('image_url')->nullable()->change();
         });

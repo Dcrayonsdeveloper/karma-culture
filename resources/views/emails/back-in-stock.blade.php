@@ -8,7 +8,7 @@ The item you've been waiting for is now available:
 **Price:** ₹{{ number_format($product->price, 2) }}
 @endif
 
-Don't wait too long — popular items sell out fast!
+Don't wait too long - popular items sell out fast!
 
 @component('mail::button', ['url' => route('product.show', $product)])
 Shop Now

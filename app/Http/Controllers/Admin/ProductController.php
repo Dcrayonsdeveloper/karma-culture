@@ -153,7 +153,7 @@ class ProductController extends Controller
         $validated['is_featured'] = $request->boolean('is_featured');
         $validated['seller_id'] = $validated['seller_id'] ?: null;
         $validated['brand_id'] = $validated['brand_id'] ?: null;
-        // `mrp` column is NOT NULL — default it to price when the form omits it
+        // `mrp` column is NOT NULL - default it to price when the form omits it
         // (admin form currently only shows a single price field).
         $validated['mrp'] = $validated['mrp'] ?? $validated['price'];
 
@@ -401,7 +401,7 @@ class ProductController extends Controller
 
                 $size = trim((string) ($variantData['name'] ?? ''));
                 if ($size === '' && ! $variant) {
-                    continue; // blank new row — nothing to save
+                    continue; // blank new row - nothing to save
                 }
 
                 $colour = trim((string) ($variantData['colour'] ?? ''));

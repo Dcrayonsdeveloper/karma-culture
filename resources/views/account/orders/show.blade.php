@@ -63,7 +63,7 @@
                                 <p class="text-[13px] text-emerald-600 mt-0.5">
                                     Delivered on {{ $order->delivered_at ? $order->delivered_at->format('d M Y, h:i A') : 'N/A' }}
                                     @if($order->payment_collected && ($order->metadata['payment_method'] ?? 'cod') === 'cod')
-                                        &mdash; Payment collected successfully
+                                        - Payment collected successfully
                                     @endif
                                 </p>
                             </div>

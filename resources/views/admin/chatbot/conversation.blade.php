@@ -26,7 +26,7 @@
             </div>
             <div>
                 <span style="color: #616161;">Last activity:</span>
-                <strong style="color: #303030;">{{ $conversation->last_message_at?->diffForHumans() ?? '—' }}</strong>
+                <strong style="color: #303030;">{{ $conversation->last_message_at?->diffForHumans() ?? '-' }}</strong>
             </div>
             @if($conversation->lead)
                 <div>

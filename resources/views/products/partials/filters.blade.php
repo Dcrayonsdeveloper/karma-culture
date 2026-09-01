@@ -130,11 +130,14 @@
                         <label class="cursor-pointer select-none" title="{{ $kkC['name'] }}">
                             <input type="checkbox" name="colour[]" value="{{ $kkC['name'] }}" @checked($kkOn)
                                    onchange="this.form.submit()" class="sr-only peer">
+                            {{-- The label inherits its colour so the selected state can
+                                 invert it. Hardcoding it on the inner span left dark text
+                                 on a dark chip once selected. --}}
                             <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded-md border transition-colors
-                                         border-neutral-200 hover:border-neutral-500
-                                         peer-checked:border-neutral-900 peer-checked:bg-neutral-100 peer-checked:font-semibold">
-                                <span style="width:12px;height:12px;border-radius:50%;background-color: {{ $kkC['hex'] ?: '#ddd' }}; border:1px solid rgba(0,0,0,.15);"></span>
-                                <span class="text-neutral-700">{{ $kkC['name'] }}</span>
+                                         border-neutral-200 text-neutral-700 hover:border-neutral-500
+                                         peer-checked:border-neutral-900 peer-checked:bg-neutral-900 peer-checked:text-white peer-checked:font-semibold">
+                                <span style="width:12px;height:12px;border-radius:50%;background-color: {{ $kkC['hex'] ?: '#ddd' }}; border:1px solid rgba(255,255,255,.35);"></span>
+                                <span>{{ $kkC['name'] }}</span>
                             </span>
                         </label>
                     @endforeach
@@ -159,7 +162,7 @@
                     <input type="number" name="min_price" value="{{ request('min_price') }}"
                            placeholder="Min" class="w-full pl-6 pr-2 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:border-[#6F9CA2] bg-neutral-50">
                 </div>
-                <span class="text-neutral-300 text-sm">—</span>
+                <span class="text-neutral-300 text-sm">-</span>
                 <div class="relative flex-1">
                     <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-neutral-600">₹</span>
                     <input type="number" name="max_price" value="{{ request('max_price') }}"

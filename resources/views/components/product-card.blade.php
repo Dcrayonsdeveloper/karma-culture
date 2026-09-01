@@ -46,7 +46,7 @@
         </a>
 
         <a href="{{ route('product.show', $product) }}" class="block px-1">
-            {{-- Eyebrow: brand first, category as fallback — always rendered so
+            {{-- Eyebrow: brand first, category as fallback - always rendered so
                  names and prices align across the row. --}}
             @if($product->brand)
                 <p class="text-[10px] text-kk-text uppercase tracking-wide mb-0.5 leading-[15px] min-h-[15px] truncate">{{ $product->brand->name }}</p>

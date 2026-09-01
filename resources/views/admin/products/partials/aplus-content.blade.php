@@ -45,12 +45,12 @@
                     <div class="flex items-center gap-1.5 shrink-0">
                         <label class="text-[11px] shrink-0" style="color:#8a8a8a;" :for="'aplus-w-' + img.id">W</label>
                         <input type="text" class="aplus-size" :id="'aplus-w-' + img.id"
-                               placeholder="auto" title="Width — e.g. 600px, 50%, auto. Blank = full width."
+                               placeholder="auto" title="Width - e.g. 600px, 50%, auto. Blank = full width."
                                x-model="img.display_width"
                                @change="saveSize(img)" @keydown.enter.prevent="$event.target.blur()">
                         <label class="text-[11px] shrink-0" style="color:#8a8a8a;" :for="'aplus-h-' + img.id">H</label>
                         <input type="text" class="aplus-size" :id="'aplus-h-' + img.id"
-                               placeholder="auto" title="Height — e.g. 400px, auto. Blank = keeps aspect ratio."
+                               placeholder="auto" title="Height - e.g. 400px, auto. Blank = keeps aspect ratio."
                                x-model="img.display_height"
                                @change="saveSize(img)" @keydown.enter.prevent="$event.target.blur()">
                     </div>
@@ -117,7 +117,7 @@
             dragOver: false,
             dragIndex: null,
             csrf() { return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''; },
-            // Mirrors ProductAplusImage::DISPLAY_SIZE_REGEX — the server revalidates.
+            // Mirrors ProductAplusImage::DISPLAY_SIZE_REGEX - the server revalidates.
             sizeOk(v) { return v === '' || /^(auto|\d{1,5}(\.\d{1,2})?(px|%|rem|em|vw|vh)?)$/i.test(v); },
             async saveSize(img) {
                 const w = (img.display_width ?? '').toString().trim();

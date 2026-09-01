@@ -117,14 +117,14 @@ class MessagingService
     {
         $clean = $reply;
 
-        // [NIA_QUALIFIED] — advance lead stage
+        // [NIA_QUALIFIED] - advance lead stage
         if (str_contains($clean, '[NIA_QUALIFIED]')) {
             $lead->update(['stage' => 'qualified']);
             $clean = str_replace('[NIA_QUALIFIED]', '', $clean);
             Log::info('Nia: Lead qualified', ['lead_id' => $lead->id]);
         }
 
-        // [SCHEDULE_CALL] — flag for follow-up
+        // [SCHEDULE_CALL] - flag for follow-up
         if (str_contains($clean, '[SCHEDULE_CALL]')) {
             $existingTags = $lead->tags ?? [];
             if (!in_array('callback_requested', $existingTags)) {
@@ -136,7 +136,7 @@ class MessagingService
             Log::info('Nia: Callback requested', ['lead_id' => $lead->id]);
         }
 
-        // [LEAD_CONTEXT:...] — save context to notes
+        // [LEAD_CONTEXT:...] - save context to notes
         if (preg_match_all('/\[LEAD_CONTEXT:(.+?)\]/', $clean, $matches)) {
             foreach ($matches[1] as $context) {
                 $context = trim($context);

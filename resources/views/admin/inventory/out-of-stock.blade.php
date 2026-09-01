@@ -54,7 +54,7 @@
                         <tr style="border-bottom: 1px solid #f0f0f0;">
                             <td style="padding: 0.625rem 1rem; font-weight: 500; color: #303030;">{{ $product->name }}</td>
                             <td style="padding: 0.625rem 1rem;">
-                                <span style="font-size: 12px; font-family: monospace; background: #f6f6f7; color: #616161; padding: 0.125rem 0.5rem; border-radius: 0.25rem;">{{ $product->sku ?? '—' }}</span>
+                                <span style="font-size: 12px; font-family: monospace; background: #f6f6f7; color: #616161; padding: 0.125rem 0.5rem; border-radius: 0.25rem;">{{ $product->sku ?? '-' }}</span>
                             </td>
                             <td style="padding: 0.625rem 1rem; text-align: center;">
                                 <span style="display: inline-block; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 12px; font-weight: 500; background: #ffe0db; color: #b71c00;">{{ $product->stock_quantity }}</span>

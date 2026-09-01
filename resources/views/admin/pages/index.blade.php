@@ -111,7 +111,7 @@
                                 @if($page->published_at)
                                     {{ $page->published_at->format('M d, Y') }}
                                 @else
-                                    <span style="color: #999;">&mdash;</span>
+                                    <span style="color: #999;">-</span>
                                 @endif
                             </td>
                             <td style="padding: 0.5rem 1rem; text-align: right;" onclick="event.stopPropagation();">

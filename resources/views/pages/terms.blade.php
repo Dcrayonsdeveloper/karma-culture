@@ -98,7 +98,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div class="bg-white border border-neutral-100 rounded-xl p-5 sm:p-6">
                     <h2 class="text-[15px] font-bold text-neutral-900 mb-2">Intellectual Property</h2>
-                    <p class="text-[13px] text-neutral-600 leading-relaxed">All content on this website — including text, images, logos, and design — is the property of {{ \App\Models\Setting::get('site_name', 'ForeverKids') }} and is protected by copyright and trademark laws. Unauthorised use is strictly prohibited.</p>
+                    <p class="text-[13px] text-neutral-600 leading-relaxed">All content on this website - including text, images, logos, and design - is the property of {{ \App\Models\Setting::get('site_name', 'ForeverKids') }} and is protected by copyright and trademark laws. Unauthorised use is strictly prohibited.</p>
                 </div>
                 <div class="bg-white border border-neutral-100 rounded-xl p-5 sm:p-6">
                     <h2 class="text-[15px] font-bold text-neutral-900 mb-2">Product Information</h2>

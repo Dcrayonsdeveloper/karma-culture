@@ -57,7 +57,7 @@ class Brand extends Model
     /**
      * Browser-ready URL for the brand logo, or null when none is set.
      * logo_url holds a storage-relative path (admin upload), but may also be
-     * a full URL or an absolute path — resolve all three like Banner does.
+     * a full URL or an absolute path - resolve all three like Banner does.
      */
     public function getLogoSrcAttribute(): ?string
     {

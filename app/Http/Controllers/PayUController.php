@@ -75,7 +75,7 @@ class PayUController extends Controller
     }
 
     /**
-     * Initiate PayU payment — redirects user to PayU payment page
+     * Initiate PayU payment - redirects user to PayU payment page
      */
     public function initiate(Order $order)
     {
@@ -124,7 +124,7 @@ class PayUController extends Controller
             'order_id'       => $order->id,
             'transaction_id' => $txnid,
             'gateway'        => 'payu',
-            'method'         => 'card', // placeholder — updated on callback with actual method
+            'method'         => 'card', // placeholder - updated on callback with actual method
             'amount'         => $order->total,
             'currency'       => 'INR',
             'status'         => 'pending',

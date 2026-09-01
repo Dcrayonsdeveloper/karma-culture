@@ -100,7 +100,7 @@
         @if($products->total() > 0)
             <div style="padding: 0.5rem 1rem; border-bottom: 1px solid #e3e3e3; display: flex; align-items: center; justify-content: space-between;">
                 <p style="font-size: 13px; color: #616161; margin: 0;">
-                    Showing <span style="font-weight: 500; color: #303030;">{{ $products->firstItem() }}</span>&ndash;<span style="font-weight: 500; color: #303030;">{{ $products->lastItem() }}</span> of <span style="font-weight: 500; color: #303030;">{{ $products->total() }}</span> products
+                    Showing <span style="font-weight: 500; color: #303030;">{{ $products->firstItem() }}</span>-<span style="font-weight: 500; color: #303030;">{{ $products->lastItem() }}</span> of <span style="font-weight: 500; color: #303030;">{{ $products->total() }}</span> products
                 </p>
             </div>
         @endif
@@ -137,10 +137,10 @@
                         <tr style="border-bottom: 1px solid #f0f0f0;">
                             <td style="padding: 0.625rem 1rem; font-weight: 500; color: #303030;">{{ $product->name }}</td>
                             <td style="padding: 0.625rem 1rem;">
-                                <span style="font-size: 12px; font-family: monospace; background: #f6f6f7; color: #616161; padding: 0.125rem 0.375rem; border-radius: 0.25rem;">{{ $product->sku ?? '—' }}</span>
+                                <span style="font-size: 12px; font-family: monospace; background: #f6f6f7; color: #616161; padding: 0.125rem 0.375rem; border-radius: 0.25rem;">{{ $product->sku ?? '-' }}</span>
                             </td>
                             <td style="padding: 0.625rem 1rem; color: #616161;">
-                                {{ $product->category->name ?? '—' }}
+                                {{ $product->category->name ?? '-' }}
                             </td>
                             <td style="padding: 0.625rem 1rem; text-align: center;">
                                 @php
@@ -165,7 +165,7 @@
                                 @if($product->last_movement_at)
                                     {{ \Carbon\Carbon::parse($product->last_movement_at)->format('M d, Y') }}
                                 @else
-                                    <span style="color: #616161;">—</span>
+                                    <span style="color: #616161;">-</span>
                                 @endif
                             </td>
                         </tr>

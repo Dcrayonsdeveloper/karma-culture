@@ -34,7 +34,7 @@
                                 PayU
                                 <span style="font-size: 10px; font-weight: 500; color: #005bd3; background: #d4edfc; padding: 0.125rem 0.375rem; border-radius: 0.25rem;">Recommended</span>
                             </h3>
-                            <p style="font-size: 12px; color: #616161; margin: 0;">Accept payments via PayU — Cards, UPI, Net Banking, Wallets & more</p>
+                            <p style="font-size: 12px; color: #616161; margin: 0;">Accept payments via PayU - Cards, UPI, Net Banking, Wallets & more</p>
                         </div>
                     </div>
                     <label class="toggle-switch">

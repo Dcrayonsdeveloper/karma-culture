@@ -15,7 +15,7 @@ class FeatureHighlightDemoSeeder extends Seeder
     public function run(): void
     {
         $copy = [
-            ['heading' => 'Crafted for Everyday Luxury', 'caption' => 'Premium fabrics and precise tailoring designed to move with you — from morning meetings to evening plans.'],
+            ['heading' => 'Crafted for Everyday Luxury', 'caption' => 'Premium fabrics and precise tailoring designed to move with you - from morning meetings to evening plans.'],
             ['heading' => 'Details That Matter', 'caption' => 'Reinforced seams, a breathable weave and a refined finish that holds its shape wash after wash.'],
             ['heading' => 'Made Responsibly', 'caption' => 'Ethically sourced and made in India with genuine care for people and the planet.'],
         ];

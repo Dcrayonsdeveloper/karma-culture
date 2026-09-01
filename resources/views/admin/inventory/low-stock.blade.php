@@ -61,10 +61,10 @@
                         <tr style="border-bottom: 1px solid #f0f0f0;">
                             <td style="padding: 0.625rem 1rem; font-weight: 500; color: #303030;">{{ $product->name }}</td>
                             <td style="padding: 0.625rem 1rem;">
-                                <span style="font-size: 12px; font-family: monospace; background: #f6f6f7; color: #616161; padding: 0.125rem 0.5rem; border-radius: 0.25rem;">{{ $product->sku ?? '—' }}</span>
+                                <span style="font-size: 12px; font-family: monospace; background: #f6f6f7; color: #616161; padding: 0.125rem 0.5rem; border-radius: 0.25rem;">{{ $product->sku ?? '-' }}</span>
                             </td>
                             <td style="padding: 0.625rem 1rem; text-align: center; font-weight: 700; color: #b98900;">{{ $product->stock_quantity }}</td>
-                            <td style="padding: 0.625rem 1rem; text-align: center; color: #616161;">{{ $product->low_stock_threshold ?? '—' }}</td>
+                            <td style="padding: 0.625rem 1rem; text-align: center; color: #616161;">{{ $product->low_stock_threshold ?? '-' }}</td>
                             <td style="padding: 0.625rem 1rem;">
                                 <div style="display: flex; align-items: center; gap: 0.5rem; min-width: 96px;">
                                     <div style="flex: 1; height: 6px; background: #e3e3e3; border-radius: 3px; overflow: hidden;">

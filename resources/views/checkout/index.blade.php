@@ -173,14 +173,14 @@
                                                 <svg class="w-4 h-4 text-neutral-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
                                                 Pay Online
                                             </span>
-                                            <span class="block text-xs text-neutral-600 mt-0.5">UPI, Cards, Net Banking &amp; Wallets — secure payment.</span>
+                                            <span class="block text-xs text-neutral-600 mt-0.5">UPI, Cards, Net Banking &amp; Wallets - secure payment.</span>
                                         </span>
                                     </label>
                                 @else
                                     <div class="flex items-start gap-3 border border-neutral-200 rounded-lg px-4 py-3 opacity-60 cursor-not-allowed">
                                         <span class="min-w-0">
                                             <span class="block text-sm font-semibold text-neutral-500">Pay Online</span>
-                                            <span class="block text-xs text-neutral-500 mt-0.5">Temporarily unavailable — please use Cash on Delivery.</span>
+                                            <span class="block text-xs text-neutral-500 mt-0.5">Temporarily unavailable - please use Cash on Delivery.</span>
                                         </span>
                                     </div>
                                 @endif

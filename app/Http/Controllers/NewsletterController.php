@@ -19,7 +19,7 @@ class NewsletterController extends Controller
             'phone' => ['nullable', 'string', 'max:20', function ($attribute, $value, $fail) {
                 $digits = preg_replace('/\D/', '', (string) $value);
                 if (strlen($digits) < 10 || strlen($digits) > 15) {
-                    $fail('Please enter a valid mobile number (10–15 digits).');
+                    $fail('Please enter a valid mobile number (10-15 digits).');
                 }
             }],
         ]);
