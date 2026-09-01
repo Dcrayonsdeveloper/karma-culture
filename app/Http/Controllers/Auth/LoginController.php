@@ -69,11 +69,16 @@ class LoginController extends Controller
             ['session_id' => null]
         );
 
-        // Move guest items into user cart
+        // Move guest items into user cart. A cart line is identified by product
+        // + variant + size + colour everywhere else; matching on only the first
+        // two collapsed "Blue / M" and "Red / L" of the same product into one
+        // line and silently lost the guest's selection.
         foreach ($guestCart->items as $item) {
             $existing = $userCart->items()
                 ->where('product_id', $item->product_id)
                 ->where('variant_id', $item->variant_id)
+                ->where('size', $item->size)
+                ->where('colour', $item->colour)
                 ->first();
 
             if ($existing) {

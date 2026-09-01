@@ -167,6 +167,50 @@ HTML,
 <p>For cookie-related questions, email <a href="mailto:{$contact}">{$contact}</a>.</p>
 HTML,
             ],
+            [
+                'slug' => 'gdpr',
+                'title' => 'GDPR Compliance',
+                'content' => <<<HTML
+<p><em>Last updated: {$today}</em></p>
+
+<p>{$brand} is committed to protecting your personal data and to complying with the General Data Protection Regulation (GDPR) and other applicable data protection law. This page explains the role we play, the legal bases on which we process your data, and the rights available to you.</p>
+
+<h2>1. Who Is the Controller</h2>
+<p>For the personal data you provide to us through {$domain}, {$brand} is the data controller. You can reach us about any data protection matter at <a href="mailto:{$contact}">{$contact}</a>.</p>
+
+<h2>2. Legal Bases for Processing</h2>
+<ul>
+    <li><strong>Contract</strong> &mdash; processing your order, arranging delivery, handling returns and refunds.</li>
+    <li><strong>Legitimate interests</strong> &mdash; preventing fraud, securing our site, and improving our products and service.</li>
+    <li><strong>Consent</strong> &mdash; marketing emails and non-essential cookies. You may withdraw consent at any time.</li>
+    <li><strong>Legal obligation</strong> &mdash; retaining tax, accounting and invoicing records for the period the law requires.</li>
+</ul>
+
+<h2>3. Your Rights</h2>
+<p>Subject to the conditions in the GDPR, you have the right to:</p>
+<ul>
+    <li>access the personal data we hold about you, and obtain a copy of it;</li>
+    <li>have inaccurate or incomplete data corrected;</li>
+    <li>have your data erased where we no longer have grounds to keep it;</li>
+    <li>restrict or object to processing, including profiling and direct marketing;</li>
+    <li>receive your data in a portable, machine-readable format;</li>
+    <li>withdraw consent at any time, without affecting processing already carried out;</li>
+    <li>lodge a complaint with your local supervisory authority.</li>
+</ul>
+
+<h2>4. Exercising Your Rights</h2>
+<p>Email <a href="mailto:{$contact}">{$contact}</a> with your request. We will verify your identity before acting and will respond within one month. Where a request is complex or you have made several, we may extend that period by a further two months and will tell you if we do.</p>
+
+<h2>5. International Transfers</h2>
+<p>Where we transfer personal data outside your jurisdiction, we do so under appropriate safeguards, such as standard contractual clauses with the recipient.</p>
+
+<h2>6. Retention</h2>
+<p>We keep personal data only for as long as needed for the purpose it was collected for, or for as long as the law requires us to. Order and invoice records are retained for the statutory accounting period; marketing data is deleted once you withdraw consent.</p>
+
+<h2>7. Contact</h2>
+<p>For any question about this page or how we handle your data, email <a href="mailto:{$contact}">{$contact}</a>. See also our <a href="/privacy-policy">Privacy Policy</a> and <a href="/cookie-policy">Cookie Policy</a>.</p>
+HTML,
+            ],
         ];
 
         foreach ($pages as $p) {
@@ -181,6 +225,6 @@ HTML,
             );
         }
 
-        $this->command->info('Seeded ' . count($pages) . ' legal pages (Privacy, Terms, Cookie).');
+        $this->command->info('Seeded ' . count($pages) . ' legal pages (Privacy, Terms, Cookie, GDPR).');
     }
 }

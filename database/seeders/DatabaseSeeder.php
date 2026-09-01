@@ -20,6 +20,9 @@ class DatabaseSeeder extends Seeder
             BannerSeeder::class,
             CouponSeeder::class,
             SettingSeeder::class,
+            // Without these the /privacy-policy, /terms-of-service,
+            // /cookie-policy and /gdpr routes firstOrFail() into a 404.
+            KarmaaLegalPagesSeeder::class,
             BeautySeeder::class,
         ]);
     }

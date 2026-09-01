@@ -119,7 +119,7 @@
 
         <!-- Save bar -->
         <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #e3e3e3;">
-            <a href="{{ route('admin.profile.edit') }}" class="btn btn-secondary" style="font-size: 13px;">Discard</a>
+            <a href="{{ route('admin.profile') }}" class="btn btn-secondary" style="font-size: 13px;">Discard</a>
             <button type="submit" class="btn btn-primary" style="font-size: 13px;">Save</button>
         </div>
     </form>

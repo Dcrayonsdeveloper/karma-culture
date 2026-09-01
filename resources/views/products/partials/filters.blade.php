@@ -83,9 +83,13 @@
                         <label class="cursor-pointer select-none">
                             <input type="checkbox" name="size[]" value="{{ $kkSize }}" @checked($kkOn)
                                    onchange="this.form.submit()" class="sr-only peer">
+                            {{-- The selected chip is black, so the plain hover:text-* below would repaint
+                                 its label near-black and swallow it. The peer-checked:hover:* pair is a
+                                 more specific selector, so the white label survives the hover. --}}
                             <span class="inline-block px-2.5 py-1 text-xs rounded-md border transition-colors
                                          border-neutral-200 text-neutral-700 hover:border-neutral-500 hover:text-neutral-900
-                                         peer-checked:border-neutral-900 peer-checked:bg-neutral-900 peer-checked:text-white">
+                                         peer-checked:border-neutral-900 peer-checked:bg-neutral-900 peer-checked:text-white
+                                         peer-checked:hover:text-white peer-checked:hover:border-neutral-900">
                                 {{ $kkSize }}
                             </span>
                         </label>

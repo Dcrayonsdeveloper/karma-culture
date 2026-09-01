@@ -114,9 +114,22 @@ class CartController extends Controller
         $variantId = $validated['variant_id'] ?? null;
         $size = $validated['size'] ?? null;
         $colour = $validated['colour'] ?? null;
-        $stockQuantity = $variantId
-            ? $product->variants()->find($variantId)->stock_quantity
-            : $product->stock_quantity;
+
+        // exists:product_variants,id proves the variant exists, not that it
+        // belongs to THIS product. A mismatched pair used to make find()
+        // return null and the ->stock_quantity read fatal.
+        $variant = $variantId ? $product->variants()->find($variantId) : null;
+
+        if ($variantId && ! $variant) {
+            $error = 'That option is no longer available for this product.';
+            if ($request->wantsJson()) {
+                return response()->json(['error' => $error], 422);
+            }
+
+            return back()->with('error', $error);
+        }
+
+        $stockQuantity = $variant ? $variant->stock_quantity : $product->stock_quantity;
 
         if ($stockQuantity < $validated['quantity']) {
             $error = $stockQuantity > 0
@@ -155,9 +168,7 @@ class CartController extends Controller
             }
             $existingItem->update(['quantity' => $newQuantity]);
         } else {
-            $price = $variantId
-                ? $product->variants()->find($variantId)->price ?? $product->price
-                : $product->price;
+            $price = $variant ? ($variant->price ?? $product->price) : $product->price;
 
             // A running flash sale beats the shelf price, including a variant's
             // own price — otherwise the countdown promises a discount the

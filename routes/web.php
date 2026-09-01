@@ -21,7 +21,6 @@ Route::get('/robots.txt', function () {
     $sitemap = url('/sitemap.xml');
     $content = "User-agent: *\n";
     $content .= "Disallow: /admin/\n";
-    $content .= "Disallow: /pos/\n";
     $content .= "Disallow: /cart\n";
     $content .= "Disallow: /checkout\n";
     $content .= "Disallow: /account/\n";

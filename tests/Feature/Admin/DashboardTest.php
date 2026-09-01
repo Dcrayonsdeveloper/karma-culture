@@ -72,6 +72,10 @@ class DashboardTest extends TestCase
         $response = $this->actingAs($customer, 'admin')
             ->get('/admin');
 
-        $response->assertStatus(403);
+        // EnsureUserIsAdmin deliberately logs a non-admin out of the admin
+        // guard and returns them to the login page, rather than stranding
+        // them on a dead-end 403.
+        $response->assertRedirect(route('admin.login'));
+        $this->assertFalse(Auth::guard('admin')->check());
     }
 }

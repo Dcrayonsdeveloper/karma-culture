@@ -57,11 +57,46 @@ class CheckoutTest extends TestCase
         ]);
     }
 
-    public function test_checkout_page_requires_authentication(): void
+    /**
+     * Checkout is deliberately guest-friendly — it no longer requires login.
+     * What it does require is a non-empty cart, which sends you back to /cart.
+     */
+    public function test_checkout_redirects_to_cart_when_empty(): void
     {
         $response = $this->get('/checkout');
 
-        $response->assertRedirect('/login');
+        $response->assertRedirect('/cart');
+    }
+
+    /**
+     * Checkout must not be auth-gated. A guest hitting it with an empty cart
+     * goes to /cart, never to /login.
+     *
+     * (Cart-to-checkout continuity for a guest can't be asserted here: the
+     * test client doesn't carry the session cookie between calls, so each
+     * request gets a fresh session id and a fresh guest cart.)
+     */
+    public function test_checkout_is_not_auth_gated_for_guests(): void
+    {
+        $response = $this->get('/checkout');
+
+        $response->assertRedirect('/cart');
+        $response->assertRedirectContains('/cart');
+        $this->assertStringNotContainsString('/login', $response->headers->get('Location'));
+    }
+
+    public function test_guest_can_add_to_cart(): void
+    {
+        $this->post('/cart/add', [
+            'product_id' => $this->product->id,
+            'quantity' => 1,
+        ]);
+
+        $this->assertDatabaseHas('carts', ['user_id' => null]);
+        $this->assertDatabaseHas('cart_items', [
+            'product_id' => $this->product->id,
+            'quantity' => 1,
+        ]);
     }
 
     public function test_checkout_page_loads_for_authenticated_user(): void
@@ -88,10 +123,12 @@ class CheckoutTest extends TestCase
                 'quantity' => 1,
             ]);
 
+        // The controller validates address_id (scoped to the signed-in user)
+        // plus a contact email — not the old shipping_address_id field.
         $response = $this->actingAs($this->user)
             ->post('/checkout/process', [
-                'shipping_address_id' => $this->address->id,
-                'same_billing_address' => true,
+                'address_id' => $this->address->id,
+                'email' => $this->user->email,
                 'payment_method' => 'cod',
                 'notes' => '',
             ]);
