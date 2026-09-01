@@ -170,7 +170,11 @@ class CheckoutController extends Controller
                     'source'                   => 'web',
                     'metadata'                 => [
                         'guest_email'     => $validated['email'],
-                        'guest_phone'     => $validated['phone'],
+                        // phone is required_without:address_id, so it is absent
+                        // from $validated whenever a saved address is chosen —
+                        // reading it directly 500'd every saved-address order.
+                        // Fall back to the phone on the address snapshot.
+                        'guest_phone'     => $validated['phone'] ?? $addressSnapshot['phone'] ?? null,
                         'guest_checkout'  => ! auth()->check(),
                         'payment_pending' => true,
                         'payment_method'  => $validated['payment_method'],
@@ -210,18 +214,33 @@ class CheckoutController extends Controller
                     $item->product->increment('sales_count', $item->quantity);
                 }
 
-                // Record coupon usage only for logged-in users (CouponUsage is
-                // keyed to a user). Guests still receive the cart discount.
-                if (auth()->check() && $cart->coupon_id) {
+                // Count the redemption for guests too. Checkout is guest-first,
+                // so incrementing only for logged-in users left usage_limit
+                // unenforceable — a single-use code could be redeemed forever.
+                // The per-user CouponUsage row still needs a user_id, so that
+                // part stays gated; the global counter does not.
+                if ($cart->coupon_id) {
                     $lockedCoupon = Coupon::lockForUpdate()->find($cart->coupon_id);
+
                     if ($lockedCoupon) {
+                        // Re-check the limit under the lock: two concurrent
+                        // checkouts could both pass the cart-page check.
+                        if ($lockedCoupon->usage_limit && $lockedCoupon->times_used >= $lockedCoupon->usage_limit) {
+                            throw new \App\Exceptions\InsufficientStockException(
+                                'The coupon "' . $lockedCoupon->code . '" has reached its usage limit. Please review your order.'
+                            );
+                        }
+
                         $lockedCoupon->increment('times_used');
-                        CouponUsage::create([
-                            'coupon_id'       => $lockedCoupon->id,
-                            'user_id'         => auth()->id(),
-                            'order_id'        => $order->id,
-                            'discount_amount' => $cart->discount,
-                        ]);
+
+                        if (auth()->check()) {
+                            CouponUsage::create([
+                                'coupon_id'       => $lockedCoupon->id,
+                                'user_id'         => auth()->id(),
+                                'order_id'        => $order->id,
+                                'discount_amount' => $cart->discount,
+                            ]);
+                        }
                     }
                 }
 

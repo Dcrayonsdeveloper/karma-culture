@@ -158,7 +158,13 @@ class ReturnRequestTest extends TestCase
                 ],
             ]);
 
-        // Should be forbidden or return with error
-        $this->assertTrue(in_array($response->status(), [403, 302, 422]));
+        // The controller scopes the lookup to the signed-in user and
+        // firstOrFail()s, so a foreign order is a 404 — it must not leak
+        // that the order exists. 403/302/422 are also acceptable outcomes.
+        $this->assertContains($response->status(), [404, 403, 302, 422]);
+        $this->assertDatabaseMissing('returns', [
+            'order_id' => $this->order->id,
+            'user_id' => $otherUser->id,
+        ]);
     }
 }

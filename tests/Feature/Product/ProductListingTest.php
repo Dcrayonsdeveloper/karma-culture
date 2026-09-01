@@ -40,7 +40,9 @@ class ProductListingTest extends TestCase
 
     public function test_product_index_page_loads(): void
     {
-        $response = $this->get('/products');
+        // The all-products listing lives at /shop; /products is now the
+        // product-detail prefix only.
+        $response = $this->get('/shop');
 
         $response->assertStatus(200);
     }

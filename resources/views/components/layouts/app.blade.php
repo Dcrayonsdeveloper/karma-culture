@@ -551,7 +551,7 @@
                         this.recognition.onerror = (event) => {
                             this.listening = false;
                             if (event.error === 'not-allowed') {
-                                alert('Microphone access denied. Please allow microphone permission in your browser settings.');
+                                alert('Microphone is blocked for this site.\n\nClick the icon to the left of the address bar, choose Site settings, set Microphone to Allow, then reload the page.');
                             } else if (event.error === 'network') {
                                 alert('Voice search needs an internet connection.');
                             } else if (event.error !== 'aborted' && event.error !== 'no-speech') {
@@ -629,27 +629,63 @@
                     }
                 },
 
-                toggleMic() {
+                /** Has the site been blocked outright, so no prompt will appear? */
+                async micBlocked() {
+                    try {
+                        const status = await navigator.permissions.query({ name: 'microphone' });
+                        return status.state === 'denied';
+                    } catch (e) {
+                        // Firefox and older Safari cannot query this; assume not blocked.
+                        return false;
+                    }
+                },
+
+                async toggleMic() {
                     if (!this.recognition) {
                         alert('Voice search is not supported in your browser. Please use Chrome or Edge.');
                         return;
                     }
+
                     if (this.listening) {
                         this.recognition.stop();
                         this.listening = false;
-                    } else {
-                        this.stopTypewriter();
-                        this.query = '';
+                        return;
+                    }
+
+                    // Ask for the microphone directly. Starting speech recognition
+                    // alone does not reliably raise Chrome's permission dialog, so
+                    // the customer saw "access denied" without ever being asked.
+                    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                        if (await this.micBlocked()) {
+                            alert('Microphone is blocked for this site.\n\nClick the icon to the left of the address bar, choose Site settings, set Microphone to Allow, then reload the page.');
+                            return;
+                        }
+
                         try {
-                            this.recognition.start();
-                            this.listening = true;
+                            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                            // Release it straight away; speech recognition opens its own.
+                            stream.getTracks().forEach((track) => track.stop());
                         } catch (e) {
                             this.listening = false;
-                            if (e.message && e.message.includes('already started')) {
-                                this.recognition.stop();
-                            } else {
-                                alert('Could not start voice search. Please check microphone permissions.');
-                            }
+                            alert(e && e.name === 'NotAllowedError'
+                                ? 'Voice search needs microphone access. Choose Allow when your browser asks, then try again.'
+                                : 'No microphone was found. Check that one is connected and try again.');
+                            return;
+                        }
+                    }
+
+                    this.stopTypewriter();
+                    this.query = '';
+
+                    try {
+                        this.recognition.start();
+                        this.listening = true;
+                    } catch (e) {
+                        this.listening = false;
+                        if (e.message && e.message.includes('already started')) {
+                            this.recognition.stop();
+                        } else {
+                            alert('Could not start voice search. Please try again.');
                         }
                     }
                 },

@@ -2,7 +2,7 @@
     <x-slot name="title">Roles</x-slot>
 
     <div style="margin-bottom: 0.25rem;">
-        <a href="{{ route('admin.settings.index') }}" style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 13px; color: #005bd3; text-decoration: none;">
+        <a href="{{ route('admin.settings.general') }}" style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 13px; color: #005bd3; text-decoration: none;">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M12 16l-6-6 6-6" stroke="#005bd3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Settings
         </a>

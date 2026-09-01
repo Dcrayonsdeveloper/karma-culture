@@ -72,8 +72,12 @@ class PageController extends Controller
     {
         $posts = BlogPost::published()
             ->when(request('category'), fn($q, $c) => $q->where('category', $c))
-            ->when(request('search'), fn($q, $s) => $q->where('title', 'like', "%{$s}%")
-                ->orWhere('excerpt', 'like', "%{$s}%"))
+            // The orWhere must be grouped, or it breaks out of published():
+            // "WHERE published AND title LIKE x OR excerpt LIKE y" matched
+            // drafts whose excerpt happened to contain the search term.
+            ->when(request('search'), fn($q, $s) => $q->where(fn($w) => $w
+                ->where('title', 'like', "%{$s}%")
+                ->orWhere('excerpt', 'like', "%{$s}%")))
             ->latest('published_at')
             ->paginate(9)
             ->withQueryString();
