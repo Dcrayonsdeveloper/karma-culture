@@ -208,8 +208,13 @@ Route::prefix('recommendations')->name('recommendations.')->group(function () {
 });
 
 // AI Chatbot
-Route::post('/chatbot/message', [App\Http\Controllers\ChatbotController::class, 'message'])->middleware('throttle:20,1')->name('chatbot.message');
-Route::post('/chatbot/product-click', [App\Http\Controllers\ChatbotController::class, 'productClick'])->middleware('throttle:60,1')->name('chatbot.product-click');
+// Signed-in customers only. The widget is hidden from guests, but the guard
+// has to live here too: an open endpoint would let anyone spend the store's
+// AI quota without ever loading the page.
+Route::middleware('auth')->group(function () {
+    Route::post('/chatbot/message', [App\Http\Controllers\ChatbotController::class, 'message'])->middleware('throttle:20,1')->name('chatbot.message');
+    Route::post('/chatbot/product-click', [App\Http\Controllers\ChatbotController::class, 'productClick'])->middleware('throttle:60,1')->name('chatbot.product-click');
+});
 
 // Track Order (Public with order number)
 Route::get('/track-order', [App\Http\Controllers\TrackOrderController::class, 'index'])->name('track-order');

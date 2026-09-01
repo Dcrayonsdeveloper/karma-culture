@@ -50,6 +50,15 @@ class ChatbotController extends Controller
         $systemPrompt = $this->buildSystemPrompt($products, $orders, $coupons, $goesWith);
         $messages     = $this->buildMessageHistory($rawHistory, $userMessage);
 
+        // A session that expires mid-conversation would otherwise get an HTML
+        // login redirect where the widget expects JSON.
+        if (! $request->user()) {
+            return response()->json([
+                'reply' => 'Please sign in to chat with the shopping assistant.',
+                'products' => [],
+            ], 401);
+        }
+
         if (! AiChatService::isConfigured()) {
             return response()->json([
                 'reply'    => 'The shopping assistant is temporarily unavailable. Please contact our support team for help.',
