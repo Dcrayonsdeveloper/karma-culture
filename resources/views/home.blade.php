@@ -437,7 +437,7 @@
 
             .kk-quality {
                 position: relative;
-                aspect-ratio: 3 / 4;
+                aspect-ratio: 4 / 5;
                 border-radius: 10px;
                 overflow: hidden;
                 background: var(--kk-brown-darker);
@@ -472,32 +472,52 @@
             }
             .kk-quality:hover .kk-quality__media { transform: scale(1.06); }
 
-            /* No image on the card. The 3:4 tile exists to hold a picture, so without
-               one it is just a tall empty rectangle with the text stranded at the
-               bottom. These cards drop the ratio and size to their own text instead. */
+            /* No image on the card. The tile exists to hold a picture, so without one
+               it would be a flat empty rectangle — and in a row that mixes photo and
+               text cards, flexbox stretches it to the photo's height, making the void
+               worse. These get a designed treatment instead of a blank panel: a warm
+               diagonal wash, a hairline edge, and a large index numeral so the space
+               above the text reads as deliberate. */
             .kk-quality--plain {
                 aspect-ratio: auto;
                 display: flex;
                 flex-direction: column;
                 justify-content: flex-end;
-                border: 1px solid rgba(239, 226, 203, 0.10);
+                min-height: 230px;
+                border: 1px solid rgba(239, 226, 203, 0.13);
+                background:
+                    radial-gradient(115% 85% at 86% 6%, rgba(184, 137, 90, 0.26) 0%, rgba(184, 137, 90, 0) 60%),
+                    linear-gradient(155deg, #351a0f 0%, #26120a 55%, #1b0e07 100%);
             }
             .kk-quality--plain .kk-quality__overlay { display: none; }
-            .kk-quality--plain .kk-quality__content { position: static; padding: 22px 20px; }
+            .kk-quality--plain .kk-quality__content { position: static; padding: 24px 22px; }
+            .kk-quality--plain:hover { border-color: rgba(184, 137, 90, 0.45); }
+
+            .kk-quality__num {
+                position: absolute; top: 12px; right: 20px; z-index: 1;
+                font-family: var(--kk-display);
+                font-size: 62px; line-height: 1; font-weight: 700;
+                color: rgba(239, 226, 203, 0.09);
+                letter-spacing: -0.02em;
+                pointer-events: none;
+                user-select: none;
+            }
 
             .kk-quality__overlay {
                 position: absolute; inset: 0; z-index: 1;
                 background: linear-gradient(to top,
-                    rgba(31,17,9,0.94) 0%,
-                    rgba(45,24,16,0.58) 45%,
-                    rgba(45,24,16,0.22) 100%);
+                    rgba(20,10,5,0.97) 0%,
+                    rgba(25,13,7,0.88) 26%,
+                    rgba(31,17,9,0.55) 56%,
+                    rgba(31,17,9,0.18) 100%);
                 transition: background 0.35s ease;
             }
             .kk-quality:hover .kk-quality__overlay {
                 background: linear-gradient(to top,
-                    rgba(31,17,9,0.86) 0%,
-                    rgba(45,24,16,0.40) 45%,
-                    rgba(45,24,16,0.08) 100%);
+                    rgba(20,10,5,0.94) 0%,
+                    rgba(25,13,7,0.78) 30%,
+                    rgba(31,17,9,0.38) 62%,
+                    rgba(31,17,9,0.06) 100%);
             }
 
             .kk-quality__content {
@@ -505,16 +525,19 @@
                 padding: 26px 24px;
             }
             .kk-quality__icon {
-                width: 36px; height: 36px;
+                width: 38px; height: 38px;
                 border-radius: 50%;
-                background: rgba(239,226,203,0.15);
-                border: 1px solid rgba(239,226,203,0.45);
+                background: rgba(184,137,90,0.24);
+                border: 1px solid rgba(184,137,90,0.60);
                 display: flex; align-items: center; justify-content: center;
                 margin-bottom: 14px;
+                transition: background .3s ease, border-color .3s ease;
             }
+            .kk-quality:hover .kk-quality__icon { background: rgba(184,137,90,0.42); border-color: var(--kk-tan); }
             .kk-quality__icon svg { width: 18px; height: 18px; color: var(--kk-cream); }
-            .kk-quality__content h4 { font-family: var(--kk-display); font-size: 19px; color: var(--kk-cream); margin: 0 0 8px; }
-            .kk-quality__content p { font-size: 12.5px; color: rgba(239,226,203,0.82); margin: 0; line-height: 1.65; }
+            /* The shadows keep both lines legible when they fall over a bright photo. */
+            .kk-quality__content h4 { font-family: var(--kk-display); font-size: 19px; color: var(--kk-cream); margin: 0 0 8px; text-shadow: 0 1px 14px rgba(0,0,0,0.6); }
+            .kk-quality__content p { font-size: 12.5px; color: rgba(239,226,203,0.88); margin: 0; line-height: 1.65; text-shadow: 0 1px 10px rgba(0,0,0,0.55); }
 
             @media (prefers-reduced-motion: reduce) {
                 .kk-quality { opacity: 1; transform: none; transition: none; }
@@ -1066,6 +1089,8 @@
                             <div class="kk-quality @if(! $q->image_url) kk-quality--plain @endif">
                                 @if($q->image_url)
                                     <img class="kk-quality__media" src="{{ $q->image }}" alt="{{ $q->title }}" loading="lazy" decoding="async">
+                                @else
+                                    <span class="kk-quality__num" aria-hidden="true">{{ str_pad($loop->iteration, 2, '0', STR_PAD_LEFT) }}</span>
                                 @endif
                                 <div class="kk-quality__overlay"></div>
                                 <div class="kk-quality__content">

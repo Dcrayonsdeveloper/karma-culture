@@ -265,6 +265,52 @@
     .kk-pdp__cta--buy { background: #2d1810; color: #efe2cb; border: 1px solid #2d1810; }
     .kk-pdp__cta--buy:hover:not(:disabled) { background: #1f1109; }
     .kk-pdp__cta:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Out of stock panel — carries the weight the CTA row leaves behind. */
+    .kk-pdp__oos {
+        margin: 14px 0;
+        padding: 18px;
+        border: 1px solid #e6d6b8;
+        border-left: 3px solid #b71c00;
+        border-radius: 10px;
+        background: linear-gradient(180deg, #fbf5e8 0%, #f5ead4 100%);
+    }
+    .kk-pdp__oos-head { display: flex; gap: 12px; align-items: flex-start; }
+    .kk-pdp__oos-icon {
+        flex: 0 0 34px; width: 34px; height: 34px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(183, 28, 0, 0.10); color: #b71c00;
+    }
+    .kk-pdp__oos-icon svg { width: 19px; height: 19px; }
+    .kk-pdp__oos-title { margin: 0 0 3px; font-size: 17px; font-weight: 700; color: #b71c00; letter-spacing: .01em; }
+    .kk-pdp__oos-sub { margin: 0; font-size: 12.5px; line-height: 1.6; color: #7a6555; }
+    .kk-pdp__oos-form { display: flex; gap: 8px; margin-top: 14px; }
+    .kk-pdp__oos-input {
+        flex: 1; min-width: 0; padding: 11px 14px; font-size: 13px; font-family: inherit;
+        color: #2d1810; background: #fff; border: 1px solid #e0cfae; border-radius: 8px; outline: none;
+        transition: border-color .2s;
+    }
+    .kk-pdp__oos-input:focus { border-color: #8c5c34; }
+    .kk-pdp__oos-input::placeholder { color: #a99280; }
+    .kk-pdp__oos-btn {
+        flex: 0 0 auto; padding: 11px 20px; font-size: 12px; font-weight: 700;
+        letter-spacing: .12em; text-transform: uppercase; font-family: inherit;
+        color: #efe2cb; background: #4a2d1a; border: 1px solid #4a2d1a; border-radius: 8px;
+        cursor: pointer; transition: background .2s;
+    }
+    .kk-pdp__oos-btn:hover:not(:disabled) { background: #2d1810; }
+    .kk-pdp__oos-btn:disabled { opacity: .55; cursor: not-allowed; }
+    .kk-pdp__oos-done { margin: 12px 0 0; font-size: 13px; font-weight: 600; color: #2f6b3f; }
+    .kk-pdp__oos-error { margin: 12px 0 0; font-size: 13px; font-weight: 600; color: #b71c00; }
+    .kk-pdp__oos-browse {
+        display: inline-block; margin-top: 12px; font-size: 12px; font-weight: 700;
+        letter-spacing: .1em; text-transform: uppercase; color: #8c5c34; text-decoration: none;
+    }
+    .kk-pdp__oos-browse:hover { color: #2d1810; }
+    @media (max-width: 420px) {
+        .kk-pdp__oos-form { flex-direction: column; }
+        .kk-pdp__oos-btn { width: 100%; }
+    }
     .kk-pdp__meta { font-size: 13px; color: #7a6555; line-height: 1.7; margin-top: 8px; }
     .kk-pdp__meta strong { color: #2d1810; font-weight: 600; }
     .kk-pdp__qty {
@@ -551,7 +597,37 @@
                         </button>
                     </div>
                 @else
-                    <div style="padding:14px 0;font-size:14px;color:#b71c00;font-weight:600;">Currently Unavailable</div>
+                    {{-- The in-stock branch fills this space with two large CTAs, so a single
+                         line of red text left the page looking broken. This keeps the same
+                         visual weight and gives the shopper somewhere to go: the back-in-stock
+                         subscription endpoint already existed but nothing on the PDP used it. --}}
+                    <div class="kk-pdp__oos" x-data="kkNotifyStock({{ $product->id }})">
+                        <div class="kk-pdp__oos-head">
+                            <span class="kk-pdp__oos-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+                            </span>
+                            <div>
+                                <p class="kk-pdp__oos-title">Currently Unavailable</p>
+                                <p class="kk-pdp__oos-sub">This piece is out of stock right now. Leave your email and we'll tell you the moment it returns.</p>
+                            </div>
+                        </div>
+
+                        <form class="kk-pdp__oos-form" @submit.prevent="submit()" x-show="!done">
+                            <label class="sr-only" for="kk-oos-email-{{ $product->id }}">Email address</label>
+                            <input id="kk-oos-email-{{ $product->id }}" type="email" x-model="email" required
+                                   placeholder="you@example.com" autocomplete="email"
+                                   class="kk-pdp__oos-input" :disabled="loading">
+                            <button type="submit" class="kk-pdp__oos-btn" :disabled="loading">
+                                <span x-show="!loading">Notify Me</span>
+                                <span x-show="loading" x-cloak>Saving...</span>
+                            </button>
+                        </form>
+
+                        <p class="kk-pdp__oos-done" x-show="done" x-cloak x-text="message"></p>
+                        <p class="kk-pdp__oos-error" x-show="error" x-cloak x-text="error"></p>
+
+                        <a href="{{ route('home') }}" class="kk-pdp__oos-browse">Browse similar pieces &rsaquo;</a>
+                    </div>
                 @endif
 
                 {{-- Trust badges --}}
@@ -1581,6 +1657,47 @@
     @endif
 
     <script>
+    // Back-in-stock signup on the out-of-stock panel. The endpoint is throttled to
+    // 5/hour per IP, so a rejected request reports the wait rather than failing mute.
+    function kkNotifyStock(productId) {
+        return {
+            email: '',
+            loading: false,
+            done: false,
+            message: '',
+            error: '',
+            async submit() {
+                if (!this.email) return;
+                this.loading = true;
+                this.error = '';
+                try {
+                    const res = await fetch(`/products/${productId}/notify-back-in-stock`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                        },
+                        body: JSON.stringify({ email: this.email }),
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (res.ok) {
+                        this.done = true;
+                        this.message = data.message || "We'll email you when it's back.";
+                    } else if (res.status === 429) {
+                        this.error = 'Too many requests. Please try again later.';
+                    } else {
+                        this.error = data.errors?.email?.[0] || data.message || 'Something went wrong. Please try again.';
+                    }
+                } catch (e) {
+                    this.error = 'Network error. Please try again.';
+                } finally {
+                    this.loading = false;
+                }
+            },
+        };
+    }
+
     function productPage() {
         return {
             currentImage: 0,

@@ -347,6 +347,124 @@ class ChatbotController extends Controller
      *
      * POST /chatbot/product-click
      */
+    /**
+     * The saved conversation, rebuilt in the shape the widget already renders.
+     *
+     * Every turn has always been written to chatbot_messages, but nothing ever
+     * read it back: the widget is a fresh Alpine component on each page load
+     * with `messages: []` and no client-side storage, so a normal navigation
+     * looked to the customer like the assistant had forgotten everything.
+     *
+     * GET /chatbot/history
+     */
+    public function history(Request $request): JsonResponse
+    {
+        $conversation = $this->readableConversation($request);
+
+        if (! $conversation) {
+            return response()->json(['conversation_id' => null, 'messages' => []]);
+        }
+
+        $messages = $conversation->messages()
+            ->orderBy('id')
+            ->get(['role', 'content', 'product_ids']);
+
+        // Resolve every referenced product in one query rather than per message.
+        $cards = $this->cardsForIds(
+            $messages->pluck('product_ids')->filter()->flatten()->unique()->all()
+        );
+
+        return response()->json([
+            'conversation_id' => $conversation->id,
+            'messages' => $messages->map(fn (ChatbotMessage $m) => [
+                'role' => $m->role,
+                'content' => $m->content,
+                // Keep the stored order, and drop anything since deactivated.
+                'products' => array_values(array_filter(array_map(
+                    fn ($id) => $cards[$id] ?? null,
+                    $m->product_ids ?? []
+                ))),
+            ])->all(),
+        ]);
+    }
+
+    /**
+     * The full-page conversation. The floating widget is fine for a quick
+     * question but gives product cards ~108px of width; this is the same
+     * conversation with room to actually read it.
+     *
+     * GET /chat
+     */
+    public function page(Request $request)
+    {
+        return view('chat.index', [
+            'quickChips' => $this->quickChips(),
+        ]);
+    }
+
+    /**
+     * Suggested openers, shared by the widget and the full page so the two
+     * surfaces never drift apart.
+     *
+     * @return array<int, array{label: string, message: string}>
+     */
+    public function quickChips(): array
+    {
+        return [
+            ['label' => '📦 Track Order', 'message' => 'How can I track my order?'],
+            ['label' => '🏷️ Current Offers', 'message' => 'What offers and coupons are available right now?'],
+            ['label' => '📏 Size Guide', 'message' => 'How do I find the right size?'],
+            ['label' => '↩️ Return Policy', 'message' => 'What is the return policy?'],
+        ];
+    }
+
+    /**
+     * The conversation to display.
+     *
+     * conversationFor() keys on the session id, which is stable while browsing
+     * but is regenerated on login — so for a signed-in customer also consider
+     * conversations already tied to their account, and take the most recent.
+     * Unlike conversationFor() this never creates a row: merely opening the
+     * widget should not litter the table with empty conversations.
+     */
+    private function readableConversation(Request $request): ?ChatbotConversation
+    {
+        $sessionId = $request->session()->getId();
+        $userId = $request->user()?->id;
+
+        return ChatbotConversation::query()
+            ->when(
+                $userId,
+                fn ($q) => $q->where(fn ($w) => $w->where('session_id', $sessionId)->orWhere('user_id', $userId)),
+                fn ($q) => $q->where('session_id', $sessionId)
+            )
+            ->orderByRaw('COALESCE(last_message_at, created_at) DESC')
+            ->first();
+    }
+
+    /**
+     * Product cards keyed by id, in the same shape the widget consumes.
+     *
+     * @param  array<int, int>  $ids
+     * @return array<int, array<string, mixed>>
+     */
+    private function cardsForIds(array $ids): array
+    {
+        if (empty($ids)) {
+            return [];
+        }
+
+        $products = Product::query()
+            ->whereIn('id', $ids)
+            ->where('is_active', true)
+            ->with(['category:id,name', 'brand:id,name', 'primaryImage', 'variants'])
+            ->get()
+            ->map(fn (Product $p) => $this->mapProduct($p))
+            ->all();
+
+        return collect($this->formatProductCards($products))->keyBy('id')->all();
+    }
+
     public function productClick(Request $request): JsonResponse
     {
         $validated = $request->validate([

@@ -24,6 +24,9 @@ class RegistrationTest extends TestCase
             'email' => 'test@example.com',
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
+            // The form has always marked this required; it is now enforced
+            // server-side too, so a valid payload has to carry it.
+            'terms' => '1',
         ]);
 
         $response->assertRedirect(route('login'));

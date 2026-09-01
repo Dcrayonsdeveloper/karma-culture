@@ -5,10 +5,14 @@ namespace App\Providers;
 use App\Models\Category;
 use App\Models\Setting;
 use App\Models\UserAddress;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -37,6 +41,23 @@ class AppServiceProvider extends ServiceProvider
         }
 
         Route::model('address', UserAddress::class);
+
+        // Named limiters, one bucket each.
+        //
+        // The guest auth routes shared a single inline `throttle:10,1`, and for
+        // a guest the limiter keys on domain|ip WITHOUT the URI — so ten hits
+        // across login, register and password-reset (page views included, and a
+        // rejected signup costs two) locked the visitor out of all of them.
+        // Separate names give separate buckets; the GET pages are no longer
+        // throttled at all.
+        RateLimiter::for('login', fn (Request $request) => [
+            Limit::perMinute(10)->by($request->ip()),
+            Limit::perMinute(5)->by(Str::lower((string) $request->input('email')).'|'.$request->ip()),
+        ]);
+
+        RateLimiter::for('register', fn (Request $request) => Limit::perMinute(10)->by($request->ip()));
+
+        RateLimiter::for('password-reset', fn (Request $request) => Limit::perMinute(6)->by($request->ip()));
 
         Blade::directive('price', function (string $expression) {
             return "<?php echo format_price({$expression}); ?>";

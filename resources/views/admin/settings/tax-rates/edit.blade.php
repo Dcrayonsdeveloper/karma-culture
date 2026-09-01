@@ -78,15 +78,22 @@
 
             <!-- Save bar -->
             <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #e3e3e3;">
-                <form action="{{ route('admin.settings.tax-rates.destroy', $taxRate) }}" method="POST"
-                      onsubmit="return confirm('Delete this tax rate?')" style="display: inline;">
-                    @csrf @method('DELETE')
-                    <button type="submit" style="font-size: 13px; font-weight: 500; color: #d72c0d; background: none; border: none; cursor: pointer;">Delete tax rate</button>
-                </form>
+                {{-- Submits the delete form declared after the edit form below.
+                     The two must not nest: the browser hoisted the inner form's
+                     _method=DELETE into the edit form, which already sent
+                     _method=PUT, and PHP keeps the last value for a repeated key
+                     — so clicking Save destroyed the record. --}}
+                <button type="submit" form="kk-delete-tax-rate"
+                        style="font-size: 13px; font-weight: 500; color: #d72c0d; background: none; border: none; cursor: pointer;">Delete tax rate</button>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <a href="{{ route('admin.settings.tax-rates.index') }}" class="btn btn-secondary" style="font-size: 13px;">Discard</a>
                     <button type="submit" class="btn btn-primary" style="font-size: 13px;">Save</button>
                 </div>
             </div>
+    </form>
+
+    <form id="kk-delete-tax-rate" action="{{ route('admin.settings.tax-rates.destroy', $taxRate) }}" method="POST"
+          onsubmit="return confirm('Delete this tax rate?')">
+        @csrf @method('DELETE')
     </form>
 </x-layouts.admin>

@@ -141,15 +141,22 @@ Route::middleware('auth')->prefix('wishlist')->name('wishlist.')->group(function
 });
 
 // Guest Authentication Routes
-Route::middleware(['guest', 'throttle:10,1'])->group(function () {
+//
+// Throttling is per-action and applies to the POSTs only. A single shared
+// `throttle:10,1` across the whole group counted page views too — and because
+// the guest limiter keys on domain|ip and ignores the URI, loading the login
+// page a few times locked the visitor out of registering.
+Route::middleware('guest')->group(function () {
     Route::get('/login', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login');
-    Route::post('/login', [App\Http\Controllers\Auth\LoginController::class, 'login']);
+    Route::post('/login', [App\Http\Controllers\Auth\LoginController::class, 'login'])->middleware('throttle:login');
+
     Route::get('/register', [App\Http\Controllers\Auth\RegisterController::class, 'showRegistrationForm'])->name('register');
-    Route::post('/register', [App\Http\Controllers\Auth\RegisterController::class, 'register']);
+    Route::post('/register', [App\Http\Controllers\Auth\RegisterController::class, 'register'])->middleware('throttle:register');
+
     Route::get('/password/reset', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
-    Route::post('/password/email', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
+    Route::post('/password/email', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'sendResetLinkEmail'])->middleware('throttle:password-reset')->name('password.email');
     Route::get('/password/reset/{token}', [App\Http\Controllers\Auth\ResetPasswordController::class, 'showResetForm'])->name('password.reset');
-    Route::post('/password/reset', [App\Http\Controllers\Auth\ResetPasswordController::class, 'reset'])->name('password.update');
+    Route::post('/password/reset', [App\Http\Controllers\Auth\ResetPasswordController::class, 'reset'])->middleware('throttle:password-reset')->name('password.update');
 });
 
 // Authenticated User Routes
@@ -225,6 +232,14 @@ Route::prefix('recommendations')->name('recommendations.')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/chatbot/message', [App\Http\Controllers\ChatbotController::class, 'message'])->middleware('throttle:20,1')->name('chatbot.message');
     Route::post('/chatbot/product-click', [App\Http\Controllers\ChatbotController::class, 'productClick'])->middleware('throttle:60,1')->name('chatbot.product-click');
+
+    // Reading the saved conversation. Without this the widget had no way to
+    // recover a conversation after a page navigation, so it always looked
+    // like the assistant had forgotten the customer.
+    Route::get('/chatbot/history', [App\Http\Controllers\ChatbotController::class, 'history'])->name('chatbot.history');
+
+    // Full-page chat — the same conversation with room for the product cards.
+    Route::get('/chat', [App\Http\Controllers\ChatbotController::class, 'page'])->name('chat');
 });
 
 // Track Order (Public with order number)

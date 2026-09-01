@@ -145,15 +145,21 @@
 
             <!-- Save bar -->
             <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #e3e3e3;">
-                <form action="{{ route('admin.staff.destroy', $staff) }}" method="POST"
-                      onsubmit="return confirm('Delete this staff member?')" style="display: inline;">
-                    @csrf @method('DELETE')
-                    <button type="submit" style="font-size: 13px; font-weight: 500; color: #d72c0d; background: none; border: none; cursor: pointer;">Delete staff</button>
-                </form>
+                <button type="submit" form="kk-staff-delete" style="font-size: 13px; font-weight: 500; color: #d72c0d; background: none; border: none; cursor: pointer;">Delete staff</button>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <a href="{{ route('admin.staff.index') }}" class="btn btn-secondary" style="font-size: 13px;">Discard</a>
                     <button type="submit" class="btn btn-primary" style="font-size: 13px;">Save</button>
                 </div>
             </div>
+    </form>
+
+    {{-- Deliberately outside the edit form. Forms cannot nest: when this sat inside,
+         the browser hoisted its _method=DELETE hidden input into the edit form, which
+         already carried _method=PUT. PHP keeps the last value for a repeated key, so
+         DELETE won and clicking Save destroyed the staff account. The button above
+         reaches this form by id instead, which keeps the save bar's layout intact. --}}
+    <form id="kk-staff-delete" action="{{ route('admin.staff.destroy', $staff) }}" method="POST"
+          onsubmit="return confirm('Delete this staff member?')">
+        @csrf @method('DELETE')
     </form>
 </x-layouts.admin>

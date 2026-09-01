@@ -336,7 +336,9 @@
          Admin -> Settings -> Integrations, so clearing the key hides it. --}}
     {{-- Shown to everyone. A guest who opens it is asked to sign in; the
          endpoint stays behind auth either way. --}}
-    @php $kkChatbot = \App\Services\AiChatService::isConfigured(); @endphp
+    {{-- Not on /chat itself: the floating panel would sit on top of the
+         full-page conversation it links to. --}}
+    @php $kkChatbot = \App\Services\AiChatService::isConfigured() && ! request()->routeIs('chat'); @endphp
     @if($kkChatbot)
         <x-chatbot-widget />
     @endif
