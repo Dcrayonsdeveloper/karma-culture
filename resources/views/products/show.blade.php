@@ -291,6 +291,8 @@
     .kk-pdp__share:hover { border-color: #2d1810; background: #2d1810; color: #efe2cb; transform: translateY(-1px); }
     .kk-pdp__share svg { width: 18px; height: 18px; }
     .kk-pdp__share-ok { border-color: #2a9d3e !important; background: #eaf6ec !important; color: #2a9d3e !important; }
+    /* Same circle as Share, but an anchor, so it needs the text reset. */
+    .kk-pdp__guide { text-decoration: none; }
     </style>
     <div class="pdp-wrapper">
     <div class="container mx-auto px-4" x-data="productPage()">
@@ -519,6 +521,15 @@
                                 <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                             </template>
                         </button>
+                        {{-- Opens in a new tab so the shopper keeps their size and
+                             colour selection on this page. --}}
+                        <a href="{{ route('size-guide') }}" target="_blank" rel="noopener"
+                           class="kk-pdp__share kk-pdp__guide" aria-label="Open the size guide" title="Size guide">
+                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5A1.5 1.5 0 014.5 6h15A1.5 1.5 0 0121 7.5v9a1.5 1.5 0 01-1.5 1.5h-15A1.5 1.5 0 013 16.5v-9z"/>
+                                <path stroke-linecap="round" d="M7 6v3M11 6v5M15 6v3M19 6v5"/>
+                            </svg>
+                        </a>
                     </div>
                 </div>
 
