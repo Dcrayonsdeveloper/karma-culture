@@ -33,11 +33,17 @@ class ProductController extends Controller
             ->where('is_active', true)
             ->with(['category', 'brand', 'primaryImage']);
 
-        // Category filter
+        // Category filter. Products are filed on the deepest category, so a
+        // parent has to match its descendants too — otherwise picking MEN or
+        // WOMEN returns nothing while their sub-categories return everything.
         if ($request->filled('category')) {
-            $query->whereHas('category', function ($q) use ($request) {
-                $q->where('slug', $request->category);
-            });
+            $scope = Category::where('slug', $request->category)->first();
+
+            if ($scope) {
+                $query->whereIn('category_id', $scope->getAllDescendantIds());
+            } else {
+                $query->whereRaw('1 = 0');
+            }
         }
 
         // Subcategory filter
