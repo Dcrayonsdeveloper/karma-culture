@@ -88,6 +88,7 @@ Route::get('/search/suggestions', [App\Http\Controllers\SearchController::class,
 
 // Special Pages
 Route::get('/deals', [App\Http\Controllers\DealsController::class, 'index'])->name('deals');
+Route::get('/flash-sale/{flashSale:slug}', [App\Http\Controllers\FlashSaleController::class, 'show'])->name('flash-sale.show');
 Route::get('/new-arrivals', [App\Http\Controllers\ProductController::class, 'newArrivals'])->name('new-arrivals');
 Route::get('/bestsellers', [App\Http\Controllers\ProductController::class, 'bestsellers'])->name('bestsellers');
 Route::get('/wholesale', [App\Http\Controllers\WholesaleController::class, 'index'])->name('wholesale');
