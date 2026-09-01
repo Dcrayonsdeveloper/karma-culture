@@ -77,8 +77,9 @@
     <!-- Footer -->
     @include('partials.footer')
 
-    <!-- Mobile Bottom Navigation -->
-    @include('partials.mobile-bottom-nav')
+    {{-- The mobile bottom bar is gone: Home, Categories, Cart, Wishlist and
+         Account are all reachable from the hamburger menu and the header
+         icons, so it only repeated them over the bottom of every page. --}}
 
     @stack('scripts')
 </body>
