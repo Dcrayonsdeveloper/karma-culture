@@ -500,8 +500,9 @@
     <!-- Footer -->
     @include('partials.footer')
 
-    <!-- Mobile Bottom Navigation -->
-    @include('partials.mobile-bottom-nav')
+    {{-- The mobile bottom bar is gone: Home, Categories, Cart, Wishlist and
+         Account are all reachable from the hamburger menu and the header
+         icons, so it only repeated them over the bottom of every page. --}}
 
     <script>
         function searchBar() {
@@ -511,6 +512,7 @@
                 loading: false,
                 showResults: false,
                 listening: false,
+                micPanel: null,   // waiting | listening | blocked | denied | nodevice | unsupported | error
                 recognition: null,
                 currentPlaceholder: '',
                 placeholders: [
@@ -542,6 +544,7 @@
                             const transcript = event.results[0][0].transcript;
                             this.query = transcript;
                             this.listening = false;
+                            this.micPanel = null;
                             this.fetchSuggestions();
                             // Auto-submit after voice input
                             this.$nextTick(() => {
@@ -550,6 +553,11 @@
                         };
                         this.recognition.onerror = (event) => {
                             this.listening = false;
+                            if (event.error === 'not-allowed') { this.micPanel = 'blocked'; return; }
+                            if (event.error === 'no-speech') { this.micPanel = 'nospeech'; return; }
+                            if (event.error === 'aborted') { this.micPanel = null; return; }
+                            this.micPanel = 'error';
+                            return;
                             if (event.error === 'not-allowed') {
                                 alert('Microphone is blocked for this site.\n\nClick the icon to the left of the address bar, choose Site settings, set Microphone to Allow, then reload the page.');
                             } else if (event.error === 'network') {
@@ -560,6 +568,7 @@
                         };
                         this.recognition.onend = () => {
                             this.listening = false;
+                            if (this.micPanel === 'listening') { this.micPanel = null; }
                         };
                     }
                 },
@@ -640,36 +649,46 @@
                     }
                 },
 
+                closeMicPanel() {
+                    this.micPanel = null;
+                    if (this.listening) {
+                        this.recognition && this.recognition.stop();
+                        this.listening = false;
+                    }
+                },
+
                 async toggleMic() {
                     if (!this.recognition) {
-                        alert('Voice search is not supported in your browser. Please use Chrome or Edge.');
+                        this.micPanel = 'unsupported';
                         return;
                     }
 
                     if (this.listening) {
                         this.recognition.stop();
                         this.listening = false;
+                        this.micPanel = null;
                         return;
                     }
 
-                    // Ask for the microphone directly. Starting speech recognition
-                    // alone does not reliably raise Chrome's permission dialog, so
-                    // the customer saw "access denied" without ever being asked.
+                    // Show the waiting panel first, then ask. The browser prompt
+                    // appears over it, so the customer can see what is being asked
+                    // for and why — rather than a bare dialog with no context.
+                    this.micPanel = 'waiting';
+
                     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                         if (await this.micBlocked()) {
-                            alert('Microphone is blocked for this site.\n\nClick the icon to the left of the address bar, choose Site settings, set Microphone to Allow, then reload the page.');
+                            // Chrome will not prompt again once a site is blocked,
+                            // so explain where to undo it instead of waiting.
+                            this.micPanel = 'blocked';
                             return;
                         }
 
                         try {
                             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                            // Release it straight away; speech recognition opens its own.
                             stream.getTracks().forEach((track) => track.stop());
                         } catch (e) {
                             this.listening = false;
-                            alert(e && e.name === 'NotAllowedError'
-                                ? 'Voice search needs microphone access. Choose Allow when your browser asks, then try again.'
-                                : 'No microphone was found. Check that one is connected and try again.');
+                            this.micPanel = (e && e.name === 'NotAllowedError') ? 'denied' : 'nodevice';
                             return;
                         }
                     }
@@ -680,12 +699,14 @@
                     try {
                         this.recognition.start();
                         this.listening = true;
+                        this.micPanel = 'listening';
                     } catch (e) {
                         this.listening = false;
                         if (e.message && e.message.includes('already started')) {
                             this.recognition.stop();
+                            this.micPanel = null;
                         } else {
-                            alert('Could not start voice search. Please try again.');
+                            this.micPanel = 'error';
                         }
                     }
                 },
