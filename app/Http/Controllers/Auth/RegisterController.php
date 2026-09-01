@@ -28,6 +28,12 @@ class RegisterController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'phone' => ['nullable', 'string', 'max:20', 'unique:users'],
             'password' => ['required', 'confirmed', Password::defaults()],
+            // The form has always marked this required, but nothing enforced it
+            // server-side — and the view already renders an $errors->has('terms')
+            // branch that could never fire.
+            'terms' => ['accepted'],
+        ], [
+            'terms.accepted' => 'Please accept the Terms and Privacy Policy to continue.',
         ]);
 
         $nameParts = explode(' ', trim($validated['full_name']), 2);

@@ -682,7 +682,15 @@
                             'X-CSRF-TOKEN': this.csrf,
                             'X-Requested-With': 'XMLHttpRequest'
                         },
-                        body: JSON.stringify(this.form)
+                        // This modal has no Terms checkbox — consent is the
+                        // "By continuing you agree to our Privacy Policy &
+                        // Terms" notice above the button, so submitting IS the
+                        // acceptance. Send it explicitly: the server requires
+                        // the field, and without it signup 422s against an
+                        // input this form does not render, which shows nothing.
+                        body: JSON.stringify(
+                            this.mode === 'signup' ? { ...this.form, terms: true } : this.form
+                        )
                     });
                     // The page's CSRF token goes stale once the session expires
                     // (tab left open); a fresh load is the only way to renew it.
@@ -715,6 +723,16 @@
                         if (this.mode === 'login' && mapped.email) {
                             this.error = mapped.email;
                             this.fieldErrors = {};
+                        }
+
+                        // An error for a field this modal does not render (the
+                        // server validates more than the modal shows) would map
+                        // to nothing and leave the button looking dead. Anything
+                        // unplaceable goes in the banner instead.
+                        const shown = ['full_name', 'email', 'phone', 'password', 'password_confirmation'];
+                        const orphan = Object.keys(mapped).find(f => !shown.includes(f));
+                        if (!this.error && orphan) {
+                            this.error = mapped[orphan];
                         }
                     } else {
                         this.error = data.message || 'Something went wrong. Please try again.';

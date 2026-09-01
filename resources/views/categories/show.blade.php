@@ -158,12 +158,32 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                             </svg>
                         </div>
+                        @php
+                            // Only what the shopper actually chose. The subcategory box is
+                            // ticked automatically on a sub-category page, so counting it
+                            // would offer to clear a filter nobody set.
+                            $kkFiltered = request()->hasAny([
+                                'size', 'colour', 'min_price', 'max_price',
+                                'rating', 'in_stock', 'on_sale', 'brand', 'q',
+                            ]) || (request()->filled('subcategory') && $category->parent_id === null);
+                        @endphp
+
                         <h3 class="text-lg font-semibold text-neutral-900 mb-1">No products found</h3>
-                        <p class="text-sm text-neutral-600 mb-5">Try adjusting your filters or browse all products.</p>
-                        <a href="{{ route('category.show', $category) }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-[#F8931D] hover:bg-[#E07E0A] text-white text-sm font-semibold rounded-lg transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                            Clear All Filters
-                        </a>
+
+                        @if($kkFiltered)
+                            <p class="text-sm text-neutral-600 mb-5">Try adjusting your filters or browse all products.</p>
+                            <a href="{{ route('category.show', $category) }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-[#F8931D] hover:bg-[#E07E0A] text-white text-sm font-semibold rounded-lg transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                Clear All Filters
+                            </a>
+                        @else
+                            {{-- Nothing was filtered: the collection is simply empty, so
+                                 offering to clear filters would be nonsense. --}}
+                            <p class="text-sm text-neutral-600 mb-5">There's nothing in this collection yet. Check back soon.</p>
+                            <a href="{{ route('shop') }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-[#F8931D] hover:bg-[#E07E0A] text-white text-sm font-semibold rounded-lg transition-colors">
+                                Browse all products
+                            </a>
+                        @endif
                     </div>
                 @endif
             </div>

@@ -851,6 +851,39 @@ Alpine.start();
         }, true);
     });
 
-    // Suppress the native bubble without losing the constraints themselves.
-    document.addEventListener('invalid', function (event) { event.preventDefault(); }, true);
+    // Suppress the native bubble without losing the constraints themselves —
+    // and render our own message in its place.
+    //
+    // This is where the "dead button" came from. When a required field fails,
+    // the browser fires `invalid` on each offending control and then abandons
+    // the submission WITHOUT ever firing `submit`. The handler above therefore
+    // never ran, while this one cancelled the only feedback the browser would
+    // have given, so clicking Create Account (or Sign In, or any other native
+    // validated form) did nothing at all: no bubble, no message, no request.
+    let pendingInvalid = [];
+
+    document.addEventListener('invalid', function (event) {
+        event.preventDefault();
+
+        const field = event.target;
+        if (!field || !field.willValidate) return;
+
+        const form = field.form;
+        if (form && form.hasAttribute('data-no-validate')) return;
+
+        showError(field, messageFor(field));
+
+        // `invalid` fires once per failing control, in document order. Collect
+        // them and act on the first once the browser has finished the pass.
+        if (pendingInvalid.length === 0) {
+            Promise.resolve().then(function () {
+                const first = pendingInvalid[0];
+                pendingInvalid = [];
+                if (!first) return;
+                first.focus({ preventScroll: true });
+                first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+        }
+        pendingInvalid.push(field);
+    }, true);
 })();

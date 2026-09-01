@@ -34,8 +34,17 @@
         x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="opacity-100 translate-y-0 scale-100"
         x-transition:leave-end="opacity-0 translate-y-4 scale-95"
-        class="w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-neutral-100 flex flex-col overflow-hidden"
-        style="height: 520px; transform-origin: bottom right;"
+        {{-- w-80 is exactly 320px, and the panel sits 1rem from the right edge —
+             so on a 320px screen it was 16px wider than the viewport and pushed
+             the whole page sideways. Size it against the viewport instead, and
+             cap it at the old 384px so nothing changes on desktop.
+
+             Height: 520px is taller than the usable area on a short phone once
+             the URL bar and the 73px bottom nav are accounted for. dvh tracks
+             the URL bar as it hides and shows; the 520px cap keeps desktop as
+             it was. --}}
+        class="w-[calc(100vw-2rem)] max-w-[384px] sm:w-96 bg-white rounded-2xl shadow-2xl border border-neutral-100 flex flex-col overflow-hidden"
+        style="height: min(520px, calc(100dvh - 8rem)); transform-origin: bottom right;"
         role="dialog"
         aria-label="Shopping Assistant"
     >
@@ -53,6 +62,21 @@
                     </div>
                 </div>
             </div>
+            <div class="flex items-center gap-1.5">
+            <a
+                href="{{ route('chat') }}"
+                class="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
+                style="background: rgba(255,255,255,0.2); color: white;"
+                onmouseover="this.style.background='rgba(255,255,255,0.35)'"
+                onmouseout="this.style.background='rgba(255,255,255,0.2)'"
+                aria-label="Open full page chat"
+                title="Open in full page"
+            >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                          d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4"/>
+                </svg>
+            </a>
             <button
                 @click="close()"
                 class="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
@@ -65,6 +89,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
             </button>
+            </div>
         </div>
 
         {{-- ── Message List ─────────────────────────────────────────────── --}}
@@ -372,9 +397,38 @@ function chatbotWidget() {
             { label: '↩️ Return Policy',   message: 'What is the return policy?' },
         ],
 
+        historyLoaded: false,
+
         init() {
             this.$watch('messages', () => this.$nextTick(() => this.scrollToBottom()));
             this.$watch('isTyping', () => this.$nextTick(() => this.scrollToBottom()));
+        },
+
+        /**
+         * Restore the saved conversation.
+         *
+         * This component is rebuilt from scratch on every page load and keeps
+         * nothing client-side, so without this the customer saw an empty chat
+         * each time they navigated — even though every turn was already stored
+         * in chatbot_messages. Loaded lazily on first open so visitors who
+         * never touch the widget cost nothing.
+         */
+        async loadHistory() {
+            if (this.historyLoaded) return;
+            this.historyLoaded = true;
+
+            try {
+                const { data } = await axios.get('{{ route('chatbot.history') }}');
+                if (data.conversation_id) this.conversationId = data.conversation_id;
+                if (Array.isArray(data.messages) && data.messages.length) {
+                    // Anything typed before the response landed stays last.
+                    this.messages = data.messages.concat(this.messages);
+                }
+            } catch (e) {
+                // A missing transcript must not stop a new conversation.
+            } finally {
+                this.$nextTick(() => this.scrollToBottom());
+            }
         },
 
         toggle() {
@@ -385,6 +439,8 @@ function chatbotWidget() {
             this.isOpen       = true;
             this.hasBeenOpened = true;
             this.unreadCount  = 0;
+            // Bring back whatever was said before this page load.
+            this.loadHistory();
             this.$nextTick(() => {
                 this.scrollToBottom();
                 this.$refs.chatInput?.focus();

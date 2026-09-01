@@ -163,13 +163,20 @@
 
                             <!-- Remember Me -->
                             <div class="flex items-center">
+                                {{-- Same shape as the Terms box: the input carries its own
+                                     styling so it stays focusable, and the tick is a sibling so
+                                     peer-checked: can reach it. As a descendant of the old
+                                     indicator div it never matched, and the tick never appeared. --}}
                                 <label class="relative flex items-center cursor-pointer">
-                                    <input type="checkbox" name="remember" id="remember" class="peer sr-only" {{ old('remember') ? 'checked' : '' }}>
-                                    <div class="w-5 h-5 border-2 border-neutral-500 rounded-md peer-checked:bg-[#2D1810] peer-checked:border-[#3A6166] transition-all flex items-center justify-center">
-                                        <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                                        </svg>
-                                    </div>
+                                    <input type="checkbox" name="remember" id="remember" value="1" @checked(old('remember'))
+                                           class="peer appearance-none w-5 h-5 shrink-0 rounded-md border-2 border-neutral-500 bg-white
+                                                  checked:bg-[#2D1810] checked:border-[#3A6166]
+                                                  focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:ring-offset-1
+                                                  transition-all cursor-pointer">
+                                    <svg class="pointer-events-none absolute left-0 w-5 h-5 p-1 text-white opacity-0 peer-checked:opacity-100 transition-opacity"
+                                         fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                    </svg>
                                     <span class="ml-3 text-sm text-neutral-600">Keep me signed in</span>
                                 </label>
                             </div>
@@ -200,6 +207,20 @@
                             <h1 class="text-2xl font-bold text-neutral-900 mb-1">Create Account</h1>
                             <p class="text-neutral-600 text-sm">Join the {{ config('app.name') }} family</p>
                         </div>
+
+                        {{-- A rejected signup used to come back with only per-field messages,
+                             several of which are gated behind old('_register') — so a failure
+                             could land with nothing on screen explaining it. --}}
+                        @if(old('_register') && $errors->any())
+                            <div class="mb-5 p-3 bg-red-50 border border-red-200 rounded-xl">
+                                <p class="text-sm font-medium text-red-800">We couldn't create your account.</p>
+                                <ul class="mt-1 list-disc list-inside text-xs text-red-700 space-y-0.5">
+                                    @foreach($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
 
                         <form method="POST" action="{{ route('register') }}" class="space-y-4">
                             @csrf
@@ -275,14 +296,24 @@
                             </div>
 
                             <!-- Terms -->
-                            <div class="flex items-start pt-1">
+                            {{-- The input must stay a real, visible, focusable control. It was
+                                 `required` on an `sr-only` element, and Chrome refuses to focus a
+                                 clipped control to show its validation bubble — so submitting with
+                                 the box unticked aborted silently and the button looked dead.
+                                 `appearance-none` keeps the custom look on the input itself, and
+                                 the tick is now a sibling so `peer-checked:` can actually reach it. --}}
+                            <div class="pt-1">
                                 <label class="relative flex items-start cursor-pointer">
-                                    <input type="checkbox" name="terms" id="terms" required class="peer sr-only">
-                                    <div class="w-4.5 h-4.5 mt-0.5 border-2 border-neutral-500 rounded peer-checked:bg-[#2D1810] peer-checked:border-[#3A6166] transition-all flex items-center justify-center shrink-0">
-                                        <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                                        </svg>
-                                    </div>
+                                    <input type="checkbox" name="terms" id="terms" value="1" required
+                                           @checked(old('terms'))
+                                           class="peer appearance-none w-4.5 h-4.5 mt-0.5 shrink-0 rounded border-2 border-neutral-500 bg-white
+                                                  checked:bg-[#2D1810] checked:border-[#3A6166]
+                                                  focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:ring-offset-1
+                                                  transition-all cursor-pointer @error('terms') border-red-400 @enderror">
+                                    <svg class="pointer-events-none absolute left-0 top-0.5 w-4.5 h-4.5 p-0.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity"
+                                         fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                    </svg>
                                     <span class="ml-2.5 text-[13px] text-neutral-600 leading-snug">
                                         I agree to the
                                         <a href="{{ route('terms') }}" class="text-[#3A6166] hover:text-[#2A494D] font-medium">Terms</a>
@@ -290,6 +321,9 @@
                                         <a href="{{ route('privacy') }}" class="text-[#3A6166] hover:text-[#2A494D] font-medium">Privacy Policy</a>
                                     </span>
                                 </label>
+                                @error('terms')
+                                    <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             <!-- Submit -->

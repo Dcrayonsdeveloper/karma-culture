@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -13,11 +14,33 @@ return Application::configure(basePath: dirname(__DIR__))
         apiPrefix: 'api',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // The site runs behind Hostinger's proxy. Without this, request()->ip()
+        // is the proxy's address for every visitor — so per-IP rate limiters
+        // put the whole world in one bucket — and the scheme is read as http,
+        // which breaks secure-cookie and absolute-URL generation.
+        $middleware->trustProxies(
+            at: '*',
+            headers: Request::HEADER_X_FORWARDED_FOR
+                | Request::HEADER_X_FORWARDED_HOST
+                | Request::HEADER_X_FORWARDED_PORT
+                | Request::HEADER_X_FORWARDED_PROTO
+        );
+
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
-        // Written but never registered, so no CSP header was actually being
-        // sent. It is the main defence-in-depth layer behind admin-authored
-        // HTML (product descriptions, blog posts, CMS pages).
-        $middleware->append(\App\Http\Middleware\ContentSecurityPolicy::class);
+
+        // ContentSecurityPolicy is deliberately NOT registered yet.
+        //
+        // The policy as written does not match what the storefront loads: it
+        // omits fonts.googleapis.com / fonts.gstatic.com (typography), the CDNs
+        // that serve CKEditor and icon fonts, and the analytics endpoints, and
+        // its script-src cannot accommodate Alpine's standard build or the ~40
+        // Blade views with inline <script> blocks. Enabling it as-is blanks out
+        // navigation, modals, carousels and the cart.
+        //
+        // Enable it only after auditing every external origin, starting in
+        // Content-Security-Policy-Report-Only against the live site. The
+        // stored-XSS vectors it was meant to backstop are already closed at
+        // source by safe_html() and the upload mime pinning.
 
         $middleware->validateCsrfTokens(except: [
             'payu/success',
