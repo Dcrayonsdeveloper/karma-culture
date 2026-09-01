@@ -19,7 +19,9 @@ class FlashSaleController extends Controller
         abort_unless($flashSale->is_active, 404);
 
         $flashSale->load(['products' => fn ($q) => $q->where('is_active', true)
-            ->with(['category:id,name', 'brand:id,name', 'primaryImage'])]);
+            // slug is needed: the product card links to the category and brand,
+            // and route binding resolves them by slug.
+            ->with(['category:id,name,slug', 'brand:id,name,slug', 'primaryImage'])]);
 
         $hasEnded = $flashSale->ends_at && $flashSale->ends_at->isPast();
         $hasStarted = ! $flashSale->starts_at || $flashSale->starts_at->isPast();
