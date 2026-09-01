@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
-use App\Services\ShiprocketService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -15,9 +14,19 @@ class ShiprocketWebhookController extends Controller
      */
     public function handle(Request $request)
     {
-        // Verify webhook token if set
-        $token = $request->header('X-Webhook-Token') ?? $request->input('token');
-        if ($token && $token !== 'foreverkids2026') {
+        // This endpoint is CSRF-exempt and can move an order to "delivered" or
+        // "cancelled", so the token is mandatory. The old check was
+        // `if ($token && $token !== '...')`, which let a request carrying NO
+        // token through the guard entirely — an open endpoint in practice.
+        $expected = (string) config('services.shiprocket.webhook_token');
+        $token = (string) ($request->header('X-Webhook-Token') ?? $request->input('token') ?? '');
+
+        if ($expected === '' || ! hash_equals($expected, $token)) {
+            Log::warning('Shiprocket webhook rejected', [
+                'reason' => $expected === '' ? 'no token configured' : 'token mismatch',
+                'ip'     => $request->ip(),
+            ]);
+
             return response()->json(['status' => 'unauthorized'], 401);
         }
 
@@ -91,8 +100,6 @@ class ShiprocketWebhookController extends Controller
         // Map status and update order
         $statusToMap = $shipmentStatus ?? $currentStatus;
         if ($statusToMap) {
-            $shiprocket = new ShiprocketService();
-            // Use reflection to call the private method, or inline the logic
             $newStatus = $this->mapStatus($statusToMap);
             if ($newStatus && $newStatus !== $order->status) {
                 $statusOrder = ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];

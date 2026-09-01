@@ -805,7 +805,7 @@
                         <p>{!! nl2br(e($product->short_description)) !!}</p>
                     @endif
                     @if($product->description)
-                        <div>{!! $product->description !!}</div>
+                        <div>{!! safe_html($product->description) !!}</div>
                     @endif
                     @if(!$product->short_description && !$product->description)
                         <p>{{ $product->name }} &mdash; thoughtfully designed and crafted for the modern wardrobe.</p>

@@ -85,10 +85,17 @@
                             </div>
                         @endif
 
+                        @if(session('error'))
+                            <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex items-center gap-2">
+                                <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                {{ session('error') }}
+                            </div>
+                        @endif
+
                         <!-- Welcome Text -->
                         <div class="mb-5">
                             <h1 class="text-2xl font-bold text-neutral-900 mb-1">Welcome Back</h1>
-                            <p class="text-neutral-600 text-sm">Sign in to access your kids' fashion collection</p>
+                            <p class="text-neutral-600 text-sm">Sign in to access your fashion collection</p>
                         </div>
 
                         <form method="POST" action="{{ route('login') }}" class="space-y-4">
@@ -324,20 +331,20 @@
                 slides: [
                     {
                         bg: 'linear-gradient(135deg, #1A3133 0%, #2A494D 40%, #4A7A80 100%)',
-                        tagline: 'Little Styles, Big Smiles',
-                        subtitle: 'Discover adorable outfits that let your kids express themselves with comfort and joy',
+                        tagline: 'Style That Speaks',
+                        subtitle: 'Discover outfits that let you express yourself with comfort and confidence',
                         icon: 'sparkles'
                     },
                     {
                         bg: 'linear-gradient(135deg, #2A494D 0%, #3A6166 40%, #6F9CA2 100%)',
-                        tagline: 'Premium Kids Collection',
-                        subtitle: 'Explore our curated range of trendy and comfortable clothing designed for growing kids',
+                        tagline: 'Premium Fashion Collection',
+                        subtitle: 'Explore our curated range of trendy and comfortable clothing for every occasion',
                         icon: 'gem'
                     },
                     {
                         bg: 'linear-gradient(135deg, #1A3133 0%, #3A6166 40%, #5B878D 100%)',
                         tagline: 'Fashion for Every Adventure',
-                        subtitle: 'From playtime to party time, dress your little ones in style with our vibrant collection',
+                        subtitle: 'From work to weekend, dress in style with our vibrant collection',
                         icon: 'palette'
                     }
                 ],

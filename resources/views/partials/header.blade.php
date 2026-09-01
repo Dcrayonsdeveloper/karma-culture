@@ -404,7 +404,9 @@
             <p class="kk-loginmodal__notice" x-show="notice" x-text="notice" x-cloak></p>
             <p class="kk-loginmodal__error" x-show="error" x-text="error" x-cloak></p>
 
-            <form @submit.prevent="submit()">
+            {{-- novalidate: the browser's anonymous "Please fill out this field"
+                 bubble names no field; submit() shows a message that does. --}}
+            <form @submit.prevent="submit()" novalidate>
                 {{-- Signup-only: full name --}}
                 <input type="text" class="kk-loginmodal__field" x-show="mode === 'signup'"
                        x-model="form.full_name" placeholder="Full Name" autocomplete="name">
@@ -437,9 +439,9 @@
 
             <p class="kk-loginmodal__legal">
                 By continuing you agree to our
-                <a href="#" class="kk-loginmodal__legal-link">Privacy Policy</a>
+                <a href="{{ route('privacy') }}" class="kk-loginmodal__legal-link">Privacy Policy</a>
                 <span> &amp; </span>
-                <a href="#" class="kk-loginmodal__legal-link">T&amp;Cs.</a>
+                <a href="{{ route('terms') }}" class="kk-loginmodal__legal-link">T&amp;Cs.</a>
             </p>
 
             <div class="kk-loginmodal__fallback">
@@ -462,12 +464,32 @@
             csrf: '{{ csrf_token() }}',
             openModal() { this.open = true; this.error = ''; this.notice = ''; },
             switchMode(m) { this.mode = m; this.error = ''; this.notice = ''; },
-            async submit() {
-                this.error = '';
-                if (this.mode === 'signup' && this.form.password !== this.form.password_confirmation) {
-                    this.error = 'Passwords do not match.';
-                    return;
+            validate() {
+                if (this.mode === 'signup' && !this.form.full_name.trim()) {
+                    return 'Please enter your full name.';
                 }
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(this.form.email.trim())) {
+                    return 'Please enter a valid email address.';
+                }
+                if (this.mode === 'signup') {
+                    const digits = this.form.phone.replace(/\D/g, '').replace(/^91(?=[6-9]\d{9}$)/, '');
+                    if (this.form.phone.trim() && !/^[6-9]\d{9}$/.test(digits)) {
+                        return 'Please enter a valid 10-digit mobile number, or leave it blank.';
+                    }
+                    if (this.form.password.length < 8) {
+                        return 'Password must be at least 8 characters.';
+                    }
+                    if (this.form.password !== this.form.password_confirmation) {
+                        return 'Passwords do not match.';
+                    }
+                } else if (!this.form.password) {
+                    return 'Please enter your password.';
+                }
+                return '';
+            },
+            async submit() {
+                this.error = this.validate();
+                if (this.error) return;
                 this.loading = true;
                 const url = this.mode === 'login' ? '{{ route('login') }}' : '{{ route('register') }}';
                 try {
@@ -481,6 +503,13 @@
                         },
                         body: JSON.stringify(this.form)
                     });
+                    // The page's CSRF token goes stale once the session expires
+                    // (tab left open); a fresh load is the only way to renew it.
+                    if (res.status === 419) {
+                        this.error = 'Your session expired. Refreshing the page…';
+                        setTimeout(() => window.location.reload(), 1200);
+                        return;
+                    }
                     const data = await res.json().catch(() => ({}));
                     if (res.ok && data.success) {
                         if (this.mode === 'signup') {

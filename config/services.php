@@ -37,7 +37,7 @@ return [
 
     'anthropic' => [
         'key'   => env('ANTHROPIC_API_KEY'),
-        'model' => env('ANTHROPIC_MODEL', 'claude-haiku-4-5-20251001'),
+        'model' => env('ANTHROPIC_MODEL', 'claude-haiku-4-5'),
     ],
 
     'gemini' => [
@@ -54,6 +54,13 @@ return [
         'pixel_id' => env('FB_PIXEL_ID'),
         'access_token' => env('FB_ACCESS_TOKEN'),
         'test_event_code' => env('FB_TEST_EVENT_CODE'),
+    ],
+
+    // The tracking webhook can move an order to delivered/cancelled, so this
+    // token is required — an unset value rejects every request rather than
+    // leaving the endpoint open.
+    'shiprocket' => [
+        'webhook_token' => env('SHIPROCKET_WEBHOOK_TOKEN'),
     ],
 
     'meta' => [

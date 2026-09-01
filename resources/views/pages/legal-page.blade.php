@@ -88,7 +88,7 @@
                                 [&_strong]:font-semibold [&_strong]:text-neutral-800
                                 [&_blockquote]:border-l-4 [&_blockquote]:border-neutral-200 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-neutral-600">
                         {{-- Render each section's raw HTML --}}
-                        {!! strip_tags($section, '<p><br><strong><em><ul><ol><li><h1><h2><h3><h4><h5><h6><a><span><div><table><tr><td><th><thead><tbody><blockquote><hr>') !!}
+                        {!! safe_html($section, '<p><br><strong><em><ul><ol><li><h1><h2><h3><h4><h5><h6><a><span><div><table><tr><td><th><thead><tbody><blockquote><hr>') !!}
                     </div>
                 @endforeach
             @else
