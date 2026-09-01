@@ -8,6 +8,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProductVariant extends Model
 {
+    protected static function booted(): void
+    {
+        // Size chips are cached for ten minutes and are built from variants,
+        // so adding or removing a size must drop that cache immediately.
+        $forget = fn () => \Illuminate\Support\Facades\Cache::forget('kk_filter_sizes_v2');
+
+        static::saved($forget);
+        static::deleted($forget);
+    }
+
     /**
      * The size a shopper recognises.
      *

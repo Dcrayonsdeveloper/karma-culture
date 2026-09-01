@@ -48,6 +48,15 @@ class Category extends Model
 
     protected static function booted(): void
     {
+        // The navigation menu is cached for five minutes. Without this, renaming
+        // or adding a category left the old menu on the site and a browser hard
+        // refresh could not fix it, because the stale copy lives on the server.
+        $forgetMenu = function () {
+            \Illuminate\Support\Facades\Cache::forget('kk_mega_menu_v5');
+        };
+
+        static::saved($forgetMenu);
+        static::deleted($forgetMenu);
         static::creating(function ($category) {
             $category->level = $category->parent ? $category->parent->level + 1 : 0;
             $category->path = $category->parent

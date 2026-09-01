@@ -92,6 +92,11 @@ class Product extends Model
 
     protected static function booted(): void
     {
+        // Colour swatches are cached and read from the product's Colours list.
+        $forgetColours = fn () => \Illuminate\Support\Facades\Cache::forget('kk_filter_colours');
+
+        static::saved($forgetColours);
+        static::deleted($forgetColours);
         static::creating(function ($product) {
             if (empty($product->uuid)) {
                 $product->uuid = (string) Str::uuid();
