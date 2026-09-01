@@ -105,6 +105,36 @@ class ChatbotAnalyticsController extends Controller
         ]);
     }
 
+    /**
+     * Every customer who has used the assistant, with what they asked and what
+     * the assistant put in front of them.
+     */
+    public function leads(Request $request): View
+    {
+        $conversations = ChatbotConversation::query()
+            ->whereNotNull('user_id')
+            ->with(['user', 'lead', 'messages' => fn ($q) => $q->orderBy('id')])
+            ->withCount('messages')
+            ->latest('last_message_at')
+            ->paginate(20);
+
+        // Resolve every product any of these conversations surfaced, in one go.
+        $productIds = $conversations->flatMap(
+            fn ($c) => $c->messages->pluck('product_ids')->filter()->flatten()
+        )->unique()->values();
+
+        $products = Product::whereIn('id', $productIds)
+            ->with('variants')
+            ->get(['id', 'name', 'slug', 'price', 'attributes'])
+            ->keyBy('id');
+
+        $clicks = ChatbotProductClick::whereIn('conversation_id', $conversations->pluck('id'))
+            ->get()
+            ->groupBy('conversation_id');
+
+        return view('admin.chatbot.leads', compact('conversations', 'products', 'clicks'));
+    }
+
     public function show(ChatbotConversation $conversation): View
     {
         $conversation->load(['messages' => fn ($q) => $q->orderBy('id'), 'user', 'lead']);

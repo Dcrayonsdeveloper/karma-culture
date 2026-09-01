@@ -109,7 +109,10 @@
         {{-- Leads --}}
         <div class="card">
             <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;">
-                <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Leads from chat</h2>
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                    <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Leads from chat</h2>
+                    <a href="{{ route('admin.chatbot.leads') }}" style="font-size:12px; color:#005bd3; text-decoration:none;">View all</a>
+                </div>
             </div>
             <div style="padding: 0.5rem 1rem 1rem;">
                 @forelse($recentLeads as $lead)
