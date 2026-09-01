@@ -41,6 +41,28 @@ class Setting extends Model
         };
     }
 
+    protected static function booted(): void
+    {
+        // Settings are cached twice: once per key and once per group. Only the
+        // key was ever cleared, so an admin save could sit behind a stale group
+        // cache for an hour and look like it had not been applied.
+        $forget = function (self $setting) {
+            Cache::forget("setting.{$setting->key}");
+
+            if ($setting->group) {
+                Cache::forget("settings.group.{$setting->group}");
+            }
+
+            foreach (array_unique([$setting->group, $setting->getOriginal('group')]) as $group) {
+                if ($group) {
+                    Cache::forget("settings.group.{$group}");
+                }
+            }
+        };
+
+        static::saved($forget);
+        static::deleted($forget);
+    }
     /** Marks "no row in the database" so a missing setting is still cached. */
     private const MISSING = '__kk_setting_missing__';
 
