@@ -59,6 +59,12 @@
                 <p style="color: #616161; font-size: 0.875rem; margin: 0;">Enter your credentials to access the admin panel</p>
             </div>
 
+            @if(session('error'))
+                <div style="margin-bottom: 1.25rem; padding: 0.75rem 1rem; background: #fff4f4; border: 1px solid #f0c2bc; border-radius: 8px; color: #d72c0d; font-size: 13px;">
+                    {{ session('error') }}
+                </div>
+            @endif
+
             {{-- Form --}}
             <form method="POST" action="{{ route('admin.login') }}" style="display: flex; flex-direction: column; gap: 1.25rem;">
                 @csrf

@@ -118,7 +118,7 @@
                     <div class="bg-white border border-neutral-100 rounded-xl p-5 sm:p-8 mb-6">
                         @if($post->content)
                             <div class="prose prose-neutral prose-headings:font-bold prose-a:text-primary-600 prose-img:rounded-xl max-w-none text-neutral-700 leading-relaxed">
-                                {!! strip_tags($post->content, '<p><br><strong><em><ul><ol><li><h1><h2><h3><h4><h5><h6><a><span><div><table><tr><td><th><thead><tbody><img><blockquote><hr><figure><figcaption><pre><code>') !!}
+                                {!! safe_html($post->content, '<p><br><strong><em><ul><ol><li><h1><h2><h3><h4><h5><h6><a><span><div><table><tr><td><th><thead><tbody><img><blockquote><hr><figure><figcaption><pre><code>') !!}
                             </div>
                         @else
                             <p class="text-neutral-600 italic text-[13px]">No content available.</p>

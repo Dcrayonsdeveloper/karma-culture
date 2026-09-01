@@ -270,7 +270,7 @@ class SettingController extends Controller
 
             // AI Chatbot
             'anthropic_api_key'                  => ['nullable', 'string', 'max:500', 'regex:/^(sk-ant-[A-Za-z0-9\-_]*)?$/'],
-            'anthropic_model'                    => 'nullable|in:claude-haiku-4-5-20251001,claude-sonnet-4-6,claude-opus-4-6,',
+            'anthropic_model'                    => 'nullable|in:claude-haiku-4-5,claude-sonnet-5,claude-opus-5',
             'ai_provider'                        => 'nullable|in:anthropic,gemini',
             // Google issues more than one key format (AIza... and AQ....), so accept
             // any plausible token rather than rejecting a valid key on its prefix.

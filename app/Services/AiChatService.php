@@ -75,7 +75,7 @@ class AiChatService
                 'content-type'      => 'application/json',
             ])
             ->post('https://api.anthropic.com/v1/messages', [
-                'model'      => $model ?: 'claude-haiku-4-5-20251001',
+                'model'      => $model ?: 'claude-haiku-4-5',
                 'max_tokens' => 1024,
                 'system'     => $system,
                 'messages'   => $messages,

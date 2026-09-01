@@ -22,7 +22,7 @@ class ClaudeService
 
         $systemPrompt = $this->buildSystemPrompt($lead);
         $messages = $this->buildMessageHistory($lead, $message);
-        $model = Setting::get('nia_model', 'claude-sonnet-4-20250514');
+        $model = Setting::get('nia_model', 'claude-sonnet-5');
 
         try {
             $response = Http::timeout(25)

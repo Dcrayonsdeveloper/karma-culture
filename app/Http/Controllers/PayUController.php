@@ -183,9 +183,19 @@ class PayUController extends Controller
             $methodMap = ['CC' => 'card', 'DC' => 'card', 'NB' => 'netbanking', 'UPI' => 'upi', 'WALLET' => 'wallet', 'EMI' => 'emi', 'BNPL' => 'bnpl'];
 
             if ($payment) {
+                // A replayed callback must not re-capture an already-settled
+                // payment; PayU can retry, and the browser can resubmit.
+                if ($payment->status === 'captured') {
+                    return redirect()->route('checkout.success', $order);
+                }
+
                 $payment->update(['method' => $methodMap[strtoupper($payuMode)] ?? 'card']);
                 $payment->markAsAuthorized($mihpayid, $params);
                 $payment->markAsCaptured();
+
+                // markAsCaptured() sets payment_status but not the amount, so
+                // without this a paid order still reads as ₹0 received in admin.
+                $order->update(['paid_amount' => $order->total]);
             } else {
                 // Create payment if missing
                 $payuMode = $params['mode'] ?? 'CC';
@@ -234,6 +244,19 @@ class PayUController extends Controller
         $params = $request->all();
 
         Log::info('PayU Failure Callback', ['params' => $params]);
+
+        // This route is CSRF-exempt and cancels an order + restores its stock,
+        // so it must prove the POST came from PayU. Without the hash check any
+        // visitor could cancel any order by guessing its (sequential) id.
+        if (! $this->verifyHash($params, $config['salt'])) {
+            Log::warning('PayU hash verification failed on failure callback', [
+                'txnid' => $params['txnid'] ?? 'unknown',
+                'ip'    => $request->ip(),
+            ]);
+
+            return redirect()->route('checkout.failed')
+                ->with('error', 'Payment was not successful. Please try again.');
+        }
 
         $orderId = $params['udf1'] ?? null;
         $txnid = $params['txnid'] ?? '';

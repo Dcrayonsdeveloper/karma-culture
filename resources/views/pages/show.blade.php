@@ -20,7 +20,7 @@
             <h1 class="text-4xl font-bold text-neutral-900 mb-6">{{ $page->title }}</h1>
 
             <div class="prose prose-lg max-w-none">
-                {!! strip_tags($page->content, '<p><br><strong><em><ul><ol><li><h1><h2><h3><h4><h5><h6><a><span><div><table><tr><td><th><thead><tbody><img><blockquote><hr><figure><figcaption>') !!}
+                {!! safe_html($page->content, '<p><br><strong><em><ul><ol><li><h1><h2><h3><h4><h5><h6><a><span><div><table><tr><td><th><thead><tbody><img><blockquote><hr><figure><figcaption>') !!}
             </div>
         </div>
     </div>

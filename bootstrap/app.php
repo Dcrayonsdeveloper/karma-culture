@@ -14,6 +14,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+        // Written but never registered, so no CSP header was actually being
+        // sent. It is the main defence-in-depth layer behind admin-authored
+        // HTML (product descriptions, blog posts, CMS pages).
+        $middleware->append(\App\Http\Middleware\ContentSecurityPolicy::class);
 
         $middleware->validateCsrfTokens(except: [
             'payu/success',
@@ -47,7 +51,15 @@ return Application::configure(basePath: dirname(__DIR__))
         // token. The default response is a dead-end 419 error page; sending
         // the visitor back to the form with a fresh token lets them just
         // retry. Passwords are excluded from the re-fill for safety.
-        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, \Illuminate\Http\Request $request) {
+        // Typed on HttpException rather than TokenMismatchException: the
+        // handler converts the latter into a 419 HttpException in
+        // prepareException(), which runs before render callbacks are
+        // consulted, so a callback typed on the original never matches.
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\HttpException $e, \Illuminate\Http\Request $request) {
+            if ($e->getStatusCode() !== 419 || ! $e->getPrevious() instanceof \Illuminate\Session\TokenMismatchException) {
+                return null;
+            }
+
             // Signing out is the one case where a stale token is not a problem
             // worth reporting: the session it belonged to is what the visitor
             // is asking us to throw away. Finish the job and send them home
@@ -68,7 +80,9 @@ return Application::configure(basePath: dirname(__DIR__))
                 ], 419);
             }
 
-            return redirect()->back(fallback: route('login'))
+            $isAdmin = $request->is('admin', 'admin/*');
+
+            return redirect()->back(fallback: $isAdmin ? route('admin.login') : route('login'))
                 ->withInput($request->except(['password', 'password_confirmation', '_token']))
                 ->with('error', 'Your session expired. Please try again.');
         });

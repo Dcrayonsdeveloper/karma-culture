@@ -19,7 +19,7 @@ class ChatbotSettingsSeeder extends Seeder
             ],
             [
                 'key'       => 'nia_model',
-                'value'     => 'claude-sonnet-4-20250514',
+                'value'     => 'claude-sonnet-5',
                 'type'      => 'string',
                 'group'     => 'chatbot',
                 'is_public' => false,

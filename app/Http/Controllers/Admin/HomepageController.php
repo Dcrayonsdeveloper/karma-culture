@@ -108,7 +108,7 @@ class HomepageController extends Controller
         // is supplied the image becomes optional and acts as the poster frame.
         $request->validate([
             'name' => 'nullable|string|max:255',
-            'image' => 'required_without:video|nullable|image|max:5120',
+            'image' => 'required_without:video|nullable|image|mimes:jpeg,jpg,png,webp,gif|max:5120',
             'video' => 'nullable|file|mimetypes:video/mp4,video/webm,video/quicktime|max:'.self::MAX_VIDEO_KB,
             'link' => 'nullable|string|max:255',
             'title' => 'nullable|string|max:255',
@@ -148,7 +148,7 @@ class HomepageController extends Controller
     {
         $request->validate([
             'name' => 'nullable|string|max:255',
-            'image' => 'nullable|image|max:5120',
+            'image' => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:5120',
             'video' => 'nullable|file|mimetypes:video/mp4,video/webm,video/quicktime|max:'.self::MAX_VIDEO_KB,
             'link' => 'nullable|string|max:255',
             'title' => 'nullable|string|max:255',
@@ -310,7 +310,7 @@ class HomepageController extends Controller
             'content' => 'required|string|max:1000',
             'rating' => 'required|integer|min:1|max:5',
             'product_name' => 'nullable|string|max:255',
-            'avatar' => 'nullable|image|max:2048',
+            'avatar' => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:2048',
         ]);
 
         $data = $request->only(['name', 'title', 'content', 'rating', 'product_name']);
@@ -334,7 +334,7 @@ class HomepageController extends Controller
             'content' => 'required|string|max:1000',
             'rating' => 'required|integer|min:1|max:5',
             'product_name' => 'nullable|string|max:255',
-            'avatar' => 'nullable|image|max:2048',
+            'avatar' => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:2048',
         ]);
 
         $data = $request->only(['name', 'title', 'content', 'rating', 'product_name']);

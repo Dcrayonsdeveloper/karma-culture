@@ -28,8 +28,8 @@ class BannerController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'position' => 'required|string|max:50',
-            'image' => 'required|image|max:5120',
-            'mobile_image' => 'nullable|image|max:5120',
+            'image' => 'required|image|mimes:jpeg,jpg,png,webp,gif|max:5120',
+            'mobile_image' => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:5120',
             'link' => 'nullable|url',
             'priority' => 'nullable|integer',
             'starts_at' => 'nullable|date',
@@ -58,8 +58,8 @@ class BannerController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'position' => 'required|string|max:50',
-            'image' => 'nullable|image|max:5120',
-            'mobile_image' => 'nullable|image|max:5120',
+            'image' => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:5120',
+            'mobile_image' => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:5120',
             'link' => 'nullable|url',
             'priority' => 'nullable|integer',
             'starts_at' => 'nullable|date',
