@@ -103,12 +103,6 @@
     @if(!empty($paymentDetails['reference']))
     <div class="row" style="font-size: 10px;"><span>Ref #</span><span>{{ $paymentDetails['reference'] }}</span></div>
     @endif
-    @if(!empty($paymentDetails['credit_note']))
-    <div class="row" style="font-size: 10px;">
-        <span>Credit Note</span>
-        <span>-₹{{ number_format($paymentDetails['credit_note']['amount'], 2) }}</span>
-    </div>
-    @endif
 
     {{-- GST Summary --}}
     @php

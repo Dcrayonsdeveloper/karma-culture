@@ -52,20 +52,6 @@
                 </div>
 
                 <!-- Wallet Balance -->
-                @if($creditBalance > 0)
-                    <div class="bg-white border border-success-200 rounded-xl p-5 mb-6 flex items-center gap-4">
-                        <div class="w-12 h-12 bg-success-50 rounded-full flex items-center justify-center shrink-0">
-                            <svg class="w-6 h-6 text-success-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <p class="text-sm text-neutral-600">Store Credit Balance</p>
-                            <p class="text-xl font-bold text-success-600">@price($creditBalance)</p>
-                        </div>
-                        <p class="ml-auto text-xs text-neutral-600">Available for your next order</p>
-                    </div>
-                @endif
 
                 <!-- Quick Actions -->
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-8">

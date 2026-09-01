@@ -67,10 +67,6 @@ class OrderReturn extends Model
         return $this->hasMany(ReturnItem::class, 'return_id');
     }
 
-    public function creditNote(): HasOne
-    {
-        return $this->hasOne(CreditNote::class, 'return_id');
-    }
 
     public function exchangeOrder(): BelongsTo
     {

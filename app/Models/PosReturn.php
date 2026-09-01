@@ -16,7 +16,6 @@ class PosReturn extends Model
         'customer_id',
         'amount',
         'refund_method',
-        'credit_note_id',
         'reason',
         'status',
         'type',
@@ -60,10 +59,6 @@ class PosReturn extends Model
         return $this->belongsTo(User::class, 'customer_id');
     }
 
-    public function creditNote(): BelongsTo
-    {
-        return $this->belongsTo(CreditNote::class);
-    }
 
     public function items(): HasMany
     {

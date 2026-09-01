@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Pos;
 
 use App\Events\PosSaleCompleted;
 use App\Http\Controllers\Controller;
-use App\Models\CreditNote;
 use App\Models\PosCashMovement;
 use App\Models\PosSale;
 use App\Models\PosSaleItem;
@@ -27,8 +26,6 @@ class SaleController extends Controller
             'paid_amount'      => ['required', 'numeric', 'min:0'],
             'payment_ref'        => ['nullable', 'string', 'max:100'],
             'payment_details'    => ['nullable', 'array'],
-            'credit_note_id'     => ['nullable', 'integer', 'exists:credit_notes,id'],
-            'credit_note_amount' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $cart = $request->session()->get('pos_cart');
@@ -117,33 +114,6 @@ class SaleController extends Controller
                 // Increment coupon usage
                 if (! empty($cart['coupon']['id'])) {
                     \App\Models\Coupon::where('id', $cart['coupon']['id'])->increment('times_used');
-                }
-
-                // Redeem credit note
-                if (! empty($validated['credit_note_id']) && ($validated['credit_note_amount'] ?? 0) > 0) {
-                    $cn = CreditNote::lockForUpdate()->find($validated['credit_note_id']);
-                    if ($cn && $cn->isValid()) {
-                        $redeemAmount = min($validated['credit_note_amount'], (float) $cn->remaining_amount);
-                        $cn->remaining_amount -= $redeemAmount;
-                        $cn->used_amount = ($cn->used_amount ?? 0) + $redeemAmount;
-                        $cn->status = $cn->remaining_amount <= 0 ? 'fully_used' : 'partially_used';
-                        $cn->save();
-
-                        $cn->usages()->create([
-                            'order_id' => null,
-                            'amount'   => $redeemAmount,
-                        ]);
-
-                        // Record in payment details
-                        $sale->payment_details = array_merge($sale->payment_details ?? [], [
-                            'credit_note' => [
-                                'id'     => $cn->id,
-                                'number' => $cn->credit_note_number,
-                                'amount' => $redeemAmount,
-                            ],
-                        ]);
-                        $sale->save();
-                    }
                 }
 
                 return $sale;

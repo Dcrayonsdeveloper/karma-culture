@@ -9,7 +9,6 @@ use App\Http\Controllers\Admin\BlogPostController;
 use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CouponController;
-use App\Http\Controllers\Admin\CreditNoteController;
 use App\Http\Controllers\Admin\CurrencyController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -100,12 +99,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // Chat analytics
             Route::get('chatbot/analytics', [App\Http\Controllers\Admin\ChatbotAnalyticsController::class, 'index'])->name('chatbot.analytics');
             Route::get('chatbot/conversations/{conversation}', [App\Http\Controllers\Admin\ChatbotAnalyticsController::class, 'show'])->name('chatbot.conversation');
-
-            // Credit Notes
-            Route::prefix('credit-notes')->name('credit-notes.')->group(function () {
-                Route::get('/', [CreditNoteController::class, 'index'])->name('index');
-                Route::get('/{creditNote}', [CreditNoteController::class, 'show'])->name('show');
-            });
         });
 
         // Catalog
