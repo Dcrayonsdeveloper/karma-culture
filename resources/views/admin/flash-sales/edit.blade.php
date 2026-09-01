@@ -101,12 +101,6 @@
                         };
                     }
                 </script>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                @endif
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 1rem;">
