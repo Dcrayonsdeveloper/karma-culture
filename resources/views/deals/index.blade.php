@@ -1,5 +1,14 @@
 <x-layouts.app>
     <x-slot name="title">Deals - {{ config('app.name') }}</x-slot>
+    <x-slot name="meta">
+        <meta name="description" content="Current offers at Karmaa Kulture — discounted shirts, kurtas and more while the introductory pricing lasts.">
+        <link rel="canonical" href="{{ url()->current() }}">
+        <meta property="og:title" content="Introductory Offer — {{ config('app.name') }}">
+        <meta property="og:description" content="Current offers at Karmaa Kulture — discounted shirts, kurtas and more while the introductory pricing lasts.">
+        <meta property="og:type" content="website">
+        <meta property="og:url" content="{{ url()->current() }}">
+        <meta name="twitter:card" content="summary_large_image">
+    </x-slot>
 
     <div class="bg-neutral-50 border-b border-neutral-100">
         <div class="container mx-auto px-4 py-3">

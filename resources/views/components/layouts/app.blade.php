@@ -8,12 +8,16 @@
     <title>{{ $title ?? config('app.name', 'Laravel') }}</title>
 
     <!-- SEO Meta Tags -->
-    @hasSection('meta')
-        @yield('meta')
-    @else
-        {{ $meta ?? '' }}
-    @endif
-    @stack('meta')
+    @php
+        // Pages contribute meta three ways: @section, a slot, or @push. Collect
+        // all three into one string so the fallbacks below can see what a page
+        // already set — checking only some of them duplicated the canonical.
+        $kkPageMeta = trim(
+            ($__env->hasSection('meta') ? $__env->yieldContent('meta') : (string) ($meta ?? ''))
+            . $__env->yieldPushContent('meta')
+        );
+    @endphp
+    {!! $kkPageMeta !!}
 
     @php
         // Global SEO defaults from DB settings (injected unless individual pages override)
@@ -23,16 +27,29 @@
         $twitterSite = \App\Models\Setting::get('twitter_site');
         $gscCode     = preg_replace('/[^A-Za-z0-9_=\-]/', '', (string) \App\Models\Setting::get('google_search_console_verification'));
     @endphp
-    @if($seoMetaDesc && !$__env->hasSection('meta'))
-    <meta name="description" content="{{ $seoMetaDesc }}">
+    {{-- Fill only the gaps: a page that already set one of these keeps it. --}}
+    @if($seoMetaDesc && ! str_contains($kkPageMeta, 'name="description"'))
+        <meta name="description" content="{{ $seoMetaDesc }}">
+    @endif
+    @if(! str_contains($kkPageMeta, 'rel="canonical"'))
+        <link rel="canonical" href="{{ url()->current() }}">
     @endif
     @if($seoKeywords)
     <meta name="keywords" content="{{ $seoKeywords }}">
     @endif
-    @if($seoOgImage)
-    <meta property="og:image" content="{{ $seoOgImage }}">
-    <meta name="twitter:image" content="{{ $seoOgImage }}">
-    @endif
+    @php
+        $kkOgFallback = $seoOgImage
+            ?: (\App\Models\Setting::get('site_logo')
+                ? asset('storage/' . \App\Models\Setting::get('site_logo'))
+                : asset('images/karmaa-kulture-logo.png'));
+    @endphp
+    @unless(str_contains($kkPageMeta, 'og:image'))
+        <meta property="og:image" content="{{ $kkOgFallback }}">
+        <meta name="twitter:image" content="{{ $kkOgFallback }}">
+    @endunless
+    @unless(str_contains($kkPageMeta, 'twitter:card'))
+        <meta name="twitter:card" content="summary_large_image">
+    @endunless
     @if($twitterSite)
     <meta name="twitter:site" content="{{ $twitterSite }}">
     @endif
