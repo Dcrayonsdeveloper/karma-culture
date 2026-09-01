@@ -43,21 +43,64 @@
                 </div>
 
                 <!-- Products in this Flash Sale -->
-                @if($flashSale->products->count())
-                    <div class="card" style="padding: 1.25rem;">
-                        <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Products ({{ $flashSale->products->count() }})</h2>
-                        <div>
-                            @foreach($flashSale->products as $product)
-                                <div style="padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: space-between;{{ !$loop->last ? ' border-bottom: 1px solid #e3e3e3;' : '' }}">
-                                    <div>
-                                        <p style="font-weight: 500; color: #303030; font-size: 13px; margin: 0;">{{ $product->name }}</p>
-                                        <p style="font-size: 13px; color: #616161; margin: 0.125rem 0 0 0;">{{ $product->sku ?? 'N/A' }}</p>
-                                    </div>
-                                    <div style="font-size: 13px; text-align: right;">
-                                        <span style="font-weight: 500; color: #303030;">@price($product->pivot->sale_price)</span>
-                                        @if($product->pivot->stock_limit)
-                                            <p style="color: #616161; margin: 0.125rem 0 0 0;">{{ $product->pivot->sold_count ?? 0 }}/{{ $product->pivot->stock_limit }} sold</p>
-                                        @endif
+                @php
+                    $kkRows = $flashSale->products->map(fn ($p) => [
+                        'product_id' => $p->id,
+                        'sale_price' => (string) $p->pivot->sale_price,
+                        'stock_limit' => $p->pivot->stock_limit,
+                        'sold_count' => (int) ($p->pivot->sold_count ?? 0),
+                    ])->values();
+                @endphp
+                <div class="card" style="padding: 1.25rem;" x-data="kkFlashProducts()">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem;">
+                        <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Products in this sale</h2>
+                        <button type="button" @click="add()" class="btn btn-secondary" style="font-size: 12px; padding: 4px 10px;">+ Add product</button>
+                    </div>
+                    <p style="font-size: 12px; color: #616161; margin: 0 0 1rem 0;">
+                        Pick a product and the price it sells at during the sale. Leave the limit blank for unlimited.
+                    </p>
+
+                    <p style="font-size: 13px; color: #616161;" x-show="rows.length === 0" x-cloak>
+                        No products yet &mdash; the sale will show a countdown but discount nothing.
+                    </p>
+
+                    <div x-show="rows.length > 0" x-cloak style="display: flex; flex-direction: column; gap: 8px;">
+                        <template x-for="(r, i) in rows" :key="r.uid">
+                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                <select x-bind:name="'products[' + i + '][product_id]'" x-model="r.product_id"
+                                        class="form-select" style="flex: 1 1 200px; font-size: 13px;">
+                                    <option value="">Choose a product…</option>
+                                    @foreach($allProducts as $p)
+                                        <option value="{{ $p->id }}">{{ $p->name }} — @price($p->price)</option>
+                                    @endforeach
+                                </select>
+                                <input type="number" step="0.01" min="0" x-bind:name="'products[' + i + '][sale_price]'" x-model="r.sale_price"
+                                       placeholder="Sale price" class="form-input" style="width: 120px; font-size: 13px;">
+                                <input type="number" min="0" x-bind:name="'products[' + i + '][stock_limit]'" x-model="r.stock_limit"
+                                       placeholder="Limit" class="form-input" style="width: 90px; font-size: 13px;">
+                                <span style="font-size: 12px; color: #616161; width: 62px;" x-show="r.sold_count > 0" x-cloak>
+                                    <span x-text="r.sold_count"></span> sold
+                                </span>
+                                <button type="button" @click="rows.splice(i, 1)" title="Remove"
+                                        style="color:#d72c0d;background:none;border:0;cursor:pointer;font-size:16px;line-height:1;">&times;</button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                <script>
+                    function kkFlashProducts() {
+                        return {
+                            seq: 0,
+                            rows: [],
+                            init() {
+                                this.rows = (@json($kkRows)).map(r => ({ ...r, uid: ++this.seq }));
+                            },
+                            add() {
+                                this.rows.push({ uid: ++this.seq, product_id: '', sale_price: '', stock_limit: '', sold_count: 0 });
+                            },
+                        };
+                    }
+                </script>
                                     </div>
                                 </div>
                             @endforeach
