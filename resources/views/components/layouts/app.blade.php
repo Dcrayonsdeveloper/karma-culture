@@ -334,9 +334,9 @@
 
     {{-- The assistant only renders once a provider key is saved in
          Admin -> Settings -> Integrations, so clearing the key hides it. --}}
-    {{-- Signed-in customers only: the assistant reads their orders, and every
-         reply costs the store AI credit. --}}
-    @php $kkChatbot = auth()->check() && \App\Services\AiChatService::isConfigured(); @endphp
+    {{-- Shown to everyone. A guest who opens it is asked to sign in; the
+         endpoint stays behind auth either way. --}}
+    @php $kkChatbot = \App\Services\AiChatService::isConfigured(); @endphp
     @if($kkChatbot)
         <x-chatbot-widget />
     @endif
