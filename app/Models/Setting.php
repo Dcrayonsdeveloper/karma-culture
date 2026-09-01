@@ -41,12 +41,31 @@ class Setting extends Model
         };
     }
 
+    /** Marks "no row in the database" so a missing setting is still cached. */
+    private const MISSING = '__kk_setting_missing__';
+
+    /**
+     * The default must not be cached.
+     *
+     * Caching it meant the first caller for a missing key fixed the value for
+     * an hour: a caller passing no default cached null, and every later caller
+     * asking for the same key got that null back instead of its own default.
+     * A blank stored value counts as unset for the same reason — an admin field
+     * left empty should fall back, not silently become zero.
+     */
     public static function get(string $key, $default = null)
     {
-        return Cache::remember("setting.{$key}", 3600, function () use ($key, $default) {
+        $value = Cache::remember("setting.{$key}", 3600, function () use ($key) {
             $setting = static::where('key', $key)->first();
-            return $setting ? $setting->value : $default;
+
+            return $setting ? ($setting->value ?? self::MISSING) : self::MISSING;
         });
+
+        if ($value === self::MISSING || $value === '') {
+            return $default;
+        }
+
+        return $value;
     }
 
     public static function set(string $key, $value, string $type = 'string', string $group = 'general'): self
