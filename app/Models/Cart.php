@@ -49,8 +49,53 @@ class Cart extends Model
         return $this->hasMany(CartItem::class);
     }
 
+    /**
+     * Bring every line back to the price it would be added at today.
+     *
+     * Only flash-sale movement can change a price under the customer, so this
+     * writes nothing when the figure is unchanged.
+     */
+    private function repriceItems(): void
+    {
+        foreach ($this->items as $item) {
+            $product = $item->product;
+
+            if (! $product) {
+                continue;
+            }
+
+            $base = $item->variant_id
+                ? ($product->variants->firstWhere('id', $item->variant_id)?->price ?? $product->price)
+                : $product->price;
+
+            $price = (float) $base;
+
+            if ($flash = $product->flashSalePrice()) {
+                $price = min($price, $flash);
+            }
+
+            if (abs($price - (float) $item->price) > 0.001) {
+                // Quietly: CartItem::saved() calls recalculate(), and a normal
+                // update here would re-enter this method until memory ran out.
+                $item->updateQuietly([
+                    'price' => $price,
+                    'total' => $price * $item->quantity,
+                ]);
+            }
+        }
+
+        $this->load('items.product');
+    }
+
     public function recalculate(bool $skipAutoApply = false): void
     {
+        $this->load(['items.product.variants', 'coupon']);
+
+        // A cart line stores the price it was added at. Without this, a flash
+        // sale starting after the item went in never reaches the customer, and
+        // one that has ended keeps discounting them forever.
+        $this->repriceItems();
+
         $this->load(['items.product', 'coupon']);
         $subtotal = $this->items->sum('total');
         $discount = 0;

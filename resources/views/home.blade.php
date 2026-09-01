@@ -557,7 +557,7 @@
                     <p class="text-xs text-kk-text-muted mb-3">
                         <span class="font-semibold text-kk-brown">{{ $flashSale->products_count }} {{ Str::plural('product', $flashSale->products_count) }}</span> on sale
                     </p>
-                    <a href="{{ route('home') }}?flash_sale={{ $flashSale->slug }}" @click="dismiss()" class="kk-btn-brown w-full">
+                    <a href="{{ route('flash-sale.show', $flashSale->slug) }}" @click="dismiss()" class="kk-btn-brown w-full">
                         Shop the Sale Now
                     </a>
                 </div>
