@@ -34,15 +34,7 @@ class Store extends Model
         return $this->hasMany(Staff::class);
     }
 
-    public function registers(): HasMany
-    {
-        return $this->hasMany(PosRegister::class);
-    }
 
-    public function sales(): HasMany
-    {
-        return $this->hasMany(PosSale::class);
-    }
 
     public function shifts(): HasMany
     {

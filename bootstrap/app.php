@@ -29,9 +29,6 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->is('admin/*') || $request->is('admin')) {
                 return route('admin.login');
             }
-            if ($request->is('pos/*') || $request->is('pos')) {
-                return route('pos.login');
-            }
             return route('login');
         });
 
@@ -42,8 +39,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
             'admin.section' => \App\Http\Middleware\CheckAdminSection::class,
             'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
-            'pos.auth' => \App\Http\Middleware\PosAuthenticate::class,
-            'pos.shift' => \App\Http\Middleware\PosShiftRequired::class,
             'admin.audit' => \App\Http\Middleware\LogAdminActions::class,
         ]);
     })

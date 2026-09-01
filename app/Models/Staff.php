@@ -47,10 +47,6 @@ class Staff extends Model
         return $this->hasMany(StaffShift::class);
     }
 
-    public function sales(): HasMany
-    {
-        return $this->hasMany(PosSale::class);
-    }
 
     public function hasPermission(string $permission): bool
     {
