@@ -291,8 +291,16 @@
     .kk-pdp__share:hover { border-color: #2d1810; background: #2d1810; color: #efe2cb; transform: translateY(-1px); }
     .kk-pdp__share svg { width: 18px; height: 18px; }
     .kk-pdp__share-ok { border-color: #2a9d3e !important; background: #eaf6ec !important; color: #2a9d3e !important; }
-    /* Same circle as Share, but an anchor, so it needs the text reset. */
-    .kk-pdp__guide { text-decoration: none; }
+    /* Reads as a label rather than an icon, so it matches the wishlist pill
+       beside it rather than the round Share button. */
+    .kk-pdp__guide {
+        display: inline-flex; align-items: center; height: 44px; flex-shrink: 0;
+        background: #fff; border: 1px solid #c9b393; border-radius: 999px;
+        text-decoration: none; white-space: nowrap;
+        font-size: 13px; font-weight: 600; color: #2d1810;
+        padding: 0 18px; letter-spacing: 0.02em; transition: all .18s ease;
+    }
+    .kk-pdp__guide:hover { border-color: #2d1810; background: #f7eedb; }
     </style>
     <div class="pdp-wrapper">
     <div class="container mx-auto px-4" x-data="productPage()">
@@ -524,12 +532,7 @@
                         {{-- Opens in a new tab so the shopper keeps their size and
                              colour selection on this page. --}}
                         <a href="{{ route('size-guide') }}" target="_blank" rel="noopener"
-                           class="kk-pdp__share kk-pdp__guide" aria-label="Open the size guide" title="Size guide">
-                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5A1.5 1.5 0 014.5 6h15A1.5 1.5 0 0121 7.5v9a1.5 1.5 0 01-1.5 1.5h-15A1.5 1.5 0 013 16.5v-9z"/>
-                                <path stroke-linecap="round" d="M7 6v3M11 6v5M15 6v3M19 6v5"/>
-                            </svg>
-                        </a>
+                           class="kk-pdp__guide" title="Open the size guide">Size Guide</a>
                     </div>
                 </div>
 
