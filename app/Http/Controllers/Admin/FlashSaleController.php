@@ -21,7 +21,7 @@ class FlashSaleController extends Controller
 
     public function create(): View
     {
-        return view('admin.flash-sales.create');
+        return view('admin.flash-sales.create')->with('allProducts', $this->selectableProducts());
     }
 
     public function store(Request $request): RedirectResponse
@@ -32,13 +32,54 @@ class FlashSaleController extends Controller
             'starts_at' => 'required|date',
             'ends_at' => 'required|date|after:starts_at',
             'is_active' => 'boolean',
+            'products' => 'nullable|array',
+            'products.*.product_id' => 'nullable|integer|exists:products,id',
+            'products.*.sale_price' => 'nullable|numeric|min:0',
+            'products.*.stock_limit' => 'nullable|integer|min:0',
         ]);
 
-        $validated['slug'] = Str::slug($validated['name']);
+        $flashSale = FlashSale::create([
+            'name' => $validated['name'],
+            'slug' => Str::slug($validated['name']),
+            'description' => $validated['description'] ?? null,
+            'starts_at' => $validated['starts_at'],
+            'ends_at' => $validated['ends_at'],
+            'is_active' => $request->boolean('is_active'),
+        ]);
 
-        FlashSale::create($validated);
+        // Attach here as well as on edit: making someone save, reopen and save
+        // again just to add a product is a needless round trip.
+        $flashSale->products()->sync($this->productRows($request));
 
-        return redirect()->route('admin.flash-sales.index')->with('success', 'Flash sale created');
+        return redirect()->route('admin.flash-sales.edit', $flashSale)->with('success', 'Flash sale created');
+    }
+
+    /**
+     * Turn the repeated form rows into a sync payload, keeping any sold_count
+     * a surviving row already had so a running sale does not reset its limits.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function productRows(Request $request, ?FlashSale $flashSale = null): array
+    {
+        $existing = $flashSale?->products->keyBy('id') ?? collect();
+        $rows = [];
+
+        foreach ($request->input('products', []) as $row) {
+            $productId = (int) ($row['product_id'] ?? 0);
+
+            if ($productId <= 0 || isset($rows[$productId])) {
+                continue;
+            }
+
+            $rows[$productId] = [
+                'sale_price' => (float) ($row['sale_price'] ?? 0),
+                'stock_limit' => ($row['stock_limit'] ?? '') === '' ? null : (int) $row['stock_limit'],
+                'sold_count' => $existing[$productId]->pivot->sold_count ?? 0,
+            ];
+        }
+
+        return $rows;
     }
 
     /** Products a sale can include: live and sellable, cheapest name-first. */
@@ -81,26 +122,7 @@ class FlashSaleController extends Controller
             'is_active' => $request->boolean('is_active'),
         ]);
 
-        // Rebuild the line-up from the form. sold_count is preserved for rows
-        // that survive, so a running sale does not reset its stock limits.
-        $existing = $flashSale->products->keyBy('id');
-        $sync = [];
-
-        foreach ($request->input('products', []) as $row) {
-            $productId = (int) ($row['product_id'] ?? 0);
-
-            if ($productId <= 0 || isset($sync[$productId])) {
-                continue;
-            }
-
-            $sync[$productId] = [
-                'sale_price' => (float) ($row['sale_price'] ?? 0),
-                'stock_limit' => ($row['stock_limit'] ?? '') === '' ? null : (int) $row['stock_limit'],
-                'sold_count' => $existing[$productId]->pivot->sold_count ?? 0,
-            ];
-        }
-
-        $flashSale->products()->sync($sync);
+        $flashSale->products()->sync($this->productRows($request, $flashSale));
 
         return redirect()->route('admin.flash-sales.edit', $flashSale)->with('success', 'Flash sale updated');
     }
