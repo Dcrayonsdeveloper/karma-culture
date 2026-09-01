@@ -982,7 +982,7 @@
                                 <div class="kk-rail-bar" aria-hidden="true"></div>
                                 <div class="kk-rail-cells">
                                     @foreach($tabCfg['items'] as $i => $item)
-                                        <a href="{{ route('home') }}?{{ $item['q'] }}"
+                                        <a href="{{ route('shop') }}?{{ $item['q'] }}"
                                            class="kk-rail-cell"
                                            style="--d: {{ $i * 80 }}ms;">
                                             <div class="kk-shirt-hanger" style="color: {{ $item['shade'] }};">
