@@ -35,8 +35,18 @@
 
     {{-- Size --}}
     @php
-        $kkAllSizes = \Illuminate\Support\Facades\Cache::remember('kk_filter_sizes_v2', 600, function () {
-            return \App\Models\ProductVariant::where('is_active', true)
+        // Only the sizes stocked inside this category. Listing every size in the
+        // shop meant a category holding one polo still offered UK 7 to UK 11,
+        // and picking one returned nothing.
+        $kkScopeProductIds = \App\Models\Product::where('is_active', true)
+            ->whereIn('category_id', $category->getAllDescendantIds())
+            ->pluck('id');
+
+        $kkVer = \App\Models\ProductVariant::filterCacheVersion();
+
+        $kkAllSizes = \Illuminate\Support\Facades\Cache::remember("kk_filter_sizes_c{$category->id}_v{$kkVer}", 600, function () use ($kkScopeProductIds) {
+            return \App\Models\ProductVariant::whereIn('product_id', $kkScopeProductIds)
+                ->where('is_active', true)
                 ->where('stock_quantity', '>', 0)
                 ->pluck('name')
                 ->map(fn ($n) => \App\Models\ProductVariant::sizeLabel($n))
@@ -76,8 +86,8 @@
 
     {{-- Colour --}}
     @php
-        $kkAllColours = \Illuminate\Support\Facades\Cache::remember('kk_filter_colours', 600, function () {
-            return \App\Models\Product::where('is_active', true)
+        $kkAllColours = \Illuminate\Support\Facades\Cache::remember("kk_filter_colours_c{$category->id}_v{$kkVer}", 600, function () use ($kkScopeProductIds) {
+            return \App\Models\Product::whereIn('id', $kkScopeProductIds)
                 ->pluck('attributes')
                 ->flatMap(fn ($a) => collect(data_get($a, 'Colours', []))
                     ->map(fn ($c) => is_array($c)

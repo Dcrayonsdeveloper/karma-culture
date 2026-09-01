@@ -93,7 +93,7 @@ class Product extends Model
     protected static function booted(): void
     {
         // Colour swatches are cached and read from the product's Colours list.
-        $forgetColours = fn () => \Illuminate\Support\Facades\Cache::forget('kk_filter_colours');
+        $forgetColours = fn () => \App\Models\ProductVariant::bumpFilterCache();
 
         static::saved($forgetColours);
         static::deleted($forgetColours);
