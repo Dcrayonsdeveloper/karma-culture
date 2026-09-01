@@ -87,6 +87,10 @@ Route::get('/search', [App\Http\Controllers\SearchController::class, 'index'])->
 Route::get('/search/suggestions', [App\Http\Controllers\SearchController::class, 'suggestions'])->name('search.suggestions');
 
 // Special Pages
+// The all-products page. Its controller and filters already existed but it
+// had no route, which is why /products 404'd and the Shop It Your Way tiles
+// pointed at the home page, where their filters mean nothing.
+Route::get('/shop', [App\Http\Controllers\ProductController::class, 'index'])->name('shop');
 Route::get('/deals', [App\Http\Controllers\DealsController::class, 'index'])->name('deals');
 Route::get('/flash-sale/{flashSale:slug}', [App\Http\Controllers\FlashSaleController::class, 'show'])->name('flash-sale.show');
 Route::get('/new-arrivals', [App\Http\Controllers\ProductController::class, 'newArrivals'])->name('new-arrivals');

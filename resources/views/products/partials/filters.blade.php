@@ -1,4 +1,4 @@
-<form action="{{ route('home') }}" method="GET" class="space-y-4">
+<form action="{{ route('shop') }}" method="GET" class="space-y-4">
     {{-- Preserve sort --}}
     @if(request('sort'))
         <input type="hidden" name="sort" value="{{ request('sort') }}">
