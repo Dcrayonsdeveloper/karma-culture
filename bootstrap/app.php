@@ -48,6 +48,20 @@ return Application::configure(basePath: dirname(__DIR__))
         // the visitor back to the form with a fresh token lets them just
         // retry. Passwords are excluded from the re-fill for safety.
         $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, \Illuminate\Http\Request $request) {
+            // Signing out is the one case where a stale token is not a problem
+            // worth reporting: the session it belonged to is what the visitor
+            // is asking us to throw away. Finish the job and send them home
+            // rather than making them fix a token to be allowed to leave.
+            if ($request->routeIs('logout', 'admin.logout') || $request->is('logout', 'admin/logout')) {
+                $wasAdmin = $request->routeIs('admin.logout') || $request->is('admin/logout');
+
+                \Illuminate\Support\Facades\Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return redirect($wasAdmin ? route('admin.login') : '/');
+            }
+
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => 'Your session expired. Please refresh the page and try again.',
