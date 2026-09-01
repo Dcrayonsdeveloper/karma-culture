@@ -434,7 +434,14 @@ class HomepageController extends Controller
         $data = $request->validate([
             'title'       => 'required|string|max:255',
             'description' => 'required|string|max:500',
+            'image'       => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:5120',
         ]);
+        unset($data['image']);
+
+        if ($request->hasFile('image')) {
+            $data['image_url'] = $request->file('image')->store('qualities', 'public');
+        }
+
         $data['position']  = (Quality::max('position') ?? 0) + 1;
         $data['is_active'] = true;
         Quality::create($data);
@@ -445,9 +452,26 @@ class HomepageController extends Controller
     public function updateQuality(Request $request, Quality $quality)
     {
         $data = $request->validate([
-            'title'       => 'required|string|max:255',
-            'description' => 'required|string|max:500',
+            'title'        => 'required|string|max:255',
+            'description'  => 'required|string|max:500',
+            'image'        => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:5120',
+            'remove_image' => 'nullable|boolean',
         ]);
+        unset($data['image'], $data['remove_image']);
+
+        // A new upload replaces the old file; the explicit remove checkbox sends
+        // the card back to its no-image layout. Either way the orphan is deleted
+        // rather than left behind on disk.
+        if ($request->hasFile('image')) {
+            if ($quality->image_url) {
+                Storage::disk('public')->delete($quality->image_url);
+            }
+            $data['image_url'] = $request->file('image')->store('qualities', 'public');
+        } elseif ($request->boolean('remove_image') && $quality->image_url) {
+            Storage::disk('public')->delete($quality->image_url);
+            $data['image_url'] = null;
+        }
+
         $quality->update($data);
         Cache::flush();
         return back()->with('success', 'Quality updated.');
@@ -462,6 +486,9 @@ class HomepageController extends Controller
 
     public function deleteQuality(Quality $quality)
     {
+        if ($quality->image_url) {
+            Storage::disk('public')->delete($quality->image_url);
+        }
         $quality->delete();
         Cache::flush();
         return back()->with('success', 'Quality deleted.');

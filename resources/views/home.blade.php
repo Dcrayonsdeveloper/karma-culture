@@ -460,6 +460,31 @@
             }
             .kk-quality:hover .kk-quality__video { transform: scale(1.06); }
 
+            /* Still-image background, uploaded per card in admin. Deliberately not
+               reusing __video: the reduced-motion rule below hides that layer, and a
+               still photo has no motion to reduce — it should stay visible. */
+            .kk-quality__media {
+                position: absolute; inset: 0;
+                width: 100%; height: 100%;
+                object-fit: cover;
+                z-index: 0;
+                transition: transform 0.6s ease;
+            }
+            .kk-quality:hover .kk-quality__media { transform: scale(1.06); }
+
+            /* No image on the card. The 3:4 tile exists to hold a picture, so without
+               one it is just a tall empty rectangle with the text stranded at the
+               bottom. These cards drop the ratio and size to their own text instead. */
+            .kk-quality--plain {
+                aspect-ratio: auto;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-end;
+                border: 1px solid rgba(239, 226, 203, 0.10);
+            }
+            .kk-quality--plain .kk-quality__overlay { display: none; }
+            .kk-quality--plain .kk-quality__content { position: static; padding: 22px 20px; }
+
             .kk-quality__overlay {
                 position: absolute; inset: 0; z-index: 1;
                 background: linear-gradient(to top,
@@ -1034,7 +1059,10 @@
                      @mouseenter="stop()" @mouseleave="autoplay && start()">
                     <div class="kk-qslider__track" x-ref="track" @scroll.debounce.100ms="update()" tabindex="0" aria-label="Our qualities">
                         @foreach($qualities as $q)
-                            <div class="kk-quality">
+                            <div class="kk-quality @if(! $q->image_url) kk-quality--plain @endif">
+                                @if($q->image_url)
+                                    <img class="kk-quality__media" src="{{ $q->image }}" alt="{{ $q->title }}" loading="lazy" decoding="async">
+                                @endif
                                 <div class="kk-quality__overlay"></div>
                                 <div class="kk-quality__content">
                                     <span class="kk-quality__icon">

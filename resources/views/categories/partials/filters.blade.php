@@ -17,8 +17,10 @@
                 <div class="space-y-1.5 max-h-52 overflow-y-auto pt-1 pb-2">
                     @php $activeSubs = $activeSubcategorySlugs ?? (array) request('subcategory'); @endphp
                     @foreach($filterSubcategories as $sub)
-                        <label class="flex items-center gap-2.5 cursor-pointer group py-0.5">
-                            <input type="checkbox" name="subcategory[]" value="{{ $sub->slug }}" onchange="this.form.submit()"
+                        @php $kkEmpty = ($sub->products_total ?? 0) === 0; @endphp
+                        <label class="flex items-center gap-2.5 py-0.5 group {{ $kkEmpty ? 'cursor-not-allowed opacity-45' : 'cursor-pointer' }}"
+                               @if($kkEmpty) title="Nothing in this collection yet" @endif>
+                            <input type="checkbox" name="subcategory[]" value="{{ $sub->slug }}" onchange="this.form.submit()" @disabled($kkEmpty)
                                    {{ in_array($sub->slug, $activeSubs) ? 'checked' : '' }}
                                    class="w-3.5 h-3.5 rounded border-neutral-300 text-[#6F9CA2] focus:ring-[#6F9CA2] focus:ring-offset-0">
                             <span class="text-sm text-neutral-600 group-hover:text-neutral-900 transition-colors">{{ $sub->name }}</span>
@@ -117,10 +119,14 @@
                             {{-- The label inherits its colour so the selected state can
                                  invert it. Hardcoding it on the inner span left dark text
                                  on a dark chip once selected. --}}
-                            <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded-md border transition-colors
-                                         border-neutral-200 text-neutral-700 hover:border-neutral-500
-                                         peer-checked:border-neutral-900 peer-checked:bg-neutral-900 peer-checked:text-white peer-checked:font-semibold">
-                                <span style="width:12px;height:12px;border-radius:50%;background-color: {{ $kkC['hex'] ?: '#ddd' }}; border:1px solid rgba(255,255,255,.35);"></span>
+                            {{-- Selected state is a ring, not a fill: filling the chip
+                                 with black fights the swatch, which is the one thing
+                                 the customer is actually reading. --}}
+                            <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded-md border transition-all
+                                         border-neutral-200 text-neutral-700 bg-white hover:border-neutral-500
+                                         peer-checked:border-neutral-900 peer-checked:text-neutral-900 peer-checked:font-semibold
+                                         peer-checked:ring-2 peer-checked:ring-neutral-900/15 peer-checked:shadow-sm">
+                                <span style="width:12px;height:12px;border-radius:50%;background-color: {{ $kkC['hex'] ?: '#ddd' }}; border:1px solid rgba(0,0,0,.2);"></span>
                                 <span>{{ $kkC['name'] }}</span>
                             </span>
                         </label>
