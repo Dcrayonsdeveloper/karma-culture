@@ -10,12 +10,31 @@ class ProductVariant extends Model
 {
     protected static function booted(): void
     {
-        // Size chips are cached for ten minutes and are built from variants,
-        // so adding or removing a size must drop that cache immediately.
-        $forget = fn () => \Illuminate\Support\Facades\Cache::forget('kk_filter_sizes_v2');
+        static::saved(fn () => self::bumpFilterCache());
+        static::deleted(fn () => self::bumpFilterCache());
+    }
 
-        static::saved($forget);
-        static::deleted($forget);
+    /**
+     * Filter chips are cached per category, so there is no single key to
+     * forget. Bumping a shared version number retires every one of them at
+     * once the moment the catalogue changes.
+     */
+    public static function bumpFilterCache(): void
+    {
+        $cache = \Illuminate\Support\Facades\Cache::getFacadeRoot();
+
+        if (! $cache->has('kk_filter_ver')) {
+            $cache->forever('kk_filter_ver', 1);
+
+            return;
+        }
+
+        $cache->forever('kk_filter_ver', ((int) $cache->get('kk_filter_ver', 1)) + 1);
+    }
+
+    public static function filterCacheVersion(): int
+    {
+        return (int) \Illuminate\Support\Facades\Cache::get('kk_filter_ver', 1);
     }
 
     /**

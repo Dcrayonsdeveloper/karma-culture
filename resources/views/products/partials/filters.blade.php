@@ -57,7 +57,7 @@
 
     {{-- Size --}}
     @php
-        $kkAllSizes = \Illuminate\Support\Facades\Cache::remember('kk_filter_sizes_v2', 600, function () {
+        $kkAllSizes = \Illuminate\Support\Facades\Cache::remember('kk_filter_sizes_v2_' . \App\Models\ProductVariant::filterCacheVersion(), 600, function () {
             return \App\Models\ProductVariant::where('is_active', true)
                 ->where('stock_quantity', '>', 0)
                 ->pluck('name')
@@ -98,7 +98,7 @@
 
     {{-- Colour --}}
     @php
-        $kkAllColours = \Illuminate\Support\Facades\Cache::remember('kk_filter_colours', 600, function () {
+        $kkAllColours = \Illuminate\Support\Facades\Cache::remember('kk_filter_colours_' . \App\Models\ProductVariant::filterCacheVersion(), 600, function () {
             return \App\Models\Product::where('is_active', true)
                 ->pluck('attributes')
                 ->flatMap(fn ($a) => collect(data_get($a, 'Colours', []))
