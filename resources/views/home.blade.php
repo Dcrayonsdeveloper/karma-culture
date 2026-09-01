@@ -914,7 +914,11 @@
              ============================================ --}}
         @php
             $aboutTitle = ($sections['about_us']->title ?? null) ?: 'Crafted to Last';
-            $aboutText  = ($sections['about_us']->content ?? null) ?: 'A closer look at the cloth, cut and craft.';
+            // subtitle, not content: content is cast to an array and the admin
+            // edits it as a repeater of title/description/icon items, so reading
+            // it here produced an array where a sentence was wanted and the
+            // admin's own tagline field never reached the page.
+            $aboutText  = ($sections['about_us']->subtitle ?? null) ?: 'A closer look at the cloth, cut and craft.';
             $aboutLink  = ($sections['about_us']->button_link ?? null);
             $aboutLink  = ($aboutLink && $aboutLink !== '#') ? $aboutLink : route('about');
             // Three reel-style videos, each admin-configurable (Site Settings).

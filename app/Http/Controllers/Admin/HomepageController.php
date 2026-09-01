@@ -56,6 +56,8 @@ class HomepageController extends Controller
             'contact_address' => Setting::get('contact_address', ''),
             'announcement_text' => Setting::get('announcement_text', ''),
             'about_us_video_url' => Setting::get('about_us_video_url', ''),
+            'about_us_video_url_2' => Setting::get('about_us_video_url_2', ''),
+            'about_us_video_url_3' => Setting::get('about_us_video_url_3', ''),
         ];
 
         return view('admin.homepage.site-settings', compact('settings'));
@@ -70,7 +72,8 @@ class HomepageController extends Controller
             'social_youtube', 'social_tiktok', 'social_pinterest',
             'contact_email', 'contact_phone', 'contact_address',
             'announcement_text',
-            'about_us_video_url',
+            // The About Us section renders three videos; all three are editable.
+            'about_us_video_url', 'about_us_video_url_2', 'about_us_video_url_3',
         ];
 
         foreach ($fields as $field) {
@@ -84,10 +87,16 @@ class HomepageController extends Controller
             Setting::set('site_logo', $path, 'string', 'homepage');
         }
 
-        // About Us video upload - saved path overrides the URL field.
-        if ($request->hasFile('about_us_video_file')) {
-            $videoPath = $request->file('about_us_video_file')->store('storefront/about', 'public');
-            Setting::set('about_us_video_url', 'storage/' . $videoPath, 'string', 'homepage');
+        // About Us video uploads - an uploaded file overrides that slot's URL field.
+        foreach ([
+            'about_us_video_file' => 'about_us_video_url',
+            'about_us_video_file_2' => 'about_us_video_url_2',
+            'about_us_video_file_3' => 'about_us_video_url_3',
+        ] as $fileField => $urlSetting) {
+            if ($request->hasFile($fileField)) {
+                $videoPath = $request->file($fileField)->store('storefront/about', 'public');
+                Setting::set($urlSetting, 'storage/' . $videoPath, 'string', 'homepage');
+            }
         }
 
         Cache::flush();

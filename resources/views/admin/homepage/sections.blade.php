@@ -21,7 +21,7 @@
             <p style="font-size: 12px; color: #616161; margin: 0.25rem 0 0 0;">Toggle visibility and edit content of homepage sections</p>
         </div>
         <div style="padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
-            @foreach($sections as $section)
+            @forelse($sections as $section)
                 <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; background: #f6f6f7; border-radius: 0.5rem; border: 1px solid #e3e3e3; {{ !$section->is_active ? 'opacity: 0.6;' : '' }}">
                     <div style="display: flex; align-items: center; gap: 0.75rem;">
                         <div style="cursor: move; color: #616161;">
@@ -79,7 +79,12 @@
                         <a href="{{ route('admin.homepage.sections.edit', $section) }}" class="btn btn-primary" style="font-size: 12px; padding: 0.25rem 0.5rem;">Edit</a>
                     </div>
                 </div>
-            @endforeach
+            @empty
+                <div style="padding: 2rem 1rem; text-align: center; color: #616161;">
+                    <p style="font-size: 13px; margin: 0 0 0.25rem 0;">No homepage sections yet.</p>
+                    <p style="font-size: 12px; margin: 0;">Sections are created by the application; once one exists it appears here and its heading, text and button become editable.</p>
+                </div>
+            @endforelse
         </div>
     </div>
 </x-layouts.admin>

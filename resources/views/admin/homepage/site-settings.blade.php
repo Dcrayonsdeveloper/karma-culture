@@ -53,18 +53,27 @@
                         <input type="text" name="announcement_text" value="{{ $settings['announcement_text'] }}" class="form-input" placeholder="e.g. Free Shipping on Orders Over ₹500!">
                         <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Displayed in the teal bar at the top of every page. Leave empty to hide.</p>
                     </div>
+                    {{-- The About Us section shows three videos side by side, so all
+                         three are editable here. Only the first used to be, which left
+                         two cards that could never be filled from the admin. --}}
+                    @foreach([
+                        ['url' => 'about_us_video_url',   'file' => 'about_us_video_file',   'label' => 'About Us - Video 1'],
+                        ['url' => 'about_us_video_url_2', 'file' => 'about_us_video_file_2', 'label' => 'About Us - Video 2'],
+                        ['url' => 'about_us_video_url_3', 'file' => 'about_us_video_file_3', 'label' => 'About Us - Video 3'],
+                    ] as $kkAboutVideo)
                     <div style="border-top: 1px solid #e3e3e3; padding-top: 1rem;">
-                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">About Us - Video</label>
-                        @if($settings['about_us_video_url'])
+                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">{{ $kkAboutVideo['label'] }}</label>
+                        @if($settings[$kkAboutVideo['url']] ?? '')
                             <div style="margin: 0.5rem 0;">
-                                <video src="{{ str_starts_with($settings['about_us_video_url'], 'http') ? $settings['about_us_video_url'] : asset($settings['about_us_video_url']) }}"
+                                <video src="{{ str_starts_with($settings[$kkAboutVideo['url']], 'http') ? $settings[$kkAboutVideo['url']] : asset($settings[$kkAboutVideo['url']]) }}"
                                        controls muted style="max-width: 100%; max-height: 200px; border-radius: 6px;"></video>
                             </div>
                         @endif
-                        <input type="text" name="about_us_video_url" value="{{ $settings['about_us_video_url'] }}" class="form-input" placeholder="https://… or storage/storefront/about/video.mp4">
-                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Paste a video URL above OR upload a file below. Used in the About Us section on the home page.</p>
-                        <input type="file" name="about_us_video_file" accept="video/mp4,video/webm,video/quicktime" class="form-input" style="margin-top: 0.5rem;">
+                        <input type="text" name="{{ $kkAboutVideo['url'] }}" value="{{ $settings[$kkAboutVideo['url']] ?? '' }}" class="form-input" placeholder="https://… or storage/storefront/about/video.mp4">
+                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Paste a video URL above OR upload a file below. Shown in the About Us section on the home page.</p>
+                        <input type="file" name="{{ $kkAboutVideo['file'] }}" accept="video/mp4,video/webm,video/quicktime" class="form-input" style="margin-top: 0.5rem;">
                     </div>
+                    @endforeach
                 </div>
             </div>
 
