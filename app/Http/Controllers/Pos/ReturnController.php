@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Pos;
 
 use App\Http\Controllers\Controller;
-use App\Models\CreditNote;
 use App\Models\PosCashMovement;
 use App\Models\PosSale;
 use App\Models\Staff;
@@ -82,7 +81,7 @@ class ReturnController extends Controller
             'items.*.quantity'     => ['required', 'integer', 'min:1'],
             'items.*.reason'       => ['nullable', 'string', 'max:100'],
             'items.*.condition'    => ['nullable', 'in:unused_with_tags,used,defective'],
-            'refund_method'  => ['required', 'in:cash,original_payment,credit_note'],
+            'refund_method'  => ['required', 'in:cash,original_payment'],
             'reason'         => ['nullable', 'string', 'max:500'],
             'authorized_by'  => ['nullable', 'integer', 'exists:staff,id'],  // manager who approved
         ]);
@@ -162,7 +161,6 @@ class ReturnController extends Controller
                 }
 
                 // Create return record
-                $creditNote = null;
                 $return = PosReturn::create([
                     'pos_sale_id'   => $sale->id,
                     'store_id'      => $storeId,
@@ -181,23 +179,10 @@ class ReturnController extends Controller
                     $return->items()->create($ri);
                 }
 
-                // Generate credit note if refund method is credit_note
-                if ($validated['refund_method'] === 'credit_note' && $sale->customer_id) {
-                    $creditNote = CreditNote::create([
-                        'user_id'          => $sale->customer_id,
-                        'amount'           => $totalRefund,
-                        'remaining_amount' => $totalRefund,
-                        'status'           => 'active',
-                        'expires_at'       => now()->addYear(),
-                    ]);
-
-                    $return->update(['credit_note_id' => $creditNote->id]);
-                }
 
                 return [
                     'return'       => $return,
                     'refund'       => $totalRefund,
-                    'credit_note'  => $creditNote?->credit_note_number,
                 ];
             });
 
@@ -225,7 +210,6 @@ class ReturnController extends Controller
                 'success'       => true,
                 'return_number' => $result['return']->return_number,
                 'refund_amount' => $result['refund'],
-                'credit_note'   => $result['credit_note'],
                 'message'       => 'Return processed successfully.',
             ]);
         } catch (\RuntimeException $e) {

@@ -74,7 +74,6 @@ Route::prefix('pos')->name('pos.')->group(function () {
             Route::post('/customers', [Pos\CustomerController::class, 'store'])->name('customers.store');
 
             // ── Credit Notes ─────────────────────────────────────────
-            Route::get('/credit-note/{code}/validate', [Pos\CreditNoteController::class, 'validate'])->name('credit-note.validate');
 
             // ── Manager Authorization ────────────────────────────────
             Route::post('/authorize', [Pos\AuthController::class, 'authorizeAction'])->name('authorize')->middleware('throttle:10,1');

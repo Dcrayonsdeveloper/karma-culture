@@ -116,55 +116,6 @@
             @endif
 
             <!-- Credit Note -->
-            @if($return->creditNote)
-                <div class="card">
-                    <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3; display: flex; align-items: center; gap: 0.5rem;">
-                        <div style="width: 2rem; height: 2rem; border-radius: 0.5rem; background: #cdfee1; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            <svg style="width: 1rem; height: 1rem; color: #1a7a2e;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
-                            </svg>
-                        </div>
-                        <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Credit Note Issued</h2>
-                    </div>
-                    <div style="padding: 1rem;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                            <div>
-                                <a href="{{ route('admin.credit-notes.show', $return->creditNote) }}" style="font-size: 15px; font-weight: 600; color: #005bd3; text-decoration: none;">
-                                    {{ $return->creditNote->credit_note_number }}
-                                </a>
-                                <p style="font-size: 12px; color: #616161; margin: 0.25rem 0 0 0;">{{ $return->creditNote->created_at->format('M d, Y h:i A') }}</p>
-                            </div>
-                            @php
-                                $cnStatusStyle = match($return->creditNote->status) {
-                                    'active' => 'background: #cdfee1; color: #1a7a2e;',
-                                    'partially_used' => 'background: #d4edfc; color: #0064a4;',
-                                    'fully_used' => 'background: #ebebeb; color: #616161;',
-                                    'expired' => 'background: #ffe0db; color: #b71c00;',
-                                    default => 'background: #ebebeb; color: #616161;',
-                                };
-                            @endphp
-                            <span style="display: inline-block; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 12px; font-weight: 500; {{ $cnStatusStyle }}">{{ ucfirst(str_replace('_', ' ', $return->creditNote->status)) }}</span>
-                        </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; text-align: center;">
-                            <div style="background: #f6f6f7; border-radius: 0.5rem; padding: 0.75rem;">
-                                <p style="font-size: 12px; color: #616161; margin: 0;">Amount</p>
-                                <p style="font-size: 13px; font-weight: 700; color: #303030; margin: 0.25rem 0 0 0;">@price($return->creditNote->amount)</p>
-                            </div>
-                            <div style="background: #f6f6f7; border-radius: 0.5rem; padding: 0.75rem;">
-                                <p style="font-size: 12px; color: #616161; margin: 0;">Used</p>
-                                <p style="font-size: 13px; font-weight: 700; color: #0064a4; margin: 0.25rem 0 0 0;">@price($return->creditNote->used_amount)</p>
-                            </div>
-                            <div style="background: #f6f6f7; border-radius: 0.5rem; padding: 0.75rem;">
-                                <p style="font-size: 12px; color: #616161; margin: 0;">Remaining</p>
-                                <p style="font-size: 13px; font-weight: 700; color: #1a7a2e; margin: 0.25rem 0 0 0;">@price($return->creditNote->remaining_amount)</p>
-                            </div>
-                        </div>
-                        <a href="{{ route('admin.credit-notes.show', $return->creditNote) }}" class="btn btn-secondary" style="width: 100%; text-align: center; margin-top: 1rem; font-size: 13px;">
-                            View Credit Note Details
-                        </a>
-                    </div>
-                </div>
-            @endif
 
             <!-- Update Status -->
             @if(!in_array($return->status, ['completed', 'rejected']))

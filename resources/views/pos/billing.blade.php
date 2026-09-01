@@ -539,42 +539,7 @@
                 </div>
             </template>
 
-            {{-- Credit Note Redemption --}}
-            <div class="mt-4 p-3 rounded-lg" style="border: 1px dashed var(--pos-border);">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-xs font-medium" style="color: var(--pos-text-muted);">Apply Credit Note</span>
-                    <template x-if="creditNote">
-                        <button @click="removeCreditNote()" class="text-xs" style="color: var(--pos-danger);">Remove</button>
-                    </template>
-                </div>
-                <template x-if="!creditNote">
-                    <div class="flex gap-2">
-                        <input type="text" x-model="creditNoteCode" placeholder="Credit note code..."
-                               class="flex-1 px-3 py-1.5 rounded border text-sm pos-mono focus:outline-none focus:ring-1"
-                               style="border-color: var(--pos-border); --tw-ring-color: var(--pos-primary);"
-                               @keydown.enter="validateCreditNote()">
-                        <button @click="validateCreditNote()" :disabled="!creditNoteCode.trim()"
-                                class="px-3 py-1.5 rounded text-xs font-medium"
-                                style="background: var(--pos-primary); color: white;"
-                                :style="!creditNoteCode.trim() ? 'opacity: 0.5;' : ''">Verify</button>
-                    </div>
-                </template>
-                <template x-if="creditNote">
-                    <div class="p-2 rounded" style="background: #DCFCE7;">
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold pos-mono" style="color: #166534;" x-text="creditNote.number"></span>
-                            <span class="text-xs" style="color: #166534;">Balance: ₹<span x-text="creditNote.remaining.toFixed(2)" class="pos-mono"></span></span>
-                        </div>
-                        <div class="flex items-center justify-between mt-1">
-                            <span class="text-xs" style="color: #166534;">Applied:</span>
-                            <span class="text-sm font-bold pos-mono" style="color: #166534;" x-text="'-₹' + creditNoteApplied.toFixed(2)"></span>
-                        </div>
-                        <div x-show="amountAfterCreditNote() > 0" class="text-xs mt-1" style="color: #166534;">
-                            Remaining to pay: ₹<span x-text="amountAfterCreditNote().toFixed(2)" class="pos-mono font-medium"></span>
-                        </div>
-                    </div>
-                </template>
-            </div>
+
 
             {{-- Error --}}
             <p x-show="paymentError" x-text="paymentError" x-transition class="text-sm mt-3" style="color: var(--pos-danger);"></p>
@@ -732,7 +697,6 @@
                     <h4 class="text-lg font-bold mb-1" style="color: var(--pos-text);">Return Processed</h4>
                     <p class="text-sm" style="color: var(--pos-text-muted);">Return #<span x-text="returnSuccess.return_number" class="pos-mono font-medium"></span></p>
                     <p class="text-xl font-bold pos-mono mt-2" style="color: var(--pos-success);">Refund: ₹<span x-text="returnSuccess.refund_amount.toFixed(2)"></span></p>
-                    <p x-show="returnSuccess.credit_note" class="text-sm mt-1" style="color: var(--pos-primary);">Credit Note: <span x-text="returnSuccess.credit_note" class="pos-mono font-medium"></span></p>
                     <button @click="returnSuccess = null; showReturnsModal = false" class="pos-btn pos-btn-primary mt-5 px-8 text-sm">Done</button>
                 </div>
             </template>
@@ -854,8 +818,6 @@
                                                     :style="returnRefundMethod === 'cash' ? 'background: var(--pos-primary); color: white;' : 'background: #F1F5F9; color: var(--pos-text-muted);'">Cash</button>
                                             <button @click="returnRefundMethod = 'original_payment'" class="flex-1 py-2 rounded-lg text-xs font-medium transition-colors"
                                                     :style="returnRefundMethod === 'original_payment' ? 'background: var(--pos-primary); color: white;' : 'background: #F1F5F9; color: var(--pos-text-muted);'">Original</button>
-                                            <button @click="returnRefundMethod = 'credit_note'" class="flex-1 py-2 rounded-lg text-xs font-medium transition-colors"
-                                                    :style="returnRefundMethod === 'credit_note' ? 'background: var(--pos-primary); color: white;' : 'background: #F1F5F9; color: var(--pos-text-muted);'">Credit Note</button>
                                         </div>
                                     </div>
 
@@ -960,9 +922,6 @@ function posBilling() {
         returnSuccess: null,
 
         // ── Credit Note (in payment) ──
-        creditNoteCode: '',
-        creditNote: null,
-        creditNoteApplied: 0,
 
         // ── Other ──
         barcodeBuffer: '',
@@ -1251,7 +1210,7 @@ function posBilling() {
             // Validate cash (minus credit note)
             if (this.paymentMethod === 'cash') {
                 const received = parseFloat(this.cashReceived) || 0;
-                if (received < this.amountAfterCreditNote()) {
+                if (received < this.cart.total) {
                     this.paymentError = 'Insufficient cash received.';
                     return;
                 }
@@ -1269,16 +1228,9 @@ function posBilling() {
                 payment_method: this.paymentMethod,
             };
 
-            // Credit note
-            if (this.creditNote && this.creditNoteApplied > 0) {
-                payload.credit_note_id = this.creditNote.id;
-                payload.credit_note_amount = this.creditNoteApplied;
-            }
-
-            const effectiveTotal = this.amountAfterCreditNote();
 
             if (this.paymentMethod === 'cash') {
-                payload.paid_amount = (parseFloat(this.cashReceived) || 0) + this.creditNoteApplied;
+                payload.paid_amount = parseFloat(this.cashReceived) || 0;
             } else if (this.paymentMethod === 'card' || this.paymentMethod === 'upi') {
                 payload.paid_amount = this.cart.total;
                 payload.payment_ref = this.paymentRef;
@@ -1302,7 +1254,6 @@ function posBilling() {
                     this.showPaymentModal = false;
                     this.showSuccessModal = true;
                     this.updateCartData({ items: [], subtotal: 0, discount: 0, tax: 0, total: 0 });
-                    this.removeCreditNote();
                     this.loadHeldBillsCount();
                 }
             } catch (e) {
@@ -1445,7 +1396,6 @@ function posBilling() {
                     this.returnSuccess = {
                         return_number: res.data.return_number,
                         refund_amount: parseFloat(res.data.refund_amount) || 0,
-                        credit_note: res.data.credit_note || null,
                     };
                     this.returnSelectedSale = null;
                     this.returnItems = [];
@@ -1455,32 +1405,6 @@ function posBilling() {
             } catch (e) {
                 alert(e.response?.data?.message || 'Return processing failed.');
             } finally { this.returnLoading = false; }
-        },
-
-        // ═══════ CREDIT NOTE ═══════
-        async validateCreditNote() {
-            if (!this.creditNoteCode.trim()) return;
-            try {
-                const res = await axios.get('{{ url("/pos/credit-note") }}/' + encodeURIComponent(this.creditNoteCode.trim()) + '/validate');
-                if (res.data.valid) {
-                    this.creditNote = res.data;
-                    this.creditNoteApplied = Math.min(res.data.remaining, this.cart.total);
-                    this.creditNoteCode = '';
-                }
-            } catch (e) {
-                alert(e.response?.data?.message || 'Invalid credit note.');
-            }
-        },
-
-        removeCreditNote() {
-            this.creditNote = null;
-            this.creditNoteApplied = 0;
-            this.creditNoteCode = '';
-        },
-
-        amountAfterCreditNote() {
-            if (!this.creditNote) return this.cart.total;
-            return Math.max(0, this.cart.total - this.creditNoteApplied);
         },
 
         // ═══════ LOGOUT ═══════

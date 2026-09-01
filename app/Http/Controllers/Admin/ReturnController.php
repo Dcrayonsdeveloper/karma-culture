@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Events\RefundProcessed;
 use App\Events\ReturnRequested;
 use App\Http\Controllers\Controller;
-use App\Models\CreditNote;
 use App\Models\DeliveryPartner;
 use App\Models\OrderReturn;
 use Illuminate\Http\RedirectResponse;
@@ -50,7 +49,7 @@ class ReturnController extends Controller
 
     public function show(OrderReturn $return): View
     {
-        $return->load(['order', 'order.user', 'items.orderItem.product', 'pickupPartner.user', 'creditNote']);
+        $return->load(['order', 'order.user', 'items.orderItem.product', 'pickupPartner.user']);
 
         $activePartners = DeliveryPartner::with('user')->where('is_active', true)->get();
 
@@ -117,17 +116,6 @@ class ReturnController extends Controller
             'processed_by' => auth()->id(),
         ]);
 
-        // Credit the refund amount to customer's wallet (credit note)
-        $customer = $return->order->user;
-        if ($customer && $validated['amount'] > 0) {
-            CreditNote::create([
-                'user_id' => $customer->id,
-                'return_id' => $return->id,
-                'order_id' => $return->order_id,
-                'amount' => $validated['amount'],
-                'status' => 'active',
-            ]);
-        }
 
         RefundProcessed::dispatch($return, (float) $validated['amount'], $validated['refund_method']);
 
