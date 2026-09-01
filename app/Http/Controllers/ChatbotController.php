@@ -382,8 +382,29 @@ class ChatbotController extends Controller
         $prompt .= "- Concise: keep responses under 120 words unless a detailed answer is clearly needed.\n";
         $prompt .= "- Never fabricate product details, prices, availability, or policies.\n";
         $prompt .= "- If you're unsure about something, say so honestly and suggest the customer contact support.\n\n";
+        // Read the live catalogue rather than naming ranges from memory: a
+        // hardcoded list had the assistant offering co-ord sets and one pieces
+        // that no longer exist, which reads as a lie to a customer.
+        $liveCategories = \Illuminate\Support\Facades\Cache::remember(
+            'kk_bot_categories_' . \App\Models\ProductVariant::filterCacheVersion(),
+            600,
+            fn () => \App\Models\Category::where('is_active', true)
+                ->whereHas('products', fn ($q) => $q->where('is_active', true))
+                ->orderBy('name')
+                ->pluck('name')
+                ->unique()
+                ->values()
+        );
+
         $prompt .= "## What We Sell\n";
-        $prompt .= "Men's and women's fashion: shirts, t-shirts and polos, kurtas, trousers, tops, jumpsuits, co-ord sets and one pieces. ";
+
+        if ($liveCategories->isNotEmpty()) {
+            $prompt .= "These are the only categories this store currently stocks: " . $liveCategories->join(', ') . ". ";
+            $prompt .= "Never offer, list or imply any other range. If a customer asks for something outside these, say plainly that the store does not carry it. ";
+        } else {
+            $prompt .= "The catalogue is being set up, so do not name any category or claim the store stocks a particular range. ";
+        }
+
         $prompt .= "This is not a children's store - never describe the range as kids' or babywear, and never quote children's sizes.\n\n";
 
         $prompt .= "## Store Policies\n";
