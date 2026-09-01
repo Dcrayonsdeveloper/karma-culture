@@ -43,5 +43,19 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // A form left open past the session lifetime submits a stale CSRF
+        // token. The default response is a dead-end 419 error page; sending
+        // the visitor back to the form with a fresh token lets them just
+        // retry. Passwords are excluded from the re-fill for safety.
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, \Illuminate\Http\Request $request) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Your session expired. Please refresh the page and try again.',
+                ], 419);
+            }
+
+            return redirect()->back(fallback: route('login'))
+                ->withInput($request->except(['password', 'password_confirmation', '_token']))
+                ->with('error', 'Your session expired. Please try again.');
+        });
     })->create();

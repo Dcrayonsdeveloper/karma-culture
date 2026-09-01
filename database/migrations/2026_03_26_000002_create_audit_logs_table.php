@@ -8,6 +8,16 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // 2026_01_29_000046 already creates audit_logs, and its shape — the one
+        // AuditLog and LogAdminActions actually write to, with description, url
+        // and method nested inside the properties JSON — is what every existing
+        // database has. This migration is a duplicate that never applied
+        // anywhere; on a fresh database it would abort the whole migrate run,
+        // so it stands down when the table is already there.
+        if (Schema::hasTable('audit_logs')) {
+            return;
+        }
+
         Schema::create('audit_logs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
@@ -32,6 +42,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('audit_logs');
+        // Dropping here would destroy the table 2026_01_29_000046 owns.
     }
 };
