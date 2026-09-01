@@ -982,9 +982,11 @@
                                 <div class="kk-rail-bar" aria-hidden="true"></div>
                                 <div class="kk-rail-cells">
                                     @foreach($tabCfg['items'] as $i => $item)
-                                        <a href="{{ route('shop') }}?{{ $item['q'] }}"
-                                           class="kk-rail-cell"
-                                           style="--d: {{ $i * 80 }}ms;">
+                                        {{-- Display only. These linked through to the shop with a
+                                             size/price/shade filter, which returned nothing, so every
+                                             hanger was a dead end onto an empty results page. --}}
+                                        <div class="kk-rail-cell"
+                                             style="--d: {{ $i * 80 }}ms;">
                                             <div class="kk-shirt-hanger" style="color: {{ $item['shade'] }};">
                                                 <svg viewBox="0 0 100 170" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                                                     {{-- Hook --}}
@@ -1004,7 +1006,7 @@
                                             </div>
                                             <div class="kk-rail-label">{{ $item['label'] }}</div>
                                             <div class="kk-rail-count">{{ $item['count'] }} Styles</div>
-                                        </a>
+                                        </div>
                                     @endforeach
                                 </div>
                             </div>

@@ -1699,3 +1699,24 @@ a:focus-visible,
         gap: 1rem;
     }
 }
+
+/* --- Hide scrollbars on deliberately swipeable rows ---
+   Used by the chatbot's quick-chip row and its product-card strip. The class
+   was already applied in the markup but never defined, so those rows showed a
+   full-width horizontal scrollbar inside the chat panel. */
+.scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+    display: none;
+}
+
+/* --- Social icons: keep the glyph visible on the dark hover circle ---
+   `body:not(.layout-admin) a:hover` scores (0,2,2) and outranks Tailwind's
+   hover:text-* at (0,2,0), so the icon inherited the dark link-hover colour
+   and vanished against the brown background. This selector outranks both. */
+body:not(.layout-admin) a.kk-social-link:hover,
+body:not(.layout-admin) a.kk-social-link:focus-visible {
+    color: var(--kk-cream, #efe2cb);
+}

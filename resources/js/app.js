@@ -749,3 +749,108 @@ Alpine.data('exitPopup', (code = 'KARMAA10', minutes = 10) => ({
 // Start Alpine.js (MUST be after all stores and components are registered)
 // ========================================
 Alpine.start();
+
+// ========================================
+// Site-wide inline form validation
+// ========================================
+//
+// The browser's own validation bubble says "Please fill out this field" over a
+// box the customer then has to identify themselves — and on a form with several
+// empty inputs it names none of them. This keeps the native constraints as the
+// source of truth (required, type, minlength, pattern) but renders the failures
+// as text under each field, naming it from its own label.
+//
+// Opt a form out with data-no-validate. Forms that already handle their own
+// submission (Alpine's @submit.prevent sets novalidate) are skipped.
+(function () {
+    const ERROR_CLASS = 'kk-field-error';
+    const INVALID_CLASS = 'kk-input-invalid';
+
+    function labelFor(field) {
+        if (field.labels && field.labels.length) {
+            return field.labels[0].textContent.replace(/\*/g, '').trim().replace(/:$/, '');
+        }
+        return field.getAttribute('aria-label')
+            || field.getAttribute('placeholder')
+            || 'This field';
+    }
+
+    function messageFor(field) {
+        const v = field.validity;
+        const name = labelFor(field);
+
+        if (v.valueMissing) {
+            return field.type === 'checkbox'
+                ? `Please tick "${name}" to continue.`
+                : `${name} is required.`;
+        }
+        if (v.typeMismatch && field.type === 'email') return 'Enter a valid email address, like you@example.com.';
+        if (v.typeMismatch && field.type === 'url') return 'Enter a full web address, starting with https://';
+        if (v.tooShort) return `${name} must be at least ${field.minLength} characters.`;
+        if (v.tooLong) return `${name} must be ${field.maxLength} characters or fewer.`;
+        if (v.rangeUnderflow) return `${name} must be ${field.min} or more.`;
+        if (v.rangeOverflow) return `${name} must be ${field.max} or less.`;
+        if (v.stepMismatch) return `${name} is not a valid amount.`;
+        if (v.patternMismatch) return field.title || `${name} is not in the expected format.`;
+        return field.validationMessage;
+    }
+
+    function clearError(field) {
+        field.classList.remove(INVALID_CLASS);
+        field.removeAttribute('aria-invalid');
+        const existing = field.parentNode && field.parentNode.querySelector(':scope > .' + ERROR_CLASS);
+        if (existing) existing.remove();
+    }
+
+    function showError(field, message) {
+        clearError(field);
+        field.classList.add(INVALID_CLASS);
+        field.setAttribute('aria-invalid', 'true');
+
+        const note = document.createElement('p');
+        note.className = ERROR_CLASS;
+        note.textContent = message;
+
+        // After the field itself, or after its wrapper when the input sits
+        // inside a relative box (icon buttons, password eyes) so the message
+        // does not land between the input and its own decoration.
+        const wrapper = field.closest('.relative, .kk-loginmodal__inputwrap');
+        const anchor = wrapper && wrapper.contains(field) && wrapper !== field.parentNode ? wrapper : field;
+        anchor.parentNode.insertBefore(note, anchor.nextSibling);
+    }
+
+    document.addEventListener('submit', function (event) {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        if (form.hasAttribute('data-no-validate') || form.hasAttribute('novalidate')) return;
+
+        const fields = Array.from(form.elements).filter(function (el) {
+            return el.willValidate && !el.disabled && el.type !== 'hidden';
+        });
+
+        fields.forEach(clearError);
+        const invalid = fields.filter(function (el) { return !el.checkValidity(); });
+        if (invalid.length === 0) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        invalid.forEach(function (el) { showError(el, messageFor(el)); });
+
+        const first = invalid[0];
+        first.focus({ preventScroll: true });
+        first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, true);
+
+    // Clear a field's message as soon as it becomes valid, so the form stops
+    // scolding the customer while they are still fixing it.
+    ['input', 'change'].forEach(function (type) {
+        document.addEventListener(type, function (event) {
+            const field = event.target;
+            if (!field || !field.willValidate) return;
+            if (field.classList.contains(INVALID_CLASS) && field.checkValidity()) clearError(field);
+        }, true);
+    });
+
+    // Suppress the native bubble without losing the constraints themselves.
+    document.addEventListener('invalid', function (event) { event.preventDefault(); }, true);
+})();

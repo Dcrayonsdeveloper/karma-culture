@@ -27,7 +27,10 @@
                             'twitter'   => \App\Models\Setting::get('social_twitter', '')   ?: 'https://twitter.com/',
                             'linkedin'  => \App\Models\Setting::get('social_linkedin', '')  ?: 'https://www.linkedin.com/',
                         ];
-                        $kkSocialClass = 'w-9 h-9 bg-kk-cream-lighter hover:bg-kk-brown text-kk-brown hover:text-kk-cream rounded-full flex items-center justify-center transition-all border border-kk-cream-dark';
+                        // kk-social-link carries the hover colour in app.css. Tailwind's
+                        // hover:text-* loses to the storefront's generic `a:hover` rule on
+                        // specificity, which left the icon dark on the dark hover circle.
+                        $kkSocialClass = 'kk-social-link w-9 h-9 bg-kk-cream-lighter hover:bg-kk-brown text-kk-brown rounded-full flex items-center justify-center transition-all border border-kk-cream-dark';
                     @endphp
                     <div class="flex items-center gap-3 mt-1">
                         <a href="{{ $kkSocials['instagram'] }}" target="_blank" rel="noopener" class="{{ $kkSocialClass }}" aria-label="Follow us on Instagram">

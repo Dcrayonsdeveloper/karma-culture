@@ -70,7 +70,10 @@
         {{-- ── Message List ─────────────────────────────────────────────── --}}
         <div
             x-ref="messageList"
-            class="flex-1 overflow-y-auto p-3 space-y-3 bg-neutral-50/60"
+            {{-- overflow-x-hidden: a single long word (the assistant quotes full
+                 product URLs) is wider than the panel and would otherwise give
+                 the whole conversation a horizontal scrollbar. --}}
+            class="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-3 bg-neutral-50/60"
         >
             {{-- Empty / Welcome state --}}
             <template x-if="messages.length === 0">
@@ -119,7 +122,7 @@
                     <template x-if="msg.role === 'user'">
                         <div class="flex justify-end">
                             <div
-                                class="max-w-[82%] px-3.5 py-2.5 rounded-2xl rounded-br-sm text-sm text-white leading-relaxed"
+                                class="max-w-[82%] px-3.5 py-2.5 rounded-2xl rounded-br-sm text-sm text-white leading-relaxed [overflow-wrap:anywhere]"
                                 style="background-color: #8C5C34;"
                                 x-text="msg.content"
                             ></div>
@@ -134,7 +137,7 @@
                             </div>
                             <div class="flex-1 min-w-0">
                                 <div
-                                    class="max-w-full px-3.5 py-2.5 rounded-2xl rounded-tl-sm text-sm text-neutral-800 bg-white border border-neutral-100 leading-relaxed shadow-sm"
+                                    class="max-w-full px-3.5 py-2.5 rounded-2xl rounded-tl-sm text-sm text-neutral-800 bg-white border border-neutral-100 leading-relaxed shadow-sm [overflow-wrap:anywhere]"
                                     x-html="formatBotMessage(msg.content)"
                                 ></div>
                                 {{-- Product cards --}}

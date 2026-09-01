@@ -137,6 +137,28 @@ class ChatbotController extends Controller
     {
         $lower = mb_strtolower(trim($message));
 
+        // Asking us to compose something is off-topic even when the request
+        // mentions the shop: "write a poem about your shirts" is still a poem,
+        // and the shop-vocabulary allowance below would otherwise wave it past.
+        $writingRequests = [
+            'write a poem', 'write a song', 'write an essay', 'write a story',
+            'write a letter', 'write a mail', 'write an email', 'write a email',
+            'write email', 'write a message', 'write a caption', 'write a speech',
+            'write a script', 'write code', 'write a paragraph', 'write an article',
+            'write a review for me', 'write a description for',
+            'draft an email', 'draft a mail', 'draft a letter', 'draft a message',
+            'compose an email', 'compose a message', 'compose a letter',
+            'essay on', 'paragraph on', 'poem about', 'song about',
+            'cover letter', 'leave application', 'application for leave',
+            'instagram caption', 'caption for', 'whatsapp status', 'birthday wish',
+        ];
+
+        foreach ($writingRequests as $w) {
+            if (str_contains($lower, $w)) {
+                return true;
+            }
+        }
+
         // Shop vocabulary present: always allow, even alongside a blocked word.
         $shopWords = [
             'product', 'order', 'size', 'sizes', 'fit', 'colour', 'color', 'price', 'cost',
@@ -147,8 +169,11 @@ class ChatbotController extends Controller
             'gift', 'material', 'fabric', 'wash', 'care',
         ];
 
+        // Whole words only. As a plain substring "cod" matches "code", "top"
+        // matches "laptop" and "fit" matches "profit", so a coding question
+        // counted as shop vocabulary and was let through.
         foreach ($shopWords as $w) {
-            if (str_contains($lower, $w)) {
+            if (preg_match('/\b' . preg_quote($w, '/') . '\b/u', $lower) === 1) {
                 return false;
             }
         }

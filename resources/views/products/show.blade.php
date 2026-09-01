@@ -895,8 +895,19 @@
                 margin: 0 auto;       /* centred whenever narrower than the viewport */
                 border: 0;
             }
-            /* Controls, positioned as in the reference: pause left, dots centre, arrows right */
-            .kk-aplus__bar { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 0 16px; }
+            /* Controls, positioned as in the reference: pause left, dots centre, arrows right.
+               The section is full-bleed (100vw) but the banner is capped at --kk-aplus-w and
+               centred, so a full-width bar threw the arrows out to the screen edges with a
+               gulf of empty cream between them and the image. Matching the banner's own cap
+               and centring the bar keeps the controls beside the picture they drive. */
+            .kk-aplus__bar {
+                display: flex; align-items: center; gap: 12px;
+                margin: 10px auto 0;
+                padding: 0 16px;
+                width: var(--kk-aplus-w, 1120px);
+                max-width: 100%;
+                box-sizing: border-box;
+            }
             .kk-aplus__dots { display: flex; align-items: center; justify-content: center; gap: 7px; flex: 1; }
             .kk-aplus__dot { width: 9px; height: 9px; border-radius: 999px; border: 0; padding: 0; cursor: pointer;
                 background: #d6cbb6; transition: width .25s, background .25s; }

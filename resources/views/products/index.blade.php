@@ -36,7 +36,7 @@
     <div class="bg-[#F8931D]">
         <div class="container mx-auto px-4 py-6 md:py-8">
             <h1 class="text-2xl md:text-3xl font-bold text-white mb-1">All Products</h1>
-            <p class="text-white text-sm">Browse our wide range of kids' clothing & accessories</p>
+            <p class="text-white text-sm">Browse our full range of men's and women's clothing</p>
             <p class="text-white/80 text-xs mt-2">{{ $products->total() }} products</p>
         </div>
     </div>

@@ -408,23 +408,78 @@
                  bubble names no field; submit() shows a message that does. --}}
             <form @submit.prevent="submit()" novalidate>
                 {{-- Signup-only: full name --}}
-                <input type="text" class="kk-loginmodal__field" x-show="mode === 'signup'"
-                       x-model="form.full_name" placeholder="Full Name" autocomplete="name">
+                <div class="kk-loginmodal__group" x-show="mode === 'signup'">
+                    <label class="kk-loginmodal__label" for="kk-auth-name">Full Name</label>
+                    <input type="text" id="kk-auth-name" class="kk-loginmodal__field"
+                           :class="fieldErrors.full_name && 'has-error'"
+                           x-model="form.full_name" placeholder="Enter your full name" autocomplete="name">
+                    <p class="kk-loginmodal__fielderror" x-show="fieldErrors.full_name" x-text="fieldErrors.full_name" x-cloak></p>
+                </div>
 
-                <input type="email" class="kk-loginmodal__field"
-                       x-model="form.email" placeholder="Email Address" autocomplete="email" required>
+                <div class="kk-loginmodal__group">
+                    <label class="kk-loginmodal__label" for="kk-auth-email">Email Address</label>
+                    <input type="email" id="kk-auth-email" class="kk-loginmodal__field"
+                           :class="fieldErrors.email && 'has-error'"
+                           x-model="form.email" placeholder="you@example.com" autocomplete="email">
+                    <p class="kk-loginmodal__fielderror" x-show="fieldErrors.email" x-text="fieldErrors.email" x-cloak></p>
+                </div>
 
                 {{-- Signup-only: phone --}}
-                <input type="tel" class="kk-loginmodal__field" x-show="mode === 'signup'"
-                       x-model="form.phone" placeholder="Phone Number (optional)" autocomplete="tel"
-                       inputmode="numeric" maxlength="15">
+                <div class="kk-loginmodal__group" x-show="mode === 'signup'">
+                    <label class="kk-loginmodal__label" for="kk-auth-phone">
+                        Phone Number <span class="kk-loginmodal__optional">(optional)</span>
+                    </label>
+                    <input type="tel" id="kk-auth-phone" class="kk-loginmodal__field"
+                           :class="fieldErrors.phone && 'has-error'"
+                           x-model="form.phone" placeholder="98765 43210" autocomplete="tel"
+                           inputmode="numeric" maxlength="15">
+                    <p class="kk-loginmodal__fielderror" x-show="fieldErrors.phone" x-text="fieldErrors.phone" x-cloak></p>
+                </div>
 
-                <input type="password" class="kk-loginmodal__field"
-                       x-model="form.password" placeholder="Password" autocomplete="current-password" required>
+                <div class="kk-loginmodal__group">
+                    <label class="kk-loginmodal__label" for="kk-auth-password">Password</label>
+                    <div class="kk-loginmodal__inputwrap">
+                        <input :type="showPassword ? 'text' : 'password'" id="kk-auth-password"
+                               class="kk-loginmodal__field kk-loginmodal__field--haseye"
+                               :class="fieldErrors.password && 'has-error'"
+                               x-model="form.password" placeholder="Enter your password"
+                               :autocomplete="mode === 'login' ? 'current-password' : 'new-password'">
+                        <button type="button" class="kk-loginmodal__eye" @click="showPassword = !showPassword"
+                                :aria-label="showPassword ? 'Hide password' : 'Show password'" tabindex="-1">
+                            <svg x-show="!showPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                                <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M2.46 12C3.73 7.94 7.52 5 12 5s8.27 2.94 9.54 7c-1.27 4.06-5.06 7-9.54 7s-8.27-2.94-9.54-7z" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <svg x-show="showPassword" x-cloak viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                                <path d="M13.88 18.83A10.05 10.05 0 0112 19c-4.48 0-8.27-2.94-9.54-7a9.97 9.97 0 011.56-3.03m5.86.91a3 3 0 114.24 4.24M9.88 9.88l4.24 4.24M9.88 9.88L6.59 6.59m7.53 7.53l3.29 3.29M3 3l3.59 3.59m0 0A9.95 9.95 0 0112 5c4.48 0 8.27 2.94 9.54 7a10.03 10.03 0 01-4.13 5.41m0 0L21 21" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="kk-loginmodal__fielderror" x-show="fieldErrors.password" x-text="fieldErrors.password" x-cloak></p>
+                </div>
 
                 {{-- Signup-only: confirm password --}}
-                <input type="password" class="kk-loginmodal__field" x-show="mode === 'signup'"
-                       x-model="form.password_confirmation" placeholder="Confirm Password" autocomplete="new-password">
+                <div class="kk-loginmodal__group" x-show="mode === 'signup'">
+                    <label class="kk-loginmodal__label" for="kk-auth-password2">Confirm Password</label>
+                    <div class="kk-loginmodal__inputwrap">
+                        <input :type="showConfirm ? 'text' : 'password'" id="kk-auth-password2"
+                               class="kk-loginmodal__field kk-loginmodal__field--haseye"
+                               :class="fieldErrors.password_confirmation && 'has-error'"
+                               x-model="form.password_confirmation" placeholder="Repeat your password"
+                               autocomplete="new-password">
+                        <button type="button" class="kk-loginmodal__eye" @click="showConfirm = !showConfirm"
+                                :aria-label="showConfirm ? 'Hide password' : 'Show password'" tabindex="-1">
+                            <svg x-show="!showConfirm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                                <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M2.46 12C3.73 7.94 7.52 5 12 5s8.27 2.94 9.54 7c-1.27 4.06-5.06 7-9.54 7s-8.27-2.94-9.54-7z" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <svg x-show="showConfirm" x-cloak viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                                <path d="M13.88 18.83A10.05 10.05 0 0112 19c-4.48 0-8.27-2.94-9.54-7a9.97 9.97 0 011.56-3.03m5.86.91a3 3 0 114.24 4.24M9.88 9.88l4.24 4.24M9.88 9.88L6.59 6.59m7.53 7.53l3.29 3.29M3 3l3.59 3.59m0 0A9.95 9.95 0 0112 5c4.48 0 8.27 2.94 9.54 7a10.03 10.03 0 01-4.13 5.41m0 0L21 21" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="kk-loginmodal__fielderror" x-show="fieldErrors.password_confirmation" x-text="fieldErrors.password_confirmation" x-cloak></p>
+                </div>
 
                 <label class="kk-loginmodal__notify" x-show="mode === 'login'">
                     <input type="checkbox" x-model="form.remember">
@@ -460,36 +515,68 @@
             loading: false,
             error: '',
             notice: '',
+            showPassword: false,
+            showConfirm: false,
+            fieldErrors: {},
             form: { full_name: '', email: '', phone: '', password: '', password_confirmation: '', remember: false },
             csrf: '{{ csrf_token() }}',
-            openModal() { this.open = true; this.error = ''; this.notice = ''; },
-            switchMode(m) { this.mode = m; this.error = ''; this.notice = ''; },
+            openModal() { this.open = true; this.error = ''; this.notice = ''; this.fieldErrors = {}; },
+            switchMode(m) {
+                this.mode = m;
+                this.error = '';
+                this.notice = '';
+                // Errors belong to the form that produced them; carrying them
+                // across marks fields the other tab doesn't even show.
+                this.fieldErrors = {};
+                this.showPassword = false;
+                this.showConfirm = false;
+            },
+            /**
+             * Errors are keyed by field so each one renders under the input it
+             * belongs to, rather than as a single message at the top that makes
+             * the reader work out which box it means.
+             */
             validate() {
-                if (this.mode === 'signup' && !this.form.full_name.trim()) {
-                    return 'Please enter your full name.';
+                const e = {};
+                const signup = this.mode === 'signup';
+
+                if (signup && !this.form.full_name.trim()) {
+                    e.full_name = 'Please enter your full name.';
                 }
-                if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(this.form.email.trim())) {
-                    return 'Please enter a valid email address.';
+
+                if (!this.form.email.trim()) {
+                    e.email = 'Please enter your email address.';
+                } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(this.form.email.trim())) {
+                    e.email = 'That does not look like a valid email address.';
                 }
-                if (this.mode === 'signup') {
+
+                if (signup && this.form.phone.trim()) {
                     const digits = this.form.phone.replace(/\D/g, '').replace(/^91(?=[6-9]\d{9}$)/, '');
-                    if (this.form.phone.trim() && !/^[6-9]\d{9}$/.test(digits)) {
-                        return 'Please enter a valid 10-digit mobile number, or leave it blank.';
+                    if (!/^[6-9]\d{9}$/.test(digits)) {
+                        e.phone = 'Enter a 10-digit mobile number, or leave this blank.';
                     }
-                    if (this.form.password.length < 8) {
-                        return 'Password must be at least 8 characters.';
-                    }
-                    if (this.form.password !== this.form.password_confirmation) {
-                        return 'Passwords do not match.';
-                    }
-                } else if (!this.form.password) {
-                    return 'Please enter your password.';
                 }
-                return '';
+
+                if (!this.form.password) {
+                    e.password = 'Please enter your password.';
+                } else if (signup && this.form.password.length < 8) {
+                    e.password = 'Password must be at least 8 characters.';
+                }
+
+                if (signup) {
+                    if (!this.form.password_confirmation) {
+                        e.password_confirmation = 'Please confirm your password.';
+                    } else if (this.form.password && this.form.password !== this.form.password_confirmation) {
+                        e.password_confirmation = 'The two passwords do not match.';
+                    }
+                }
+
+                this.fieldErrors = e;
+                return Object.keys(e).length === 0;
             },
             async submit() {
-                this.error = this.validate();
-                if (this.error) return;
+                this.error = '';
+                if (!this.validate()) return;
                 this.loading = true;
                 const url = this.mode === 'login' ? '{{ route('login') }}' : '{{ route('register') }}';
                 try {
@@ -523,7 +610,18 @@
                             window.location.reload();
                         }
                     } else if (data.errors) {
-                        this.error = Object.values(data.errors)[0][0];
+                        // Laravel keys its errors by field, so they land under the
+                        // same inputs the client-side checks use.
+                        const mapped = {};
+                        for (const [field, messages] of Object.entries(data.errors)) {
+                            mapped[field] = Array.isArray(messages) ? messages[0] : messages;
+                        }
+                        this.fieldErrors = mapped;
+                        // A credentials failure is about the pair, not one box.
+                        if (this.mode === 'login' && mapped.email) {
+                            this.error = mapped.email;
+                            this.fieldErrors = {};
+                        }
                     } else {
                         this.error = data.message || 'Something went wrong. Please try again.';
                     }
@@ -591,15 +689,35 @@
         transition: color 0.15s ease, border-color 0.15s ease;
     }
     .kk-loginmodal__tabs button.is-active { color: #2d1810; border-bottom-color: #2d1810; }
+    .kk-loginmodal__group { margin-bottom: 12px; text-align: left; }
+    .kk-loginmodal__label {
+        display: block; margin-bottom: 5px;
+        font-size: 12px; font-weight: 600; color: #2d1810; letter-spacing: 0.01em;
+    }
+    .kk-loginmodal__optional { font-weight: 400; color: #9ca3af; }
+    .kk-loginmodal__inputwrap { position: relative; }
     .kk-loginmodal__field {
         width: 100%; box-sizing: border-box;
-        padding: 11px 12px; margin-bottom: 12px;
+        padding: 11px 12px; margin-bottom: 0;
         border: 1px solid #d4d4d4; border-radius: 4px;
         font-size: 14px; color: #2d1810; background: #fff;
-        outline: none; transition: border-color 0.15s ease;
+        outline: none; transition: border-color 0.15s ease, background 0.15s ease;
     }
+    .kk-loginmodal__field--haseye { padding-right: 42px; }
     .kk-loginmodal__field:focus { border-color: #2d1810; }
     .kk-loginmodal__field::placeholder { color: #9ca3af; }
+    .kk-loginmodal__field.has-error { border-color: #d72c0d; background: #fffafa; }
+    .kk-loginmodal__eye {
+        position: absolute; top: 0; right: 0; height: 100%;
+        width: 40px; display: flex; align-items: center; justify-content: center;
+        background: none; border: none; padding: 0; cursor: pointer;
+        color: #9ca3af; transition: color 0.15s ease;
+    }
+    .kk-loginmodal__eye:hover { color: #2d1810; }
+    .kk-loginmodal__eye svg { width: 18px; height: 18px; display: block; }
+    .kk-loginmodal__fielderror {
+        margin: 5px 0 0; font-size: 11.5px; color: #d72c0d; line-height: 1.4;
+    }
     .kk-loginmodal__notify {
         display: flex; align-items: center; gap: 8px;
         font-size: 12px; color: #6b6b6b;
