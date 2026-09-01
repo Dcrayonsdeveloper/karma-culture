@@ -94,15 +94,22 @@ Route::get('/wholesale', [App\Http\Controllers\WholesaleController::class, 'inde
 
 // Cart
 Route::prefix('cart')->name('cart.')->group(function () {
+    // Named paths first. DELETE /cart/{cartItem} was declared above
+    // /remove-coupon and matched it, so the request looked for a cart item
+    // literally called "remove-coupon" and 404'd — the Remove button on an
+    // applied coupon never worked. The whereNumber constraint stops any future
+    // literal route being swallowed the same way.
     Route::get('/data', [App\Http\Controllers\CartController::class, 'data'])->name('data');
-    Route::get('/', [App\Http\Controllers\CartController::class, 'index'])->name('index');
+    Route::get('/recommendations', [App\Http\Controllers\CartController::class, 'recommendations'])->name('recommendations');
     Route::post('/add', [App\Http\Controllers\CartController::class, 'add'])->name('add');
-    Route::put('/{cartItem}', [App\Http\Controllers\CartController::class, 'update'])->name('update');
-    Route::delete('/{cartItem}', [App\Http\Controllers\CartController::class, 'destroy'])->name('destroy');
-    Route::delete('/', [App\Http\Controllers\CartController::class, 'clear'])->name('clear');
     Route::post('/apply-coupon', [App\Http\Controllers\CartController::class, 'applyCoupon'])->middleware('throttle:10,1')->name('apply-coupon');
     Route::delete('/remove-coupon', [App\Http\Controllers\CartController::class, 'removeCoupon'])->name('remove-coupon');
-    Route::get('/recommendations', [App\Http\Controllers\CartController::class, 'recommendations'])->name('recommendations');
+
+    Route::get('/', [App\Http\Controllers\CartController::class, 'index'])->name('index');
+    Route::delete('/', [App\Http\Controllers\CartController::class, 'clear'])->name('clear');
+
+    Route::put('/{cartItem}', [App\Http\Controllers\CartController::class, 'update'])->whereNumber('cartItem')->name('update');
+    Route::delete('/{cartItem}', [App\Http\Controllers\CartController::class, 'destroy'])->whereNumber('cartItem')->name('destroy');
 });
 
 // Checkout — guest checkout (no authentication required).
