@@ -168,15 +168,21 @@
 
             <!-- Save bar -->
             <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #e3e3e3;">
-                <form action="{{ route('admin.flash-sales.destroy', $flashSale) }}" method="POST"
-                      onsubmit="return confirm('Delete this flash sale?')" style="display: inline;">
-                    @csrf @method('DELETE')
-                    <button type="submit" style="font-size: 13px; font-weight: 500; color: #d72c0d; background: none; border: none; cursor: pointer;">Delete flash sale</button>
-                </form>
+                {{-- The delete button submits a form declared outside this one.
+                     Nesting the two meant the browser closed the edit form at the
+                     inner <form> tag, so Save belonged to the delete form and
+                     saving destroyed the sale. --}}
+                <button type="submit" form="kk-delete-flash-sale"
+                        style="font-size: 13px; font-weight: 500; color: #d72c0d; background: none; border: none; cursor: pointer;">Delete flash sale</button>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <a href="{{ route('admin.flash-sales.index') }}" class="btn btn-secondary" style="font-size: 13px;">Discard</a>
                     <button type="submit" class="btn btn-primary" style="font-size: 13px;">Save</button>
                 </div>
             </div>
+    </form>
+
+    <form id="kk-delete-flash-sale" action="{{ route('admin.flash-sales.destroy', $flashSale) }}" method="POST"
+          onsubmit="return confirm('Delete this flash sale?')">
+        @csrf @method('DELETE')
     </form>
 </x-layouts.admin>
