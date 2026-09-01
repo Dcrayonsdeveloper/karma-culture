@@ -78,17 +78,37 @@
                     <div class="w-14 h-14 rounded-full bg-[#8C5C34]/10 flex items-center justify-center mb-3">
                         <img src="{{ $kkBotLogo }}" alt="Karmaa Kulture" class="w-9 h-9 object-contain">
                     </div>
-                    <p class="text-sm font-semibold text-neutral-800 mb-1">Hi there! 👋</p>
-                    <p class="text-xs text-neutral-600 leading-relaxed mb-4">I'm your shopping assistant. Ask me about products, orders, sizes, offers, or anything about the store!</p>
-                    <div class="flex flex-wrap gap-1.5 justify-center">
-                        <template x-for="chip in quickChips" :key="chip.label">
-                            <button
-                                @click="sendQuickChip(chip.message)"
-                                class="text-[11px] px-3 py-1.5 rounded-full border border-[#6F9CA2]/40 text-[#6F9CA2] bg-white hover:bg-[#6F9CA2]/8 transition-colors font-medium whitespace-nowrap"
-                                x-text="chip.label"
-                            ></button>
-                        </template>
-                    </div>
+                    @auth
+                        {{-- First name only: a full name makes the greeting stiff. --}}
+                        <p class="text-sm font-semibold text-neutral-800 mb-1">Hi {{ auth()->user()->first_name ?: auth()->user()->full_name }}! 👋</p>
+                        <p class="text-xs text-neutral-600 leading-relaxed mb-4">I'm your shopping assistant. Ask me about products, orders, sizes, offers, or anything about the store!</p>
+                        <div class="flex flex-wrap gap-1.5 justify-center">
+                            <template x-for="chip in quickChips" :key="chip.label">
+                                <button
+                                    @click="sendQuickChip(chip.message)"
+                                    class="text-[11px] px-3 py-1.5 rounded-full border border-[#6F9CA2]/40 text-[#6F9CA2] bg-white hover:bg-[#6F9CA2]/8 transition-colors font-medium whitespace-nowrap"
+                                    x-text="chip.label"
+                                ></button>
+                            </template>
+                        </div>
+                    @else
+                        {{-- The assistant reads the customer's own orders, so it needs to
+                             know who is asking. Returning here after login keeps the
+                             shopper on the product they were looking at. --}}
+                        <p class="text-sm font-semibold text-neutral-800 mb-1">Hi there! 👋</p>
+                        <p class="text-xs text-neutral-600 leading-relaxed mb-4">
+                            Sign in to chat with our shopping assistant. It can check your orders,
+                            find sizes and colours, and share current offers.
+                        </p>
+                        <a href="{{ route('login') }}?redirect={{ urlencode(request()->fullUrl()) }}"
+                           class="inline-flex items-center gap-2 px-5 py-2 rounded-full text-white text-xs font-semibold transition-colors"
+                           style="background:#8C5C34;" onmouseover="this.style.background='#2D1810'" onmouseout="this.style.background='#8C5C34'">
+                            Sign in to chat
+                        </a>
+                        <p class="text-[11px] text-neutral-500 mt-3">
+                            New here? <a href="{{ route('register') }}" class="underline" style="color:#8C5C34;">Create an account</a>
+                        </p>
+                    @endauth
                 </div>
             </template>
 
@@ -193,6 +213,15 @@
 
         {{-- ── Input ────────────────────────────────────────────────────── --}}
         <div class="px-3 py-3 border-t border-neutral-100 bg-white shrink-0">
+            @guest
+                {{-- No input for a guest: the endpoint would refuse them anyway,
+                     and a dead text box reads as a broken chat. --}}
+                <a href="{{ route('login') }}?redirect={{ urlencode(request()->fullUrl()) }}"
+                   class="flex items-center justify-center w-full px-4 py-2 rounded-full text-white text-xs font-semibold transition-colors"
+                   style="background:#8C5C34;" onmouseover="this.style.background='#2D1810'" onmouseout="this.style.background='#8C5C34'">
+                    Sign in to start chatting
+                </a>
+            @else
             <div class="flex items-center gap-2">
                 <input
                     x-ref="chatInput"
@@ -216,6 +245,7 @@
                     </svg>
                 </button>
             </div>
+            @endguest
             <p class="text-[9px] text-neutral-600 text-center mt-1.5 leading-none">AI · May occasionally make mistakes</p>
         </div>
     </div>
