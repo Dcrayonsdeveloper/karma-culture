@@ -37,7 +37,7 @@ class CategorizeProducts extends Command
     {
         $dryRun = $this->option('dry-run');
 
-        $this->info($dryRun ? '🔍 DRY RUN — no changes' : '📂 Categorizing products...');
+        $this->info($dryRun ? '🔍 DRY RUN - no changes' : '📂 Categorizing products...');
 
         $products = Product::whereNull('category_id')
             ->where('status', 'draft')

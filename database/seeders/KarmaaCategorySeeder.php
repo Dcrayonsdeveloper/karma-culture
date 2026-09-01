@@ -44,7 +44,7 @@ class KarmaaCategorySeeder extends Seeder
             ],
         ];
 
-        // Match on (parent_id, name) rather than slug — the Category model
+        // Match on (parent_id, name) rather than slug - the Category model
         // auto-uniques slugs (e.g. `t-shirts-2`), so matching on our intended
         // slug would miss existing rows and silently create duplicates.
         $rootPos = 1;
@@ -69,7 +69,7 @@ class KarmaaCategorySeeder extends Seeder
                 $cat = Category::updateOrCreate(
                     ['parent_id' => $root->id, 'name' => $catName],
                     [
-                        'description'=> "{$catName} for {$rootName} — Karmaa Kulture.",
+                        'description'=> "{$catName} for {$rootName} - Karmaa Kulture.",
                         'level'      => 1,
                         'path'       => $rootSlug . '/' . Str::slug($catName),
                         'position'   => $catPos++,

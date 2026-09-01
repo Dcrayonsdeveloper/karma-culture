@@ -101,7 +101,7 @@
         .kk-pdp { grid-template-columns: 1.2fr 1fr; gap: 56px; align-items: start; }
     }
 
-    /* ===== Gallery — thumbnail rail + main image ===== */
+    /* ===== Gallery - thumbnail rail + main image ===== */
     .kk-pdp__gallery { display: flex; gap: 14px; align-items: flex-start; }
     .kk-pdp__thumbs {
         display: flex; flex-direction: column; gap: 10px;
@@ -155,7 +155,7 @@
         .kk-pdp__main { aspect-ratio: 3/4; max-height: 45vh; flex: none; width: 100%; }
     }
 
-    /* ===== Info column — scrolls normally ===== */
+    /* ===== Info column - scrolls normally ===== */
     .kk-pdp__info { padding-top: 4px; }
 
     /* ===== Sticky LEFT gallery (desktop only) =============================
@@ -165,7 +165,7 @@
 
        Why this works with the existing layout (no structural changes needed):
        - .kk-pdp is a CSS grid with `align-items: start` (line ~91), so the
-         gallery cell is NOT stretched to the full row height — that vertical
+         gallery cell is NOT stretched to the full row height - that vertical
          slack is exactly what lets it stick. `align-self: start` reasserts it.
        - The gallery is shorter than the details column, so it has room to
          stick as you scroll past it.
@@ -319,13 +319,13 @@
                                     aria-label="View media {{ $i + 1 }}">
                                 @if($m['type'] === 'video')
                                     @if($m['thumb'])
-                                        <img src="{{ $m['thumb'] }}" alt="{{ $product->name }} — video {{ $i + 1 }}" loading="lazy">
+                                        <img src="{{ $m['thumb'] }}" alt="{{ $product->name }} - video {{ $i + 1 }}" loading="lazy">
                                     @else
                                         <video src="{{ $m['url'] }}#t=0.1" muted playsinline preload="metadata"></video>
                                     @endif
                                     <span class="kk-pdp__thumb-play" aria-hidden="true">&#9654;</span>
                                 @else
-                                    <img src="{{ $m['url'] }}" alt="{{ $product->name }} — thumbnail {{ $i + 1 }}" loading="lazy">
+                                    <img src="{{ $m['url'] }}" alt="{{ $product->name }} - thumbnail {{ $i + 1 }}" loading="lazy">
                                 @endif
                             </button>
                         @endforeach
@@ -382,7 +382,7 @@
                            class="kk-pdp__rating-count" style="text-decoration:none;">{{ number_format($product->rating, 1) }} · {{ $product->review_count }} {{ Str::plural('review', $product->review_count) }}</a>
                     @else
                         <a href="#customer-reviews" @click.prevent="document.getElementById('customer-reviews')?.scrollIntoView({behavior:'smooth'})"
-                           class="kk-pdp__rating-count" style="text-decoration:none;">No reviews yet — be the first</a>
+                           class="kk-pdp__rating-count" style="text-decoration:none;">No reviews yet - be the first</a>
                     @endif
                 </div>
 
@@ -463,7 +463,7 @@
                 @endphp
                 @if($kkSizes->isNotEmpty())
                 <section class="kk-sizeguide" id="kk-size-select" aria-label="Select size">
-                    <h2 class="kk-sizeguide__title">Select Size<span class="kk-sizeguide__sel" x-show="selectedSize" x-cloak> — <span x-text="selectedSize"></span></span></h2>
+                    <h2 class="kk-sizeguide__title">Select Size<span class="kk-sizeguide__sel" x-show="selectedSize" x-cloak> - <span x-text="selectedSize"></span></span></h2>
                     <div class="kk-sizeguide__row">
                         @foreach($kkSizes as $sz)
                             <button type="button" class="kk-sizeguide__size"
@@ -488,7 +488,7 @@
                     @media (max-width: 640px) { .kk-colorpick__btn { flex: 1 0 auto; justify-content: center; padding: 9px 10px; font-size: 13px; } }
                 </style>
                 <section class="kk-sizeguide" id="kk-color-select" aria-label="Select colour">
-                    <h2 class="kk-sizeguide__title">Select Colour<span class="kk-sizeguide__sel" x-show="selectedColor" x-cloak> — <span x-text="selectedColor"></span></span></h2>
+                    <h2 class="kk-sizeguide__title">Select Colour<span class="kk-sizeguide__sel" x-show="selectedColor" x-cloak> - <span x-text="selectedColor"></span></span></h2>
                     <div class="kk-colorpick__row">
                         @foreach($kkColours as $kkC)
                             <button type="button" class="kk-colorpick__btn"
@@ -580,7 +580,7 @@
                     </div>
                 </div>
 
-                {{-- ===== Offers widget (collapsible bank offers — sample data) ===== --}}
+                {{-- ===== Offers widget (collapsible bank offers - sample data) ===== --}}
                 <style>
                     .kk-offers { margin: 2px 0 16px; border: 1px solid #e3d2b3; border-radius: 12px; overflow: hidden; background: #fbf5e8; }
                     .kk-offers__head { width: 100%; display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #fbf5e8; border: none; cursor: pointer; text-align: left; font-family: inherit; }
@@ -683,7 +683,7 @@
                                 @click="state = /^\d{6}$/.test(pin) ? 'ok' : 'err'">Check</button>
                     </div>
                     <p class="kk-pdp__delivery-msg kk-pdp__delivery-msg--ok" x-show="state==='ok'" x-cloak>
-                        Free delivery on orders above &#8377;{{ number_format($freeShipThreshold) }} to <span x-text="pin"></span> &mdash; estimated {{ $dMin->format('D, d M') }} &ndash; {{ $dMax->format('D, d M') }}.
+                        Free delivery on orders above &#8377;{{ number_format($freeShipThreshold) }} to <span x-text="pin"></span> - estimated {{ $dMin->format('D, d M') }} - {{ $dMax->format('D, d M') }}.
                     </p>
                     <p class="kk-pdp__delivery-msg kk-pdp__delivery-msg--err" x-show="state==='err'" x-cloak>
                         Please enter a valid 6-digit pincode.
@@ -697,7 +697,7 @@
                     while ($deliveryMax->isWeekend()) $deliveryMax->addDay();
                 @endphp
                 <div class="kk-pdp__meta">
-                    <strong>Free Delivery</strong> on orders above &#8377;{{ number_format($freeShipThreshold) }}: {{ $deliveryMin->format('D, d M') }} &ndash; {{ $deliveryMax->format('D, d M') }}<br>
+                    <strong>Free Delivery</strong> on orders above &#8377;{{ number_format($freeShipThreshold) }}: {{ $deliveryMin->format('D, d M') }} - {{ $deliveryMax->format('D, d M') }}<br>
                     <strong>Easy Returns:</strong> 7-day return &amp; exchange policy
                 </div>
             </div>
@@ -808,7 +808,7 @@
                         <div>{!! safe_html($product->description) !!}</div>
                     @endif
                     @if(!$product->short_description && !$product->description)
-                        <p>{{ $product->name }} &mdash; thoughtfully designed and crafted for the modern wardrobe.</p>
+                        <p>{{ $product->name }} - thoughtfully designed and crafted for the modern wardrobe.</p>
                     @endif
                 </div>
             </div>
@@ -823,7 +823,7 @@
                     <span class="kk-pi__btn-icon" aria-hidden="true"></span>
                 </button>
                 <div class="kk-pi__panel" x-show="open" x-collapse>
-                    <p><strong>Shipping:</strong> Free delivery on orders above &#8377;{{ number_format($freeShipThreshold) }}. Standard delivery in 3&ndash;7 business days across India.</p>
+                    <p><strong>Shipping:</strong> Free delivery on orders above &#8377;{{ number_format($freeShipThreshold) }}. Standard delivery in 3-7 business days across India.</p>
                     <p><strong>Returns:</strong> Easy 7-day return &amp; exchange policy. Items must be unworn, unwashed and with original tags attached.</p>
                     <p><strong>Exchange:</strong> One free size or colour exchange per order. Reach out via WhatsApp or email to initiate.</p>
                 </div>
@@ -854,7 +854,7 @@
         @if($product->aplusImages->isNotEmpty())
         <style>
             /* Full-bleed. The section sits inside the page's .container, which tops
-               out around 1504px, and the image's max-width:100% resolves against it —
+               out around 1504px, and the image's max-width:100% resolves against it -
                so a width like 3500px still stopped at the container edge and never
                reached the screen. The negative margins pull the section out to the
                full viewport so a large width can span edge to edge. The 1120px
@@ -864,7 +864,7 @@
             /* --kk-vw is the viewport width without the scrollbar (set in the layout).
                Plain 100vw includes the scrollbar, so a 100%-wide banner overhung the
                right edge by that amount and <html>'s overflow-x:clip cut the strip
-               off — the image looked cropped. Falls back to 100vw if the script
+               off - the image looked cropped. Falls back to 100vw if the script
                has not run yet. */
             .kk-aplus { margin: 48px 0 0; padding: 0;
                 width: var(--kk-vw, 100vw); max-width: var(--kk-vw, 100vw);
@@ -872,7 +872,7 @@
                 margin-right: calc(50% - var(--kk-vw, 100vw) / 2); }
             /* Banners stack edge-to-edge with no spacing between them; natural aspect ratio keeps original quality.
                Size comes from per-image custom properties set in the admin panel, falling back to the responsive
-               default. Custom properties (not inline width/height) so the mobile rule below can still win —
+               default. Custom properties (not inline width/height) so the mobile rule below can still win -
                an inline declaration would outrank any stylesheet rule and break narrow screens. */
             /* One banner at a time. The slide is capped to a slice of the viewport
                height and the image is contained inside it, so a whole banner is
@@ -1085,7 +1085,7 @@
             <h2 class="kk-rev__title">Customer Reviews</h2>
 
             @php
-                // Demo/sample reviews — shown ONLY while the product has no real
+                // Demo/sample reviews - shown ONLY while the product has no real
                 // reviews. They auto-hide the moment a genuine review exists.
                 // NOT real data; safe placeholder content for the storefront design.
                 $sampleReviews = [
@@ -1173,7 +1173,7 @@
                     </div>
                     @endforeach
                 </div>
-                <p class="kk-rev__demo-note">Sample reviews shown for preview — these disappear automatically once real customer reviews are submitted.</p>
+                <p class="kk-rev__demo-note">Sample reviews shown for preview - these disappear automatically once real customer reviews are submitted.</p>
             @else
                 <div class="kk-rev__list">
                     @foreach($product->reviews as $review)
@@ -1312,7 +1312,7 @@
                     </div>
 
                     <button type="submit" class="kk-rev__write" :disabled="rating < 1">Submit Review</button>
-                    <p class="kk-revform__note">Open to everyone — no account needed. Your review is published after moderation; your email is never shown publicly.</p>
+                    <p class="kk-revform__note">Open to everyone - no account needed. Your review is published after moderation; your email is never shown publicly.</p>
                 </form>
             </div>
         </div>
@@ -1423,7 +1423,7 @@
         </style>
         <div class="kk-related">
             <h2 class="kk-related__title">You May Also Like</h2>
-            {{-- Reuse the shared product card (rating, wishlist, stock, placeholder) — Task 13 --}}
+            {{-- Reuse the shared product card (rating, wishlist, stock, placeholder) - Task 13 --}}
             <div class="kk-related__grid">
                 @foreach($relatedProducts as $rp)
                     <x-product-card :product="$rp" :show-quick-view="false" />
@@ -1458,7 +1458,7 @@
             /* Three stacked lines: what happened, what was bought, when.
                app.css forces `font-weight:700 !important` on every storefront <p>
                via `body:not(.layout-admin) p`, which scores (0,1,2). !important
-               alone does not win that — a lone class is only (0,1,0) — so these
+               alone does not win that - a lone class is only (0,1,0) - so these
                selectors add the parent class to reach (0,2,1) and take the
                cascade. Without this all three lines render bold and the
                hierarchy collapses. */
@@ -1676,7 +1676,7 @@
             },
 
             // A product that offers sizes or colours cannot be bought without
-            // picking one — otherwise the order reaches packing with no idea
+            // picking one - otherwise the order reaches packing with no idea
             // which variant the customer actually wanted.
             requireSelection() {
                 if (this.hasSizes && !this.selectedSize) {
@@ -1717,7 +1717,7 @@
                 if (navigator.share) {
                     try {
                         await navigator.share({ title: title, text: title, url: url });
-                    } catch (e) { /* user dismissed the share sheet — ignore */ }
+                    } catch (e) { /* user dismissed the share sheet - ignore */ }
                     return;
                 }
                 // … otherwise copy the link to the clipboard as a fallback.

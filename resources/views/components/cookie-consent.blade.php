@@ -72,7 +72,7 @@ function cookieConsent() {
                 $ga4Id   = \App\Models\Setting::get('google_analytics_id')   ?: config('services.ga4.measurement_id');
                 $gtmId   = \App\Models\Setting::get('google_tag_manager_id') ?: config('services.gtm.id');
                 $fbPixel = \App\Models\Setting::get('facebook_pixel_id')     ?: config('services.facebook.pixel_id');
-                // Sanitize — only allow safe identifier characters
+                // Sanitize - only allow safe identifier characters
                 $ga4Id   = preg_replace('/[^A-Z0-9\-]/i', '', (string) $ga4Id);
                 $gtmId   = preg_replace('/[^A-Z0-9\-]/i', '', (string) $gtmId);
                 $fbPixel = preg_replace('/[^0-9]/', '', (string) $fbPixel);

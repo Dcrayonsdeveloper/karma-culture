@@ -59,7 +59,7 @@ class BeautySeeder extends Seeder
             ['name' => 'Girls Dresses', 'description' => 'Beautiful dresses, frocks, and gowns for girls', 'icon' => 'dress', 'position' => 1],
             ['name' => 'Boys Wear', 'description' => 'Shirts, t-shirts, kurtas, and outfits for boys', 'icon' => 'shirt', 'position' => 2],
             ['name' => 'Baby Clothing', 'description' => 'Soft and comfy clothing for babies and toddlers', 'icon' => 'baby', 'position' => 3],
-            ['name' => 'Ethnic Wear', 'description' => 'Traditional Indian outfits for kids — lehengas, kurtas, sherwanis', 'icon' => 'ethnic', 'position' => 4],
+            ['name' => 'Ethnic Wear', 'description' => 'Traditional Indian outfits for kids - lehengas, kurtas, sherwanis', 'icon' => 'ethnic', 'position' => 4],
             ['name' => 'Winter Wear', 'description' => 'Jackets, sweaters, hoodies, and warm clothing for kids', 'icon' => 'winter', 'position' => 5],
             ['name' => 'Footwear', 'description' => 'Shoes, sandals, and slippers for boys and girls', 'icon' => 'shoe', 'position' => 6],
             ['name' => 'Accessories', 'description' => 'Hair accessories, bags, caps, and more for kids', 'icon' => 'accessories', 'position' => 7],
@@ -446,7 +446,7 @@ class BeautySeeder extends Seeder
             [
                 'name' => 'Priya Sharma',
                 'title' => 'Happy Parent',
-                'content' => 'The cotton frocks are so soft and comfortable — my daughter loves wearing them! The quality is amazing for the price. We\'ve ordered multiple times now and every piece has been perfect.',
+                'content' => 'The cotton frocks are so soft and comfortable - my daughter loves wearing them! The quality is amazing for the price. We\'ve ordered multiple times now and every piece has been perfect.',
                 'rating' => 5,
                 'product_name' => 'Cotton Floral Frock',
                 'position' => 1,
@@ -470,7 +470,7 @@ class BeautySeeder extends Seeder
             [
                 'name' => 'Ananya Reddy',
                 'title' => 'Regular Customer',
-                'content' => 'My daughter is obsessed with the LED sneakers! They\'re not just fun — they\'re actually well-made and comfortable. She gets compliments at school every day.',
+                'content' => 'My daughter is obsessed with the LED sneakers! They\'re not just fun - they\'re actually well-made and comfortable. She gets compliments at school every day.',
                 'rating' => 5,
                 'product_name' => 'LED Light-Up Sneakers',
                 'position' => 4,

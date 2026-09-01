@@ -34,7 +34,7 @@ class ProductController extends Controller
             ->with(['category', 'brand', 'primaryImage']);
 
         // Category filter. Products are filed on the deepest category, so a
-        // parent has to match its descendants too — otherwise picking MEN or
+        // parent has to match its descendants too - otherwise picking MEN or
         // WOMEN returns nothing while their sub-categories return everything.
         if ($request->filled('category')) {
             $scope = Category::where('slug', $request->category)->first();
@@ -150,7 +150,7 @@ class ProductController extends Controller
             );
         }
 
-        // Similar / "You May Also Like" products (Task 13) — use the cached
+        // Similar / "You May Also Like" products (Task 13) - use the cached
         // RecommendationService (category+brand ranked), then top up so the
         // section always appears, and normalise relations for the product card.
         $relatedProducts = app(RecommendationService::class)->similarProducts($product->id, 8);

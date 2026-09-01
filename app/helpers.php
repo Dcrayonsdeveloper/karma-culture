@@ -70,11 +70,11 @@ if (!function_exists('safe_html')) {
 
         $clean = strip_tags($html, $allowed);
 
-        // on*="..." / on*='...' / on*=value — inline event handlers.
+        // on*="..." / on*='...' / on*=value - inline event handlers.
         $clean = preg_replace('/\son[a-z-]+\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $clean);
 
         // href/src/action pointing at javascript:, vbscript: or data: (data:
-        // image/* is kept — it is the only common legitimate use).
+        // image/* is kept - it is the only common legitimate use).
         $clean = preg_replace_callback(
             '/\s(href|src|action|formaction)\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))/i',
             function (array $m): string {

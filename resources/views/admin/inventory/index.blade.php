@@ -138,7 +138,7 @@
         @if($products->total() > 0)
             <div style="padding: 0.5rem 1rem; border-bottom: 1px solid #e3e3e3; background: #f6f6f7;">
                 <p style="font-size: 12px; color: #616161; margin: 0;">
-                    Showing <span style="font-weight: 600; color: #303030;">{{ $products->firstItem() }}</span>&ndash;<span style="font-weight: 600; color: #303030;">{{ $products->lastItem() }}</span> of <span style="font-weight: 600; color: #303030;">{{ $products->total() }}</span> products
+                    Showing <span style="font-weight: 600; color: #303030;">{{ $products->firstItem() }}</span>-<span style="font-weight: 600; color: #303030;">{{ $products->lastItem() }}</span> of <span style="font-weight: 600; color: #303030;">{{ $products->total() }}</span> products
                 </p>
             </div>
         @endif
@@ -163,7 +163,7 @@
                                 <span style="font-weight: 500; color: #303030; font-size: 13px;">{{ $product->name }}</span>
                             </td>
                             <td>
-                                <span style="font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace; font-size: 12px; background: #f6f6f7; color: #616161; padding: 0.125rem 0.375rem; border-radius: 0.25rem;">{{ $product->sku ?? '—' }}</span>
+                                <span style="font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace; font-size: 12px; background: #f6f6f7; color: #616161; padding: 0.125rem 0.375rem; border-radius: 0.25rem;">{{ $product->sku ?? '-' }}</span>
                             </td>
                             <td style="text-align: center;">
                                 @php
@@ -176,7 +176,7 @@
                                 <span style="font-size: 13px; font-weight: 700; color: {{ $qtyColor }};">{{ $qty }}</span>
                             </td>
                             <td style="text-align: center; color: #616161;">
-                                {{ $product->low_stock_threshold ?? '—' }}
+                                {{ $product->low_stock_threshold ?? '-' }}
                             </td>
                             <td>
                                 @if($product->stock_quantity <= 0)

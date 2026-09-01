@@ -211,7 +211,7 @@
                                     x-text="show ? 'Hide' : 'Show'"></button>
                         </div>
                         <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
-                            Create one at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style="color: #005bd3; text-decoration: underline;">aistudio.google.com/apikey</a>. Use the <strong>Copy key</strong> button rather than retyping it &mdash; the characters are easy to misread.
+                            Create one at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style="color: #005bd3; text-decoration: underline;">aistudio.google.com/apikey</a>. Use the <strong>Copy key</strong> button rather than retyping it - the characters are easy to misread.
                         </p>
                     </div>
 
@@ -240,7 +240,7 @@
                         <textarea name="chatbot_extra_instructions" rows="5" class="form-input"
                                   placeholder="Rules the assistant must follow. e.g. Never promise next-day delivery. Always mention our 7-day returns when someone hesitates. Do not discuss competitors.">{{ old('chatbot_extra_instructions', $settings['chatbot_extra_instructions'] ?? '') }}</textarea>
                         <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
-                            These override everything else, including the built-in rules. Changes apply to the next message &mdash; no deploy needed.
+                            These override everything else, including the built-in rules. Changes apply to the next message - no deploy needed.
                         </p>
                     </div>
                 </div>

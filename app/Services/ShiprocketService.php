@@ -28,7 +28,7 @@ class ShiprocketService
             return $apiToken;
         }
 
-        // Fall back to email/password login (cached for 9 days — tokens expire in 10)
+        // Fall back to email/password login (cached for 9 days - tokens expire in 10)
         return Cache::remember('shiprocket_token', 9 * 24 * 60 * 60, function () {
             $response = Http::post(self::BASE_URL . '/auth/login', [
                 'email'    => Setting::get('shiprocket_email'),

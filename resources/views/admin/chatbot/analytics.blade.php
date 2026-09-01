@@ -155,7 +155,7 @@
     <div class="card" style="margin-top: 1rem;">
         <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;">
             <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Latest questions</h2>
-            <p style="font-size: 12px; color: #616161; margin: 0.125rem 0 0 0;">In the customer's own words &mdash; useful for spotting gaps in your product pages</p>
+            <p style="font-size: 12px; color: #616161; margin: 0.125rem 0 0 0;">In the customer's own words - useful for spotting gaps in your product pages</p>
         </div>
         <div style="padding: 0.5rem 1rem 1rem;">
             @foreach($recentQuestions as $q)
@@ -167,7 +167,7 @@
     </div>
 
     <p style="font-size: 12px; color: #616161; margin-top: 1rem;">
-        Average reply time: {{ $stats['avg_response_ms'] > 0 ? number_format($stats['avg_response_ms'] / 1000, 1) . 's' : '—' }}
+        Average reply time: {{ $stats['avg_response_ms'] > 0 ? number_format($stats['avg_response_ms'] / 1000, 1) . 's' : '-' }}
         &middot; {{ number_format($stats['signed_in']) }} of {{ number_format($stats['conversations']) }} conversations were from signed-in customers
     </p>
     @endif

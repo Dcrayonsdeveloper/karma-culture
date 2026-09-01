@@ -40,7 +40,7 @@
                             <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">MP4, WebM or MOV &middot; max 64MB. Plays muted and looped, with no controls.</p>
                         </div>
                         <p style="font-size: 12px; color: #616161; margin: -0.35rem 0 0; padding: 0.5rem 0.65rem; background: #f6f6f7; border-radius: 6px; line-height: 1.5;">
-                            Provide an <strong>image or a video</strong> — at least one is required. Supplying both
+                            Provide an <strong>image or a video</strong> - at least one is required. Supplying both
                             shows the image first while the video loads, and keeps it as the fallback where a video
                             cannot autoplay.
                         </p>

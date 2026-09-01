@@ -65,7 +65,7 @@
         <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3; display: flex; align-items: center; justify-content: space-between;">
             <div>
                 <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Traffic Overview</h2>
-                <p style="font-size: 12px; color: #616161; margin: 0.125rem 0 0 0;">Product views & unique visitors — last {{ $period }} days</p>
+                <p style="font-size: 12px; color: #616161; margin: 0.125rem 0 0 0;">Product views & unique visitors - last {{ $period }} days</p>
             </div>
             @if($trafficData->sum('pageviews') > 0)
                 <div style="display: flex; align-items: center; gap: 1rem; font-size: 12px; color: #616161;">

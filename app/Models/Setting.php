@@ -50,7 +50,7 @@ class Setting extends Model
      * Caching it meant the first caller for a missing key fixed the value for
      * an hour: a caller passing no default cached null, and every later caller
      * asking for the same key got that null back instead of its own default.
-     * A blank stored value counts as unset for the same reason — an admin field
+     * A blank stored value counts as unset for the same reason - an admin field
      * left empty should fall back, not silently become zero.
      */
     public static function get(string $key, $default = null)

@@ -148,7 +148,7 @@
                                 {{ $subscriber->email }}
                             </td>
                             <td style="padding: 0.625rem 1rem; color: #616161;">
-                                {{ $subscriber->name ?? '—' }}
+                                {{ $subscriber->name ?? '-' }}
                             </td>
                             <td style="padding: 0.625rem 1rem;">
                                 <span style="display: inline-block; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 12px; font-weight: 500; background: #f1f1f1; color: #616161;">{{ ucfirst($subscriber->source) }}</span>

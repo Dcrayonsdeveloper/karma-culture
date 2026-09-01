@@ -268,7 +268,7 @@
                         </div>
                         <p class="text-xs mb-4" style="color: #616161;">Each row is one size a customer can buy, with its own price and stock. Measurements are optional and let the assistant advise on fit. Leave SKU blank and one is generated. Colours are set separately below.</p>
 
-                        <p class="text-xs" style="color:#616161; padding:10px 0;" x-show="visibleCount() === 0" x-cloak>No sizes yet &mdash; click &ldquo;Add size&rdquo;.</p>
+                        <p class="text-xs" style="color:#616161; padding:10px 0;" x-show="visibleCount() === 0" x-cloak>No sizes yet - click &ldquo;Add size&rdquo;.</p>
 
                         <div style="overflow-x:auto;" x-show="visibleCount() > 0" x-cloak>
                             <table style="width:100%; font-size:13px; border-collapse:collapse;">
@@ -381,7 +381,7 @@
                         </div>
                         <p class="text-xs mb-4" style="color: #616161;">The colours this product comes in. They show as swatches on the product page, under the sizes.</p>
 
-                        <p class="text-xs" style="color:#616161; padding:6px 0;" x-show="rows.length === 0" x-cloak>No colours yet &mdash; click &ldquo;Add colour&rdquo;.</p>
+                        <p class="text-xs" style="color:#616161; padding:6px 0;" x-show="rows.length === 0" x-cloak>No colours yet - click &ldquo;Add colour&rdquo;.</p>
 
                         <div x-show="rows.length > 0" x-cloak style="display:flex;flex-direction:column;gap:8px;">
                             <template x-for="(c, i) in rows" :key="c.uid">
@@ -410,7 +410,7 @@
                     </script>
 
 
-                    {{-- A+ Content (Amazon-style banner images) — replaces the old Feature Highlights --}}
+                    {{-- A+ Content (Amazon-style banner images) - replaces the old Feature Highlights --}}
                     @include('admin.products.partials.aplus-content')
                 </div>
 

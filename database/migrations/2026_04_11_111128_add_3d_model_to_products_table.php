@@ -12,9 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('products', function (Blueprint $table) {
-            // .glb file — used by Android Scene Viewer and <model-viewer> on desktop/web
+            // .glb file - used by Android Scene Viewer and <model-viewer> on desktop/web
             $table->string('model_glb_path', 500)->nullable()->after('height');
-            // .usdz file — used by iOS AR QuickLook
+            // .usdz file - used by iOS AR QuickLook
             $table->string('model_usdz_path', 500)->nullable()->after('model_glb_path');
         });
     }

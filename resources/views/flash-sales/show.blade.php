@@ -1,9 +1,9 @@
 <x-layouts.app>
-    <x-slot name="title">{{ $flashSale->name }} — {{ config('app.name') }}</x-slot>
+    <x-slot name="title">{{ $flashSale->name }} - {{ config('app.name') }}</x-slot>
     <x-slot name="meta">
-        <meta name="description" content="{{ Str::limit($flashSale->description ?: $flashSale->name . ' at Karmaa Kulture — limited-time prices while the sale runs.', 155) }}">
+        <meta name="description" content="{{ Str::limit($flashSale->description ?: $flashSale->name . ' at Karmaa Kulture - limited-time prices while the sale runs.', 155) }}">
         <link rel="canonical" href="{{ url()->current() }}">
-        <meta property="og:title" content="{{ $flashSale->name }} — {{ config('app.name') }}">
+        <meta property="og:title" content="{{ $flashSale->name }} - {{ config('app.name') }}">
         <meta property="og:type" content="website">
         <meta property="og:url" content="{{ url()->current() }}">
         {{-- A sale is temporary; keeping it out of the index avoids stale
@@ -33,7 +33,7 @@
                 </div>
             @elseif($hasEnded)
                 <p class="mt-4 inline-block text-xs font-semibold px-3 py-1.5 rounded-full" style="background:#f1f1f1; color:#616161;">
-                    This sale has ended &mdash; prices are back to normal.
+                    This sale has ended - prices are back to normal.
                 </p>
             @else
                 <p class="mt-4 inline-block text-xs font-semibold px-3 py-1.5 rounded-full" style="background:#fdf3d7; color:#9a7016;">

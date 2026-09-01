@@ -1,8 +1,8 @@
 {{--
     Karmaa Kulture AI Shopping Assistant Widget
     Floating chatbot in the bottom-right corner.
-    Z-index z-[75] — above quick-view modal (z-70).
-    Alpine.js: chatbotWidget() — defined in <script> below.
+    Z-index z-[75] - above quick-view modal (z-70).
+    Alpine.js: chatbotWidget() - defined in <script> below.
 --}}
 
 @php
@@ -470,7 +470,7 @@ function chatbotWidget() {
             // 2. Convert **bold** → <strong>
             let html = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
-            // 3. Build output line by line — detect bullet lists
+            // 3. Build output line by line - detect bullet lists
             const lines = html.split('\n');
             const result = [];
             let inList = false;

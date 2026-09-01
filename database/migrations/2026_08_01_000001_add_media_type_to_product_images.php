@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::table('product_images', function (Blueprint $table) {
             if (! Schema::hasColumn('product_images', 'media_type')) {
-                // 'image' | 'video' — existing rows default to image (backward compatible).
+                // 'image' | 'video' - existing rows default to image (backward compatible).
                 $table->string('media_type', 10)->default('image')->after('variant_id');
             }
             if (! Schema::hasColumn('product_images', 'thumbnail_url')) {

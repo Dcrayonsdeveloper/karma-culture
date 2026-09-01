@@ -11,7 +11,7 @@
     @php
         // Pages contribute meta three ways: @section, a slot, or @push. Collect
         // all three into one string so the fallbacks below can see what a page
-        // already set — checking only some of them duplicated the canonical.
+        // already set - checking only some of them duplicated the canonical.
         $kkPageMeta = trim(
             ($__env->hasSection('meta') ? $__env->yieldContent('meta') : (string) ($meta ?? ''))
             . $__env->yieldPushContent('meta')
@@ -99,7 +99,7 @@
 {{-- Full-bleed sections (the hero and A+ banners) need the viewport width
      *excluding* the scrollbar. 100vw includes it, so a 100%-wide banner
      overhangs by the scrollbar width and this body's overflow-x-clip silently
-     cuts that strip off the right edge — the banner looks cropped.
+     cuts that strip off the right edge - the banner looks cropped.
      clientWidth excludes the scrollbar, so this measurement is exact. --}}
 <script>
     (function () {
@@ -672,7 +672,7 @@
 
                     // Show the waiting panel first, then ask. The browser prompt
                     // appears over it, so the customer can see what is being asked
-                    // for and why — rather than a bare dialog with no context.
+                    // for and why - rather than a bare dialog with no context.
                     this.micPanel = 'waiting';
 
                     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {

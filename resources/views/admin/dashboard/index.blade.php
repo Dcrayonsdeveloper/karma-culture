@@ -43,7 +43,7 @@
             @endif
         </form>
         @if($hasDateFilter)
-            <p style="font-size: 12px; margin-top: 0.5rem; color: #616161;">{{ $startDate->format('M d, Y') }} &ndash; {{ $endDate->format('M d, Y') }}</p>
+            <p style="font-size: 12px; margin-top: 0.5rem; color: #616161;">{{ $startDate->format('M d, Y') }} - {{ $endDate->format('M d, Y') }}</p>
         @endif
     </div>
 
@@ -153,7 +153,7 @@
         <div class="card lg:col-span-2">
             <div style="padding: 0.875rem 1.25rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e3e3e3;">
                 <h2 style="font-size: 13px; font-weight: 600; color: #303030;">Monthly revenue</h2>
-                <span style="font-size: 11px; color: #616161;">{{ $hasDateFilter ? $startDate->format('M d') . ' – ' . $endDate->format('M d, Y') : 'Last 6 months' }}</span>
+                <span style="font-size: 11px; color: #616161;">{{ $hasDateFilter ? $startDate->format('M d') . ' - ' . $endDate->format('M d, Y') : 'Last 6 months' }}</span>
             </div>
             <div style="padding: 1rem;">
                 <canvas id="monthlyRevenueChart" height="200"></canvas>

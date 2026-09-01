@@ -83,7 +83,7 @@
                     </button>
 
                     <p class="text-[11px] text-kk-text-muted text-center leading-relaxed pt-1">
-                        Offers shared via <strong>Email</strong> &amp; <strong>WhatsApp</strong>. No spam — unsubscribe anytime.
+                        Offers shared via <strong>Email</strong> &amp; <strong>WhatsApp</strong>. No spam - unsubscribe anytime.
                     </p>
                 </form>
             </div>

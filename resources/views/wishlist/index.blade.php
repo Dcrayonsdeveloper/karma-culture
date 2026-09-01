@@ -69,7 +69,7 @@
                     </svg>
                 </div>
                 <h2 class="text-xl font-bold text-neutral-900 mb-2">Your wishlist is empty</h2>
-                <p class="text-neutral-600 mb-6">Tap the heart on any product to save it here — no login needed.</p>
+                <p class="text-neutral-600 mb-6">Tap the heart on any product to save it here - no login needed.</p>
                 <a href="{{ route('home') }}" class="inline-flex items-center gap-2 px-6 py-2.5 text-white text-sm font-semibold rounded-lg transition-colors" style="background:#4a2d1a;" onmouseover="this.style.background='#2d1810'" onmouseout="this.style.background='#4a2d1a'">
                     Continue Shopping
                 </a>

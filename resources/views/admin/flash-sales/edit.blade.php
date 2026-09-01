@@ -61,7 +61,7 @@
                     </p>
 
                     <p style="font-size: 13px; color: #616161;" x-show="rows.length === 0" x-cloak>
-                        No products yet &mdash; the sale will show a countdown but discount nothing.
+                        No products yet - the sale will show a countdown but discount nothing.
                     </p>
 
                     <div x-show="rows.length > 0" x-cloak style="display: flex; flex-direction: column; gap: 8px;">
@@ -71,7 +71,7 @@
                                         class="form-select" style="flex: 1 1 200px; font-size: 13px;">
                                     <option value="">Choose a product…</option>
                                     @foreach($allProducts as $p)
-                                        <option value="{{ $p->id }}">{{ $p->name }} — @price($p->price)</option>
+                                        <option value="{{ $p->id }}">{{ $p->name }} - @price($p->price)</option>
                                     @endforeach
                                 </select>
                                 <input type="number" step="0.01" min="0" x-bind:name="'products[' + i + '][sale_price]'" x-model="r.sale_price"

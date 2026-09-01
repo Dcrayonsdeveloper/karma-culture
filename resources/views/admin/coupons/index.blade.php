@@ -92,7 +92,7 @@
                                 @elseif($coupon->type === 'free_shipping')
                                     <span style="font-size: 13px; font-weight: 500; color: #1a7a2e;">Free</span>
                                 @else
-                                    <span style="font-size: 13px; color: #616161;">&mdash;</span>
+                                    <span style="font-size: 13px; color: #616161;">-</span>
                                 @endif
                             </td>
                             <td style="text-align: right;">

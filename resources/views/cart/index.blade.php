@@ -137,7 +137,7 @@
                                                 </div>
                                             </div>
 
-                                            <!-- Item Total — right aligned on desktop -->
+                                            <!-- Item Total - right aligned on desktop -->
                                             <div class="hidden sm:flex flex-col items-end justify-center shrink-0">
                                                 <p class="text-[13px] font-bold text-neutral-900" x-text="fp(item.price * item.quantity)"></p>
                                                 <template x-if="item.quantity > 1">

@@ -8,9 +8,9 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // 2026_01_29_000046 already creates audit_logs, and its shape — the one
+        // 2026_01_29_000046 already creates audit_logs, and its shape - the one
         // AuditLog and LogAdminActions actually write to, with description, url
-        // and method nested inside the properties JSON — is what every existing
+        // and method nested inside the properties JSON - is what every existing
         // database has. This migration is a duplicate that never applied
         // anywhere; on a fresh database it would abort the whole migrate run,
         // so it stands down when the table is already there.

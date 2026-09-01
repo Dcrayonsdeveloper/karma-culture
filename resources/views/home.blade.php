@@ -4,7 +4,7 @@
         // Organization and WebSite belong on the home page: they tell Google the
         // brand behind the shop and expose the site search, which is what earns
         // the search box under a listing. Social links are only included when
-        // they are actually configured — an empty sameAs is worse than none.
+        // they are actually configured - an empty sameAs is worse than none.
         $kkSameAs = collect([
             \App\Models\Setting::get('social_instagram'),
             \App\Models\Setting::get('social_facebook'),
@@ -84,7 +84,7 @@
             .kk-display { font-family: var(--kk-display); font-weight: 500; letter-spacing: -0.01em; }
             .kk-eyebrow { font-family: var(--kk-body); font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--kk-tan-dark); font-weight: 700; }
             /* Consecutive sections stack their paddings, so each side stays
-               small — the visible gap between two sections is roughly double
+               small - the visible gap between two sections is roughly double
                these values. */
             .kk-section { padding: 24px 0; }
             .kk-section--tight { padding: 16px 0; }
@@ -115,7 +115,7 @@
             .kk-tile-gender { aspect-ratio: 3/4; }
             @media (min-width: 768px) { .kk-tile-gender { aspect-ratio: 4/5; } }
 
-            /* ===== Category grid — uniform equal-size cards (Men's) ===== */
+            /* ===== Category grid - uniform equal-size cards (Men's) ===== */
             .kk-catgrid { position: relative; }
             .kk-catgrid__track {
                 display: flex;
@@ -125,7 +125,7 @@
                 scroll-behavior: smooth;
                 -webkit-overflow-scrolling: touch;
                 padding: 8px 2px 14px;                 /* room so hover-lift/shadow isn't clipped */
-                scrollbar-width: none;                 /* hide bar — navigate via arrows / swipe */
+                scrollbar-width: none;                 /* hide bar - navigate via arrows / swipe */
             }
             .kk-catgrid__track::-webkit-scrollbar { display: none; }
             .kk-catgrid .kk-tile {
@@ -177,7 +177,7 @@
             @media (max-width: 767px) { .kk-catgrid .kk-tile { margin-right: 12px; } }
 
 
-            /* ===== Shop It Your Way — Rail of hangers ===== */
+            /* ===== Shop It Your Way - Rail of hangers ===== */
             .kk-shop-your-way { background: var(--kk-cream-light); padding: 24px 0 28px; }
             .kk-syw-heading {
                 font-family: var(--kk-display);
@@ -350,7 +350,7 @@
                 .kk-rail-label { font-size: 18px; }
             }
 
-            /* Product cards — compact 4-up grid */
+            /* Product cards - compact 4-up grid */
             .kk-product-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
             @media (max-width: 1024px) { .kk-product-grid { grid-template-columns: repeat(3, 1fr); } }
             @media (max-width: 640px)  { .kk-product-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
@@ -373,7 +373,7 @@
             .kk-product__cta { margin-top: auto; padding-top: 8px; }
             .kk-product__cta .kk-btn-brown { padding: 8px 14px; font-size: 10.5px; letter-spacing: 0.1em; }
 
-            /* About Us — video-led, minimal copy */
+            /* About Us - video-led, minimal copy */
             .kk-about { background: var(--kk-cream); padding: 40px 0; text-align: center; }
             .kk-about p.intro { max-width: 480px; margin: 14px auto 0; color: var(--kk-text-muted); font-size: 15px; line-height: 1.65; }
             /* Three reel-style (9:16) videos, Instagram-reels grid */
@@ -413,12 +413,12 @@
                 .kk-about-reel { border-radius: 8px; }
             }
 
-            /* Qualities (dark) — video-background cards */
+            /* Qualities (dark) - video-background cards */
             .kk-qualities { background: var(--kk-brown-dark); color: var(--kk-cream); padding: 28px 0; text-align: center; }
             .kk-qualities h2 { font-family: var(--kk-display); font-size: 32px; color: var(--kk-cream); margin: 10px 0 8px; }
             .kk-qualities p.sub { color: rgba(239,226,203,.7); font-size: 13px; max-width: 520px; margin: 0 auto; }
 
-            /* Our Qualities — horizontal autoplay slider (Task 4) */
+            /* Our Qualities - horizontal autoplay slider (Task 4) */
             .kk-qslider { position: relative; margin-top: 28px; }
             .kk-qslider__track {
                 display: flex; gap: 16px; overflow-x: auto;
@@ -644,7 +644,7 @@
         </section>
 
         <style>
-            /* Full-bleed hero — span the entire viewport width regardless of
+            /* Full-bleed hero - span the entire viewport width regardless of
                any parent container, and clip any margin baked into the video. */
             .kk-hero {
                 width: 100vw;
@@ -666,7 +666,7 @@
         </style>
 
         {{-- ============================================
-             SHOP BY CATEGORY — bento mosaics per gender
+             SHOP BY CATEGORY - bento mosaics per gender
              ============================================ --}}
         @php
             // Pull Men's and Women's roots directly from the DB so the section
@@ -864,7 +864,7 @@
         @endif
 
         {{-- ============================================
-             TRENDING NOW — most viewed in the last 30 days.
+             TRENDING NOW - most viewed in the last 30 days.
              Sits alongside Bestsellers (all-time sales), not instead of it.
              ============================================ --}}
         @php $tr = ($trending ?? collect())->take(4); @endphp
@@ -885,7 +885,7 @@
         @endif
 
         {{-- ============================================
-             ABOUT US — video-led, minimal text
+             ABOUT US - video-led, minimal text
              ============================================ --}}
         @php
             $aboutTitle = ($sections['about_us']->title ?? null) ?: 'Crafted to Last';
@@ -927,7 +927,7 @@
         </section>
 
         {{-- ============================================
-             SHOP IT YOUR WAY — Rail of hangers per tab
+             SHOP IT YOUR WAY - Rail of hangers per tab
              ============================================ --}}
         @php
             // Filter items come from admin (ShopFilterItem model). Normalise each
@@ -954,7 +954,7 @@
             <div class="container mx-auto px-4 text-center">
                 <span class="kk-eyebrow">Curate The Edit</span>
                 <h2 class="kk-syw-heading">Shop It Your <em>Way</em></h2>
-                <p class="kk-syw-sub">Pick a size off the rail — every cut is tailored for a flattering drape.</p>
+                <p class="kk-syw-sub">Pick a size off the rail - every cut is tailored for a flattering drape.</p>
 
                 <div class="kk-syw-tabs">
                     @foreach($kkTabs as $tabKey => $tabCfg)
@@ -1024,7 +1024,7 @@
             <div class="container mx-auto px-4">
                 <span class="kk-eyebrow" style="color: var(--kk-tan);">What Sets Us Apart</span>
                 <h2>Our Qualities</h2>
-                <p class="sub">Six pillars every piece is measured against — no shortcuts, no exceptions.</p>
+                <p class="sub">Six pillars every piece is measured against - no shortcuts, no exceptions.</p>
 
                 {{-- Cards come from admin: Online Store > Our Qualities. Autoplay slider (Task 4). --}}
                 @php $qualities = $qualities ?? collect(); @endphp

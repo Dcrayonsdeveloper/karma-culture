@@ -61,7 +61,7 @@ class SettingController extends Controller
             'cod_instructions'    => 'nullable|string|max:1000',
         ]);
 
-        // Boolean toggles — use request->boolean() so unchecked checkboxes save '0'
+        // Boolean toggles - use request->boolean() so unchecked checkboxes save '0'
         foreach (['payu_enabled', 'cod_enabled'] as $key) {
             Setting::updateOrCreate(
                 ['key' => $key],
@@ -220,14 +220,14 @@ class SettingController extends Controller
             'robots_txt'                         => 'nullable|string|max:5000',
         ]);
 
-        // Sanitize robots.txt — strip all HTML/script before saving
+        // Sanitize robots.txt - strip all HTML/script before saving
         if (isset($validated['robots_txt'])) {
             $validated['robots_txt'] = strip_tags($validated['robots_txt']);
             // Write to public/robots.txt so it is served as a static file
             file_put_contents(public_path('robots.txt'), $validated['robots_txt']);
         }
 
-        // Normalize Twitter handle — ensure it starts with @
+        // Normalize Twitter handle - ensure it starts with @
         if (!empty($validated['twitter_site']) && !str_starts_with($validated['twitter_site'], '@')) {
             $validated['twitter_site'] = '@' . $validated['twitter_site'];
         }

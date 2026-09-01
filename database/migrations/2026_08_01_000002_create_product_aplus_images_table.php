@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('product_id')->constrained()->cascadeOnDelete();
             $table->string('image_path');
             $table->string('alt_text')->nullable();
-            $table->unsignedInteger('width')->nullable();   // intrinsic px — reserves layout space, avoids CLS
+            $table->unsignedInteger('width')->nullable();   // intrinsic px - reserves layout space, avoids CLS
             $table->unsignedInteger('height')->nullable();
             $table->unsignedInteger('sort_order')->default(0);
             $table->timestamps();

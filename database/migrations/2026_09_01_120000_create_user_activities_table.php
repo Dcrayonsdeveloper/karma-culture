@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * user_activities exists in production but had no migration, so a fresh
- * database never got it — every test that signed a user out died on the
+ * database never got it - every test that signed a user out died on the
  * missing table, and a new install would have failed the same way the first
  * time anything recorded a view or an add-to-cart.
  *

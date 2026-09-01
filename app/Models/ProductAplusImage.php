@@ -9,7 +9,7 @@ class ProductAplusImage extends Model
 {
     /**
      * Accepted display size: a CSS length with an optional unit, or "auto".
-     * A bare number is treated as px. Anything else is rejected — these values
+     * A bare number is treated as px. Anything else is rejected - these values
      * are written into a style attribute, so nothing unvalidated may pass.
      */
     public const DISPLAY_SIZE_REGEX = '/^(auto|\d{1,5}(\.\d{1,2})?(px|%|rem|em|vw|vh)?)$/i';
@@ -63,7 +63,7 @@ class ProductAplusImage extends Model
      * Per-image CSS custom properties, consumed by .kk-aplus__img.
      *
      * Custom properties rather than direct width/height declarations so a
-     * media query can still override the value on small screens — an inline
+     * media query can still override the value on small screens - an inline
      * `width:900px` would win against any stylesheet rule and break mobile.
      * Empty string when unset, leaving the stylesheet defaults in force.
      */

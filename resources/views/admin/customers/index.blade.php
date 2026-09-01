@@ -70,7 +70,7 @@
                                 <span style="font-size: 13px; color: #616161;">{{ $customer->email }}</span>
                             </td>
                             <td>
-                                <span style="font-size: 13px; color: #616161;">{{ $customer->phone ?? '—' }}</span>
+                                <span style="font-size: 13px; color: #616161;">{{ $customer->phone ?? '-' }}</span>
                             </td>
                             <td style="text-align: right;">
                                 <span style="font-size: 13px; color: #303030;">{{ $customer->orders_count }}</span>

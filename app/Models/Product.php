@@ -272,7 +272,7 @@ class Product extends Model
 
     public function getPrimaryImageUrlAttribute(): string
     {
-        // Never use a video as the thumbnail — pick the primary image, else the
+        // Never use a video as the thumbnail - pick the primary image, else the
         // first non-video media, else any first media.
         $notVideo = fn ($i) => ($i->media_type ?? 'image') !== 'video';
         $primary = $this->images->firstWhere('is_primary', true);

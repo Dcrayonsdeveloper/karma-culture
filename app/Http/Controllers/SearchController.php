@@ -203,7 +203,7 @@ class SearchController extends Controller
 
         // Start from a base collection. ->map() only downgrades an Eloquent
         // collection to a base one when it can see a non-model item, so a query
-        // that matched nothing stays an Eloquent collection — and Eloquent's
+        // that matched nothing stays an Eloquent collection - and Eloquent's
         // merge() calls getKey() on every item, which throws on these arrays.
         // That made any search with no product hits but a category hit return a
         // 500 instead of results ("kurta" being one).

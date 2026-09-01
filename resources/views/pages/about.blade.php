@@ -1,8 +1,8 @@
 <x-layouts.app>
-    <x-slot name="title">Our Story — {{ config('app.name', 'Karmaa Kulture') }}</x-slot>
+    <x-slot name="title">Our Story - {{ config('app.name', 'Karmaa Kulture') }}</x-slot>
 
     @push('meta')
-        <meta name="description" content="The story behind {{ config('app.name', 'Karmaa Kulture') }} — premium tailored essentials, crafted with care for the modern individual.">
+        <meta name="description" content="The story behind {{ config('app.name', 'Karmaa Kulture') }} - premium tailored essentials, crafted with care for the modern individual.">
         <link rel="canonical" href="{{ route('about') }}">
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
     @endpush
@@ -60,9 +60,9 @@
             <div class="container mx-auto px-4">
                 <div class="ab-story">
                     <h2>Crafted to last</h2>
-                    <p>{{ config('app.name', 'Karmaa Kulture') }} began with a simple belief — that everyday wear should feel considered, comfortable and enduring. Every shirt, polo and trouser is designed around fit, fabric and finish, so it looks as good on the hundredth wear as the first.</p>
-                    <p>We work with premium fabrics and refined construction to build a wardrobe of essentials that transcend trends. Less noise, more intention — pieces you reach for again and again.</p>
-                    <p>More than a label, {{ config('app.name', 'Karmaa Kulture') }} is a way of dressing with meaning — where good karma, good craft and good culture come together.</p>
+                    <p>{{ config('app.name', 'Karmaa Kulture') }} began with a simple belief - that everyday wear should feel considered, comfortable and enduring. Every shirt, polo and trouser is designed around fit, fabric and finish, so it looks as good on the hundredth wear as the first.</p>
+                    <p>We work with premium fabrics and refined construction to build a wardrobe of essentials that transcend trends. Less noise, more intention - pieces you reach for again and again.</p>
+                    <p>More than a label, {{ config('app.name', 'Karmaa Kulture') }} is a way of dressing with meaning - where good karma, good craft and good culture come together.</p>
                 </div>
             </div>
         </section>
@@ -90,7 +90,7 @@
                             <svg fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
                         </div>
                         <h3>Made with Intention</h3>
-                        <p>Thoughtfully created, responsibly delivered — culture you can wear.</p>
+                        <p>Thoughtfully created, responsibly delivered - culture you can wear.</p>
                     </div>
                 </div>
             </div>
@@ -101,7 +101,7 @@
             <div class="container mx-auto px-4">
                 <div class="ab-banner">
                     <h2>Wear your culture</h2>
-                    <p>Discover essentials designed to move with you — from the everyday to the occasion.</p>
+                    <p>Discover essentials designed to move with you - from the everyday to the occasion.</p>
                     <a href="{{ route('new-arrivals') }}" class="ab-btn">Shop New Arrivals <span aria-hidden="true">&rarr;</span></a>
                 </div>
             </div>

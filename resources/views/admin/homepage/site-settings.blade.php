@@ -54,7 +54,7 @@
                         <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Displayed in the teal bar at the top of every page. Leave empty to hide.</p>
                     </div>
                     <div style="border-top: 1px solid #e3e3e3; padding-top: 1rem;">
-                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">About Us — Video</label>
+                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">About Us - Video</label>
                         @if($settings['about_us_video_url'])
                             <div style="margin: 0.5rem 0;">
                                 <video src="{{ str_starts_with($settings['about_us_video_url'], 'http') ? $settings['about_us_video_url'] : asset($settings['about_us_video_url']) }}"

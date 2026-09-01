@@ -78,8 +78,8 @@
                                 <span style="color: #616161; margin: 0 0.25rem;">&rarr;</span>
                                 <span style="font-weight: 600; color: #303030;">{{ $movement->quantity_after }}</span>
                             </td>
-                            <td style="padding: 0.625rem 1rem; color: #616161;">{{ $movement->reason ?? '—' }}</td>
-                            <td style="padding: 0.625rem 1rem; color: #616161;">{{ $movement->createdBy?->full_name ?? '—' }}</td>
+                            <td style="padding: 0.625rem 1rem; color: #616161;">{{ $movement->reason ?? '-' }}</td>
+                            <td style="padding: 0.625rem 1rem; color: #616161;">{{ $movement->createdBy?->full_name ?? '-' }}</td>
                         </tr>
                     @empty
                         <tr>

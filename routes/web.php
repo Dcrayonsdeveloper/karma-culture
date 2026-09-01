@@ -41,7 +41,7 @@ Route::get('/', [App\Http\Controllers\HomeController::class, 'index'])->name('ho
 
 // Products
 Route::prefix('products')->name('products.')->group(function () {
-    // All-products index page removed — CTAs now point to the home page.
+    // All-products index page removed - CTAs now point to the home page.
     Route::get('/{product:slug}', [App\Http\Controllers\ProductController::class, 'show'])->name('show');
 });
 
@@ -68,7 +68,7 @@ Route::post('/products/{product}/notify-back-in-stock', [App\Http\Controllers\Pr
 
 // Categories
 Route::prefix('categories')->name('categories.')->group(function () {
-    // Categories index page removed — the navbar shows a hover dropdown instead.
+    // Categories index page removed - the navbar shows a hover dropdown instead.
     Route::get('/{category:slug}', [App\Http\Controllers\CategoryController::class, 'show'])->name('show');
 });
 
@@ -100,7 +100,7 @@ Route::get('/wholesale', [App\Http\Controllers\WholesaleController::class, 'inde
 Route::prefix('cart')->name('cart.')->group(function () {
     // Named paths first. DELETE /cart/{cartItem} was declared above
     // /remove-coupon and matched it, so the request looked for a cart item
-    // literally called "remove-coupon" and 404'd — the Remove button on an
+    // literally called "remove-coupon" and 404'd - the Remove button on an
     // applied coupon never worked. The whereNumber constraint stops any future
     // literal route being swallowed the same way.
     Route::get('/data', [App\Http\Controllers\CartController::class, 'data'])->name('data');
@@ -116,7 +116,7 @@ Route::prefix('cart')->name('cart.')->group(function () {
     Route::delete('/{cartItem}', [App\Http\Controllers\CartController::class, 'destroy'])->whereNumber('cartItem')->name('destroy');
 });
 
-// Checkout — guest checkout (no authentication required).
+// Checkout - guest checkout (no authentication required).
 // Order is placed without login; payment/shipping (Shiprocket) will be wired in later.
 Route::prefix('checkout')->name('checkout.')->group(function () {
     Route::get('/', [App\Http\Controllers\CheckoutController::class, 'index'])->name('index');
@@ -129,12 +129,12 @@ Route::prefix('checkout')->name('checkout.')->group(function () {
 // ownership (user id or guest session) is enforced inside the controller.
 Route::get('/payu/initiate/{order}', [App\Http\Controllers\PayUController::class, 'initiate'])->name('payu.initiate');
 
-// Wishlist page — client-side (localStorage) wishlist, works for guests
+// Wishlist page - client-side (localStorage) wishlist, works for guests
 Route::get('/wishlist', [App\Http\Controllers\WishlistController::class, 'index'])->name('wishlist');
 // Product data for the favourited IDs (guest-accessible; used to render the wishlist page)
 Route::get('/wishlist-items', [App\Http\Controllers\WishlistController::class, 'items'])->name('wishlist.items');
 
-// Wishlist actions (require auth — legacy server wishlist, kept for logged-in sync if needed)
+// Wishlist actions (require auth - legacy server wishlist, kept for logged-in sync if needed)
 Route::middleware('auth')->prefix('wishlist')->name('wishlist.')->group(function () {
     Route::post('/{product}', [App\Http\Controllers\WishlistController::class, 'store'])->name('store');
     Route::delete('/{product}', [App\Http\Controllers\WishlistController::class, 'destroy'])->name('destroy');
@@ -254,11 +254,11 @@ Route::get('/cookie-policy', [App\Http\Controllers\PageController::class, 'cooki
 Route::get('/gdpr', [App\Http\Controllers\PageController::class, 'gdpr'])->name('gdpr');
 Route::get('/page/{page:slug}', [App\Http\Controllers\PageController::class, 'show'])->name('page.show');
 
-// PayU Payment Callbacks (outside auth — PayU POSTs here after payment)
+// PayU Payment Callbacks (outside auth - PayU POSTs here after payment)
 Route::post('/payu/success', [App\Http\Controllers\PayUController::class, 'success'])->name('payu.success');
 Route::post('/payu/failure', [App\Http\Controllers\PayUController::class, 'failure'])->name('payu.failure');
 
-// Shiprocket Webhook (outside auth — Shiprocket POSTs tracking updates)
+// Shiprocket Webhook (outside auth - Shiprocket POSTs tracking updates)
 Route::post('/webhooks/shiprocket', [App\Http\Controllers\ShiprocketWebhookController::class, 'handle'])->name('webhooks.shiprocket');
 
 // Load Admin Routes

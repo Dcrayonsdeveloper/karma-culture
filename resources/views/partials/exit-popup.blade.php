@@ -2,7 +2,7 @@
     $exitEnabled  = (bool) \App\Models\Setting::get('exit_popup_enabled', true);
     $exitCode     = \App\Models\Setting::get('exit_popup_code', 'KARMAA10');
     $exitMinutes  = (int) \App\Models\Setting::get('exit_popup_minutes', 10);
-    $exitTitle    = \App\Models\Setting::get('exit_popup_title', "Wait — Don't Miss 10% Off");
+    $exitTitle    = \App\Models\Setting::get('exit_popup_title', "Wait - Don't Miss 10% Off");
     $exitSubtitle = \App\Models\Setting::get('exit_popup_subtitle', 'Complete your order now and save. Apply the code below at checkout before it expires.');
     $exitImage    = \App\Models\Setting::get('exit_popup_image', '');
     if ($exitImage && !str_starts_with($exitImage, 'http') && !str_starts_with($exitImage, '/')) {

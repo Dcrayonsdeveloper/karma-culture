@@ -31,7 +31,7 @@
                 <h2 class="text-[15px] font-bold text-neutral-900 mb-2">What Are Cookies?</h2>
                 <div class="space-y-2.5 text-[13px] text-neutral-600 leading-relaxed">
                     <p>Cookies are small text files that are placed on your device when you visit a website. They are widely used to make websites work, improve user experience, and provide information to the website owner.</p>
-                    <p>Cookies are not harmful — they cannot carry viruses or install malware. They simply store small pieces of information that help the website remember your preferences and activity.</p>
+                    <p>Cookies are not harmful - they cannot carry viruses or install malware. They simply store small pieces of information that help the website remember your preferences and activity.</p>
                 </div>
             </div>
 
@@ -45,19 +45,19 @@
                 <ul class="space-y-2">
                     <li class="flex items-start gap-2 text-[13px] text-neutral-600">
                         <svg class="w-4 h-4 text-success-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                        Session cookies — keeping you logged in during your visit
+                        Session cookies - keeping you logged in during your visit
                     </li>
                     <li class="flex items-start gap-2 text-[13px] text-neutral-600">
                         <svg class="w-4 h-4 text-success-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                        Shopping cart contents — preserving your selected items
+                        Shopping cart contents - preserving your selected items
                     </li>
                     <li class="flex items-start gap-2 text-[13px] text-neutral-600">
                         <svg class="w-4 h-4 text-success-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                        CSRF security tokens — protecting you from cross-site attacks
+                        CSRF security tokens - protecting you from cross-site attacks
                     </li>
                     <li class="flex items-start gap-2 text-[13px] text-neutral-600">
                         <svg class="w-4 h-4 text-success-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                        Cookie consent preference — storing your cookie choices
+                        Cookie consent preference - storing your cookie choices
                     </li>
                 </ul>
             </div>
@@ -135,7 +135,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div class="bg-white border border-neutral-100 rounded-xl p-5 sm:p-6">
                     <h2 class="text-[15px] font-bold text-neutral-900 mb-2">Third-Party Cookies</h2>
-                    <p class="text-[13px] text-neutral-600 leading-relaxed">Some cookies are set by third-party services on our pages. We do not control these cookies — please refer to each third party's privacy policy for details on how they collect and use data.</p>
+                    <p class="text-[13px] text-neutral-600 leading-relaxed">Some cookies are set by third-party services on our pages. We do not control these cookies - please refer to each third party's privacy policy for details on how they collect and use data.</p>
                 </div>
                 <div class="bg-white border border-neutral-100 rounded-xl p-5 sm:p-6">
                     <h2 class="text-[15px] font-bold text-neutral-900 mb-2">Managing Cookies</h2>

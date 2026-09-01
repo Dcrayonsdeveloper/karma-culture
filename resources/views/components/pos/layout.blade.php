@@ -6,7 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>{{ config('app.name') }} — POS</title>
+    <title>{{ config('app.name') }} - POS</title>
 
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
@@ -347,7 +347,7 @@
             const banner = document.createElement('div');
             banner.id = 'pos-offline-banner';
             banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#EF4444;color:white;text-align:center;padding:4px;font-size:12px;font-weight:600;';
-            banner.textContent = 'You are offline — Some features may be limited';
+            banner.textContent = 'You are offline - Some features may be limited';
             document.body.prepend(banner);
         });
         window.addEventListener('online', () => {

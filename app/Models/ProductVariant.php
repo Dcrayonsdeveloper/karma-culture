@@ -41,8 +41,8 @@ class ProductVariant extends Model
      * The size a shopper recognises.
      *
      * Variants created in the sizes editor store just the size ("M", "XL").
-     * Older ones carry the whole variant name — "Block Print Kurti - Indigo - L"
-     * — and the size is the last segment. Showing those raw turned the size
+     * Older ones carry the whole variant name - "Block Print Kurti - Indigo - L"
+     * - and the size is the last segment. Showing those raw turned the size
      * filter into a list of 115 product names.
      */
     public static function sizeLabel(?string $name): string
