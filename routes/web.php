@@ -264,6 +264,3 @@ Route::post('/webhooks/shiprocket', [App\Http\Controllers\ShiprocketWebhookContr
 
 // Load Admin Routes
 require __DIR__.'/admin.php';
-
-// Load POS Routes
-require __DIR__.'/pos.php';
