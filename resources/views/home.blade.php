@@ -1,4 +1,54 @@
 <x-layouts.app>
+@push('meta')
+    @php
+        // Organization and WebSite belong on the home page: they tell Google the
+        // brand behind the shop and expose the site search, which is what earns
+        // the search box under a listing. Social links are only included when
+        // they are actually configured — an empty sameAs is worse than none.
+        $kkSameAs = collect([
+            \App\Models\Setting::get('social_instagram'),
+            \App\Models\Setting::get('social_facebook'),
+            \App\Models\Setting::get('social_twitter'),
+            \App\Models\Setting::get('social_linkedin'),
+        ])->filter()->values();
+
+        $kkLogo = \App\Models\Setting::get('site_logo')
+            ? asset('storage/' . \App\Models\Setting::get('site_logo'))
+            : asset('images/karmaa-kulture-logo.png');
+
+        $kkOrg = array_filter([
+            '@type' => 'Organization',
+            '@id' => url('/') . '#organization',
+            'name' => \App\Models\Setting::get('site_name', config('app.name')),
+            'url' => url('/'),
+            'logo' => $kkLogo,
+            'sameAs' => $kkSameAs->isNotEmpty() ? $kkSameAs->all() : null,
+        ]);
+
+        $kkSchema = [
+            '@context' => 'https://schema.org',
+            '@graph' => [
+                $kkOrg,
+                [
+                    '@type' => 'WebSite',
+                    '@id' => url('/') . '#website',
+                    'url' => url('/'),
+                    'name' => \App\Models\Setting::get('site_name', config('app.name')),
+                    'publisher' => ['@id' => url('/') . '#organization'],
+                    'potentialAction' => [
+                        '@type' => 'SearchAction',
+                        'target' => [
+                            '@type' => 'EntryPoint',
+                            'urlTemplate' => route('search') . '?q={search_term_string}',
+                        ],
+                        'query-input' => 'required name=search_term_string',
+                    ],
+                ],
+            ],
+        ];
+    @endphp
+    <script type="application/ld+json">{!! json_encode($kkSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
+@endpush
     <x-slot name="title">{{ $siteSettings['site_name'] ?? 'Karmaa Kulture' }} - {{ $siteSettings['site_tagline'] ?? 'Premium tailored essentials' }}</x-slot>
 
     @push('meta')
