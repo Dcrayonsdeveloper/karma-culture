@@ -80,10 +80,12 @@
                 <div class="flex flex-wrap gap-1.5 pt-1 pb-2">
                     @foreach($kkAllSizes as $kkSize)
                         @php $kkOn = in_array($kkSize, (array) request('size', []), true); @endphp
-                        <label class="cursor-pointer">
-                            <input type="checkbox" name="size[]" value="{{ $kkSize }}" @checked($kkOn) class="sr-only peer">
+                        <label class="cursor-pointer select-none">
+                            <input type="checkbox" name="size[]" value="{{ $kkSize }}" @checked($kkOn)
+                                   onchange="this.form.submit()" class="sr-only peer">
                             <span class="inline-block px-2.5 py-1 text-xs rounded-md border transition-colors
-                                         {{ $kkOn ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-200 text-neutral-700 hover:border-neutral-400' }}">
+                                         border-neutral-200 text-neutral-700 hover:border-neutral-500 hover:text-neutral-900
+                                         peer-checked:border-neutral-900 peer-checked:bg-neutral-900 peer-checked:text-white">
                                 {{ $kkSize }}
                             </span>
                         </label>
@@ -121,10 +123,12 @@
                 <div class="flex flex-wrap gap-1.5 pt-1 pb-2">
                     @foreach($kkAllColours as $kkC)
                         @php $kkOn = in_array($kkC['name'], (array) request('colour', []), true); @endphp
-                        <label class="cursor-pointer" title="{{ $kkC['name'] }}">
-                            <input type="checkbox" name="colour[]" value="{{ $kkC['name'] }}" @checked($kkOn) class="sr-only peer">
+                        <label class="cursor-pointer select-none" title="{{ $kkC['name'] }}">
+                            <input type="checkbox" name="colour[]" value="{{ $kkC['name'] }}" @checked($kkOn)
+                                   onchange="this.form.submit()" class="sr-only peer">
                             <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded-md border transition-colors
-                                         {{ $kkOn ? 'border-neutral-900 bg-neutral-50' : 'border-neutral-200 hover:border-neutral-400' }}">
+                                         border-neutral-200 hover:border-neutral-500
+                                         peer-checked:border-neutral-900 peer-checked:bg-neutral-100 peer-checked:font-semibold">
                                 <span style="width:12px;height:12px;border-radius:50%;background-color: {{ $kkC['hex'] ?: '#ddd' }}; border:1px solid rgba(0,0,0,.15);"></span>
                                 <span class="text-neutral-700">{{ $kkC['name'] }}</span>
                             </span>
