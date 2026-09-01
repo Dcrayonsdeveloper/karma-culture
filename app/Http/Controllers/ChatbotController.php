@@ -211,14 +211,19 @@ class ChatbotController extends Controller
         }
 
         $email = $emailMatch[0] ?? null;
+        $user = $conversation->user;
+
+        // The assistant is signed-in only, so anyone chatting is a known
+        // customer: their account details are the contact, and typing one into
+        // the chat simply overrides it.
+        $email = $email ?: $user?->email;
+        $phone = $phone ?: $user?->phone;
 
         if (! $email && ! $phone) {
             return;
         }
 
         try {
-            $user = $conversation->user;
-
             $lead = Lead::updateOrCreate(
                 [
                     'platform' => 'website_chat',
