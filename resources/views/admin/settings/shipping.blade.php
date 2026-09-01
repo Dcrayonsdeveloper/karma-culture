@@ -105,6 +105,28 @@
                     </div>
                 </div>
 
+                <!-- Returns -->
+                <div class="card">
+                    <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;">
+                        <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Returns</h2>
+                        <p style="font-size: 12px; color: #616161; margin: 0.125rem 0 0 0;">When a customer may request a return</p>
+                    </div>
+                    <div style="padding: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div>
+                            <label class="form-label">Return window (days)</label>
+                            <input type="number" name="return_window_days" min="0" max="365"
+                                   value="{{ old('return_window_days', $settings['return_window_days'] ?? 7) }}" class="form-input">
+                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Days after delivery a return can still be raised.</p>
+                        </div>
+                        <div>
+                            <label class="form-label">Wait before returning (hours)</label>
+                            <input type="number" name="return_min_hours" min="0" max="168"
+                                   value="{{ old('return_min_hours', $settings['return_min_hours'] ?? 0) }}" class="form-input">
+                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Set 0 to let customers return as soon as the order is delivered.</p>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Flat Rate -->
                 <div class="card" x-data="{ enabled: {{ ($settings['flat_rate_enabled'] ?? true) ? 'true' : 'false' }} }">
                     <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3; display: flex; align-items: center; justify-content: space-between;">

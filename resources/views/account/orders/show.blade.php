@@ -391,6 +391,22 @@
                                         </svg>
                                         Request Return
                                     </a>
+                                @elseif($order->status === 'delivered' && $order->delivered_at)
+                                    {{-- Delivered but still inside the waiting period, or past the
+                                         window. Showing nothing left the customer wondering whether
+                                         returns existed at all. --}}
+                                    @php
+                                        $kkWindow = (int) \App\Models\Setting::get('return_window_days', 7);
+                                        $kkWait   = (int) \App\Models\Setting::get('return_min_hours', 0);
+                                        $kkOpensAt = $order->delivered_at->copy()->addHours($kkWait);
+                                    @endphp
+                                    <p class="text-[12px] text-neutral-500 text-center px-2">
+                                        @if($kkOpensAt->isFuture())
+                                            Returns open {{ $kkOpensAt->diffForHumans() }}.
+                                        @else
+                                            The {{ $kkWindow }}-day return window for this order has closed.
+                                        @endif
+                                    </p>
                                 @endif
 
                                 @if(in_array($order->status, ['delivered', 'completed']))
