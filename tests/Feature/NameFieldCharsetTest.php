@@ -57,6 +57,8 @@ class NameFieldCharsetTest extends TestCase
             // testimonial boxes share name="name".
             'testimonial name (new)' => ['admin/homepage/testimonials.blade.php', 'id', 'testimonial-name'],
             'testimonial name (edit)' => ['admin/homepage/testimonials.blade.php', 'id', 't{{ $testimonial->id }}-name'],
+            'admin profile first name' => ['admin/profile/edit.blade.php', 'name', 'first_name'],
+            'admin profile last name' => ['admin/profile/edit.blade.php', 'name', 'last_name'],
         ];
     }
 

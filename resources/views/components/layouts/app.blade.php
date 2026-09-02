@@ -254,7 +254,13 @@
                 <form @submit.prevent="$store.authModal.register(name, email, password, password_confirmation)" class="space-y-3">
                     <div>
                         <label class="block text-sm font-medium text-neutral-700 mb-1.5">Full Name</label>
+                        {{-- autocomplete="name" is what earns this box the keystroke filter
+                             (NAME_AUTOCOMPLETE in app.js), and it is the right token anyway
+                             for a signup field. Lengths mirror auth/register.blade.php:
+                             maxlength is the field's hard bound, not the 30 the server asks
+                             for, so the 31st character is reported rather than swallowed. --}}
                         <input type="text" x-model="name" required
+                               minlength="2" maxlength="100" autocomplete="name"
                                class="w-full px-3 py-2.5 bg-neutral-50 border border-neutral-300 rounded-lg text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#6F9CA2] focus:ring-0 transition-colors"
                                placeholder="Enter your full name">
                         <template x-if="$store.authModal.errors.full_name">
