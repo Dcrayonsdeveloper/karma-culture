@@ -19,12 +19,15 @@ return new class extends Migration
             ->where('status', 'pending')
             ->update(['status' => 'approved']);
 
-        // The mirror case: status says approved but the flag the storefront
-        // reads was never flipped, so the review stayed hidden.
+        // The mirror case is a rejection, not a stalled approval. Only two paths
+        // ever wrote status='approved' - the generator and Review::approve() -
+        // and both set is_approved with it. So a row that says 'approved' while
+        // hidden is one the old admin Reject cleared the flag on without moving
+        // status. Publishing it again would undo that decision; record it instead.
         DB::table('reviews')
             ->where('status', 'approved')
             ->where('is_approved', false)
-            ->update(['is_approved' => true]);
+            ->update(['status' => 'rejected']);
 
         // Rejected or flagged reviews must not stay publicly visible.
         DB::table('reviews')

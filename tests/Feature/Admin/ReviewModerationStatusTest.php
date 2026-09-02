@@ -141,7 +141,9 @@ class ReviewModerationStatusTest extends TestCase
             ->assertSee($approved->content)
             ->assertDontSee($untouched->content)
             ->assertSee('badge badge-success')
-            ->assertDontSee('badge badge-warning">Pending');
+            // Raw match: the escaped form of this needle never appears in the
+            // page, so an escaping assertion would pass even with the bug present.
+            ->assertDontSee('badge badge-warning">Pending', false);
     }
 
     public function test_the_tab_counts_follow_the_moderation_decisions(): void
