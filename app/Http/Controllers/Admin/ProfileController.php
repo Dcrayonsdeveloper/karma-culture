@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Rules\ValidationRules as V;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -23,8 +24,12 @@ class ProfileController extends Controller
         $user = auth('admin')->user();
 
         $validated = $request->validate([
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
+            // Was 'string|max:255' - both wider than the varchar(50) columns
+            // being written, and with no charset at all. V::name(max: 50)
+            // matches the column and the same PersonName charset every other
+            // name box uses, including the box in this very form.
+            'first_name' => V::name(max: 50),
+            'last_name' => V::name(max: 50),
             'email' => 'required|email|unique:users,email,' . $user->id,
             'current_password' => 'nullable|required_with:password',
             'password' => 'nullable|min:8|confirmed',

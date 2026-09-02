@@ -1601,7 +1601,17 @@
                     <input type="hidden" name="rating" :value="rating">
 
                     <div class="kk-revform__grid">
-                        <input class="kk-revform__input" type="text" name="guest_name" placeholder="Full name *" value="{{ old('guest_name') }}" required maxlength="100">
+                        {{-- This name is PUBLISHED under the review, and the box asked only
+                             for a length - so "686876988" or a URL could be typed in and
+                             would appear on the product page. autocomplete="name" is what
+                             earns the keystroke filter (see NAME_AUTOCOMPLETE in app.js),
+                             and it is the right token anyway: this is the visitor's own
+                             name. The pattern is App\Rules\PersonName's charset, which
+                             GuestReviewController now validates against. --}}
+                        <input class="kk-revform__input" type="text" name="guest_name" placeholder="Full name *" value="{{ old('guest_name') }}" required minlength="2" maxlength="100"
+                               autocomplete="name"
+                               pattern="{{ \App\Rules\ValidationRules::namePattern() }}"
+                               title="The full name may only contain letters, spaces, hyphens, apostrophes and periods.">
                         <input class="kk-revform__input" type="email" name="guest_email" placeholder="Email (not published) *" value="{{ old('guest_email') }}" required maxlength="255">
                     </div>
                     <input class="kk-revform__input" type="text" name="title" placeholder="Review title" value="{{ old('title') }}" maxlength="255" style="margin-bottom:12px;">

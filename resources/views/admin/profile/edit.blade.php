@@ -17,7 +17,15 @@
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                             <div>
                                 <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">First Name <span style="color: #d72c0d;">*</span></label>
+                                {{-- data-kk-chars rather than an inferred autocomplete token: this
+                                     is the admin panel, and these boxes are deliberately left out
+                                     of the browser's autofill. maxlength is 50 because that is the
+                                     width of users.first_name; the rule behind it said 255. --}}
                                 <input type="text" name="first_name" value="{{ old('first_name', $user->first_name) }}" required
+                                       minlength="2" maxlength="50"
+                                       data-kk-chars="personName"
+                                       pattern="{{ \App\Rules\ValidationRules::namePattern() }}"
+                                       title="The first name may only contain letters, spaces, hyphens, apostrophes and periods."
                                        class="form-input" style="width: 100%;">
                                 @error('first_name')
                                     <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
@@ -26,6 +34,10 @@
                             <div>
                                 <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Last Name <span style="color: #d72c0d;">*</span></label>
                                 <input type="text" name="last_name" value="{{ old('last_name', $user->last_name) }}" required
+                                       minlength="2" maxlength="50"
+                                       data-kk-chars="personName"
+                                       pattern="{{ \App\Rules\ValidationRules::namePattern() }}"
+                                       title="The last name may only contain letters, spaces, hyphens, apostrophes and periods."
                                        class="form-input" style="width: 100%;">
                                 @error('last_name')
                                     <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>

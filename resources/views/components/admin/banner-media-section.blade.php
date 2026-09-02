@@ -8,8 +8,12 @@
 {{-- One breakpoint's worth of hero uploads, headed by the size that breakpoint
      actually draws at. The two devices are separated because the answer to
      "what size should this be?" is genuinely different for each: the desktop
-     hero is a wide strip, the phone one a portrait box, and a single number
-     covering both was wrong for one of them whichever number it was. --}}
+     hero is a wide strip, the phone one a squarer 3:2 box, and a single number
+     covering both was wrong for one of them whichever number it was.
+
+     The size is now advice worth following rather than a suggestion: the slide
+     is a fixed box at each breakpoint, so artwork of another shape is filled in
+     and centre-cropped, not shrunk to fit. --}}
 
 @php
     $isMobile = $device === 'mobile';
@@ -34,10 +38,11 @@
         Recommended size <strong style="color: #303030;">{{ $width }} &times; {{ $height }}px</strong>
         <span style="color: #8a8a8a;">({{ $ratio }})</span> &mdash;
         {{ $isMobile
-            ? 'a portrait box, the shape a phone gives the slide.'
+            ? 'the shape a phone gives the slide.'
             : 'the shape the hero plays at, taken from the hero video.' }}
-        Anything at the same proportions works; a different shape is shown whole,
-        with a blurred copy of itself filling what is left over.
+        Anything at the same proportions works. A different shape still fills the
+        slide edge to edge, but it is centred and cropped to get there, so keep
+        anything that must be read - a headline, a face - away from the edges.
     </p>
 
     <div style="display: flex; flex-direction: column; gap: 0.85rem;">

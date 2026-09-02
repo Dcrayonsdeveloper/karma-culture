@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Staff;
 use App\Models\User;
+use App\Rules\ValidationRules as V;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -28,8 +29,13 @@ class StaffController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'first_name' => 'required|string|max:50',
-            'last_name' => 'required|string|max:50',
+            // Was 'string|max:50', which let a staff name be saved as digits or
+            // symbol soup. These write users.first_name/last_name - the same two
+            // varchar(50) columns admin/customers and the customer's own profile
+            // form already guard with V::name - so the rule matches those, and
+            // matches the keystroke filter now on the two boxes in the blade.
+            'first_name' => V::name(max: 50),
+            'last_name' => V::name(max: 50),
             'email' => 'required|email|unique:users,email',
             'password' => 'required|min:8|confirmed',
             'role' => 'required|in:manager,cashier,support,warehouse',
@@ -69,8 +75,13 @@ class StaffController extends Controller
     public function update(Request $request, Staff $staff): RedirectResponse
     {
         $validated = $request->validate([
-            'first_name' => 'required|string|max:50',
-            'last_name' => 'required|string|max:50',
+            // Was 'string|max:50', which let a staff name be saved as digits or
+            // symbol soup. These write users.first_name/last_name - the same two
+            // varchar(50) columns admin/customers and the customer's own profile
+            // form already guard with V::name - so the rule matches those, and
+            // matches the keystroke filter now on the two boxes in the blade.
+            'first_name' => V::name(max: 50),
+            'last_name' => V::name(max: 50),
             'email' => 'required|email|unique:users,email,' . $staff->user_id,
             'password' => 'nullable|min:8|confirmed',
             'role' => 'required|in:manager,cashier,support,warehouse',

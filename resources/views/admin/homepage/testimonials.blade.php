@@ -32,10 +32,15 @@
                              "This field is required" instead of "Customer Name is required". --}}
                         <div>
                             <label for="testimonial-name" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Customer Name <span style="color: #d72c0d;">*</span></label>
-                            {{-- Length only. The charset lives in App\Rules\PersonName, which has to
-                                 keep accepting O'Connor, Mary-Anne, José and रवि कुमार - a client
-                                 pattern narrow enough to be useful here would reject them. --}}
+                            {{-- The charset lives in App\Rules\PersonName, and ValidationRules::namePattern()
+                                 is that exact rule rather than a hand-narrowed one, so it still accepts
+                                 O'Connor, Mary-Anne, José and रवि कुमार while refusing "346@#$!@fdf sf".
+                                 data-kk-chars is spelled out because this box keeps autocomplete="off" -
+                                 an admin typing a customer's name must not be offered their own. --}}
                             <input type="text" name="name" id="testimonial-name" required minlength="2" maxlength="100"
+                                   data-kk-chars="personName"
+                                   pattern="{{ \App\Rules\ValidationRules::namePattern() }}"
+                                   title="The customer name may only contain letters, spaces, hyphens, apostrophes and periods."
                                    autocomplete="off" class="form-input">
                         </div>
                         <div>
@@ -156,7 +161,11 @@
                         <div style="display: flex; flex-direction: column; gap: 0.75rem;">
                             <div>
                                 <label for="t{{ $testimonial->id }}-name" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Customer Name <span style="color: #d72c0d;">*</span></label>
-                                <input type="text" name="name" id="t{{ $testimonial->id }}-name" value="{{ $testimonial->name }}" required minlength="2" maxlength="100" autocomplete="off" class="form-input">
+                                <input type="text" name="name" id="t{{ $testimonial->id }}-name" value="{{ $testimonial->name }}" required minlength="2" maxlength="100"
+                                       data-kk-chars="personName"
+                                       pattern="{{ \App\Rules\ValidationRules::namePattern() }}"
+                                       title="The customer name may only contain letters, spaces, hyphens, apostrophes and periods."
+                                       autocomplete="off" class="form-input">
                             </div>
                             <div>
                                 <label for="t{{ $testimonial->id }}-title" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Title/Role</label>

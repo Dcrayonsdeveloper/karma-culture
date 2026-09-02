@@ -2087,3 +2087,206 @@ body.kk-modal-open main {
 }
 .kk-media--thumb .kk-media__fallback { padding: 4px; }
 .kk-media--thumb .kk-media__fallback svg { width: 18px; height: 18px; }
+
+/* ==========================================================================
+   Responsive: admin shell
+   --------------------------------------------------------------------------
+   The admin views lay themselves out with inline style="" attributes, which
+   no utility class can override. These rules key off the inline strings
+   themselves (attribute substring selectors), so every admin page collapses
+   the same way without a hundred templates being rewritten. They are scoped
+   to `.layout-admin main`; the sidebar and header already adapt on their own.
+
+   Specificity: the generic one-column collapse is (0,2,1). Each exception
+   adds a second [style*=] to reach (0,3,1) and win; `:not(:where(...))` adds
+   nothing, which is why it is used for the exclusions.
+   ========================================================================== */
+
+/* The shell is 100vh, which on a phone is taller than the visible area once
+   the browser chrome is counted, so the bottom of <main> sat under the URL
+   bar. dvh tracks the real visible height. */
+@supports (height: 100dvh) {
+    .layout-admin > .h-screen { height: 100dvh; }
+}
+
+/* Every width: an inline `1fr` track is really minmax(auto, 1fr), so one
+   unbreakable string (an email, a SKU, a URL) in a card widens its column
+   past <main>. Letting grid and flex children shrink below their content
+   keeps every column inside the page. */
+.layout-admin main [style*="grid-template-columns"] > * { min-width: 0; }
+.layout-admin main [style*="flex: 1"] { min-width: 0; }
+.layout-admin main h1 { min-width: 0; overflow-wrap: anywhere; }
+.layout-admin main a[href^="mailto:"],
+.layout-admin main a[href^="tel:"],
+.layout-admin main code { overflow-wrap: anywhere; }
+.layout-admin main input[type="file"] { display: block; width: 100%; max-width: 100%; min-width: 0; }
+
+/* Touch devices: icon-only controls reach a 40px target. The pointer media
+   query keeps the compact desktop look on a mouse. */
+@media (pointer: coarse) {
+    .layout-admin .btn-icon { width: 2.5rem; height: 2.5rem; }
+    .layout-admin header button { min-width: 2.5rem; min-height: 2.5rem; }
+    .layout-admin main [style*="width: 28px"][style*="height: 28px"] { width: 2.25rem !important; height: 2.25rem !important; }
+}
+
+/* Laptops narrower than ~1150px: beside the 240px sidebar the side column
+   of a 2fr 1fr form is under 290px, too narrow for its cards, so the
+   main + side-column forms stack from here down. */
+@media (max-width: 1151.98px) {
+    .layout-admin main [style*="grid-template-columns: 2fr 1fr"],
+    .layout-admin main [style*="grid-template-columns: 1fr 2fr"],
+    .layout-admin main [style*="grid-template-columns: 3fr 1fr"],
+    .layout-admin main [style*="grid-template-columns: 1fr 3fr"],
+    .layout-admin main [style*="grid-template-columns: 1fr 340px"],
+    .layout-admin main [style*="grid-template-columns: 1fr 320px"],
+    .layout-admin main [style*="grid-template-columns: 1fr 300px"] {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* Small laptop and below (the sidebar is off-canvas from here down): KPI
+   strips drop from 4-6 tiles a row to 2-3 so the numbers stay legible. */
+@media (max-width: 1023.98px) {
+    .layout-admin main [style*="grid-template-columns: repeat(4, 1fr)"] {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    .layout-admin main [style*="grid-template-columns: repeat(5, 1fr)"],
+    .layout-admin main [style*="grid-template-columns: repeat(6, 1fr)"] {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+}
+
+/* Tablet portrait and below. */
+@media (max-width: 767.98px) {
+    /* Every remaining fixed-column grid becomes one column. auto-fit /
+       auto-fill grids are already fluid and are left alone; the KPI strips
+       keep two tiles per row. */
+    .layout-admin main [style*="grid-template-columns"]:not(:where([style*="auto-fit"], [style*="auto-fill"])) {
+        grid-template-columns: 1fr !important;
+    }
+    .layout-admin main [style*="display: grid"][style*="grid-template-columns: repeat(4, 1fr)"],
+    .layout-admin main [style*="display: grid"][style*="grid-template-columns: repeat(5, 1fr)"],
+    .layout-admin main [style*="display: grid"][style*="grid-template-columns: repeat(6, 1fr)"],
+    .layout-admin main [style*="grid-template-columns: repeat("][style*="gap: 1px"] {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    /* A child that spanned two columns would now force an implicit second
+       column into the single-column grid and push the page sideways. */
+    .layout-admin main [style*="grid-template-columns"] > [style*="grid-column: span"] {
+        grid-column: auto !important;
+    }
+
+    /* Page headers, toolbars and button rows wrap instead of overflowing.
+       flex-wrap only takes effect when a row no longer fits, so the rows that
+       do fit are unchanged. */
+    .layout-admin .page-header,
+    .layout-admin .page-header > [style*="display: flex"],
+    .layout-admin main [style*="justify-content: space-between"],
+    .layout-admin main [style*="justify-content:space-between"],
+    .layout-admin main [style*="justify-content: flex-end"] {
+        flex-wrap: wrap;
+        row-gap: 0.5rem;
+    }
+    .layout-admin .page-header > * { min-width: 0; }
+    /* ...except a label + toggle-switch row, which must stay on one line. */
+    .layout-admin main [style*="justify-content: space-between"]:has(> .toggle-switch) {
+        flex-wrap: nowrap;
+    }
+
+    /* Search + filter bars: the form wraps, and the search box takes a full
+       row of its own so selects and buttons flow underneath it. */
+    .layout-admin .card > [style*="border-bottom"][style*="display: flex"]:not(:where(:has(> a[style*="margin-bottom: -1px"]))),
+    .layout-admin .card > [style*="border-bottom"][style*="display: flex"] > form,
+    .layout-admin main form[style*="display: flex"]:not(:where([style*="flex-direction: column"])) {
+        flex-wrap: wrap;
+        row-gap: 0.5rem;
+    }
+    .layout-admin main form [style*="max-width: 24rem"] {
+        max-width: none !important;
+        flex: 1 1 100% !important;
+    }
+
+    /* Tab strips (the underline tabs above list tables) scroll sideways as
+       one line rather than stacking. overflow-y is pinned to hidden: once
+       overflow-x is set, `auto` is the computed default, and the active tab
+       has a -1px bottom margin, enough for a phantom vertical scrollbar. */
+    .layout-admin .card [style*="display: flex"]:has(> a[style*="margin-bottom: -1px"]) {
+        overflow-x: auto;
+        overflow-y: hidden;
+        flex-wrap: nowrap;
+        scrollbar-width: thin;
+    }
+    .layout-admin .card [style*="display: flex"] > a[style*="margin-bottom: -1px"] {
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    /* Tables scroll sideways inside their own wrapper rather than squashing.
+       The wrapper is whatever element holds the table directly, so a card
+       that also holds a dropdown is not turned into a clipping box. Only
+       tables with four or more columns get a width floor; a two-column
+       key/value table can simply wrap. */
+    .layout-admin main :has(> table) {
+        overflow-x: auto;
+        max-width: 100%;
+    }
+    .layout-admin main table:has(tr > :nth-child(4)) { min-width: 600px; }
+    .layout-admin main table:has(tr > :nth-child(7)) { min-width: 760px; }
+    .layout-admin main table { width: 100%; }
+}
+
+/* Phones. */
+@media (max-width: 639.98px) {
+    /* Long tokens (emails, SKUs, tracking numbers, URLs) wrap inside their
+       column instead of pushing the whole page sideways. `anywhere` also
+       lets a flex/grid cell shrink below the token's width. */
+    .layout-admin main { overflow-wrap: anywhere; }
+    .layout-admin main table { overflow-wrap: normal; }
+
+    /* Nothing embedded may be wider than the screen. */
+    .layout-admin main :is(img, video, iframe, select, input, textarea) { max-width: 100%; }
+
+    /* Fixed-width panels (modals, pickers) fit the screen. */
+    .layout-admin main [style*="width: 640px"],
+    .layout-admin main [style*="width: 600px"],
+    .layout-admin main [style*="width: 560px"],
+    .layout-admin main [style*="width: 480px"],
+    .layout-admin main [style*="width: 420px"],
+    .layout-admin main [style*="width: 400px"],
+    .layout-admin main [style*="min-width: 400px"],
+    .layout-admin main [style*="min-width: 320px"] {
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: 100%;
+    }
+
+    /* Buttons: a touch-sized target without changing the desktop look. */
+    .layout-admin .btn:not(.btn-icon):not(.btn-sm) {
+        min-height: 2.25rem;
+    }
+    .layout-admin .page-header h1 { font-size: 1.125rem; }
+}
+
+/* ==========================================================================
+   Responsive: storefront safety net
+   --------------------------------------------------------------------------
+   html/body clip horizontal overflow, so anything wider than the viewport
+   is silently cut off rather than scrollable. These keep the common culprits
+   inside the screen; page-specific layouts are handled in their templates.
+   ========================================================================== */
+body:not(.layout-admin) main { overflow-wrap: break-word; }
+body:not(.layout-admin) :is(iframe, embed, object, video) { max-width: 100%; }
+body:not(.layout-admin) pre { max-width: 100%; overflow-x: auto; }
+body:not(.layout-admin) main table { max-width: 100%; }
+
+@media (max-width: 639.98px) {
+    /* Toasts span the screen instead of hanging off the right edge. */
+    body:not(.layout-admin) > div[aria-live="polite"].fixed.top-4.right-4 {
+        left: 1rem;
+        right: 1rem;
+    }
+    /* Long tokens in account/checkout/tracking pages wrap inside their box. */
+    body:not(.layout-admin) main :is(dd, td, li, p) { overflow-wrap: anywhere; }
+    /* Wide content tables (size guide, legal pages) scroll instead of cutting off. */
+    body:not(.layout-admin) main table { display: block; overflow-x: auto; }
+}
