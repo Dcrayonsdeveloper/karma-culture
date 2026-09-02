@@ -76,13 +76,24 @@
                     @foreach($filterPanel['subcategories'] as $kkSub)
                         {{-- A ticked box stays clickable even when the other filters have
                              emptied it out, or there would be no way to untick it. --}}
-                        @php $kkEmpty = ($kkSub->products_total ?? null) === 0 && ! in_array($kkSub->slug, $kkActiveSubs, true); @endphp
-                        <label class="flex items-center gap-2.5 py-0.5 group {{ $kkEmpty ? 'cursor-not-allowed opacity-45' : 'cursor-pointer' }}"
-                               @if($kkEmpty) title="Nothing in this collection yet" @endif>
-                            <input type="checkbox" name="subcategory[]" value="{{ $kkSub->slug }}" onchange="this.form.submit()" @disabled($kkEmpty)
+                        @php
+                            $kkEmpty = ($kkSub->products_total ?? null) === 0 && ! in_array($kkSub->slug, $kkActiveSubs, true);
+                            // The collection this page IS. The category page ticks it on
+                            // the shopper's behalf and re-ticks it on every submit, so as
+                            // a live checkbox it swallowed clicks and never changed -
+                            // unticking it just reloaded the same page with it ticked
+                            // again. Shown as settled instead: it is where they are
+                            // standing, and the way out is the parent category, not this
+                            // box. Disabled means the browser leaves it out of the submit,
+                            // which is exactly what unticking it already did.
+                            $kkPinned = ($filterPanel['pinned_subcategory'] ?? null) === $kkSub->slug;
+                        @endphp
+                        <label class="flex items-center gap-2.5 py-0.5 group {{ $kkEmpty ? 'cursor-not-allowed opacity-45' : ($kkPinned ? 'cursor-default' : 'cursor-pointer') }}"
+                               @if($kkEmpty) title="Nothing in this collection yet" @elseif($kkPinned) title="You are browsing this collection" @endif>
+                            <input type="checkbox" name="subcategory[]" value="{{ $kkSub->slug }}" onchange="this.form.submit()" @disabled($kkEmpty || $kkPinned)
                                    {{ in_array($kkSub->slug, $kkActiveSubs, true) ? 'checked' : '' }}
                                    class="w-3.5 h-3.5 rounded border-neutral-300 accent-[#6F9CA2] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#6F9CA2]">
-                            <span class="text-sm text-neutral-600 group-hover:text-neutral-900 transition-colors">{{ $kkSub->name }}</span>
+                            <span class="text-sm {{ $kkPinned ? 'font-medium text-neutral-900' : 'text-neutral-600 group-hover:text-neutral-900' }} transition-colors">{{ $kkSub->name }}</span>
                             @isset($kkSub->products_total)
                                 <span class="ml-auto text-xs text-neutral-400 tabular-nums">{{ $kkSub->products_total }}</span>
                             @endisset

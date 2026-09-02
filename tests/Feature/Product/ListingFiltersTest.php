@@ -309,8 +309,36 @@ class ListingFiltersTest extends TestCase
         // A listing answers the button with its own sidebar, so the filters
         // apply to the grid on screen; anywhere else the header's shop-wide
         // drawer takes it. This marker is how the drawer tells them apart.
-        $this->get('/shop')->assertOk()->assertSee('data-kk-filter-sidebar', false);
-        $this->get('/wishlist')->assertOk()->assertDontSee('data-kk-filter-sidebar', false);
+        // Asserted on the sidebar's own Alpine state, not on the marker
+        // attribute: the drawer's querySelector mentions that attribute by name,
+        // so the literal string is on every page whether a sidebar is there or
+        // not. `mobileOpen` belongs to the sidebar alone.
+        $this->get('/shop')->assertOk()
+            ->assertSee('data-kk-filter-sidebar', false)
+            ->assertSee('mobileOpen', false);
+        $this->get('/wishlist')->assertOk()->assertDontSee('mobileOpen', false);
+    }
+
+    /**
+     * The collection a sub-category page IS gets a settled row, not a checkbox
+     * that swallows clicks.
+     *
+     * The page ticks its own slug when the request carries no subcategory, and
+     * re-ticks it on every submit - so unticking the box reloaded the same page
+     * with the box ticked again, and the one control in the sidebar that looked
+     * most obviously undoable was the one that could not be undone.
+     */
+    public function test_the_pages_own_subcategory_is_settled_rather_than_a_dead_checkbox(): void
+    {
+        $this->get('/category/shirts')
+            ->assertOk()
+            ->assertSee('You are browsing this collection', false);
+
+        // On the parent the very same box is a live filter again.
+        $this->get('/category/men')
+            ->assertOk()
+            ->assertSee('name="subcategory[]" value="shirts"', false)
+            ->assertDontSee('You are browsing this collection', false);
     }
 
     /** And /shop is reachable from the navigation rather than only by accident. */
