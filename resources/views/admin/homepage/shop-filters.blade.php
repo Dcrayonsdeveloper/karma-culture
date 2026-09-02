@@ -32,7 +32,7 @@
                  so the table keeps a floor width and scrolls inside its own box
                  rather than squeezing every field into a sliver. --}}
             <div style="padding: 0; overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                <table style="width: 100%; min-width: 860px; font-size: 13px;">
+                <table style="width: 100%; min-width: 920px; font-size: 13px;">
                     <thead>
                         <tr style="background: #f7f7f7; border-bottom: 1px solid #e3e3e3;">
                             <th style="text-align: left; padding: 0.5rem 1rem; font-weight: 500; color: #616161; font-size: 12px;">Label</th>
@@ -52,10 +52,21 @@
                                     <td style="padding: 0.5rem 1rem;"><input type="text" name="label" value="{{ $item->label }}" required maxlength="120" aria-label="Label" class="form-input" style="font-size: 13px;"></td>
                                     <td style="padding: 0.5rem 1rem;"><input type="text" name="sub_label" value="{{ $item->sub_label }}" maxlength="120" aria-label="Sub-label" class="form-input" style="font-size: 13px;"></td>
                                     <td style="padding: 0.5rem 1rem;">
-                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                        @if($item->shade_hex)
-                                            <span style="flex: none; display:inline-block; width: 18px; height: 18px; border-radius: 4px; background: {{ $item->shade_hex }}; border: 1px solid #c9cccf;"></span>
-                                        @endif
+                                        {{-- The scope has to start inside the cell: the row's <form> is
+                                             display:contents and the parser lifts it out of the <tr>, so
+                                             anything hung on the row or the form would not hold together. --}}
+                                        {{-- flex-wrap, not for the controls but for the validator: an
+                                             invalid hex drops its message into this same row, and the
+                                             message only steps under the field if it may take a line. --}}
+                                        <div x-data="kkShadeField(@js($item->shade_hex ?? ''))" style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;">
+                                            {{-- The picker cannot draw "no shade" - a blank value reads
+                                                 as black - so the flat swatch stays on as the honest
+                                                 preview and hatches while the field is empty. The colour
+                                                 is server-rendered too: the column used to be readable
+                                                 with no JS at all and should stay that way. --}}
+                                            <span aria-hidden="true" :style="{ background: swatch }" style="flex: none; display:inline-block; width: 18px; height: 18px; border-radius: 4px; border: 1px solid #c9cccf; background: {{ $item->shade_hex ?: 'repeating-linear-gradient(45deg, #fff, #fff 4px, #e3e3e3 4px, #e3e3e3 8px)' }};"></span>
+                                            <input type="color" :value="picker" @click="open()" @input="pick($event.target.value)" aria-label="Shade colour picker"
+                                                   style="width: 32px; height: 34px; border: 1px solid #c9cccf; border-radius: 0.5rem; padding: 0.125rem; background: none; cursor: pointer; flex: 0 0 auto;">
                                         {{-- Hex only. This value is interpolated into a `style`
                                              attribute on the swatch above and again on the home
                                              page, so anything that is not a colour is arbitrary
@@ -63,7 +74,13 @@
                                         <input type="text" name="shade_hex" value="{{ $item->shade_hex }}" maxlength="9"
                                                pattern="#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})"
                                                title="Enter a hex colour such as #b8895a." aria-label="Shade hex"
-                                               class="form-input" style="font-size: 13px; max-width: 110px;" placeholder="#b8895a">
+                                               x-ref="text" @input="sync($event.target.value)"
+                                               class="form-input" style="font-size: 13px; max-width: 96px; min-width: 0;" placeholder="#b8895a">
+                                            {{-- Without this the palette is a one-way door: every colour
+                                                 is reachable but "no shade" is not, and it is the empty
+                                                 shade that lets the home page fall back to its own tan. --}}
+                                            <button type="button" x-show="hex !== ''" x-cloak @click="clear()" title="Clear shade" aria-label="Clear shade"
+                                                    style="flex: none; color: #d72c0d; background: none; border: 0; cursor: pointer; font-size: 16px; line-height: 1; padding: 0 2px;">&times;</button>
                                         </div>
                                     </td>
                                     <td style="padding: 0.5rem 1rem;"><input type="text" name="query_string" value="{{ $item->query_string }}" maxlength="255"
@@ -132,10 +149,27 @@
                     </div>
                     <div>
                         <label for="filter-{{ $type }}-shade-hex" class="form-label" style="font-size: 11px; color: #616161;">Shade hex</label>
-                        <input type="text" name="shade_hex" id="filter-{{ $type }}-shade-hex" maxlength="9"
-                               pattern="#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})"
-                               title="Enter a hex colour such as #b8895a."
-                               class="form-input" style="font-size: 13px;" placeholder="#b8895a">
+                        {{-- flex-wrap so an invalid hex puts the validator's message on a
+                             line under the field, instead of a third column beside it. --}}
+                        <div x-data="kkShadeField('')" style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;">
+                            {{-- The same unset signal the rows above carry: a new item has no
+                                 shade, and a black chip on its own would read as one. --}}
+                            <span aria-hidden="true" :style="{ background: swatch }" style="flex: none; display:inline-block; width: 18px; height: 18px; border-radius: 4px; border: 1px solid #c9cccf; background: repeating-linear-gradient(45deg, #fff, #fff 4px, #e3e3e3 4px, #e3e3e3 8px);"></span>
+                            {{-- No name on the picker: the text box is what posts. Most items
+                                 have no shade, and a named colour input - which always has a
+                                 value - would post every one of them as #000000. --}}
+                            <input type="color" :value="picker" @click="open()" @input="pick($event.target.value)" aria-label="Shade colour picker"
+                                   style="width: 32px; height: 34px; border: 1px solid #c9cccf; border-radius: 0.5rem; padding: 0.125rem; background: none; cursor: pointer; flex: 0 0 auto;">
+                            {{-- min-width lets the field shrink inside the grid track; without it
+                                 the input's default 20-character floor pushes past the column. --}}
+                            <input type="text" name="shade_hex" id="filter-{{ $type }}-shade-hex" maxlength="9"
+                                   pattern="#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})"
+                                   title="Enter a hex colour such as #b8895a."
+                                   x-ref="text" @input="sync($event.target.value)"
+                                   class="form-input" style="font-size: 13px; min-width: 0;" placeholder="#b8895a">
+                            <button type="button" x-show="hex !== ''" x-cloak @click="clear()" title="Clear shade" aria-label="Clear shade"
+                                    style="flex: none; color: #d72c0d; background: none; border: 0; cursor: pointer; font-size: 16px; line-height: 1; padding: 0 2px;">&times;</button>
+                        </div>
                     </div>
                     <div>
                         <label for="filter-{{ $type }}-query-string" class="form-label" style="font-size: 11px; color: #616161;">Query string</label>
@@ -149,4 +183,88 @@
             </div>
         </div>
     @endforeach
+
+    {{-- One scope per Shade cell, shared by every tab and row. The text input is
+         the only thing that posts; the colour input is a swatch and a palette
+         button, so it carries no name. --}}
+    <script>
+        function kkShadeHex(value) {
+            const hex = String(value ?? '').trim();
+
+            return /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/.test(hex) ? hex : '';
+        }
+
+        // <input type="color"> takes #rrggbb and nothing else: handed the #fff and
+        // #b8895aff forms the server also accepts, it silently falls back to black
+        // and shows the wrong colour. Widen and trim for the picker only - the
+        // stored value goes back to the server exactly as it was typed.
+        function kkShadeRgb(value) {
+            const digits = kkShadeHex(value).slice(1);
+
+            if (! digits) return '';
+
+            return '#' + (digits.length === 3 ? digits.replace(/./g, (c) => c + c) : digits.slice(0, 6));
+        }
+
+        const KK_SHADE_UNSET = 'repeating-linear-gradient(45deg, #fff, #fff 4px, #e3e3e3 4px, #e3e3e3 8px)';
+        const KK_SHADE_BLANK = '#000000';
+
+        function kkShadeField(initial) {
+            return {
+                hex: String(initial ?? ''),
+                picker: kkShadeRgb(initial) || KK_SHADE_BLANK,
+                // A shade nobody has set must look unset, not black.
+                get swatch() {
+                    return kkShadeHex(this.hex) || KK_SHADE_UNSET;
+                },
+                // Assigning .value fires nothing, so the inline validator would
+                // sit on a stale "Enter a hex colour" note over a field the
+                // palette had just made valid. Hand it a real event instead.
+                write(value) {
+                    this.hex = value;
+                    this.$refs.text.value = value;
+                    this.$refs.text.dispatchEvent(new Event('input', { bubbles: true }));
+                },
+                sync(value) {
+                    this.hex = value;
+                    // Half-typed hex should not flick the picker through black,
+                    // but a field cleared back to empty has to take it along -
+                    // otherwise the swatch reads unset next to a picker still
+                    // showing the colour that was deleted.
+                    if (value.trim() === '') {
+                        this.picker = KK_SHADE_BLANK;
+
+                        return;
+                    }
+
+                    const rgb = kkShadeRgb(value);
+                    if (rgb) this.picker = rgb;
+                },
+                // Opening the palette is itself the pick. A colour input fires
+                // no event when the colour chosen is the one already shown, so
+                // on an empty row - where the picker reads #000000 - black
+                // would otherwise be the single shade the palette cannot set.
+                open() {
+                    if (kkShadeHex(this.hex) === '') this.write(this.picker);
+                },
+                pick(value) {
+                    // The picker only speaks #rrggbb. Carry the alpha of an
+                    // 8-digit shade across rather than dropping it the first
+                    // time someone opens the palette on that row.
+                    const current = kkShadeHex(this.hex);
+                    const alpha = current.length === 9 ? current.slice(7) : '';
+
+                    this.picker = value;
+                    this.write(value + alpha);
+                },
+                // The way back to "no shade" - which is what lets the home page
+                // fall back to its own tan. Nothing else can empty the field
+                // once a colour is in it.
+                clear() {
+                    this.picker = KK_SHADE_BLANK;
+                    this.write('');
+                },
+            };
+        }
+    </script>
 </x-layouts.admin>
