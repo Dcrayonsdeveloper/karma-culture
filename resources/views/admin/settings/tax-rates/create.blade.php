@@ -9,6 +9,8 @@
         <h1 style="font-size: 1.125rem; font-weight: 600; color: #303030;">Add tax rate</h1>
     </div>
 
+
+    @include('admin.settings.partials.errors')
     <form action="{{ route('admin.settings.tax-rates.store') }}" method="POST">
         @csrf
 
@@ -71,7 +73,7 @@
         </div>
 
             <!-- Save bar -->
-            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #e3e3e3;">
+            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; max-width: 640px; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #e3e3e3;">
                 <a href="{{ route('admin.settings.tax-rates.index') }}" class="btn btn-secondary" style="font-size: 13px;">Discard</a>
                 <button type="submit" class="btn btn-primary" style="font-size: 13px;">Save tax rate</button>
             </div>

@@ -8,6 +8,8 @@
         </div>
     </x-slot>
 
+    <x-admin.form-errors title="Site settings were not saved" />
+
     <div style="margin-bottom: 0.25rem;">
         <a href="{{ route('admin.homepage.index') }}" style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 13px; color: #005bd3; text-decoration: none;">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M12 16l-6-6 6-6" stroke="#005bd3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -43,19 +45,19 @@
                     </div>
                     <div>
                         <label for="site-name" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Site Name</label>
-                        <input type="text" name="site_name" id="site-name" value="{{ $settings['site_name'] }}" maxlength="100" class="form-input">
+                        <input type="text" name="site_name" id="site-name" value="{{ old('site_name', $settings['site_name']) }}" required minlength="2" maxlength="100" class="form-input">
                     </div>
                     <div>
                         <label for="site-tagline" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Tagline</label>
-                        <input type="text" name="site_tagline" id="site-tagline" value="{{ $settings['site_tagline'] }}" maxlength="150" class="form-input">
+                        <input type="text" name="site_tagline" id="site-tagline" value="{{ old('site_tagline', $settings['site_tagline']) }}" maxlength="150" class="form-input">
                     </div>
                     <div>
                         <label for="site-description" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Site Description</label>
-                        <textarea name="site_description" id="site-description" rows="3" maxlength="500" class="form-textarea">{{ $settings['site_description'] }}</textarea>
+                        <textarea name="site_description" id="site-description" rows="3" maxlength="500" class="form-textarea">{{ old('site_description', $settings['site_description']) }}</textarea>
                     </div>
                     <div>
                         <label for="announcement-text" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Announcement Bar Text</label>
-                        <input type="text" name="announcement_text" id="announcement-text" value="{{ $settings['announcement_text'] }}" maxlength="255" class="form-input" placeholder="e.g. Free Shipping on Orders Over ₹500!">
+                        <input type="text" name="announcement_text" id="announcement-text" value="{{ old('announcement_text', $settings['announcement_text']) }}" maxlength="255" class="form-input" placeholder="e.g. Free Shipping on Orders Over ₹500!">
                         <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Displayed in the teal bar at the top of every page. Leave empty to hide.</p>
                     </div>
                     {{-- The About Us section shows three videos side by side, so all
@@ -76,7 +78,7 @@
                             </div>
                         @endif
                         <input type="text" name="{{ $kkAboutVideo['url'] }}" id="{{ $kkAboutVideo['url'] }}"
-                               value="{{ $settings[$kkAboutVideo['url']] ?? '' }}" maxlength="255"
+                               value="{{ old($kkAboutVideo['url'], $settings[$kkAboutVideo['url']] ?? '') }}" maxlength="255"
                                pattern="https?://\S+|[A-Za-z0-9._\-/]+\.(mp4|webm|mov|ogg)"
                                title="Enter a full https:// address, or a path to an .mp4, .webm or .mov file."
                                class="form-input" placeholder="https://… or storage/storefront/about/video.mp4">
@@ -112,7 +114,7 @@
                                 {{ $kkSocial['label'] }}
                             </label>
                             <input type="url" name="{{ $kkSocial['key'] }}" id="{{ $kkSocial['key'] }}"
-                                   value="{{ $settings[$kkSocial['key']] }}" maxlength="255"
+                                   value="{{ old($kkSocial['key'], $settings[$kkSocial['key']]) }}" maxlength="255"
                                    pattern="https?://.+" title="Enter a full web address starting with http:// or https://"
                                    class="form-input" placeholder="{{ $kkSocial['placeholder'] }}">
                         </div>
@@ -131,7 +133,7 @@
                         {{-- type="email" on its own accepts "hello@karmaa" - a bare host with no
                              TLD - which the server rule then rejects. The pattern closes that gap
                              so the mismatch is caught in the field rather than after submitting. --}}
-                        <input type="email" name="contact_email" id="contact-email" value="{{ $settings['contact_email'] }}"
+                        <input type="email" name="contact_email" id="contact-email" value="{{ old('contact_email', $settings['contact_email']) }}"
                                maxlength="255" autocomplete="email"
                                pattern=".+@.+\..+" title="Enter a full email address, like hello@example.com"
                                class="form-input">
@@ -141,15 +143,27 @@
                         {{-- Pattern mirrors App\Rules\IndianMobile: an optional +91 or 0 prefix,
                              then ten digits opening 6-9, spacing and hyphens tolerated. Anything
                              narrower would reject numbers the server accepts. --}}
-                        <input type="tel" name="contact_phone" id="contact-phone" value="{{ $settings['contact_phone'] }}"
+                        <input type="tel" name="contact_phone" id="contact-phone" value="{{ old('contact_phone', $settings['contact_phone']) }}"
                                inputmode="numeric" autocomplete="tel" maxlength="20"
                                pattern="(\+?91[\s\-]?)?0?[6-9][0-9\s\-]{9,}"
                                title="Enter a 10-digit Indian mobile number starting with 6, 7, 8 or 9."
                                class="form-input">
                     </div>
                     <div>
+                        <label for="whatsapp-number" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">WhatsApp Number</label>
+                        {{-- The floating chat button on every storefront page reads this
+                             setting, and there was no field for it anywhere in the admin -
+                             so the button could only be pointed at a number by editing the
+                             database directly. --}}
+                        <input type="tel" name="whatsapp_number" id="whatsapp-number" value="{{ old('whatsapp_number', $settings['whatsapp_number']) }}"
+                               inputmode="numeric" autocomplete="tel" maxlength="20"
+                               pattern="(\+?91[\s\-]?)?0?[6-9][0-9\s\-]{9,}"
+                               title="Enter a 10-digit Indian mobile number starting with 6, 7, 8 or 9."
+                               class="form-input" placeholder="Leave empty to hide the chat button">
+                    </div>
+                    <div>
                         <label for="contact-address" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Address</label>
-                        <textarea name="contact_address" id="contact-address" rows="3" maxlength="500" class="form-textarea">{{ $settings['contact_address'] }}</textarea>
+                        <textarea name="contact_address" id="contact-address" rows="3" maxlength="500" class="form-textarea">{{ old('contact_address', $settings['contact_address']) }}</textarea>
                     </div>
                 </div>
             </div>
@@ -162,11 +176,11 @@
                 <div style="padding: 1rem; display: flex; flex-direction: column; gap: 1rem;">
                     <div>
                         <label for="footer-about" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">About Text</label>
-                        <textarea name="footer_about" id="footer-about" rows="4" maxlength="1000" class="form-textarea">{{ $settings['footer_about'] }}</textarea>
+                        <textarea name="footer_about" id="footer-about" rows="4" maxlength="1000" class="form-textarea">{{ old('footer_about', $settings['footer_about']) }}</textarea>
                     </div>
                     <div>
                         <label for="footer-copyright" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Copyright Text</label>
-                        <input type="text" name="footer_copyright" id="footer-copyright" value="{{ $settings['footer_copyright'] }}" maxlength="255" class="form-input">
+                        <input type="text" name="footer_copyright" id="footer-copyright" value="{{ old('footer_copyright', $settings['footer_copyright']) }}" maxlength="255" class="form-input">
                     </div>
                 </div>
             </div>

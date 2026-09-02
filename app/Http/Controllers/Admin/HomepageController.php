@@ -36,8 +36,13 @@ class HomepageController extends Controller
      * scheme is allow-listed instead - http, https, mailto and tel - alongside
      * the two shapes that carry no scheme at all: a site-relative path and a
      * bare fragment.
+     *
+     * The path branch refuses a second leading slash. `//evil.com` looks like a
+     * path and passed as one, but a browser reads it as a protocol-relative URL
+     * and resolves it off-site, so a banner or menu item labelled with a local
+     * path could quietly send visitors to someone else's domain.
      */
-    private const LINK_REGEX = '/^(?:(?:https?|mailto|tel):\S+|\/\S*|#\S*)$/i';
+    private const LINK_REGEX = '/^(?:(?:https?|mailto|tel):\S+|\/(?!\/)\S*|#\S*)$/i';
 
     /**
      * A video the About Us section can play: an absolute URL, or a path
@@ -48,8 +53,14 @@ class HomepageController extends Controller
     /** A six-digit CSS hex colour - what <input type="color"> submits. */
     private const HEX_COLOR_REGEX = '/^#[0-9A-Fa-f]{6}$/';
 
-    /** Locations the header and footer partials know how to render. */
-    private const NAV_LOCATIONS = ['header', 'footer_col1', 'footer_col2', 'footer_col3', 'footer_col4'];
+    /**
+     * Locations the header and footer partials know how to render.
+     *
+     * footer_col4 was accepted here but the footer has three link columns and the
+     * admin screen lists three, so an item filed there was saved, hidden from the
+     * only page that could delete it, and rendered nowhere.
+     */
+    private const NAV_LOCATIONS = ['header', 'footer_col1', 'footer_col2', 'footer_col3'];
 
     /** Video uploads: extension, sniffed type and size all checked. */
     private function videoRules(): array
@@ -99,6 +110,7 @@ class HomepageController extends Controller
             'social_pinterest' => Setting::get('social_pinterest', ''),
             'contact_email' => Setting::get('contact_email', ''),
             'contact_phone' => Setting::get('contact_phone', ''),
+            'whatsapp_number' => Setting::get('whatsapp_number', ''),
             'contact_address' => Setting::get('contact_address', ''),
             'announcement_text' => Setting::get('announcement_text', ''),
             'about_us_video_url' => Setting::get('about_us_video_url', ''),
@@ -117,7 +129,12 @@ class HomepageController extends Controller
         // included - could be uploaded and then fetched back through
         // /storage. Every text field was likewise unbounded and unchecked.
         $rules = [
-            'site_name' => V::text(required: false, max: 100),
+            // Required, unlike every other field here. The same setting is edited
+            // on Settings > General where it is mandatory, and the storefront's
+            // footer, page titles and schema all read it - so saving this form
+            // with the box empty used to blank the shop's own name site-wide and
+            // leave the General page refusing to save until someone retyped it.
+            'site_name' => V::text(max: 100, min: 2),
             'site_tagline' => V::text(required: false, max: 150),
             'site_description' => V::textarea(required: false, max: 500),
             'footer_about' => V::textarea(required: false, max: 1000),
@@ -125,6 +142,9 @@ class HomepageController extends Controller
             'announcement_text' => V::text(required: false, max: 255),
             'contact_email' => V::email(required: false),
             'contact_phone' => V::mobile(required: false),
+            // Read by the floating chat button on every storefront page
+            // (components/layouts/app.blade.php) but editable nowhere until now.
+            'whatsapp_number' => V::mobile(required: false),
             'contact_address' => V::addressLine(required: false, max: 500),
             'site_logo' => V::image(required: false, maxKb: 2048, allowGif: false),
         ];
@@ -153,7 +173,7 @@ class HomepageController extends Controller
             'footer_about', 'footer_copyright',
             'social_facebook', 'social_instagram', 'social_twitter', 'social_linkedin',
             'social_youtube', 'social_tiktok', 'social_pinterest',
-            'contact_email', 'contact_phone', 'contact_address',
+            'contact_email', 'contact_phone', 'whatsapp_number', 'contact_address',
             'announcement_text',
             // The About Us section renders three videos; all three are editable.
             'about_us_video_url', 'about_us_video_url_2', 'about_us_video_url_3',
@@ -168,8 +188,16 @@ class HomepageController extends Controller
         }
 
         if ($request->hasFile('site_logo')) {
+            // Delete the file being replaced. Every logo ever uploaded used to
+            // stay on the public disk, reachable by URL, with nothing pointing
+            // at it - so the storage folder only ever grew.
+            $previousLogo = Setting::get('site_logo', '');
             $path = $request->file('site_logo')->store('branding', 'public');
             Setting::set('site_logo', $path, 'string', 'homepage');
+
+            if ($previousLogo && $previousLogo !== $path && ! str_starts_with($previousLogo, 'http')) {
+                Storage::disk('public')->delete($previousLogo);
+            }
         }
 
         // About Us video uploads - an uploaded file overrides that slot's URL field.
@@ -179,8 +207,15 @@ class HomepageController extends Controller
             'about_us_video_file_3' => 'about_us_video_url_3',
         ] as $fileField => $urlSetting) {
             if ($request->hasFile($fileField)) {
+                $previous = (string) Setting::get($urlSetting, '');
                 $videoPath = $request->file($fileField)->store('storefront/about', 'public');
                 Setting::set($urlSetting, 'storage/'.$videoPath, 'string', 'homepage');
+
+                // These clips run to tens of megabytes each; leaving the replaced
+                // one behind on every re-upload filled the disk for no purpose.
+                if ($previous && str_starts_with($previous, 'storage/')) {
+                    Storage::disk('public')->delete(substr($previous, strlen('storage/')));
+                }
             }
         }
 
@@ -260,6 +295,19 @@ class HomepageController extends Controller
     {
         $request->validate($this->heroBannerRules(mediaRequired: false), $this->heroBannerMessages());
 
+        // A video-only banner is legitimate - the image is optional when a video
+        // is supplied - so ticking "remove the video and show the image instead"
+        // on one of those left a banner with no media at all, which the storefront
+        // then rendered as a placeholder box. Refuse it and say why.
+        $removingVideo = $request->boolean('remove_video') && ! $request->hasFile('video');
+        $willHaveImage = $request->hasFile('image') || $banner->image_url;
+
+        if ($removingVideo && ! $willHaveImage) {
+            return back()
+                ->withInput()
+                ->withErrors(['remove_video' => 'Upload an image first - removing the video would leave this banner with nothing to show.']);
+        }
+
         $data = $request->only(['name', 'title', 'subtitle', 'button_text', 'link', 'overlay_style']);
 
         if ($request->hasFile('image')) {
@@ -304,11 +352,14 @@ class HomepageController extends Controller
     {
         $request->validate([
             'order' => ['required', 'array', 'max:500'],
-            'order.*' => ['integer', Rule::exists('banners', 'id')],
+            // Scoped to hero. The rule used to accept any banner id in the table,
+            // so this endpoint could renumber promo or sidebar banners that this
+            // screen does not manage and cannot show.
+            'order.*' => ['integer', Rule::exists('banners', 'id')->where('position', 'hero')],
         ]);
 
         foreach ($request->order as $position => $id) {
-            Banner::where('id', $id)->update(['priority' => $position]);
+            Banner::where('id', $id)->where('position', 'hero')->update(['priority' => $position]);
         }
 
         Cache::flush();
@@ -369,20 +420,26 @@ class HomepageController extends Controller
         $data = [
             'title' => $validated['title'],
             'subtitle' => $validated['subtitle'] ?? null,
-            'button_text' => $validated['button_text'] ?? null,
-            'button_link' => $validated['button_link'] ?? null,
         ];
         $data['is_active'] = $request->boolean('is_active');
 
-        if ($request->has('background_color')) {
-            $data['background_color'] = $validated['background_color'] ?? null;
+        // The form only renders the button, colour and repeater inputs for the
+        // section types that use them, so an absent field means "this form does
+        // not edit that" - not "the admin cleared it". Writing them
+        // unconditionally wiped button_text and button_link off every section
+        // whose form hides them, the first time anyone edited its heading.
+        foreach (['button_text', 'button_link', 'background_color', 'text_color'] as $field) {
+            if ($request->has($field)) {
+                $data[$field] = $validated[$field] ?? null;
+            }
         }
 
-        if ($request->has('text_color')) {
-            $data['text_color'] = $validated['text_color'] ?? null;
-        }
-
-        if ($request->has('content')) {
+        // The repeater posts nothing at all once its last card is removed, which
+        // is indistinguishable from a form that has no repeater - so deleting
+        // every benefit used to silently restore the old list on save. The
+        // hidden marker says "this form did edit the repeater", making an empty
+        // list a real, saveable state.
+        if ($request->boolean('has_content_repeater') || $request->has('content')) {
             $data['content'] = array_values(array_map(fn (array $item): array => [
                 'title' => $item['title'] ?? '',
                 'description' => $item['description'] ?? '',
@@ -460,6 +517,7 @@ class HomepageController extends Controller
         }
 
         Testimonial::create($data);
+        Cache::flush();
 
         return back()->with('success', 'Testimonial added successfully.');
     }
@@ -484,6 +542,7 @@ class HomepageController extends Controller
         }
 
         $testimonial->update($data);
+        Cache::flush();
 
         return back()->with('success', 'Testimonial updated successfully.');
     }
@@ -494,6 +553,7 @@ class HomepageController extends Controller
             Storage::disk('public')->delete($testimonial->avatar_url);
         }
         $testimonial->delete();
+        Cache::flush();
 
         return back()->with('success', 'Testimonial deleted successfully.');
     }
@@ -501,8 +561,79 @@ class HomepageController extends Controller
     public function toggleTestimonial(Testimonial $testimonial)
     {
         $testimonial->update(['is_active' => !$testimonial->is_active]);
+        Cache::flush();
 
         return back()->with('success', 'Testimonial visibility updated.');
+    }
+
+    /**
+     * Swap a testimonial with its neighbour.
+     *
+     * `position` was stamped once at creation and there was no way to change it
+     * afterwards, so the order reviews appear in was decided by the order they
+     * happened to be typed in. Swapping with the adjacent row keeps the numbers
+     * contiguous without needing a drag surface.
+     */
+    public function moveTestimonial(Request $request, Testimonial $testimonial)
+    {
+        $validated = $request->validate(['direction' => V::option(['up', 'down'])]);
+
+        $this->swapPosition($testimonial, Testimonial::query(), $validated['direction']);
+        Cache::flush();
+
+        return back()->with('success', 'Testimonial order updated.');
+    }
+
+    /**
+     * Move a row one place up or down within $scope by swapping `position` with
+     * its nearest neighbour.
+     *
+     * Three lists on this controller - testimonials, qualities and shop filter
+     * items - all stamp `position` once at creation and had no way to change it
+     * afterwards, so each ran in creation order permanently. Swapping with the
+     * adjacent row keeps the numbers contiguous and needs no drag surface.
+     *
+     * @param  \Illuminate\Database\Eloquent\Model  $row
+     * @param  \Illuminate\Database\Eloquent\Builder  $scope  the list $row belongs to
+     */
+    private function swapPosition($row, $scope, string $direction): void
+    {
+        $up = $direction === 'up';
+
+        $neighbour = (clone $scope)
+            ->when(
+                $up,
+                fn ($q) => $q->where('position', '<', $row->position)->orderByDesc('position'),
+                fn ($q) => $q->where('position', '>', $row->position)->orderBy('position'),
+            )
+            ->first();
+
+        // Rows created before this existed can share a position, which the strict
+        // comparison above skips entirely; fall back to id order so a tie still
+        // moves rather than appearing to do nothing.
+        if (! $neighbour) {
+            $neighbour = (clone $scope)
+                ->where('position', $row->position)
+                ->when(
+                    $up,
+                    fn ($q) => $q->where('id', '<', $row->id)->orderByDesc('id'),
+                    fn ($q) => $q->where('id', '>', $row->id)->orderBy('id'),
+                )
+                ->first();
+        }
+
+        if (! $neighbour) {
+            return;
+        }
+
+        $original = $row->position;
+        $row->update(['position' => $neighbour->position]);
+        $neighbour->update(['position' => $original]);
+
+        // Swapping two equal positions changes nothing visible, so break the tie.
+        if ($original === $neighbour->position) {
+            $row->update(['position' => $up ? $original - 1 : $original + 1]);
+        }
     }
 
     // ============================================================
@@ -563,6 +694,27 @@ class HomepageController extends Controller
         Cache::flush();
 
         return back()->with('success', 'Filter item updated.');
+    }
+
+    /**
+     * Swap a filter item with its neighbour inside its own tab.
+     *
+     * The page says the hangers are "ordered by position" and nothing could set
+     * one after creation, so the rails ran in creation order for good.
+     */
+    public function moveShopFilter(Request $request, ShopFilterItem $shopFilter)
+    {
+        $validated = $request->validate(['direction' => V::option(['up', 'down'])]);
+
+        // Scoped to the item's own type: the three rails are numbered separately.
+        $this->swapPosition(
+            $shopFilter,
+            ShopFilterItem::where('type', $shopFilter->type),
+            $validated['direction'],
+        );
+        Cache::flush();
+
+        return back()->with('success', 'Filter order updated.');
     }
 
     public function toggleShopFilter(ShopFilterItem $shopFilter)
@@ -641,6 +793,23 @@ class HomepageController extends Controller
         return back()->with('success', 'Quality updated.');
     }
 
+    /**
+     * Swap a quality card with its neighbour.
+     *
+     * The page told admins to "reorder by editing position later" and there was
+     * no position field on the form and no endpoint behind it, so the order was
+     * whatever order the cards happened to be created in, permanently.
+     */
+    public function moveQuality(Request $request, Quality $quality)
+    {
+        $validated = $request->validate(['direction' => V::option(['up', 'down'])]);
+
+        $this->swapPosition($quality, Quality::query(), $validated['direction']);
+        Cache::flush();
+
+        return back()->with('success', 'Quality order updated.');
+    }
+
     public function toggleQuality(Quality $quality)
     {
         $quality->update(['is_active' => !$quality->is_active]);
@@ -663,12 +832,30 @@ class HomepageController extends Controller
     // Navigation Menus
     public function navigation()
     {
-        $headerMenus = NavigationMenu::getByLocation('header');
-        $footerCol1 = NavigationMenu::getByLocation('footer_col1');
-        $footerCol2 = NavigationMenu::getByLocation('footer_col2');
-        $footerCol3 = NavigationMenu::getByLocation('footer_col3');
+        // getByLocation() is the storefront's reader: it filters to active,
+        // top-level rows. Using it here meant a hidden item, a nested one, or
+        // anything left over in footer_col4 was invisible on the one screen that
+        // could edit or delete it - unreachable except through the database.
+        $byLocation = NavigationMenu::query()
+            ->orderBy('position')
+            ->orderBy('id')
+            ->get()
+            ->groupBy('location');
 
-        return view('admin.homepage.navigation', compact('headerMenus', 'footerCol1', 'footerCol2', 'footerCol3'));
+        $headerMenus = $byLocation->get('header', collect());
+        $footerCol1 = $byLocation->get('footer_col1', collect());
+        $footerCol2 = $byLocation->get('footer_col2', collect());
+        $footerCol3 = $byLocation->get('footer_col3', collect());
+
+        // Rows filed under a location no page renders, surfaced so they can be
+        // moved or removed rather than sitting invisible forever.
+        $orphanMenus = $byLocation
+            ->except(self::NAV_LOCATIONS)
+            ->flatten();
+
+        return view('admin.homepage.navigation', compact(
+            'headerMenus', 'footerCol1', 'footerCol2', 'footerCol3', 'orphanMenus'
+        ));
     }
 
     public function storeNavItem(Request $request)
@@ -690,6 +877,7 @@ class HomepageController extends Controller
             'position' => NavigationMenu::where('location', $validated['location'])->max('position') + 1,
             'is_active' => true,
         ]);
+        Cache::flush();
 
         return back()->with('success', 'Menu item added successfully.');
     }
@@ -699,6 +887,9 @@ class HomepageController extends Controller
         $validated = $request->validate([
             'label' => V::text(max: 255),
             'url' => ['required', 'string', 'max:255', 'regex:'.self::LINK_REGEX],
+            // Editable so an item filed under the wrong column - or under the
+            // retired footer_col4 - can be moved rather than deleted and retyped.
+            'location' => V::option(self::NAV_LOCATIONS),
         ], [
             'url.regex' => 'Enter a path such as /about, or a full https:// address.',
         ]);
@@ -706,14 +897,25 @@ class HomepageController extends Controller
         $menu->update([
             'label' => $validated['label'],
             'url' => $validated['url'],
+            'location' => $validated['location'],
         ]);
+        Cache::flush();
 
         return back()->with('success', 'Menu item updated successfully.');
+    }
+
+    public function toggleNavItem(NavigationMenu $menu)
+    {
+        $menu->update(['is_active' => ! $menu->is_active]);
+        Cache::flush();
+
+        return back()->with('success', 'Menu item visibility updated.');
     }
 
     public function deleteNavItem(NavigationMenu $menu)
     {
         $menu->delete();
+        Cache::flush();
 
         return back()->with('success', 'Menu item deleted successfully.');
     }

@@ -211,7 +211,7 @@
                                 @endif
                             </td>
                             <td style="text-align: right;">
-                                <button onclick="openStockModal({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->stock_quantity }})"
+                                <button onclick="openStockModal({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->stock_quantity }}, {{ Js::from(\App\Http\Controllers\Admin\InventoryController::heldByLocation($product)) }})"
                                         style="display: inline-flex; align-items: center; padding: 0.25rem 0.625rem; font-size: 12px; font-weight: 500; color: #303030; background: #fff; border: 1px solid #c9cccf; border-radius: 0.375rem; cursor: pointer; gap: 0.25rem;">
                                     <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
@@ -250,8 +250,8 @@
     </div>
 
     {{-- Update Stock Modal --}}
-    <div x-data="{ open: false, productId: null, productName: '', currentStock: 0, isNew: false }"
-         x-on:open-stock-modal.window="open = true; productId = $event.detail.id; productName = $event.detail.name; currentStock = $event.detail.stock; isNew = !$event.detail.id"
+    <div x-data="{ open: false, productId: null, productName: '', currentStock: 0, isNew: false, byLocation: {}, locationId: '{{ $locations->firstWhere('is_default', true)?->id ?? $locations->first()?->id }}', get heldHere() { return this.byLocation[String(this.locationId)] ?? 0 } }"
+         x-on:open-stock-modal.window="open = true; productId = $event.detail.id; productName = $event.detail.name; currentStock = $event.detail.stock; byLocation = $event.detail.byLocation || {}; isNew = !$event.detail.id"
          x-show="open" x-cloak
          x-transition.opacity.duration.150ms
          x-effect="document.body.classList.toggle('kk-modal-open', open)"
@@ -277,10 +277,14 @@
             </div>
 
             {{-- Current Stock Info --}}
-            <div style="padding: 0.75rem 1rem; background: #f6f6f7; border-bottom: 1px solid #e3e3e3;" x-show="!isNew">
+            <div style="padding: 0.75rem 1rem; background: #f6f6f7; border-bottom: 1px solid #e3e3e3;" x-show="productId">
                 <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <span style="font-size: 12px; color: #616161;">Current Stock</span>
-                    <span style="font-size: 13px; font-weight: 700; color: #303030;" x-text="currentStock"></span>
+                    <span style="font-size: 12px; color: #616161;">Held at the location below</span>
+                    <span style="font-size: 13px; font-weight: 700; color: #303030;" x-text="heldHere"></span>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.25rem;">
+                    <span style="font-size: 12px; color: #616161;">In stock everywhere</span>
+                    <span style="font-size: 12px; color: #616161;" x-text="currentStock"></span>
                 </div>
             </div>
 
@@ -295,20 +299,19 @@
                         {{-- No name attribute: this select only picks which product the
                              form POSTs to, and route-model binding validates the id. --}}
                         <select id="stock_product" class="form-select" style="width: 100%; padding: 0.4rem 2rem 0.4rem 0.5rem; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; color: #303030; background-color: #fff; outline: none;"
-                                x-on:change="productId = $event.target.value; let opt = $event.target.selectedOptions[0]; currentStock = opt.dataset.stock || 0" x-bind:required="isNew">
+                                x-on:change="productId = $event.target.value; let opt = $event.target.selectedOptions[0]; currentStock = Number(opt.dataset.stock || 0); byLocation = JSON.parse(opt.dataset.locations || '{}')" x-bind:required="isNew">
                             <option value="">Select a product...</option>
-                            @foreach(\App\Models\Product::select('id', 'name', 'stock_quantity')->orderBy('name')->get() as $p)
-                                <option value="{{ $p->id }}" data-stock="{{ $p->stock_quantity }}">{{ $p->name }} (Stock: {{ $p->stock_quantity }})</option>
+                            @foreach($adjustProducts as $pickable)
+                                <option value="{{ $pickable['id'] }}" data-stock="{{ $pickable['stock'] }}" data-locations="{{ json_encode($pickable['byLocation']) }}">{{ $pickable['name'] }} (Stock: {{ $pickable['stock'] }})</option>
                             @endforeach
                         </select>
-                        <p style="font-size: 12px; color: #616161; margin: 0.25rem 0 0 0;" x-show="productId && isNew">Current stock: <span style="font-weight: 600; color: #303030;" x-text="currentStock"></span></p>
                     </div>
                     <div>
                         {{-- Stock sits in a warehouse, so an adjustment has to say
                              which one it happens at. The product's total follows
                              the same change. --}}
                         <label for="stock_location" class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: #303030; margin-bottom: 0.25rem;">Location</label>
-                        <select name="location_id" id="stock_location" class="form-select" style="width: 100%; padding: 0.4rem 2rem 0.4rem 0.5rem; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; color: #303030; background-color: #fff; outline: none;">
+                        <select name="location_id" id="stock_location" x-model="locationId" class="form-select" style="width: 100%; padding: 0.4rem 2rem 0.4rem 0.5rem; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; color: #303030; background-color: #fff; outline: none;">
                             @forelse($locations as $location)
                                 <option value="{{ $location->id }}" @selected($location->is_default)>{{ $location->name }} ({{ $location->code }})</option>
                             @empty
@@ -323,6 +326,7 @@
                             <option value="remove">Remove Stock</option>
                             <option value="set">Set Stock To</option>
                         </select>
+                        <p style="font-size: 12px; color: #616161; margin: 0.25rem 0 0 0;">Applies to the location above. The product's total moves by the same amount.</p>
                     </div>
                     <div>
                         <label for="stock_quantity" class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: #303030; margin-bottom: 0.25rem;">Quantity <span style="color: #d72c0d;">*</span></label>
@@ -348,8 +352,8 @@
     </div>
 
     <script>
-        function openStockModal(id, name, stock) {
-            window.dispatchEvent(new CustomEvent('open-stock-modal', { detail: { id, name, stock } }));
+        function openStockModal(id, name, stock, byLocation) {
+            window.dispatchEvent(new CustomEvent('open-stock-modal', { detail: { id, name, stock, byLocation } }));
         }
     </script>
 </x-layouts.admin>

@@ -9,6 +9,8 @@
 
     @include('admin.settings.partials.nav', ['active' => 'shipping'])
 
+    @include('admin.settings.partials.errors')
+
     <form action="{{ route('admin.settings.shipping.update') }}" method="POST">
         @csrf
         @method('PUT')
@@ -32,15 +34,15 @@
                         </label>
                     </div>
                     <div style="padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;" x-show="enabled" x-collapse
-                         x-data="{ authMode: '{{ !empty($settings['shiprocket_api_token'] ?? '') ? 'token' : 'credentials' }}' }">
+                         x-data="{ authMode: '{{ old('shiprocket_auth_mode', $settings['shiprocket_auth_mode'] ?? (!empty($settings['shiprocket_api_token'] ?? '') ? 'token' : 'credentials')) }}' }">
                         <div>
                             <label class="form-label">Authentication Method</label>
                             <div style="display: flex; gap: 1rem; margin-top: 0.25rem;">
                                 <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 13px; cursor: pointer;">
-                                    <input type="radio" value="token" x-model="authMode"> API Token
+                                    <input type="radio" name="shiprocket_auth_mode" value="token" x-model="authMode"> API Token
                                 </label>
                                 <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 13px; cursor: pointer;">
-                                    <input type="radio" value="credentials" x-model="authMode"> Email & Password
+                                    <input type="radio" name="shiprocket_auth_mode" value="credentials" x-model="authMode"> Email &amp; Password
                                 </label>
                             </div>
                         </div>
@@ -202,4 +204,17 @@
             <button type="submit" class="btn btn-primary" style="font-size: 13px;">Save Settings</button>
         </div>
     </form>
+
+    <!-- Shipping Zones was previously unreachable from the admin UI. -->
+    <div style="margin-top: 1.5rem;">
+        <div class="card" style="padding: 0.875rem 1rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+                <div>
+                    <h3 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Shipping Zones</h3>
+                    <p style="font-size: 12px; color: #616161; margin: 0;">Set per-region shipping rates</p>
+                </div>
+                <a href="{{ route('admin.settings.shipping-zones.index') }}" class="btn btn-secondary" style="font-size: 13px; white-space: nowrap;">Manage Shipping Zones</a>
+            </div>
+        </div>
+    </div>
 </x-layouts.admin>

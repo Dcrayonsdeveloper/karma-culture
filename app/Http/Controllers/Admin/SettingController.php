@@ -7,6 +7,8 @@ use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
 class SettingController extends Controller
@@ -74,6 +76,14 @@ class SettingController extends Controller
 
         // Credential / text fields
         foreach ($validated as $key => $value) {
+            // The salt field is deliberately rendered empty, so a blank submit
+            // means "unchanged". Without this, opening the page and pressing
+            // Save wiped the salt - and checkout drops online payment entirely
+            // once it is empty.
+            if ($key === 'payu_merchant_salt' && ! $request->filled('payu_merchant_salt')) {
+                continue;
+            }
+
             Setting::updateOrCreate(
                 ['key' => $key],
                 ['value' => $value ?? '', 'group' => 'payment']
@@ -95,6 +105,7 @@ class SettingController extends Controller
     public function updateShipping(Request $request): RedirectResponse
     {
         $validated = $request->validate([
+            'shiprocket_auth_mode'       => 'nullable|in:token,credentials',
             'shiprocket_api_token'       => 'nullable|string|max:1000',
             'shiprocket_email'           => 'nullable|email|max:255',
             'shiprocket_password'        => 'nullable|string|max:255',
@@ -109,6 +120,18 @@ class SettingController extends Controller
             'shipping_origin_state'      => 'nullable|string',
             'shipping_origin_zip'        => 'nullable|string|max:20',
         ]);
+
+        // Only one Shiprocket credential set can be in play: getToken() returns
+        // a stored API token if there is one and never looks at the email and
+        // password. Hiding the other panel with x-show still submitted its
+        // fields, so picking "Email & Password" left the old token in place and
+        // silently kept using it. Clear whichever set the admin did not choose.
+        if (($validated['shiprocket_auth_mode'] ?? null) === 'credentials') {
+            $validated['shiprocket_api_token'] = '';
+        } elseif (($validated['shiprocket_auth_mode'] ?? null) === 'token') {
+            $validated['shiprocket_email'] = '';
+            $validated['shiprocket_password'] = '';
+        }
 
         // Boolean toggles
         foreach (['shiprocket_enabled', 'free_shipping_enabled', 'flat_rate_enabled', 'local_pickup_enabled'] as $key) {
@@ -128,8 +151,11 @@ class SettingController extends Controller
         }
         Cache::forget('settings.group.shipping');
 
-        // Clear cached Shiprocket token if credentials changed
-        if ($request->filled('shiprocket_api_token') || $request->filled('shiprocket_email') || $request->filled('shiprocket_password')) {
+        // Blanking a credential to disconnect is as much a change as setting
+        // one, and so is switching auth mode - filled() alone missed both and
+        // left a working token cached for up to nine days.
+        if ($request->has(['shiprocket_api_token', 'shiprocket_email', 'shiprocket_password'])
+            || $request->filled('shiprocket_auth_mode')) {
             \App\Services\ShiprocketService::clearToken();
         }
 
@@ -146,13 +172,22 @@ class SettingController extends Controller
     public function updateTax(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'tax_enabled' => 'boolean',
             'tax_calculation' => 'in:exclusive,inclusive',
             'tax_based_on' => 'in:billing,shipping,store',
             'tax_display_cart' => 'in:excluding,including',
             'tax_display_checkout' => 'in:excluding,including',
-            'tax_round_at_subtotal' => 'boolean',
         ]);
+
+        // Boolean toggles - an unchecked checkbox submits nothing, so reading
+        // these out of $validated meant taxes could be switched on but never
+        // back off. request->boolean() sees the absent key as false.
+        foreach (['tax_enabled', 'tax_round_at_subtotal'] as $key) {
+            Setting::updateOrCreate(
+                ['key' => $key],
+                ['value' => $request->boolean($key) ? '1' : '0', 'type' => 'boolean', 'group' => 'tax']
+            );
+            Cache::forget("setting.{$key}");
+        }
 
         foreach ($validated as $key => $value) {
             Setting::updateOrCreate(
@@ -176,9 +211,9 @@ class SettingController extends Controller
     public function updateEmail(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'mail_driver' => 'required|in:smtp,sendmail,mailgun,ses,postmark',
+            'mail_driver' => 'required|in:smtp,sendmail,log',
             'mail_host' => 'nullable|string',
-            'mail_port' => 'nullable|integer',
+            'mail_port' => 'nullable|integer|min:1|max:65535',
             'mail_username' => 'nullable|string',
             'mail_password' => 'nullable|string',
             'mail_encryption' => 'nullable|in:tls,ssl',
@@ -187,6 +222,12 @@ class SettingController extends Controller
         ]);
 
         foreach ($validated as $key => $value) {
+            // Same as the PayU salt: the password box renders empty, so a blank
+            // submit must leave the stored password alone.
+            if ($key === 'mail_password' && ! $request->filled('mail_password')) {
+                continue;
+            }
+
             Setting::updateOrCreate(
                 ['key' => $key],
                 ['value' => $value ?? '', 'group' => 'email']
@@ -198,11 +239,58 @@ class SettingController extends Controller
         return back()->with('success', 'Email settings updated successfully.');
     }
 
+    /**
+     * Send a test message using the saved mail settings.
+     *
+     * The button used to call a JS alert() that said a test email "would" be
+     * sent, which told an admin nothing about whether their SMTP details
+     * actually work. This sends a real message to the signed-in admin and
+     * surfaces the transport error verbatim when it fails - that error text is
+     * the whole point of a test button.
+     */
+    public function testEmail(Request $request): RedirectResponse
+    {
+        // The admin area authenticates on the 'admin' guard; the default 'web'
+        // guard resolves to null in here.
+        $recipient = $request->user('admin')?->email;
+
+        if (! $recipient) {
+            return back()->with('error', 'Your admin account has no email address to send a test to.');
+        }
+
+        try {
+            Mail::raw(
+                "This is a test message from {$this->siteName()}.\n\n"
+                .'If you are reading it, the mail settings saved in Settings > Email are working.',
+                fn ($message) => $message->to($recipient)->subject('Test email from '.$this->siteName())
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Admin test email failed', ['error' => $e->getMessage()]);
+
+            return back()->with('error', 'Could not send the test email: '.$e->getMessage());
+        }
+
+        return back()->with('success', "Test email sent to {$recipient}.");
+    }
+
+    private function siteName(): string
+    {
+        return (string) (Setting::get('site_name') ?: config('app.name'));
+    }
+
     public function seo(): View
     {
         $settings = Setting::where('group', 'seo')->pluck('value', 'key');
 
-        return view('admin.settings.seo', compact('settings'));
+        // Show what is actually being served, not an empty box: /robots.txt
+        // falls back to a route in web.php when no static file exists.
+        $robotsPath = public_path('robots.txt');
+        $robotsIsCustom = is_file($robotsPath);
+        $robotsTxt = $robotsIsCustom
+            ? (string) file_get_contents($robotsPath)
+            : (string) ($settings['robots_txt'] ?? '');
+
+        return view('admin.settings.seo', compact('settings', 'robotsTxt', 'robotsIsCustom'));
     }
 
     public function updateSeo(Request $request): RedirectResponse
@@ -220,11 +308,35 @@ class SettingController extends Controller
             'robots_txt'                         => 'nullable|string|max:5000',
         ]);
 
-        // Sanitize robots.txt - strip all HTML/script before saving
-        if (isset($validated['robots_txt'])) {
-            $validated['robots_txt'] = strip_tags($validated['robots_txt']);
-            // Write to public/robots.txt so it is served as a static file
-            file_put_contents(public_path('robots.txt'), $validated['robots_txt']);
+        // robots.txt.
+        //
+        // /robots.txt is normally served by a route in web.php that builds the
+        // file from APP_URL. Writing public/robots.txt shadows that route for
+        // good, because the web server hands out the static file before the
+        // request ever reaches PHP - so this needs to be deliberate and, more
+        // importantly, reversible. Clearing the box used to be a silent no-op:
+        // empty input arrives as null, isset() skipped the branch, and the
+        // stale file kept being served with no way back to the dynamic route.
+        $robots = $request->input('robots_txt');
+        $robotsPath = public_path('robots.txt');
+
+        if ($robots !== null && trim($robots) !== '') {
+            $validated['robots_txt'] = strip_tags($robots);
+
+            if (@file_put_contents($robotsPath, $validated['robots_txt']) === false) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['robots_txt' => 'Could not write public/robots.txt. Check the directory is writable.']);
+            }
+        } else {
+            $validated['robots_txt'] = '';
+
+            // Emptying the box hands /robots.txt back to the dynamic route.
+            if (is_file($robotsPath) && ! @unlink($robotsPath)) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['robots_txt' => 'Could not remove public/robots.txt. Check the file is writable.']);
+            }
         }
 
         // Normalize Twitter handle - ensure it starts with @
@@ -275,15 +387,10 @@ class SettingController extends Controller
             // Google issues more than one key format (AIza... and AQ....), so accept
             // any plausible token rather than rejecting a valid key on its prefix.
             'gemini_api_key'                     => ['nullable', 'string', 'max:500', 'regex:/^[A-Za-z0-9._\-]*$/'],
-            'gemini_model'                       => 'nullable|in:gemini-3.6-flash,gemini-3.5-flash,gemini-3.1-flash-lite,',
+            'gemini_model'                       => 'nullable|in:gemini-3.6-flash,gemini-3.5-flash,gemini-3.1-flash-lite',
             'chatbot_brand_voice'                => 'nullable|string|max:2000',
             'chatbot_extra_instructions'         => 'nullable|string|max:4000',
         ]);
-
-        // Remove blank anthropic_model sentinel
-        if (isset($validated['anthropic_model']) && $validated['anthropic_model'] === '') {
-            $validated['anthropic_model'] = '';
-        }
 
         foreach ($validated as $key => $value) {
             Setting::updateOrCreate(

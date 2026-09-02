@@ -32,6 +32,17 @@ trait TracksWarehouseStock
                 );
             }
         });
+
+        static::deleting(function ($model) {
+            // A soft delete can be undone, so its shelves are left as they are.
+            if (method_exists($model, 'isForceDeleting') && ! $model->isForceDeleting()) {
+                return;
+            }
+
+            [$productId, $variantId] = $model->warehouseStockKey();
+
+            app(InventoryStockService::class)->clearLines($productId, $variantId);
+        });
     }
 
     /** [product id, variant id] the stock figure belongs to. */

@@ -14,6 +14,8 @@
         @endif
     </div>
 
+
+    @include('admin.settings.partials.errors')
     <form action="{{ route('admin.settings.tax-rates.update', $taxRate) }}" method="POST">
         @csrf
         @method('PUT')
@@ -77,7 +79,7 @@
         </div>
 
             <!-- Save bar -->
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #e3e3e3;">
+            <div style="display: flex; align-items: center; justify-content: space-between; max-width: 640px; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #e3e3e3;">
                 {{-- Submits the delete form declared after the edit form below.
                      The two must not nest: the browser hoisted the inner form's
                      _method=DELETE into the edit form, which already sent

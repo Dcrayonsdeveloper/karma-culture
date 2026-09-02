@@ -8,6 +8,8 @@
         </div>
     </x-slot>
 
+    <x-admin.form-errors title="The banner was not saved" />
+
     <div style="margin-bottom: 0.25rem;">
         <a href="{{ route('admin.homepage.index') }}" style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 13px; color: #005bd3; text-decoration: none;">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M12 16l-6-6 6-6" stroke="#005bd3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -69,7 +71,7 @@
                                  Anything else - javascript: above all - is refused here and on the
                                  server, because this value is rendered straight into an href. --}}
                             <input type="text" name="link" id="hero-new-link" maxlength="255"
-                                   pattern="(https?://|mailto:|tel:)\S+|/\S*|#\S*"
+                                   pattern="(https?://|mailto:|tel:)\S+|/(?!/)\S*|#\S*"
                                    title="Enter a path such as /products, or a full https:// address."
                                    class="form-input" placeholder="/products">
                         </div>
@@ -89,7 +91,20 @@
 
         <!-- Existing Banners -->
         <div x-data="bannerSorter()">
-            <div style="display: flex; flex-direction: column; gap: 0.75rem;" x-ref="list" x-on:dragover.prevent>
+            @php
+                // The badge is a promise about the storefront, so it has to count the
+                // way the storefront does: hidden banners are not rendered, so they
+                // cannot hold a slot in the running order.
+                $kkLivePositions = [];
+                $kkLiveSlot = 0;
+                foreach ($banners as $kkBanner) {
+                    if ($kkBanner->is_active) {
+                        $kkLivePositions[$kkBanner->id] = ++$kkLiveSlot;
+                    }
+                }
+            @endphp
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;" x-ref="list"
+                 x-on:dragover.prevent x-on:drop.prevent="onDrop()">
                 @forelse($banners as $index => $banner)
                     <div class="card" style="padding: 1rem; transition: all 0.15s;"
                          x-data="{ editing: false }"
@@ -114,7 +129,7 @@
                             <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
                                 <!-- Drag Handle + Position -->
                                 <div style="display: flex; flex-direction: column; align-items: center; gap: 0.25rem; flex-shrink: 0; padding-top: 0.25rem;">
-                                    <span class="pos-badge" style="font-size: 12px; font-weight: 700; color: #616161; width: 1.5rem; height: 1.5rem; display: flex; align-items: center; justify-content: center; background: #f6f6f7; border-radius: 0.25rem;">#{{ $index + 1 }}</span>
+                                    <span class="pos-badge" title="{{ $banner->is_active ? 'Position on the storefront' : 'Hidden - not shown on the storefront' }}" style="font-size: 12px; font-weight: 700; color: #616161; width: 1.5rem; height: 1.5rem; display: flex; align-items: center; justify-content: center; background: #f6f6f7; border-radius: 0.25rem;">{{ isset($kkLivePositions[$banner->id]) ? '#'.$kkLivePositions[$banner->id] : '--' }}</span>
                                     <div style="cursor: grab; color: #616161;" title="Drag to reorder">
                                         <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/>
@@ -206,7 +221,7 @@
                                     <div>
                                         <label for="hero-{{ $banner->id }}-link" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Link URL</label>
                                         <input type="text" name="link" id="hero-{{ $banner->id }}-link" value="{{ $banner->link }}" maxlength="255"
-                                               pattern="(https?://|mailto:|tel:)\S+|/\S*|#\S*"
+                                               pattern="(https?://|mailto:|tel:)\S+|/(?!/)\S*|#\S*"
                                                title="Enter a path such as /products, or a full https:// address."
                                                class="form-input" placeholder="/products">
                                     </div>
@@ -270,6 +285,12 @@
                 Saving order...
             </div>
             <div x-show="saved" x-cloak x-transition style="margin-top: 0.75rem; font-size: 13px; color: #1a7a2e; font-weight: 500;">Order saved.</div>
+            {{-- A rejected reorder used to leave the cards in their new places on
+                 screen with no message, so the page disagreed with the database
+                 until the next refresh silently put everything back. --}}
+            <div x-show="failed" x-cloak x-transition style="margin-top: 0.75rem; font-size: 13px; color: #8e1f0b; font-weight: 500;">
+                The new order was not saved. Reload the page and try again.
+            </div>
         </div>
     </div>
 
@@ -282,8 +303,12 @@
             return {
                 draggingId: null,
                 dropTargetId: null,
+                // dragend cannot tell a real drop from Escape or a drop on the page
+                // background; only a drop event inside the list can.
+                dropped: false,
                 saving: false,
                 saved: false,
+                failed: false,
 
                 getItems() {
                     return Array.from(this.$refs.list.querySelectorAll('[data-id]'));
@@ -300,7 +325,12 @@
                 onDragStart(e) {
                     const card = this.getCard(e.target);
                     this.draggingId = card.dataset.id;
+                    this.dropped = false;
                     e.dataTransfer.effectAllowed = 'move';
+                },
+
+                onDrop() {
+                    this.dropped = true;
                 },
 
                 onDragOver(e) {
@@ -312,7 +342,7 @@
                 },
 
                 onDragEnd() {
-                    if (this.draggingId && this.dropTargetId && this.draggingId !== this.dropTargetId) {
+                    if (this.dropped && this.draggingId && this.dropTargetId && this.draggingId !== this.dropTargetId) {
                         const items = this.getItems();
                         const fromEl = items.find(el => el.dataset.id === this.draggingId);
                         const toEl = items.find(el => el.dataset.id === this.dropTargetId);
@@ -322,6 +352,7 @@
                     }
                     this.draggingId = null;
                     this.dropTargetId = null;
+                    this.dropped = false;
                 },
 
                 moveUp(btnEl) {
@@ -367,6 +398,7 @@
 
                     this.saving = true;
                     this.saved = false;
+                    this.failed = false;
 
                     fetch('{{ route("admin.homepage.hero-banners.reorder") }}', {
                         method: 'POST',
@@ -377,14 +409,23 @@
                         },
                         body: JSON.stringify({ order }),
                     })
-                    .then(r => r.json())
-                    .then(() => {
+                    .then(r => {
+                        if (!r.ok) throw new Error('HTTP ' + r.status);
+                        return r.json();
+                    })
+                    .then(data => {
+                        if (!data || data.success !== true) throw new Error('not saved');
                         this.saving = false;
+                        this.failed = false;
                         this.saved = true;
                         setTimeout(() => this.saved = false, 2000);
                     })
                     .catch(() => {
+                        // Silence here left the admin believing an order had been
+                        // stored that the server had in fact rejected.
                         this.saving = false;
+                        this.saved = false;
+                        this.failed = true;
                     });
                 },
             };

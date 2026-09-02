@@ -5,13 +5,7 @@
         <div class="page-header">
             <h1>Analytics</h1>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <form action="{{ route('admin.reports.analytics') }}" method="GET">
-                    <select name="period" onchange="this.form.submit()" class="form-select" style="font-size: 13px;">
-                        <option value="7"  @selected($period == 7)>Last 7 days</option>
-                        <option value="30" @selected($period == 30)>Last 30 days</option>
-                        <option value="90" @selected($period == 90)>Last 90 days</option>
-                    </select>
-                </form>
+                <x-admin.date-range-filter :action="route('admin.reports.analytics')" :range="$range" />
             </div>
         </div>
     </x-slot>
@@ -35,27 +29,29 @@
     </div>
 
     {{-- Conversion Rate Banner --}}
+    {{--
+        All three rates divide by the same visitor count, and each numerator is
+        a subset of it, so none of them can read over 100% - which the old
+        "View -> Cart 137.5%" and "Cart -> Order 154.5%" both did, by dividing
+        one population by a different one. The controller computes them; the
+        view no longer does arithmetic of its own.
+    --}}
     @if($funnel['visitors'] > 0)
-        @php
-            $rate = round(($funnel['completed'] / $funnel['visitors']) * 100, 2);
-            $cartRate = $funnel['visitors'] > 0 ? round(($funnel['add_to_cart'] / $funnel['visitors']) * 100, 1) : 0;
-            $checkoutRate = $funnel['add_to_cart'] > 0 ? round(($funnel['checkout'] / $funnel['add_to_cart']) * 100, 1) : 0;
-        @endphp
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #e3e3e3; border-radius: 0.75rem; overflow: hidden; margin-bottom: 1rem;">
             <div style="background: white; padding: 0.875rem 1rem; border-left: 3px solid #005bd3;">
-                <div style="font-size: 12px; color: #616161;">View &rarr; Cart Rate</div>
-                <div style="font-size: 1.25rem; font-weight: 600; color: #303030; margin-top: 0.125rem;">{{ $cartRate }}%</div>
+                <div style="font-size: 12px; color: #616161;">Visitor &rarr; Cart Rate</div>
+                <div style="font-size: 1.25rem; font-weight: 600; color: #303030; margin-top: 0.125rem;">{{ $rates['visitor_to_cart'] }}%</div>
                 <div style="font-size: 12px; color: #616161; margin-top: 0.25rem;">{{ number_format($funnel['add_to_cart']) }} of {{ number_format($funnel['visitors']) }} visitors</div>
             </div>
             <div style="background: white; padding: 0.875rem 1rem; border-left: 3px solid #b98900;">
-                <div style="font-size: 12px; color: #616161;">Cart &rarr; Order Rate</div>
-                <div style="font-size: 1.25rem; font-weight: 600; color: #303030; margin-top: 0.125rem;">{{ $checkoutRate }}%</div>
-                <div style="font-size: 12px; color: #616161; margin-top: 0.25rem;">{{ number_format($funnel['checkout']) }} of {{ number_format($funnel['add_to_cart']) }} carts</div>
+                <div style="font-size: 12px; color: #616161;">Visitor &rarr; Order Rate</div>
+                <div style="font-size: 1.25rem; font-weight: 600; color: #303030; margin-top: 0.125rem;">{{ $rates['visitor_to_order'] }}%</div>
+                <div style="font-size: 12px; color: #616161; margin-top: 0.25rem;">{{ number_format($funnel['checkout']) }} of {{ number_format($funnel['visitors']) }} visitors</div>
             </div>
             <div style="background: white; padding: 0.875rem 1rem; border-left: 3px solid #1a7a2e;">
                 <div style="font-size: 12px; color: #616161;">Overall Conversion</div>
-                <div style="font-size: 1.25rem; font-weight: 600; color: #1a7a2e; margin-top: 0.125rem;">{{ $rate }}%</div>
-                <div style="font-size: 12px; color: #616161; margin-top: 0.25rem;">{{ number_format($funnel['completed']) }} completed of {{ number_format($funnel['visitors']) }}</div>
+                <div style="font-size: 1.25rem; font-weight: 600; color: #1a7a2e; margin-top: 0.125rem;">{{ $rates['overall'] }}%</div>
+                <div style="font-size: 12px; color: #616161; margin-top: 0.25rem;">{{ number_format($funnel['completed']) }} bought of {{ number_format($funnel['visitors']) }}</div>
             </div>
         </div>
     @endif
@@ -65,7 +61,7 @@
         <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3; display: flex; align-items: center; justify-content: space-between;">
             <div>
                 <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Traffic Overview</h2>
-                <p style="font-size: 12px; color: #616161; margin: 0.125rem 0 0 0;">Product views & unique visitors - last {{ $period }} days</p>
+                <p style="font-size: 12px; color: #616161; margin: 0.125rem 0 0 0;">Product views &amp; unique visitors &middot; {{ $range->start->format('j M Y') }} &ndash; {{ $range->end->format('j M Y') }}</p>
             </div>
             @if($trafficData->sum('pageviews') > 0)
                 <div style="display: flex; align-items: center; gap: 1rem; font-size: 12px; color: #616161;">
@@ -107,21 +103,35 @@
             </div>
             <div style="padding: 1rem;">
                 @php
+                    // Every step counts people, so the steps are comparable to
+                    // each other and to the bar they are drawn against. The old
+                    // list slipped "Product Views" - a count of page views -
+                    // in among them, which is what produced drop-off badges
+                    // like "-52%" between two numbers that measured different
+                    // things. Views are still shown, as a stat card above.
                     $funnelSteps = [
-                        ['label' => 'Unique Visitors',   'value' => $funnel['visitors'],      'color' => '#005bd3'],
-                        ['label' => 'Product Views',     'value' => $funnel['product_views'], 'color' => '#2a7de1'],
-                        ['label' => 'Add to Cart',       'value' => $funnel['add_to_cart'],   'color' => '#b98900'],
-                        ['label' => 'Orders Placed',     'value' => $funnel['checkout'],      'color' => '#0e7090'],
-                        ['label' => 'Paid & Completed',  'value' => $funnel['completed'],     'color' => '#1a7a2e'],
+                        ['label' => 'Unique Visitors',    'value' => $funnel['visitors'],    'color' => '#005bd3'],
+                        ['label' => 'Viewed a Product',   'value' => $funnel['viewers'],     'color' => '#2a7de1'],
+                        ['label' => 'Added to Cart',      'value' => $funnel['add_to_cart'], 'color' => '#b98900'],
+                        ['label' => 'Placed an Order',    'value' => $funnel['checkout'],    'color' => '#0e7090'],
+                        ['label' => 'Counted as a Sale',  'value' => $funnel['completed'],   'color' => '#1a7a2e'],
                     ];
-                    $maxFunnel = max($funnel['visitors'], $funnel['product_views'], 1);
+                    // Visitors is the union of every later stage, so it is the
+                    // largest by construction and no bar can overflow.
+                    $maxFunnel = max($funnel['visitors'], 1);
                 @endphp
 
                 @foreach($funnelSteps as $index => $step)
                     @php
                         $width   = ($step['value'] / $maxFunnel) * 100;
                         $prev    = $index > 0 ? $funnelSteps[$index - 1]['value'] : $step['value'];
-                        $dropoff = $prev > 0 ? round((1 - $step['value'] / $prev) * 100) : 0;
+                        // A stage can legitimately be larger than the one above
+                        // it - someone can order in this window after browsing
+                        // in the last one - so a rise is labelled as a rise
+                        // rather than silently dropped for being negative.
+                        $change  = $prev > 0 ? (int) round((1 - $step['value'] / $prev) * 100) : 0;
+                        $dropoff = max($change, 0);
+                        $gain    = max(-$change, 0);
                     @endphp
                     <div style="margin-bottom: 1rem;">
                         <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px; margin-bottom: 0.5rem;">
@@ -133,7 +143,9 @@
                                 <span style="font-weight: 600; color: #303030;">{{ number_format($step['value']) }}</span>
                                 @if($index > 0 && $dropoff > 0)
                                     <span style="font-size: 11px; font-weight: 500; color: #d72c0d; background: #fef0ee; padding: 0.125rem 0.375rem; border-radius: 9999px;">-{{ $dropoff }}%</span>
-                                @elseif($index > 0 && $dropoff === 0)
+                                @elseif($index > 0 && $gain > 0)
+                                    <span style="font-size: 11px; font-weight: 500; color: #1a7a2e; background: #eefbe9; padding: 0.125rem 0.375rem; border-radius: 9999px;">+{{ $gain }}%</span>
+                                @elseif($index > 0)
                                     <span style="font-size: 11px; font-weight: 500; color: #1a7a2e; background: #eefbe9; padding: 0.125rem 0.375rem; border-radius: 9999px;">0%</span>
                                 @endif
                             </div>
@@ -207,7 +219,7 @@
             <div class="card">
                 <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;">
                     <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Device Breakdown</h2>
-                    <p style="font-size: 12px; color: #616161; margin: 0.125rem 0 0 0;">Orders by device type</p>
+                    <p style="font-size: 12px; color: #616161; margin: 0.125rem 0 0 0;">Visitors by device type</p>
                 </div>
                 <div style="padding: 1rem;">
                     @if($devices['mobile'] + $devices['desktop'] + $devices['tablet'] > 0)
@@ -260,7 +272,7 @@
         <svg style="width: 1rem; height: 1rem; flex-shrink: 0; margin-top: 0.125rem; color: #616161;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
-        Analytics data is collected from product views, cart activity, and order records. Traffic sources are derived from HTTP referrer headers. Device breakdown is based on user-agent strings from orders.
+        Every stage of the funnel counts people, identified by account where they are signed in and by session otherwise, so the rates above cannot exceed 100%. Visitors is everyone who viewed a product, filled a cart or ordered in this window &mdash; {{ number_format($ordersPlaced) }} {{ $ordersPlaced === 1 ? 'order was' : 'orders were' }} placed, by {{ number_format($funnel['checkout']) }} of them. Traffic sources and device split come from each visitor's first product view in the window; a referrer from our own domain counts as Direct, not a source.
     </div>
 
     @if($trafficData->sum('pageviews') > 0)
@@ -300,7 +312,7 @@
                                 pointBackgroundColor: '#06b6d4',
                                 pointBorderColor: '#fff',
                                 pointBorderWidth: 2,
-                                pointRadius: {{ $period <= 14 ? 4 : 0 }},
+                                pointRadius: {{ $range->days() <= 14 ? 4 : 0 }},
                                 pointHoverRadius: 5,
                                 yAxisID: 'y',
                                 order: 1,
@@ -333,7 +345,7 @@
                                     font: { size: 10, family: fontFamily },
                                     color: '#a0a0a0',
                                     maxRotation: 40,
-                                    maxTicksLimit: {{ $period <= 14 ? $period : 15 }}
+                                    maxTicksLimit: {{ $range->days() <= 14 ? $range->days() : 15 }}
                                 }
                             },
                             y: {

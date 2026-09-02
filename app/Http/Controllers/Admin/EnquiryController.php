@@ -86,11 +86,11 @@ class EnquiryController extends Controller
             'message' => $validated['message'],
         ]);
 
-        $enquiry->update(['status' => 'replied']);
-
         // An enquiry comes from the public contact form, so there is no account to
         // notify in-app -- email is the only way the reply reaches the sender. Keep
-        // the saved reply even when the address is unroutable or the mailer is down.
+        // the typed reply when the address is unroutable or the mailer is down, but
+        // leave the status alone: an undelivered reply is still an open enquiry, and
+        // marking it "replied" would drop it out of the triage queue for good.
         try {
             Mail::to($enquiry->email)->send(new EnquiryReplied($enquiry, $validated['message']));
         } catch (\Throwable $e) {
@@ -100,8 +100,10 @@ class EnquiryController extends Controller
                 'error' => $e->getMessage(),
             ]);
 
-            return back()->with('warning', "Reply saved, but the email to {$enquiry->email} could not be sent.");
+            return back()->with('warning', "Reply saved, but the email to {$enquiry->email} could not be sent. The enquiry has been left open.");
         }
+
+        $enquiry->update(['status' => 'replied']);
 
         return back()->with('success', "Reply sent to {$enquiry->email}.");
     }

@@ -2,9 +2,9 @@
     <x-slot name="title">Shipping Zones</x-slot>
 
     <div style="margin-bottom: 0.25rem;">
-        <a href="{{ route('admin.settings.general') }}" style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 13px; color: #005bd3; text-decoration: none;">
+        <a href="{{ route('admin.settings.shipping') }}" style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 13px; color: #005bd3; text-decoration: none;">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M12 16l-6-6 6-6" stroke="#005bd3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            Settings
+            Shipping
         </a>
     </div>
 
@@ -12,6 +12,8 @@
         <h1 style="font-size: 1.25rem; font-weight: 600; color: #303030; margin: 0;">Shipping Zones</h1>
         <a href="{{ route('admin.settings.shipping-zones.create') }}" class="btn btn-primary" style="font-size: 13px;">Add Shipping Zone</a>
     </div>
+
+    @include('admin.settings.partials.errors')
 
     <div class="card">
         @if($zones->total() > 0)

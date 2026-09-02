@@ -8,13 +8,7 @@
             <h1 style="font-size: 20px; font-weight: 600; color: #303030; margin: 0;">Chat Analytics</h1>
             <p style="font-size: 13px; color: #616161; margin: 0.25rem 0 0 0;">What customers ask the shopping assistant, and what it leads to.</p>
         </div>
-        <form method="GET" action="{{ route('admin.chatbot.analytics') }}">
-            <select name="days" onchange="this.form.submit()" class="form-select" style="font-size: 13px;">
-                @foreach($ranges as $value => $label)
-                    <option value="{{ $value }}" @selected($days === $value)>{{ $label }}</option>
-                @endforeach
-            </select>
-        </form>
+        <x-admin.date-range-filter :action="route('admin.chatbot.analytics')" :range="$range" />
     </div>
 
     {{-- Headline numbers --}}

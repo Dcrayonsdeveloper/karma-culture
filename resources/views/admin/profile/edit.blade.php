@@ -51,7 +51,10 @@
 
                         <div>
                             <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Current Password</label>
-                            <input type="password" name="current_password" class="form-input" style="width: 100%;">
+                            <div style="position: relative;">
+                                <input type="password" name="current_password" class="form-input" style="width: 100%; padding-right: 2.75rem;">
+                                <x-admin.password-toggle label="current password" />
+                            </div>
                             @error('current_password')
                                 <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
                             @enderror
@@ -60,14 +63,20 @@
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                             <div>
                                 <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">New Password</label>
-                                <input type="password" name="password" class="form-input" style="width: 100%;">
+                                <div style="position: relative;">
+                                    <input type="password" name="password" class="form-input" style="width: 100%; padding-right: 2.75rem;">
+                                    <x-admin.password-toggle label="new password" />
+                                </div>
                                 @error('password')
                                     <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
                                 @enderror
                             </div>
                             <div>
                                 <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Confirm New Password</label>
-                                <input type="password" name="password_confirmation" class="form-input" style="width: 100%;">
+                                <div style="position: relative;">
+                                    <input type="password" name="password_confirmation" class="form-input" style="width: 100%; padding-right: 2.75rem;">
+                                    <x-admin.password-toggle label="password confirmation" />
+                                </div>
                             </div>
                         </div>
                     </div>

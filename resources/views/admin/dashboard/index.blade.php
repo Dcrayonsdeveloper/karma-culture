@@ -12,36 +12,13 @@
         <h1 style="font-size: 1.125rem; font-weight: 600; color: #303030;">{{ $greeting }}, {{ $firstName }}</h1>
     </div>
 
-    <!-- Date range pills (Shopify style - inline, no card wrapper) -->
-    <div style="margin-bottom: 1.25rem;" x-data>
-        <form method="GET" action="{{ route('admin.dashboard') }}" x-ref="filterForm" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-            <input type="hidden" name="start_date" x-ref="startDate" value="{{ request('start_date') }}">
-            <input type="hidden" name="end_date" x-ref="endDate" value="{{ request('end_date') }}">
-
-            <button type="button" @click="$refs.startDate.value='{{ today()->format('Y-m-d') }}'; $refs.endDate.value='{{ today()->format('Y-m-d') }}'; $refs.filterForm.submit()"
-                    style="padding: 0.375rem 0.75rem; font-size: 12px; font-weight: 500; border-radius: 50rem; cursor: pointer; border: none; {{ request('start_date') == today()->format('Y-m-d') && request('end_date') == today()->format('Y-m-d') ? 'background:#303030;color:white;' : 'background:white;color:#616161;border:1px solid #d4d4d4;' }}">
-                Today
-            </button>
-            <button type="button" @click="$refs.startDate.value='{{ now()->subDays(6)->format('Y-m-d') }}'; $refs.endDate.value='{{ today()->format('Y-m-d') }}'; $refs.filterForm.submit()"
-                    style="padding: 0.375rem 0.75rem; font-size: 12px; font-weight: 500; border-radius: 50rem; cursor: pointer; border: none; {{ request('start_date') == now()->subDays(6)->format('Y-m-d') && request('end_date') == today()->format('Y-m-d') ? 'background:#303030;color:white;' : 'background:white;color:#616161;border:1px solid #d4d4d4;' }}">
-                Last 7 days
-            </button>
-            <button type="button" @click="$refs.startDate.value='{{ now()->subDays(29)->format('Y-m-d') }}'; $refs.endDate.value='{{ today()->format('Y-m-d') }}'; $refs.filterForm.submit()"
-                    style="padding: 0.375rem 0.75rem; font-size: 12px; font-weight: 500; border-radius: 50rem; cursor: pointer; border: none; {{ request('start_date') == now()->subDays(29)->format('Y-m-d') && request('end_date') == today()->format('Y-m-d') ? 'background:#303030;color:white;' : 'background:white;color:#616161;border:1px solid #d4d4d4;' }}">
-                Last 30 days
-            </button>
-            <button type="button" @click="$refs.startDate.value='{{ now()->startOfMonth()->format('Y-m-d') }}'; $refs.endDate.value='{{ today()->format('Y-m-d') }}'; $refs.filterForm.submit()"
-                    style="padding: 0.375rem 0.75rem; font-size: 12px; font-weight: 500; border-radius: 50rem; cursor: pointer; border: none; {{ request('start_date') == now()->startOfMonth()->format('Y-m-d') && request('end_date') == today()->format('Y-m-d') ? 'background:#303030;color:white;' : 'background:white;color:#616161;border:1px solid #d4d4d4;' }}">
-                This month
-            </button>
-            <button type="button" @click="$refs.startDate.value='{{ now()->startOfYear()->format('Y-m-d') }}'; $refs.endDate.value='{{ today()->format('Y-m-d') }}'; $refs.filterForm.submit()"
-                    style="padding: 0.375rem 0.75rem; font-size: 12px; font-weight: 500; border-radius: 50rem; cursor: pointer; border: none; {{ request('start_date') == now()->startOfYear()->format('Y-m-d') && request('end_date') == today()->format('Y-m-d') ? 'background:#303030;color:white;' : 'background:white;color:#616161;border:1px solid #d4d4d4;' }}">
-                This year
-            </button>
-            @if($hasDateFilter)
-                <a href="{{ route('admin.dashboard') }}" style="padding: 0.375rem 0.75rem; font-size: 12px; font-weight: 500; border-radius: 50rem; color: #6F9CA2; text-decoration: none;">Clear filter</a>
-            @endif
-        </form>
+    {{-- Date range. The preset pills ("Today / Last 7 days / Last 30 days /
+         This month / This year") were replaced by an explicit From/To picker so
+         every reporting screen in the admin is filtered the same way. The
+         controller's start_date/end_date validation is unchanged. --}}
+    <div style="margin-bottom: 1.25rem;">
+        <x-admin.date-range-filter :action="route('admin.dashboard')"
+                                   from-name="start_date" to-name="end_date" />
         @if($hasDateFilter)
             <p style="font-size: 12px; margin-top: 0.5rem; color: #616161;">{{ $startDate->format('M d, Y') }} - {{ $endDate->format('M d, Y') }}</p>
         @endif

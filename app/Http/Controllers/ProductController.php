@@ -9,6 +9,7 @@ use App\Models\Coupon;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductQuestion;
+use App\Models\ProductVariant;
 use App\Models\ProductView;
 use App\Services\RecommendationService;
 use App\Services\ReviewSchemaService;
@@ -48,87 +49,120 @@ class ProductController extends Controller
 
         $filters = $this->filters($request);
 
-        $query = Product::query()
-            ->where('is_active', true)
-            ->with(['category', 'brand', 'primaryImage']);
+        // The category tree in one query. The sidebar needs a subtree per row, and
+        // Category::getAllDescendantIds() walks the children relation, lazy-loading a
+        // query per level - so asking it per row cost dozens of round trips.
+        $tree = Category::query()->get(['id', 'parent_id', 'name', 'slug', 'is_active']);
+        $childrenByParent = $tree->groupBy('parent_id');
+        $descendantIds = function (int $id) use (&$descendantIds, $childrenByParent): array {
+            $ids = [$id];
+            foreach ($childrenByParent->get($id, collect()) as $child) {
+                $ids = array_merge($ids, $descendantIds($child->id));
+            }
 
-        // Category filter. Products are filed on the deepest category, so a
-        // parent has to match its descendants too - otherwise picking MEN or
-        // WOMEN returns nothing while their sub-categories return everything.
+            return $ids;
+        };
+
+        // Category filter. Products are filed on the deepest category, so a parent has
+        // to match its descendants too - otherwise picking MEN or WOMEN returns nothing
+        // while their sub-categories return everything. A slug that resolves to nothing
+        // matches nothing, rather than quietly dropping the filter and handing back the
+        // whole shop.
+        $categoryIds = null;
         if ($filters['category'] !== null) {
-            $scope = Category::where('slug', $filters['category'])->first();
-
-            if ($scope) {
-                $query->whereIn('category_id', $scope->getAllDescendantIds());
-            } else {
-                $query->whereRaw('1 = 0');
-            }
+            $scope = $tree->firstWhere('slug', $filters['category']);
+            $categoryIds = $scope ? $descendantIds($scope->id) : [];
         }
 
-        // Subcategory filter
+        $subcategoryIds = null;
         if ($filters['subcategory'] !== []) {
-            $subIds = Category::whereIn('slug', $filters['subcategory'])->pluck('id');
-            if ($subIds->isNotEmpty()) {
-                $query->whereIn('category_id', $subIds);
+            $subcategoryIds = $tree->whereIn('slug', $filters['subcategory'])
+                ->flatMap(fn ($c) => $descendantIds($c->id))
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        /**
+         * The one query behind both the grid and the sidebar.
+         *
+         * $except names the dimensions to leave out, which is what makes the sidebar
+         * live: the Size list is built from everything matching the OTHER filters, so
+         * picking a category immediately reshapes the sizes, colours and brands on
+         * offer. A facet never applies its own filter, because that is the only way two
+         * sizes can both stay pickable - filtering to XL first would leave XL as the
+         * only size the list could ever show.
+         */
+        $filtered = function (array $except = []) use ($filters, $categoryIds, $subcategoryIds) {
+            $query = Product::query()->where('is_active', true);
+
+            if ($categoryIds !== null && ! in_array('category', $except, true)) {
+                $query->whereIn('category_id', $categoryIds ?: [0]);
             }
-        }
 
-        // Price filter
-        // Sizes live on the variants, colours on the product's Colours list, so
-        // each needs its own lookup rather than a column on products.
-        if ($filters['size'] !== []) {
-            $sizes = $filters['size'];
-            $query->whereHas('variants', function ($q) use ($sizes) {
-                $q->where('is_active', true)
-                  ->where('stock_quantity', '>', 0)
-                  ->whereSizeIn($sizes);
-            });
-        }
+            if ($subcategoryIds !== null && ! in_array('subcategory', $except, true)) {
+                $query->whereIn('category_id', $subcategoryIds ?: [0]);
+            }
 
-        if ($filters['colour'] !== []) {
-            $colours = $filters['colour'];
-            $query->where(function ($q) use ($colours) {
-                foreach ($colours as $colour) {
-                    // Matches the name inside the Colours JSON, and the legacy
-                    // colour stored on a variant for older products.
-                    //
-                    // The value is a bound parameter, so this was never an
-                    // injection - but % and _ are LIKE wildcards, and a colour
-                    // of "%" quietly matched every product on the site.
-                    $needle = '%"'.$this->escapeLike($colour).'"%';
-                    $q->orWhere('attributes', 'like', $needle)
-                      ->orWhereHas('variants', fn ($vq) => $vq->where('attributes', 'like', $needle));
+            // Sizes live on the variants, colours on the product's Colours list, so each
+            // needs its own lookup rather than a column on products. Stock is
+            // deliberately not part of the size match: a sold-out size still belongs to
+            // the product, and "In Stock Only" is the control for hiding it.
+            if ($filters['size'] !== [] && ! in_array('size', $except, true)) {
+                $sizes = $filters['size'];
+                $query->whereHas('variants', fn ($q) => $q->where('is_active', true)->whereSizeIn($sizes));
+            }
+
+            if ($filters['colour'] !== [] && ! in_array('colour', $except, true)) {
+                $colours = $filters['colour'];
+                $query->where(function ($q) use ($colours) {
+                    foreach ($colours as $colour) {
+                        // Matches the name inside the Colours JSON, and the legacy
+                        // colour stored on a variant for older products.
+                        //
+                        // The value is a bound parameter, so this was never an
+                        // injection - but % and _ are LIKE wildcards, and a colour
+                        // of "%" quietly matched every product on the site.
+                        $needle = '%"'.$this->escapeLike($colour).'"%';
+                        $q->orWhere('attributes', 'like', $needle)
+                            ->orWhereHas('variants', fn ($vq) => $vq->where('attributes', 'like', $needle));
+                    }
+                });
+            }
+
+            // Brand filter. Slugs, not ids, so the URL stays readable and shareable.
+            if ($filters['brand'] !== [] && ! in_array('brand', $except, true)) {
+                $brandSlugs = $filters['brand'];
+                $query->whereHas('brand', fn ($q) => $q->whereIn('slug', $brandSlugs));
+            }
+
+            if (! in_array('price', $except, true)) {
+                if ($filters['min_price'] !== null) {
+                    $query->where('price', '>=', $filters['min_price']);
                 }
-            });
-        }
+                if ($filters['max_price'] !== null) {
+                    $query->where('price', '<=', $filters['max_price']);
+                }
+            }
 
-        // Brand filter. Slugs, not ids, so the URL stays readable and shareable.
-        if ($filters['brand'] !== []) {
-            $brandSlugs = $filters['brand'];
-            $query->whereHas('brand', fn ($q) => $q->whereIn('slug', $brandSlugs));
-        }
+            if ($filters['rating'] !== null && ! in_array('rating', $except, true)) {
+                $query->where('rating', '>=', $filters['rating']);
+            }
 
-        if ($filters['min_price'] !== null) {
-            $query->where('price', '>=', $filters['min_price']);
-        }
-        if ($filters['max_price'] !== null) {
-            $query->where('price', '<=', $filters['max_price']);
-        }
+            // In stock filter
+            if ($filters['in_stock']) {
+                $query->where('stock_quantity', '>', 0);
+            }
 
-        // Rating filter
-        if ($filters['rating'] !== null) {
-            $query->where('rating', '>=', $filters['rating']);
-        }
+            // On sale filter (price less than mrp)
+            if ($filters['on_sale']) {
+                $query->whereNotNull('mrp')->whereColumn('price', '<', 'mrp');
+            }
 
-        // In stock filter
-        if ($filters['in_stock']) {
-            $query->where('stock_quantity', '>', 0);
-        }
+            return $query;
+        };
 
-        // On sale filter (price less than mrp)
-        if ($filters['on_sale']) {
-            $query->whereNotNull('mrp')->whereColumn('price', '<', 'mrp');
-        }
+        $query = $filtered()->with(['category', 'brand', 'primaryImage']);
 
         // Sorting
         $sortBy = $filters['sort'];
@@ -143,21 +177,89 @@ class ProductController extends Controller
 
         $products = $query->paginate(24)->withQueryString();
 
-        // Get categories and subcategories for filters
-        $categories = Category::whereNull('parent_id')->where('is_active', true)->get();
-        $subcategories = Category::whereNotNull('parent_id')->where('is_active', true)->orderBy('name')->get();
+        // How many matching products sit on each category, in ONE grouped query per
+        // facet. The sidebar then totals a subtree in memory - a count query per row
+        // would be forty round trips on a forty-category shop.
+        $countsBy = fn (array $except) => $filtered($except)
+            ->select('category_id')
+            ->selectRaw('count(*) as aggregate')
+            ->groupBy('category_id')
+            ->pluck('aggregate', 'category_id');
 
-        // Only brands that actually carry a live product. The table holds 26 rows
-        // left over from the demo seed, and offering "Canon" on a kidswear shop
-        // returns nothing. The view has always dereferenced $brands for the active
-        // filter chip and the meta description, so omitting it 500'd /shop?brand=x.
+        $totalUnder = function (int $id, $counts) use ($descendantIds): int {
+            $total = 0;
+            foreach ($descendantIds($id) as $categoryId) {
+                $total += (int) ($counts[$categoryId] ?? 0);
+            }
+
+            return $total;
+        };
+
+        // The category radio list keeps every top-level category, so the shape of the
+        // catalogue stays visible, but carries the count it would return under the
+        // shopper's other filters. Sub-category ticks are left out of that count: they
+        // belong to the category being replaced, so counting them would show 0 beside
+        // every other category.
+        $categoryCounts = $countsBy(['category', 'subcategory']);
+        $categories = $tree->whereNull('parent_id')
+            ->where('is_active', true)
+            ->each(fn ($c) => $c->setAttribute('products_total', $totalUnder($c->id, $categoryCounts)))
+            ->values();
+
+        // Sub-categories, on the other hand, are narrowed: the list used to offer every
+        // sub-category in the shop, so a shopper inside MEN was invited to tick Sarees
+        // and got nothing back. A ticked one is always kept, or it could never be
+        // unticked once another filter had emptied it.
+        $subcategoryCounts = $countsBy(['subcategory']);
+        $subcategories = $tree->where('is_active', true)
+            ->filter(fn ($c) => $c->parent_id !== null)
+            ->when($categoryIds !== null, fn ($rows) => $rows->whereIn('id', $categoryIds ?: [0]))
+            ->each(fn ($c) => $c->setAttribute('products_total', $totalUnder($c->id, $subcategoryCounts)))
+            ->filter(fn ($c) => $c->products_total > 0 || in_array($c->slug, $filters['subcategory'], true))
+            ->sortBy('name')
+            ->values();
+
+        // Sizes carried by the products the shopper is currently looking at. The list
+        // used to be every size in the shop, cached globally, so narrowing to a single
+        // polo still offered UK 7 to UK 11 and picking one returned nothing.
+        $filterSizes = ProductVariant::query()
+            ->where('is_active', true)
+            ->whereIn('product_id', $filtered(['size'])->select('id'))
+            ->pluck('name')
+            ->map(fn ($n) => ProductVariant::sizeLabel($n))
+            ->filter()
+            ->merge($filters['size'])
+            ->unique()
+            ->sortBy(fn ($s) => ProductVariant::sizeRank($s))
+            ->values();
+
+        // Colours get the same treatment, read off the product's own Colours list. The
+        // ticked ones are concatenated last so a real swatch hex wins over the hex-less
+        // placeholder when unique() collapses the pair.
+        $filterColours = $filtered(['colour'])
+            ->pluck('attributes')
+            ->flatMap(fn ($a) => collect(data_get($a, 'Colours', []))
+                ->map(fn ($c) => is_array($c)
+                    ? ['name' => trim((string) ($c['name'] ?? '')), 'hex' => $c['hex'] ?? null]
+                    : ['name' => trim((string) $c), 'hex' => null]))
+            ->filter(fn ($c) => $c['name'] !== '')
+            ->concat(collect($filters['colour'])->map(fn ($n) => ['name' => $n, 'hex' => null]))
+            ->unique('name')
+            ->sortBy('name')
+            ->values();
+
+        // Only brands that actually carry a matching product. The table holds 26 rows
+        // left over from the demo seed, and offering "Canon" on a kidswear shop returns
+        // nothing. The view has always dereferenced $brands for the active filter chip
+        // and the meta description, so omitting it 500'd /shop?brand=x.
         $brands = Brand::query()
             ->where('is_active', true)
-            ->whereHas('products', fn ($q) => $q->where('is_active', true))
+            ->where(fn ($q) => $q->whereIn('id', $filtered(['brand'])->select('brand_id'))
+                ->orWhereIn('slug', $filters['brand']))
             ->orderBy('name')
             ->get(['id', 'name', 'slug']);
 
-        return view('products.index', compact('products', 'categories', 'subcategories', 'brands'));
+        return view('products.index', compact('products', 'categories', 'subcategories', 'brands', 'filterSizes', 'filterColours'));
     }
 
     /**
@@ -275,16 +377,10 @@ class ProductController extends Controller
             'questions.answers',
         ]);
 
-        // Record product view
-        if (auth()->check()) {
-            ProductView::updateOrCreate(
-                [
-                    'user_id' => auth()->id(),
-                    'product_id' => $product->id,
-                ],
-                ['viewed_at' => now()]
-            );
-        }
+        // Record product view. Guests included — they are most of the traffic,
+        // and counting only signed-in customers left the Analytics report
+        // reporting on a small self-selected slice of the site.
+        ProductView::record($product);
 
         // Similar / "You May Also Like" products (Task 13) - use the cached
         // RecommendationService (category+brand ranked), then top up so the

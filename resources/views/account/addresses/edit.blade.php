@@ -88,7 +88,7 @@
                                     <input type="text" name="name" id="name" value="{{ old('name', $address->full_name) }}" required
                                            minlength="2" maxlength="100" autocomplete="name"
                                            data-kk-chars="personName"
-                                           pattern=" *[\p{L}\p{M}][\p{L}\p{M} \xA0'\u2019.\-]*"
+                                           pattern="{{ \App\Rules\ValidationRules::namePattern() }}"
                                            title="The full name may only contain letters, spaces, hyphens, apostrophes and periods."
                                            class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors @error('name') border-error-300 ring-1 ring-error-300 @enderror"
                                            placeholder="Enter full name">
@@ -162,7 +162,7 @@
                                         <input type="text" name="city" id="city" value="{{ old('city', $address->city) }}" required
                                                minlength="2" maxlength="100" autocomplete="address-level2"
                                                data-kk-chars="personName"
-                                               pattern=" *[\p{L}\p{M}][\p{L}\p{M} \xA0'\u2019.\-]*"
+                                               pattern="{{ \App\Rules\ValidationRules::namePattern() }}"
                                                title="The city may only contain letters, spaces, hyphens, apostrophes and periods."
                                                class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors @error('city') border-error-300 ring-1 ring-error-300 @enderror"
                                                placeholder="Enter city">

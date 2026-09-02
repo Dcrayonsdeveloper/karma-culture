@@ -161,6 +161,30 @@ class InventoryStockService
     }
 
     /**
+     * Clear the shelves of something that has left the catalogue.
+     *
+     * A size deleted in the product form takes its stock_quantity with it, but
+     * inventory_stocks.variant_id has no foreign key to cascade on - the rows
+     * survived, and because a row with no size renders as "All sizes" they came
+     * back as a phantom line beside the product's own, inflating every
+     * per-location total and blocking the location from being deleted.
+     */
+    public function clearLines(int $productId, ?int $variantId): void
+    {
+        foreach ($this->rows($productId, $variantId) as $row) {
+            $before = (int) $row->quantity;
+
+            $this->record($productId, $variantId, (int) $row->location_id, $before, 0, [
+                'type' => 'out',
+                'reference_type' => 'adjustment',
+                'reason' => 'Removed from catalogue',
+            ]);
+
+            $row->delete();
+        }
+    }
+
+    /**
      * Follow a stock figure that was changed somewhere else.
      *
      * The product form, the importer and checkout all write

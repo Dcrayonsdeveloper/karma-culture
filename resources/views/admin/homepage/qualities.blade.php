@@ -8,6 +8,8 @@
         </div>
     </x-slot>
 
+    <x-admin.form-errors title="The quality was not saved" />
+
     <div style="margin-bottom: 0.25rem;">
         <a href="{{ route('admin.homepage.index') }}" style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 13px; color: #005bd3; text-decoration: none;">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M12 16l-6-6 6-6" stroke="#005bd3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -16,7 +18,7 @@
     </div>
 
     <p style="font-size: 12px; color: #616161; margin: 0 0 1rem 0;">
-        The grid of quality blocks on the home page's dark "Our Qualities" section. Each row is a title + short description, plus an optional background image — cards with an image render as a tall 3:4 photo tile, cards without one stay compact. Reorder by editing position later.
+        The grid of quality blocks on the home page's dark "Our Qualities" section. Each row is a title + short description, plus an optional background image — cards with an image render as a tall 3:4 photo tile, cards without one stay compact. Use the arrows on each row to change the order they appear in.
     </p>
 
     <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem;">
@@ -103,6 +105,23 @@
                                 @csrf @method('DELETE')
                                 <button type="submit" class="btn btn-sm btn-danger" style="font-size: 12px;">Delete</button>
                             </form>
+                            {{-- position was stamped once at creation and nothing could
+                                 change it afterwards, so the order on the home page was
+                                 fixed by the order the rows happened to be added in. --}}
+                            @if(! $loop->first)
+                                <form action="{{ route('admin.homepage.qualities.move', $quality) }}" method="POST" style="display: inline;">
+                                    @csrf @method('PUT')
+                                    <input type="hidden" name="direction" value="up">
+                                    <button type="submit" class="btn btn-sm btn-secondary" style="font-size: 12px;" aria-label="Move up" title="Move up">&uarr;</button>
+                                </form>
+                            @endif
+                            @if(! $loop->last)
+                                <form action="{{ route('admin.homepage.qualities.move', $quality) }}" method="POST" style="display: inline;">
+                                    @csrf @method('PUT')
+                                    <input type="hidden" name="direction" value="down">
+                                    <button type="submit" class="btn btn-sm btn-secondary" style="font-size: 12px;" aria-label="Move down" title="Move down">&darr;</button>
+                                </form>
+                            @endif
                             <span class="badge {{ $quality->is_active ? 'badge-success' : 'badge-neutral' }}" style="margin-left: auto;">{{ $quality->is_active ? 'Active' : 'Hidden' }}</span>
                         </div>
                     </div>

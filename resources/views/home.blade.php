@@ -724,51 +724,108 @@
     <div class="kk-home">
 
         {{-- ============================================
-             HERO BACKGROUND VIDEO
+             HERO - every active banner, in admin order
              ============================================ --}}
         @php
-            // The hero used to hard-code a video file, so changing it meant editing
-            // this template. It now renders the first active hero banner from the
-            // admin panel, which may carry a video or an image. The hard-coded clip
-            // stays as the fallback for when no hero banner has been added yet.
-            $heroBanner = ($banners ?? collect())->first();
+            // This used to render `$banners->first()` and stop, so the second and
+            // third banners an admin added were invisible and the reorder controls
+            // in the admin panel only ever decided which single banner survived.
+            // All of them are rendered now, as slides; the hard-coded clip is still
+            // the fallback for a store that has not added a banner yet.
+            $heroBanners = ($banners ?? collect())->values();
             $heroName = $siteSettings['site_name'] ?? 'Karmaa Kulture';
+            $heroCount = $heroBanners->count();
         @endphp
-        <section class="kk-hero">
-            @if($heroBanner && $heroBanner->has_video)
-                <div class="kk-hero-slide kk-hero-slide--video">
-                    <video class="kk-hero-video"
-                           src="{{ $heroBanner->video }}"
-                           @if($heroBanner->image_url) poster="{{ $heroBanner->image }}" @endif
-                           autoplay
-                           muted
-                           loop
-                           playsinline
-                           preload="auto"
-                           aria-label="{{ $heroBanner->title ?: $heroName }} hero video">
-                    </video>
+        <section class="kk-hero"
+                 @if($heroCount > 1)
+                     x-data="kkHero({{ $heroCount }})"
+                     x-init="start()"
+                     @mouseenter="stop()" @mouseleave="start()"
+                     role="region" aria-roledescription="carousel" aria-label="Highlights"
+                 @endif>
+            @if($heroCount)
+                <div class="kk-hero-viewport">
+                    @foreach($heroBanners as $i => $banner)
+                        @php
+                            // A banner may carry a video, an image or both; the image
+                            // doubles as the poster frame when a video is present.
+                            $hasOverlayText = $banner->title || $banner->subtitle || $banner->button_text;
+                        @endphp
+                        <div class="kk-hero-slide {{ $banner->has_video ? 'kk-hero-slide--video' : '' }}"
+                             @if($heroCount > 1)
+                                 x-show="current === {{ $i }}"
+                                 x-transition:enter="kk-fade-enter" x-transition:enter-start="kk-fade-start"
+                                 :aria-hidden="current !== {{ $i }}"
+                             @endif
+                             role="group" aria-roledescription="slide"
+                             aria-label="{{ $i + 1 }} of {{ $heroCount }}">
+
+                            {{-- The link used to be honoured for image banners only, so a
+                                 video banner's Link URL was collected, stored and ignored.
+                                 Both shapes are wrapped the same way now. --}}
+                            @if($banner->link)
+                                <a href="{{ $banner->link }}" class="kk-hero-link" aria-label="{{ $banner->title ?: $heroName }}">
+                            @endif
+
+                            @if($banner->has_video)
+                                <video class="kk-hero-video"
+                                       src="{{ $banner->video }}"
+                                       @if($banner->image_url) poster="{{ $banner->image }}" @endif
+                                       autoplay muted loop playsinline preload="{{ $i === 0 ? 'auto' : 'metadata' }}"
+                                       aria-label="{{ $banner->title ?: $heroName }} hero video"></video>
+                            @else
+                                <img src="{{ $banner->image }}" alt="{{ $banner->title ?: $heroName }}"
+                                     @if($i === 0) fetchpriority="high" @else loading="lazy" @endif>
+                            @endif
+
+                            {{-- Heading, subtitle and button were editable in the admin
+                                 and stored, but no template ever printed them, and the
+                                 Overlay Style selector fed an accessor nothing called. --}}
+                            @if($hasOverlayText)
+                                <div class="kk-hero-overlay {{ $banner->overlay_css }}"></div>
+                                <div class="kk-hero-caption kk-hero-caption--{{ $banner->overlay_style ?: 'left-dark' }}">
+                                    @if($banner->title)
+                                        <h2 class="kk-hero-title">{{ $banner->title }}</h2>
+                                    @endif
+                                    @if($banner->subtitle)
+                                        <p class="kk-hero-sub">{{ $banner->subtitle }}</p>
+                                    @endif
+                                    @if($banner->button_text && $banner->link)
+                                        <span class="kk-btn-cream kk-hero-btn">{{ $banner->button_text }}</span>
+                                    @endif
+                                </div>
+                            @endif
+
+                            @if($banner->link)
+                                </a>
+                            @endif
+                        </div>
+                    @endforeach
                 </div>
-            @elseif($heroBanner && $heroBanner->image_url)
-                <div class="kk-hero-slide">
-                    @if($heroBanner->link)
-                        <a href="{{ $heroBanner->link }}" aria-label="{{ $heroBanner->title ?: $heroName }}">
-                            <img src="{{ $heroBanner->image }}" alt="{{ $heroBanner->title ?: $heroName }}" fetchpriority="high">
-                        </a>
-                    @else
-                        <img src="{{ $heroBanner->image }}" alt="{{ $heroBanner->title ?: $heroName }}" fetchpriority="high">
-                    @endif
-                </div>
+
+                @if($heroCount > 1)
+                    <button type="button" class="kk-hero-nav kk-hero-nav--prev" @click="prev()" aria-label="Previous slide">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 16l-6-6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <button type="button" class="kk-hero-nav kk-hero-nav--next" @click="next()" aria-label="Next slide">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <div class="kk-hero-dots" role="tablist" aria-label="Choose slide">
+                        @foreach($heroBanners as $i => $banner)
+                            <button type="button" class="kk-hero-dot" :class="current === {{ $i }} && 'is-active'"
+                                    @click="go({{ $i }})" role="tab" :aria-selected="current === {{ $i }}"
+                                    aria-label="Slide {{ $i + 1 }}"></button>
+                        @endforeach
+                    </div>
+                @endif
             @else
-                <div class="kk-hero-slide kk-hero-slide--video">
-                    <video class="kk-hero-video"
-                           src="{{ asset_v('images/karmaa-kulture-web-banner-v3.mp4') }}"
-                           autoplay
-                           muted
-                           loop
-                           playsinline
-                           preload="auto"
-                           aria-label="{{ $heroName }} hero video">
-                    </video>
+                <div class="kk-hero-viewport">
+                    <div class="kk-hero-slide kk-hero-slide--video">
+                        <video class="kk-hero-video"
+                               src="{{ asset_v('images/karmaa-kulture-web-banner-v3.mp4') }}"
+                               autoplay muted loop playsinline preload="auto"
+                               aria-label="{{ $heroName }} hero video"></video>
+                    </div>
                 </div>
             @endif
         </section>
@@ -777,12 +834,14 @@
             /* Full-bleed hero - span the entire viewport width regardless of
                any parent container, and clip any margin baked into the video. */
             .kk-hero {
+                position: relative;
                 width: 100vw;
                 max-width: 100vw;
                 margin-left: calc(50% - 50vw);
                 margin-right: calc(50% - 50vw);
                 overflow: hidden;
             }
+            .kk-hero-viewport { position: relative; }
             .kk-hero-slide--video {
                 aspect-ratio: auto;
                 background: var(--kk-brown-dark);
@@ -793,7 +852,90 @@
                 height: auto;
                 display: block;
             }
+            .kk-hero-link { display: block; color: inherit; text-decoration: none; }
+
+            /* Caption. Only drawn when the admin filled in a heading, subtitle
+               or button, so a plain image banner stays a plain image banner. */
+            .kk-hero-overlay { position: absolute; inset: 0; pointer-events: none; }
+            .kk-hero-caption {
+                position: absolute; inset: 0; display: flex; flex-direction: column;
+                justify-content: center; gap: 12px; padding: 0 8vw; pointer-events: none;
+            }
+            .kk-hero-caption--right-dark { align-items: flex-end; text-align: right; }
+            .kk-hero-caption--center-vignette, .kk-hero-caption--full-dark { align-items: center; text-align: center; }
+            .kk-hero-title {
+                font-family: var(--kk-display); font-weight: 600; color: #fff; margin: 0;
+                font-size: clamp(22px, 4.2vw, 52px); line-height: 1.08;
+                text-shadow: 0 2px 18px rgba(0,0,0,.35);
+            }
+            .kk-hero-sub {
+                color: rgba(255,255,255,.92); margin: 0; max-width: 46ch;
+                font-size: clamp(12px, 1.5vw, 17px); line-height: 1.5;
+                text-shadow: 0 1px 12px rgba(0,0,0,.35);
+            }
+            .kk-hero-btn { margin-top: 4px; align-self: flex-start; }
+            .kk-hero-caption--right-dark .kk-hero-btn { align-self: flex-end; }
+            .kk-hero-caption--center-vignette .kk-hero-btn,
+            .kk-hero-caption--full-dark .kk-hero-btn { align-self: center; }
+            @media (max-width: 640px) {
+                .kk-hero-caption { padding: 0 6vw; gap: 8px; }
+                .kk-hero-sub { display: none; }
+            }
+
+            /* Slider chrome - only rendered when there is more than one banner. */
+            .kk-hero-nav {
+                position: absolute; top: 50%; transform: translateY(-50%); z-index: 2;
+                width: 38px; height: 38px; border-radius: 999px; border: none; cursor: pointer;
+                display: flex; align-items: center; justify-content: center;
+                background: rgba(255,255,255,.82); color: var(--kk-brown);
+                transition: background .2s;
+            }
+            .kk-hero-nav:hover { background: #fff; }
+            .kk-hero-nav--prev { left: 14px; }
+            .kk-hero-nav--next { right: 14px; }
+            .kk-hero-dots {
+                position: absolute; left: 0; right: 0; bottom: 14px; z-index: 2;
+                display: flex; justify-content: center; gap: 8px;
+            }
+            .kk-hero-dot {
+                width: 8px; height: 8px; padding: 0; border-radius: 999px; cursor: pointer;
+                border: 1px solid rgba(255,255,255,.85); background: rgba(255,255,255,.35);
+                transition: background .2s, width .2s;
+            }
+            .kk-hero-dot.is-active { background: #fff; width: 22px; }
+            .kk-fade-start { opacity: 0; }
+            .kk-fade-enter { transition: opacity .45s ease; }
+            @media (max-width: 640px) {
+                .kk-hero-nav { width: 30px; height: 30px; }
+                .kk-hero-nav--prev { left: 8px; }
+                .kk-hero-nav--next { right: 8px; }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .kk-fade-enter { transition: none; }
+            }
         </style>
+
+        @if($heroCount > 1)
+            <script>
+                function kkHero(count) {
+                    return {
+                        current: 0,
+                        timer: null,
+                        go(i) { this.current = (i + count) % count; },
+                        next() { this.go(this.current + 1); },
+                        prev() { this.go(this.current - 1); },
+                        start() {
+                            // Auto-advance is a decorative motion, so visitors who have
+                            // asked their OS for less of it get a static first slide.
+                            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+                            this.stop();
+                            this.timer = setInterval(() => this.next(), 6000);
+                        },
+                        stop() { if (this.timer) { clearInterval(this.timer); this.timer = null; } },
+                    };
+                }
+            </script>
+        @endif
 
         {{-- ============================================
              SHOP BY CATEGORY - bento mosaics per gender
@@ -1093,7 +1235,12 @@
             }
         @endphp
         @if(collect($kkTabs)->contains(fn($t) => count($t['items']) > 0))
-        <section class="kk-shop-your-way" x-data="{ tab: 'size' }">
+        @php
+            // Opened on Size unconditionally, so a shop that only fills in Price or
+            // Shade greeted every visitor with an empty rail.
+            $kkFirstTab = collect($kkTabs)->filter(fn ($t) => count($t['items']) > 0)->keys()->first() ?? 'size';
+        @endphp
+        <section class="kk-shop-your-way" x-data="{ tab: '{{ $kkFirstTab }}' }">
             <div class="container mx-auto px-4 text-center">
                 <span class="kk-eyebrow">Curate The Edit</span>
                 <h2 class="kk-syw-heading">Shop It Your <em>Way</em></h2>
@@ -1142,7 +1289,16 @@
                                             {{-- Display only. These linked through to the shop with a
                                                  size/price/shade filter, which returned nothing, so every
                                                  hanger was a dead end onto an empty results page. --}}
-                                            <div class="kk-rail-cell"
+                                            {{-- The Query String an admin sets against each item
+                                                 (size=M, price_min=1000&price_max=2000, shade=Indigo)
+                                                 was validated, stored and then never read here, so the
+                                                 field did nothing at all. The shop route accepts every
+                                                 one of those keys - ProductController@index reads size,
+                                                 price_min/max and shade - so they resolve to real
+                                                 results. An item with no query stays a plain tile. --}}
+                                            <{{ $item['q'] !== '' ? 'a' : 'div' }}
+                                                 @if($item['q'] !== '') href="{{ route('shop') }}?{{ $item['q'] }}" @endif
+                                                 class="kk-rail-cell @if($item['q'] !== '') kk-rail-cell--link @endif"
                                                  style="--d: {{ $i * 80 }}ms;">
                                                 <div class="kk-shirt-hanger" style="color: {{ $item['shade'] }};">
                                                     <svg viewBox="0 0 100 170" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -1168,7 +1324,7 @@
                                                 @if($item['count'] !== '')
                                                     <div class="kk-rail-count">{{ $item['count'] }}</div>
                                                 @endif
-                                            </div>
+                                            </{{ $item['q'] !== '' ? 'a' : 'div' }}>
                                         @endforeach
                                     </div>
                                 </div>
@@ -1178,19 +1334,32 @@
                 </div>
             </div>
         </section>
+        <style>
+            .kk-rail-cell--link { text-decoration: none; color: inherit; cursor: pointer; }
+            .kk-rail-cell--link:focus-visible { outline: 2px solid var(--kk-tan-dark); outline-offset: 4px; border-radius: 4px; }
+            .kk-rail-cell--link .kk-shirt-hanger { transition: transform .25s ease; }
+            .kk-rail-cell--link:hover .kk-shirt-hanger { transform: translateY(3px); }
+            @media (prefers-reduced-motion: reduce) {
+                .kk-rail-cell--link .kk-shirt-hanger { transition: none; }
+            }
+        </style>
         @endif
 
         {{-- ============================================
              OUR QUALITIES (dark)
              ============================================ --}}
+        {{-- Cards come from admin: Online Store > Our Qualities. With none active
+             this drew a dark band containing a heading and nothing else, so the
+             whole section is now gated on there being something to show. The
+             subtitle counted "Six pillars" no matter how many cards existed. --}}
+        @php $qualities = $qualities ?? collect(); @endphp
+        @if($qualities->count())
         <section class="kk-qualities">
             <div class="container mx-auto px-4">
                 <span class="kk-eyebrow" style="color: var(--kk-tan);">What Sets Us Apart</span>
                 <h2>Our Qualities</h2>
-                <p class="sub">Six pillars every piece is measured against - no shortcuts, no exceptions.</p>
+                <p class="sub">{{ $qualities->count() }} {{ \Illuminate\Support\Str::plural('pillar', $qualities->count()) }} every piece is measured against - no shortcuts, no exceptions.</p>
 
-                {{-- Cards come from admin: Online Store > Our Qualities. Autoplay slider (Task 4). --}}
-                @php $qualities = $qualities ?? collect(); @endphp
                 @if($qualities->count())
                 <div class="kk-qslider"
                      x-data="kkCarousel({ autoplay: true, interval: 3800 })"
@@ -1226,6 +1395,141 @@
                 @endif
             </div>
         </section>
+        @endif
+
+        {{-- ============================================
+             TESTIMONIALS
+             The admin has had a full Testimonials manager since the table was
+             created, HomeController has always queried six of them, and no
+             template ever printed one - so every review an admin wrote went
+             nowhere. Rendered here, honouring the same Visible/Hidden switch
+             the About Us block uses.
+             ============================================ --}}
+        @php
+            $testimonials = ($testimonials ?? collect())->values();
+            $tSection = $sections['testimonials'] ?? null;
+            $tVisible = $tSection === null || $tSection->is_active;
+            $tTitle = ($tSection->title ?? null) ?: 'What Our Customers Say';
+            $tSub   = ($tSection->subtitle ?? null) ?: 'Worn, washed and lived in - in their words.';
+        @endphp
+        @if($tVisible && $testimonials->count())
+        <section class="kk-section kk-testimonials">
+            <div class="container mx-auto px-4">
+                <div style="text-align:center; margin-bottom:22px;">
+                    <span class="kk-eyebrow">Reviews</span>
+                    <h2 class="kk-section-title kk-section-title--lg" style="margin-top:8px;">{{ $tTitle }}</h2>
+                    <p class="kk-testimonials__sub">{{ is_string($tSub) ? $tSub : '' }}</p>
+                </div>
+
+                <div class="kk-treview-grid">
+                    @foreach($testimonials as $t)
+                        <figure class="kk-treview">
+                            <div class="kk-treview__stars" aria-label="{{ $t->rating }} out of 5">
+                                @for($star = 1; $star <= 5; $star++)
+                                    <svg viewBox="0 0 20 20" aria-hidden="true"
+                                         fill="{{ $star <= $t->rating ? 'currentColor' : 'none' }}"
+                                         stroke="currentColor" stroke-width="1.4">
+                                        <path d="M10 2.5l2.35 4.76 5.25.76-3.8 3.7.9 5.23L10 14.48l-4.7 2.47.9-5.23-3.8-3.7 5.25-.76L10 2.5z"/>
+                                    </svg>
+                                @endfor
+                            </div>
+                            <blockquote class="kk-treview__text">{{ $t->content }}</blockquote>
+                            <figcaption class="kk-treview__by">
+                                <span class="kk-treview__avatar" aria-hidden="true">
+                                    @if($t->avatar_url)
+                                        <img src="{{ asset_v('storage/' . $t->avatar_url) }}" alt="" loading="lazy" decoding="async">
+                                    @else
+                                        {{-- mb_substr, not substr: the name validator accepts scripts
+                                             whose first character is several bytes wide, and slicing
+                                             one byte off those produced a broken glyph. --}}
+                                        {{ mb_strtoupper(mb_substr($t->name, 0, 1)) }}
+                                    @endif
+                                </span>
+                                <span>
+                                    <span class="kk-treview__name">{{ $t->name }}</span>
+                                    @if($t->title || $t->product_name)
+                                        <span class="kk-treview__meta">{{ $t->title ?: $t->product_name }}</span>
+                                    @endif
+                                </span>
+                            </figcaption>
+                        </figure>
+                    @endforeach
+                </div>
+            </div>
+        </section>
+        <style>
+            .kk-testimonials__sub { color: var(--kk-text-muted); font-size: 14px; margin: 8px 0 0; }
+            .kk-treview-grid {
+                display: grid; gap: 16px;
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            }
+            .kk-treview {
+                margin: 0; padding: 20px; border-radius: 6px;
+                background: var(--kk-cream-lighter); border: 1px solid var(--kk-cream-dark);
+                display: flex; flex-direction: column; gap: 12px;
+            }
+            .kk-treview__stars { display: flex; gap: 2px; color: var(--kk-tan-dark); }
+            .kk-treview__stars svg { width: 16px; height: 16px; }
+            .kk-treview__text {
+                margin: 0; font-size: 14px; line-height: 1.6; color: var(--kk-text);
+            }
+            .kk-treview__by { display: flex; align-items: center; gap: 10px; margin-top: auto; }
+            .kk-treview__avatar {
+                width: 34px; height: 34px; flex: 0 0 34px; border-radius: 999px; overflow: hidden;
+                display: flex; align-items: center; justify-content: center;
+                background: var(--kk-brown); color: var(--kk-cream);
+                font-size: 13px; font-weight: 600;
+            }
+            .kk-treview__avatar img { width: 100%; height: 100%; object-fit: cover; }
+            .kk-treview__name { display: block; font-size: 13px; font-weight: 600; color: var(--kk-text); }
+            .kk-treview__meta { display: block; font-size: 12px; color: var(--kk-text-muted); }
+        </style>
+        @endif
+
+        {{-- ============================================
+             NEWSLETTER
+             The .kk-newsletter styles above were still in the page with no
+             markup left to use them, so the only ways onto the list were the
+             two popups - and each shows once per browser. A shopper who closed
+             one had no way to subscribe at all.
+             ============================================ --}}
+        @php
+            $newsletterSection = $sections['newsletter'] ?? null;
+            // Same rule as About Us: a missing row still renders with the
+            // defaults, only a row that exists and is switched off hides it.
+            $newsletterVisible = $newsletterSection === null || $newsletterSection->is_active;
+            $newsletterTitle   = ($newsletterSection->title ?? null) ?: 'Join the Karmaa Kulture List';
+            $newsletterText    = ($newsletterSection->subtitle ?? null) ?: 'Early access to new drops, private sales and styling notes.';
+            $newsletterButton  = ($newsletterSection->button_text ?? null) ?: 'Subscribe';
+        @endphp
+        @if($newsletterVisible)
+        <section class="kk-newsletter" x-data="newsletterSignup()">
+            <div class="container mx-auto px-4">
+                <span class="kk-eyebrow">Stay in the Loop</span>
+                <h2>{{ $newsletterTitle }}</h2>
+                <p>{{ $newsletterText }}</p>
+
+                <form @submit.prevent="submit()" novalidate class="kk-newsletter-form" x-show="!done">
+                    <label for="kk-newsletter-email" class="sr-only">Email address</label>
+                    <input id="kk-newsletter-email" type="email" x-model="email" required maxlength="255"
+                           placeholder="Your email address" autocomplete="email">
+                    <button type="submit" :disabled="submitting">
+                        <span x-show="!submitting">{{ $newsletterButton }}</span>
+                        <span x-show="submitting" x-cloak>Sending</span>
+                    </button>
+                </form>
+
+                <p x-show="error" x-cloak x-text="error" role="alert"
+                   style="margin: 12px 0 0; font-size: 13px; color: #b3261e;"></p>
+                <p x-show="done" x-cloak x-text="message" role="status"
+                   style="margin: 0; font-size: 14px; color: var(--kk-text);"></p>
+
+                <p style="font-size: 11px; color: var(--kk-text-muted); margin: 14px 0 0;">
+                    No spam - unsubscribe anytime.
+                </p>
+            </div>
+        </section>
+        @endif
 
     </div>
 

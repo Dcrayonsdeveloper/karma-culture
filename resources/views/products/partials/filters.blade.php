@@ -22,6 +22,11 @@
                                    class="w-3.5 h-3.5 border-neutral-300 text-[#6F9CA2] focus:ring-[#6F9CA2] focus:ring-offset-0"
                                    onchange="this.form.submit()">
                             <span class="text-sm text-neutral-600 group-hover:text-neutral-900 transition-colors">{{ $category->name }}</span>
+                            @isset($category->products_total)
+                                {{-- What this category would return under the shopper's
+                                     other filters, so the list is not a guess. --}}
+                                <span class="ml-auto text-xs text-neutral-400 tabular-nums">{{ $category->products_total }}</span>
+                            @endisset
                         </label>
                     @endforeach
                 </div>
@@ -43,10 +48,15 @@
                 <div class="space-y-1.5 max-h-52 overflow-y-auto pt-1 pb-2">
                     @foreach($subcategories as $sub)
                         <label class="flex items-center gap-2.5 cursor-pointer group py-0.5">
-                            <input type="checkbox" name="subcategory[]" value="{{ $sub->slug }}"
+                            {{-- Submits on tick like every other chip in this sidebar; it
+                                 used to sit there until the shopper found Apply. --}}
+                            <input type="checkbox" name="subcategory[]" value="{{ $sub->slug }}" onchange="this.form.submit()"
                                    {{ in_array($sub->slug, (array) request('subcategory')) ? 'checked' : '' }}
                                    class="w-3.5 h-3.5 rounded border-neutral-300 text-[#6F9CA2] focus:ring-[#6F9CA2] focus:ring-offset-0">
                             <span class="text-sm text-neutral-600 group-hover:text-neutral-900 transition-colors">{{ $sub->name }}</span>
+                            @isset($sub->products_total)
+                                <span class="ml-auto text-xs text-neutral-400 tabular-nums">{{ $sub->products_total }}</span>
+                            @endisset
                         </label>
                     @endforeach
                 </div>
@@ -57,16 +67,11 @@
 
     {{-- Size --}}
     @php
-        $kkAllSizes = \Illuminate\Support\Facades\Cache::remember('kk_filter_sizes_v2_' . \App\Models\ProductVariant::filterCacheVersion(), 600, function () {
-            return \App\Models\ProductVariant::where('is_active', true)
-                ->where('stock_quantity', '>', 0)
-                ->pluck('name')
-                ->map(fn ($n) => \App\Models\ProductVariant::sizeLabel($n))
-                ->filter()
-                ->unique()
-                ->sortBy(fn ($s) => \App\Models\ProductVariant::sizeRank($s))
-                ->values();
-        });
+        // Built by the controller from the products currently matching, minus the size
+        // filter itself, so picking a category or a colour reshapes this list on the
+        // next submit. The old global list was every size in the shop, cached, and
+        // offered sizes nothing on screen came in.
+        $kkAllSizes = $filterSizes ?? collect();
     @endphp
     @if($kkAllSizes->isNotEmpty())
         <div x-data="{ open: true }">
@@ -102,18 +107,9 @@
 
     {{-- Colour --}}
     @php
-        $kkAllColours = \Illuminate\Support\Facades\Cache::remember('kk_filter_colours_' . \App\Models\ProductVariant::filterCacheVersion(), 600, function () {
-            return \App\Models\Product::where('is_active', true)
-                ->pluck('attributes')
-                ->flatMap(fn ($a) => collect(data_get($a, 'Colours', []))
-                    ->map(fn ($c) => is_array($c)
-                        ? ['name' => trim((string) ($c['name'] ?? '')), 'hex' => $c['hex'] ?? null]
-                        : ['name' => trim((string) $c), 'hex' => null]))
-                ->filter(fn ($c) => $c['name'] !== '')
-                ->unique('name')
-                ->sortBy('name')
-                ->values();
-        });
+        // Same story as Size: the controller narrows this to the colours the matching
+        // products actually come in.
+        $kkAllColours = $filterColours ?? collect();
     @endphp
     @if($kkAllColours->isNotEmpty())
         <div x-data="{ open: true }">

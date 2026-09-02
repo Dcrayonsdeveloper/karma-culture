@@ -3,6 +3,7 @@
 namespace App\Rules;
 
 use DateTimeInterface;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
@@ -50,10 +51,9 @@ final class ValidationRules
      *
      * Client-side counterpart:
      *   required minlength="2" maxlength="100"
-     *   and, for lettersOnly, pattern=" *[\p{L}\p{M}][\p{L}\p{M} \xA0]*"
-     *   (the leading ` *` is deliberate: TrimStrings drops leading spaces
-     *   server-side, so a pasted " Asha" is accepted there and the browser
-     *   must not block the submit over an invisible character)
+     *   pattern="{{ \App\Rules\ValidationRules::namePattern() }}"
+     *   data-kk-chars="personName"
+     * and, for lettersOnly, namePattern(lettersOnly: true).
      */
     public static function name(bool $required = true, int $min = 2, int $max = 100, bool $lettersOnly = false): array
     {
@@ -64,6 +64,40 @@ final class ValidationRules
             "max:{$max}",
             new PersonName($lettersOnly),
         ];
+    }
+
+    /**
+     * The HTML `pattern` attribute mirroring {@see PersonName} for a name box.
+     *
+     * Echo it rather than pasting the string into each blade. Five hand-copied
+     * regexes drifted apart once already, and the leading-whitespace clause
+     * below is subtle enough that a copy which loses it looks fine and quietly
+     * blocks checkout.
+     *
+     * WHY THE WHITESPACE CLAUSES. TrimStrings runs Str::trim before validation,
+     * which strips Str::INVISIBLE_CHARACTERS from both ends - and that list is
+     * far wider than the space bar: it includes TAB, NBSP, the ideographic
+     * space, the zero-width joiners and the BOM. A name pasted out of Word,
+     * WhatsApp Web or a spreadsheet routinely carries one, the server never
+     * sees it, and a browser rule that stops at ` *` refuses a name the server
+     * would have accepted - over a character the customer cannot see, with a
+     * message naming only characters that ARE allowed. So the same set the
+     * server trims is tolerated here, at both ends, and nowhere else: the
+     * charset in the middle stays exactly PersonName's.
+     *
+     * The list is derived from Str::INVISIBLE_CHARACTERS rather than retyped,
+     * so it cannot fall behind a framework upgrade. \x{...} is PCRE's spelling;
+     * JavaScript wants \u{...}, and the `pattern` attribute is compiled with the
+     * u/v flag, which is what makes both that and \p{L} legal there.
+     */
+    public static function namePattern(bool $lettersOnly = false): string
+    {
+        // \s covers CR/LF/FF, which PHP's trim strips but the list does not name.
+        $trimmed = '['.str_replace('\x{', '\u{', Str::INVISIBLE_CHARACTERS).'\s]*';
+
+        $separators = $lettersOnly ? '' : '\'\u{2019}.\-';
+
+        return $trimmed.'[\p{L}\p{M}][\p{L}\p{M}\x20\u{00A0}'.$separators.']*'.$trimmed;
     }
 
     /**

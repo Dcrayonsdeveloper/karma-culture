@@ -112,24 +112,40 @@
 
                         <!-- Upload zones -->
                         <div class="flex flex-wrap gap-3">
+                            {{-- Every zone cancels the drag events. Without that the browser
+                                 handles the drop itself and navigates away from the form,
+                                 taking any unsaved edit with it. --}}
                             <div class="flex-1 min-w-[45%] border border-dashed rounded-lg p-3 text-center cursor-pointer hover:border-neutral-400 transition-colors" style="border-color: #b5b5b5;"
-                                 @click="$refs.mainFileInput.click()">
+                                 @click="$refs.mainFileInput.click()"
+                                 @dragover.prevent @dragleave.prevent
+                                 @drop.prevent="handleMainImage($event.dataTransfer.files[0])">
                                 <input type="file" name="main_image" accept="image/jpeg,image/jpg,image/png,image/webp,image/gif" x-ref="mainFileInput" style="display: none;" @change="handleMainImage($event.target.files[0])">
                                 <p class="text-xs font-medium" style="color: #005bd3;" x-text="mainImageChanged ? 'Main image ready ✓' : 'Set / replace main image'">Set / replace main image</p>
+                                <p class="text-[11px] mt-0.5" style="color: #616161;">JPG, PNG, WEBP or GIF, max 2MB</p>
                             </div>
                             <div class="flex-1 min-w-[45%] border border-dashed rounded-lg p-3 text-center cursor-pointer hover:border-neutral-400 transition-colors" style="border-color: #b5b5b5;"
-                                 @click="$refs.galleryInput.click()">
+                                 @click="$refs.galleryInput.click()"
+                                 @dragover.prevent @dragleave.prevent
+                                 @drop.prevent="handleGalleryFiles($event.dataTransfer.files)">
                                 <input type="file" name="images[]" multiple accept="image/jpeg,image/jpg,image/png,image/webp,image/gif" x-ref="galleryInput" style="display: none;" @change="handleGalleryFiles($event.target.files)">
                                 <p class="text-xs font-medium" style="color: #005bd3;">Add images</p>
+                                <p class="text-[11px] mt-0.5" style="color: #616161;">Up to 10 per save, JPG/PNG/WEBP/GIF, max 2MB each</p>
                             </div>
                             <div class="flex-1 min-w-[45%] border border-dashed rounded-lg p-3 text-center cursor-pointer hover:border-neutral-400 transition-colors" style="border-color: #b5b5b5;"
-                                 @click="$refs.videoInput.click()">
+                                 @click="$refs.videoInput.click()"
+                                 @dragover.prevent @dragleave.prevent
+                                 @drop.prevent="handleVideoFiles($event.dataTransfer.files)">
                                 <input type="file" name="videos[]" multiple accept="video/mp4,video/webm,video/quicktime" x-ref="videoInput" style="display: none;" @change="handleVideoFiles($event.target.files)">
-                                <p class="text-xs font-medium" style="color: #005bd3;">Add videos <span style="color:#999;">(MP4/WEBM/MOV, max 50MB)</span></p>
+                                <p class="text-xs font-medium" style="color: #005bd3;">Add videos</p>
+                                <p class="text-[11px] mt-0.5" style="color: #616161;">Up to 5 per save, MP4/WEBM/MOV, max 50MB each</p>
                             </div>
                         </div>
                         @error('main_image') <p class="form-error mt-2">{{ $message }}</p> @enderror
+                        {{-- The array-level max:10 / max:5 rules report under `images` and
+                             `videos`; without these the save was rejected in silence. --}}
+                        @error('images') <p class="form-error mt-2">{{ $message }}</p> @enderror
                         @error('images.*') <p class="form-error mt-2">{{ $message }}</p> @enderror
+                        @error('videos') <p class="form-error mt-2">{{ $message }}</p> @enderror
                         @error('videos.*') <p class="form-error mt-2">{{ $message }}</p> @enderror
                     </div>
 
@@ -581,8 +597,8 @@
                 dragEl: null,
                 handleMainImage(file) {
                     if (!file) return;
-                    if (!IMAGE_TYPES.includes(file.type)) { toastr.error(file.name + ' is not a JPG, PNG, WEBP or GIF.'); return; }
-                    if (file.size > IMAGE_MAX_BYTES) { toastr.error(file.name + ' exceeds 2MB limit.'); return; }
+                    if (!IMAGE_TYPES.includes(file.type)) { if (window.toastr) toastr.error(file.name + ' is not a JPG, PNG, WEBP or GIF.'); return; }
+                    if (file.size > IMAGE_MAX_BYTES) { if (window.toastr) toastr.error(file.name + ' exceeds 2MB limit.'); return; }
                     const dt = new DataTransfer();
                     dt.items.add(file);
                     this.$refs.mainFileInput.files = dt.files;
@@ -595,15 +611,15 @@
                 handleGalleryFiles(files) {
                     let overCap = 0;
                     for (const file of files) {
-                        if (!IMAGE_TYPES.includes(file.type)) { toastr.error(file.name + ' is not a JPG, PNG, WEBP or GIF.'); continue; }
-                        if (file.size > IMAGE_MAX_BYTES) { toastr.error(file.name + ' exceeds 2MB.'); continue; }
+                        if (!IMAGE_TYPES.includes(file.type)) { if (window.toastr) toastr.error(file.name + ' is not a JPG, PNG, WEBP or GIF.'); continue; }
+                        if (file.size > IMAGE_MAX_BYTES) { if (window.toastr) toastr.error(file.name + ' exceeds 2MB.'); continue; }
                         // Count what is attached to the input, not what has been previewed.
                         if (this.galleryFileList.items.length >= GALLERY_MAX) { overCap++; continue; }
                         this.galleryFileList.items.add(file);
                         this.galleryPreviews.push({ url: URL.createObjectURL(file), name: file.name });
                     }
                     this.$refs.galleryInput.files = this.galleryFileList.files;
-                    if (overCap > 0) {
+                    if (overCap > 0 && window.toastr) {
                         toastr.error('Only ' + GALLERY_MAX + ' new images per save - ' + overCap + (overCap === 1 ? ' was' : ' were') + ' left out.');
                     }
                 },
@@ -616,14 +632,14 @@
                 handleVideoFiles(files) {
                     let overCap = 0;
                     for (const file of files) {
-                        if (!VIDEO_TYPES.includes(file.type)) { toastr.error(file.name + ' is not an MP4, WEBM or MOV.'); continue; }
-                        if (file.size > VIDEO_MAX_BYTES) { toastr.error(file.name + ' exceeds 50MB.'); continue; }
+                        if (!VIDEO_TYPES.includes(file.type)) { if (window.toastr) toastr.error(file.name + ' is not an MP4, WEBM or MOV.'); continue; }
+                        if (file.size > VIDEO_MAX_BYTES) { if (window.toastr) toastr.error(file.name + ' exceeds 50MB.'); continue; }
                         if (this.videoFileList.items.length >= VIDEO_MAX) { overCap++; continue; }
                         this.videoFileList.items.add(file);
                         this.videoPreviews.push({ url: URL.createObjectURL(file), name: file.name });
                     }
                     this.$refs.videoInput.files = this.videoFileList.files;
-                    if (overCap > 0) {
+                    if (overCap > 0 && window.toastr) {
                         toastr.error('Only ' + VIDEO_MAX + ' new videos per save - ' + overCap + (overCap === 1 ? ' was' : ' were') + ' left out.');
                     }
                 },

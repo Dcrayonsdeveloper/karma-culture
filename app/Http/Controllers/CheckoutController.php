@@ -60,10 +60,15 @@ class CheckoutController extends Controller
      */
     public static function availablePaymentMethods(): array
     {
-        $onlineReady = Setting::get('payu_enabled', '0') === '1'
+        // getBool, not === '1'. cod_enabled is seeded with type 'boolean', so
+        // the model casts it back to a real bool and the string comparison was
+        // always false - Cash on Delivery vanished from checkout the moment
+        // PayU was configured, and no amount of toggling it in the admin
+        // brought it back.
+        $onlineReady = Setting::getBool('payu_enabled', false)
             && Setting::get('payu_merchant_key', '') !== ''
             && Setting::get('payu_merchant_salt', '') !== '';
-        $codEnabled = Setting::get('cod_enabled', '1') === '1' || ! $onlineReady;
+        $codEnabled = Setting::getBool('cod_enabled', true) || ! $onlineReady;
 
         return array_keys(array_filter(['cod' => $codEnabled, 'online' => $onlineReady]));
     }

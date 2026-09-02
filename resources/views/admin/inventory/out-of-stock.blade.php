@@ -60,7 +60,7 @@
                                 <span style="display: inline-block; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 12px; font-weight: 500; background: #ffe0db; color: #b71c00;">{{ $product->stock_quantity }}</span>
                             </td>
                             <td style="padding: 0.625rem 1rem; text-align: right;">
-                                <button onclick="openStockModal({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->stock_quantity }})"
+                                <button onclick="openStockModal({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->stock_quantity }}, {{ Js::from(\App\Http\Controllers\Admin\InventoryController::heldByLocation($product)) }})"
                                         class="btn btn-primary" style="font-size: 12px; padding: 0.25rem 0.625rem; display: inline-flex; align-items: center; gap: 0.375rem;">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
                                     Restock
@@ -92,8 +92,8 @@
     </div>
 
     <!-- Stock Modal -->
-    <div x-data="{ open: false, productId: null, productName: '', currentStock: 0 }"
-         x-on:open-stock-modal.window="open = true; productId = $event.detail.id; productName = $event.detail.name; currentStock = $event.detail.stock"
+    <div x-data="{ open: false, productId: null, productName: '', currentStock: 0, byLocation: {}, locationId: '{{ $locations->firstWhere('is_default', true)?->id ?? $locations->first()?->id }}', get heldHere() { return this.byLocation[String(this.locationId)] ?? 0 } }"
+         x-on:open-stock-modal.window="open = true; productId = $event.detail.id; productName = $event.detail.name; currentStock = $event.detail.stock; byLocation = $event.detail.byLocation || {}"
          x-show="open" x-cloak
          x-transition.opacity.duration.150ms
          x-effect="document.body.classList.toggle('kk-modal-open', open)"
@@ -111,8 +111,12 @@
             </div>
             <div style="padding: 0.625rem 1.5rem; background: #ffe0db; border-bottom: 1px solid #e3e3e3;">
                 <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <span style="font-size: 12px; color: #b71c00;">Current Stock</span>
-                    <span style="font-size: 13px; font-weight: 700; color: #d72c0d;" x-text="currentStock"></span>
+                    <span style="font-size: 12px; color: #b71c00;">Held at the location below</span>
+                    <span style="font-size: 13px; font-weight: 700; color: #d72c0d;" x-text="heldHere"></span>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.25rem;">
+                    <span style="font-size: 12px; color: #b71c00;">In stock everywhere</span>
+                    <span style="font-size: 12px; color: #b71c00;" x-text="currentStock"></span>
                 </div>
             </div>
             <form method="POST" x-bind:action="'/admin/inventory/' + productId + '/stock'">
@@ -123,7 +127,7 @@
                         {{-- Stock sits in a warehouse, so an adjustment has to say
                              which one it happens at. --}}
                         <label class="form-label">Location</label>
-                        <select name="location_id" class="form-select" style="width: 100%;">
+                        <select name="location_id" x-model="locationId" class="form-select" style="width: 100%;">
                             @forelse($locations as $location)
                                 <option value="{{ $location->id }}" @selected($location->is_default)>{{ $location->name }} ({{ $location->code }})</option>
                             @empty
@@ -156,8 +160,8 @@
     </div>
 
     <script>
-        function openStockModal(id, name, stock) {
-            window.dispatchEvent(new CustomEvent('open-stock-modal', { detail: { id, name, stock } }));
+        function openStockModal(id, name, stock, byLocation) {
+            window.dispatchEvent(new CustomEvent('open-stock-modal', { detail: { id, name, stock, byLocation } }));
         }
     </script>
 </x-layouts.admin>

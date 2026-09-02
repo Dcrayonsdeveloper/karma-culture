@@ -34,7 +34,10 @@
                                 <span style="display: inline-block; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 10px; font-weight: 500; background: #ebebeb; color: #616161;">{{ $section->key }}</span>
                             </div>
                             <p style="font-size: 12px; color: #616161; margin: 0;">
-                                @switch($section->type)
+                                @switch($section->key === 'about_us' ? 'about_us' : $section->type)
+                                    @case('about_us')
+                                        About Us video block - heading, tagline and button
+                                        @break
                                     @case('products')
                                         Product slider section
                                         @break
@@ -54,7 +57,7 @@
                                         Category collections grid
                                         @break
                                     @default
-                                        {{ ucfirst($section->type) }} content
+                                        Text block
                                 @endswitch
                             </p>
                         </div>

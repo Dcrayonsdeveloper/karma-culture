@@ -19,6 +19,8 @@
         <p style="font-size: 13px; color: #616161; margin: 0;">Configure tax rates by region</p>
     </div>
 
+    @include('admin.settings.partials.errors')
+
     <div class="card" style="margin-top: 1rem;">
         @if($taxRates->total() > 0)
             <div style="padding: 0.5rem 1rem; border-bottom: 1px solid #e3e3e3;">

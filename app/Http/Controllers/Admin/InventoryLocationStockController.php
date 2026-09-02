@@ -34,7 +34,9 @@ class InventoryLocationStockController extends Controller
      */
     public function store(Request $request, InventoryLocation $location): RedirectResponse
     {
-        $validated = $request->validate([
+        // Named bag: both forms on the page post a "quantity", and errors from
+        // one were reopening the other with its message and its number.
+        $validated = $request->validateWithBag('addStock', [
             'product_id' => [
                 'required',
                 Rule::exists('products', 'id')->whereNull('deleted_at'),
@@ -75,7 +77,7 @@ class InventoryLocationStockController extends Controller
 
         $onHand = (int) $stock->quantity;
 
-        $validated = $request->validate([
+        $validated = $request->validateWithBag('adjustStock', [
             'type' => V::option(['add', 'remove', 'set']),
             // Removing more than the shelf holds is a typo, not a request for
             // negative stock - the quantity columns are UNSIGNED either way.

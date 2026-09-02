@@ -6,6 +6,7 @@ use App\Mail\EnquiryReplied;
 use App\Models\Admin;
 use App\Models\Enquiry;
 use App\Models\EnquiryReply;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
@@ -138,6 +139,51 @@ class EnquiryReplyTest extends TestCase
         ])->assertRedirect()->assertSessionHas('warning');
 
         $this->assertSame(1, EnquiryReply::where('enquiry_id', $enquiry->id)->count());
+
+        // An undelivered reply is still an open enquiry - flipping it to replied
+        // would drop it out of the triage queue with nobody the wiser.
+        $this->assertSame('new', $enquiry->fresh()->status);
+    }
+
+    public function test_the_emailed_reply_says_what_the_admin_typed(): void
+    {
+        // The mail is markdown, and CommonMark quietly eats plain text that looks
+        // like markup: "[Order]: KK-4821" on its own line is a link reference
+        // definition and renders as nothing at all, and an indented line becomes a
+        // code block that breaks out of the quoted-message panel.
+        $enquiry = $this->enquiry([
+            'subject' => 'Order *KK-4821*',
+            'message' => "My address is:\n    Flat 3, Green Park\n    New Delhi 110016",
+        ]);
+
+        $html = (new EnquiryReplied(
+            $enquiry,
+            "Here are the details:\n[Order]: KK-4821\n[Status]: Shipped\nLet us know if you need anything else."
+        ))->render();
+
+        $this->assertStringContainsString('[Order]: KK-4821', $html);
+        $this->assertStringContainsString('[Status]: Shipped', $html);
+        $this->assertStringContainsString('Green Park', $html);
+        $this->assertStringContainsString('New Delhi 110016', $html);
+        $this->assertStringNotContainsString('<pre', $html);
+    }
+
+    public function test_a_junk_contact_email_setting_does_not_block_the_send(): void
+    {
+        Setting::updateOrCreate(
+            ['key' => 'contact_email'],
+            ['group' => 'contact', 'value' => 'not-an-email', 'type' => 'string']
+        );
+
+        Mail::fake();
+
+        $enquiry = $this->enquiry();
+
+        $this->post(route('admin.enquiries.reply', $enquiry), [
+            'message' => 'We have received your enquiry and are looking into it.',
+        ])->assertRedirect()->assertSessionHas('success');
+
+        Mail::assertSent(EnquiryReplied::class);
         $this->assertSame('replied', $enquiry->fresh()->status);
     }
 }

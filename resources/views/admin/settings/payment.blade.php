@@ -9,12 +9,7 @@
 
     @include('admin.settings.partials.nav', ['active' => 'payment'])
 
-    @if(session('success'))
-        <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.625rem 1rem; background: #cdfee1; border: 1px solid #b3d8c0; border-radius: 0.5rem; font-size: 13px; color: #1a7a2e; margin-bottom: 1rem;">
-            <svg style="width: 18px; height: 18px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            {{ session('success') }}
-        </div>
-    @endif
+    @include('admin.settings.partials.errors')
 
     <form action="{{ route('admin.settings.payment.update') }}" method="POST">
         @csrf
@@ -50,7 +45,12 @@
                         </div>
                         <div>
                             <label class="form-label">Merchant Salt (v2)</label>
-                            <input type="password" name="payu_merchant_salt" value="{{ old('payu_merchant_salt', $settings['payu_merchant_salt'] ?? '') }}" placeholder="••••••••••••" class="form-input">
+                            {{-- The salt signs and verifies every PayU callback. It used to be rendered
+                                 into the value attribute, so it sat in view-source and in the
+                                 browser's back/forward cache. Blank now means "keep what is
+                                 stored" - see updatePayment(). --}}
+                            <input type="password" name="payu_merchant_salt" value="" autocomplete="new-password"
+                                   placeholder="{{ ($settings['payu_merchant_salt'] ?? '') !== '' ? 'Saved - leave blank to keep' : 'Your PayU Merchant Salt' }}" class="form-input">
                         </div>
                     </div>
                     <div style="max-width: 16rem; margin-top: 1rem;">

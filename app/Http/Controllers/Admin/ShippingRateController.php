@@ -27,8 +27,21 @@ class ShippingRateController extends Controller
             'max_weight' => 'nullable|numeric|min:0',
             'estimated_days_min' => 'nullable|integer|min:1',
             'estimated_days_max' => 'nullable|integer|min:1',
-            'is_active' => 'boolean',
         ]);
+
+        // An unchecked box submits nothing, so taking is_active out of
+        // $validated meant the record could be activated but never
+        // deactivated. boolean() reads the absent key as false.
+        $validated['is_active'] = $request->boolean('is_active');
+
+        // min_order and the two estimate columns are NOT NULL with defaults.
+        // Laravel turns a blank "Optional" input into null, and inserting an
+        // explicit null into those columns is a database error rather than a
+        // fallback to the default - so blanking one of these fields used to
+        // throw a 500 instead of saving. Fall back to the column defaults.
+        foreach (['min_order' => 0, 'estimated_days_min' => 3, 'estimated_days_max' => 7] as $field => $default) {
+            $validated[$field] = $validated[$field] ?? $default;
+        }
 
         $validated['zone_id'] = $shippingZone->id;
 
@@ -53,8 +66,21 @@ class ShippingRateController extends Controller
             'max_weight' => 'nullable|numeric|min:0',
             'estimated_days_min' => 'nullable|integer|min:1',
             'estimated_days_max' => 'nullable|integer|min:1',
-            'is_active' => 'boolean',
         ]);
+
+        // An unchecked box submits nothing, so taking is_active out of
+        // $validated meant the record could be activated but never
+        // deactivated. boolean() reads the absent key as false.
+        $validated['is_active'] = $request->boolean('is_active');
+
+        // min_order and the two estimate columns are NOT NULL with defaults.
+        // Laravel turns a blank "Optional" input into null, and inserting an
+        // explicit null into those columns is a database error rather than a
+        // fallback to the default - so blanking one of these fields used to
+        // throw a 500 instead of saving. Fall back to the column defaults.
+        foreach (['min_order' => 0, 'estimated_days_min' => 3, 'estimated_days_max' => 7] as $field => $default) {
+            $validated[$field] = $validated[$field] ?? $default;
+        }
 
         $rate->update($validated);
 

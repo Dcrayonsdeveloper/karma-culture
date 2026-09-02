@@ -1,5 +1,12 @@
 @php
-    $announcement = \App\Models\Setting::get('announcement_text') ?: 'Free Shipping on Orders Above Rs. {threshold} | Easy Returns';
+    // The admin field says "leave empty to hide", but an empty value used to fall
+    // through to this default and the bar stayed up, so the bar could not be
+    // turned off at all. An unset setting still gets the default; a setting the
+    // admin has deliberately cleared now means no bar.
+    $announcementRaw = \App\Models\Setting::get('announcement_text');
+    $announcement = $announcementRaw === null
+        ? 'Free Shipping on Orders Above Rs. {threshold} | Easy Returns'
+        : trim((string) $announcementRaw);
     // Single source of truth for the free-shipping threshold (Task 8).
     // Admins can write "{threshold}" in the announcement text and it is interpolated site-wide.
     $freeShipThreshold = (int) \App\Models\Setting::get('free_shipping_threshold', 999);
@@ -194,6 +201,14 @@
                     @if(config('app.wholesale_enabled'))
                         <a href="{{ route('wholesale') }}" class="px-3 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.18em] uppercase">Wholesale</a>
                     @endif
+                    {{-- Online Store > Navigation has always saved header menu items and
+                         no template read them back, so anything added there never
+                         appeared anywhere on the site. --}}
+                    @foreach(\App\Models\NavigationMenu::getByLocation('header') as $kkNavItem)
+                        <a href="{{ $kkNavItem->url }}"
+                           @if($kkNavItem->open_in_new_tab) target="_blank" rel="noopener" @endif
+                           class="px-3 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.18em] uppercase">{{ $kkNavItem->label }}</a>
+                    @endforeach
                 </nav>
 
                 <!-- Mobile search icon (shown below sm, links to search page) -->

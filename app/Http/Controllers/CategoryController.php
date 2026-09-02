@@ -118,8 +118,13 @@ class CategoryController extends Controller
                     foreach ($selectedColours as $colour) {
                         // Matches the Colours JSON, and the legacy colour that older
                         // products still keep on the variant.
-                        $q->orWhere('attributes', 'like', '%"'.$colour.'"%')
-                            ->orWhereHas('variants', fn ($vq) => $vq->where('attributes', 'like', '%"'.$colour.'"%'));
+                        //
+                        // The value is a bound parameter, so this was never an
+                        // injection - but % and _ are LIKE wildcards, and a colour
+                        // of "%" quietly matched every product on the site.
+                        $needle = '%"'.$this->escapeLike($colour).'"%';
+                        $q->orWhere('attributes', 'like', $needle)
+                            ->orWhereHas('variants', fn ($vq) => $vq->where('attributes', 'like', $needle));
                     }
                 });
             }
@@ -256,5 +261,11 @@ class CategoryController extends Controller
             'activeSubcategorySlugs',
             'breadcrumbs'
         ));
+    }
+
+    /** % and _ are LIKE wildcards; a shopper picking a colour means it literally. */
+    private function escapeLike(string $value): string
+    {
+        return addcslashes($value, '%_\\');
     }
 }

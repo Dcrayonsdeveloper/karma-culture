@@ -1029,6 +1029,31 @@ Alpine.data('exitPopup', (code = 'KARMAA10', minutes = 10) => ({
     },
 }));
 
+// The homepage signup band. Both popups are once-per-browser (see _seen), so
+// without this there is no way at all to join the list after dismissing them -
+// which is also why this posts source 'homepage' rather than reusing 'footer'.
+// The endpoint answers JSON, so the form cannot be a plain POST: it would
+// render the response body as text over the page.
+Alpine.data('newsletterSignup', () => ({
+    email: '', submitting: false, done: false, error: '', message: '',
+    async submit() {
+        this.error = '';
+        if (!this.email) { this.error = 'Please enter your email address.'; return; }
+        this.submitting = true;
+        try {
+            const res = await fetch('/newsletter/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': _csrf() },
+                body: JSON.stringify({ email: this.email, source: 'homepage' }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data.success) { this.done = true; this.message = data.message || 'You are subscribed. Thanks for joining us.'; }
+            else { this.error = data.message || 'Something went wrong. Please try again.'; }
+        } catch (e) { this.error = 'Network error. Please try again.'; }
+        finally { this.submitting = false; }
+    },
+}));
+
 Alpine.data('saleCountdown', (seconds = 0) => ({
     hours: '00', minutes: '00', secs: '00',
     _end: 0, _tick: null,
@@ -1260,21 +1285,43 @@ Alpine.start();
         const policy = charPolicy(field);
         if (!policy) return;
 
+        // An IME is mid-word: the field currently holds a composition buffer,
+        // not a value. Rewriting field.value and moving the selection now leaves
+        // the IME's own buffer disagreeing with the field, and the next keystroke
+        // replays the stale buffer against the wrong offsets - Gboard duplicates
+        // the word, iOS Safari commits the half-composed text. The VNI layout is
+        // the clearest case: it spells Vietnamese tones as digits, so "Nguyen64"
+        // becomes "Nguyễn" only once the composition commits, and stripping the
+        // digits as they arrive makes that name untypeable. Nothing is lost by
+        // waiting - a committed composition fires its own input event, which this
+        // handler then judges normally.
+        if (event.isComposing) return;
+
         const before = field.value;
+
+        // Iterated by code point, not by UTF-16 code unit. A supplementary-plane
+        // letter - 𠮟 and 𠀀 are real CJK name characters - is two code units,
+        // and testing each half alone matches neither \p{L} nor \p{M}, so the
+        // character used to be deleted as it was typed. Both the server rule and
+        // the pattern beside it accept those names, which made this filter the
+        // strictest layer of the three and the only silent one.
         let cleaned = '';
-        for (let i = 0; i < before.length; i++) {
-            if (policy.allow.test(before[i])) cleaned += before[i];
-        }
-        if (cleaned === before) return;
+        let removedBeforeCaret = 0;
 
         // Put the caret back where it was, minus whatever was dropped ahead of
         // it, so editing the middle of a number does not throw the cursor to
-        // the end on every rejected keystroke.
+        // the end on every rejected keystroke. Counted in code units, because
+        // that is what setSelectionRange takes.
         const caret = typeof field.selectionStart === 'number' ? field.selectionStart : before.length;
-        let removedBeforeCaret = 0;
-        for (let i = 0; i < caret && i < before.length; i++) {
-            if (!policy.allow.test(before[i])) removedBeforeCaret++;
+        let unitsSeen = 0;
+
+        for (const ch of before) {
+            if (policy.allow.test(ch)) cleaned += ch;
+            else if (unitsSeen < caret) removedBeforeCaret += ch.length;
+            unitsSeen += ch.length;
         }
+
+        if (cleaned === before) return;
 
         field.value = cleaned;
         try { field.setSelectionRange(caret - removedBeforeCaret, caret - removedBeforeCaret); } catch (e) { /* unsupported on some types */ }

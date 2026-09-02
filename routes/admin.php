@@ -267,10 +267,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::put('/integrations', [SettingController::class, 'updateIntegrations'])->name('integrations.update');
 
                 // Tax Rates
-                Route::resource('tax-rates', TaxRateController::class);
+                Route::resource('tax-rates', TaxRateController::class)->except(['show']);
 
                 // Shipping Zones
-                Route::resource('shipping-zones', ShippingZoneController::class);
+                Route::resource('shipping-zones', ShippingZoneController::class)->except(['show']);
                 // Only the five methods ShippingRateController actually defines.
                 // The full resource also registered index and show, which
                 // resolved to missing methods and 500'd when hit.
@@ -279,10 +279,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
                     ->only(['create', 'store', 'edit', 'update', 'destroy']);
 
                 // Currencies
-                Route::resource('currencies', CurrencyController::class);
+                Route::resource('currencies', CurrencyController::class)->except(['show']);
 
                 // Roles & Permissions
-                Route::resource('roles', RoleController::class);
+                Route::resource('roles', RoleController::class)->except(['show']);
             });
 
             // Stores (POS)
@@ -317,6 +317,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/testimonials', [HomepageController::class, 'storeTestimonial'])->name('testimonials.store');
                 Route::put('/testimonials/{testimonial}', [HomepageController::class, 'updateTestimonial'])->name('testimonials.update');
                 Route::put('/testimonials/{testimonial}/toggle', [HomepageController::class, 'toggleTestimonial'])->name('testimonials.toggle');
+                Route::put('/testimonials/{testimonial}/move', [HomepageController::class, 'moveTestimonial'])->name('testimonials.move');
                 Route::delete('/testimonials/{testimonial}', [HomepageController::class, 'deleteTestimonial'])->name('testimonials.destroy');
 
                 // Shop It Your Way filter items
@@ -324,6 +325,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/shop-filters', [HomepageController::class, 'storeShopFilter'])->name('shop-filters.store');
                 Route::put('/shop-filters/{shopFilter}', [HomepageController::class, 'updateShopFilter'])->name('shop-filters.update');
                 Route::put('/shop-filters/{shopFilter}/toggle', [HomepageController::class, 'toggleShopFilter'])->name('shop-filters.toggle');
+                Route::put('/shop-filters/{shopFilter}/move', [HomepageController::class, 'moveShopFilter'])->name('shop-filters.move');
                 Route::delete('/shop-filters/{shopFilter}', [HomepageController::class, 'deleteShopFilter'])->name('shop-filters.destroy');
 
                 // Our Qualities cards
@@ -331,12 +333,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/qualities', [HomepageController::class, 'storeQuality'])->name('qualities.store');
                 Route::put('/qualities/{quality}', [HomepageController::class, 'updateQuality'])->name('qualities.update');
                 Route::put('/qualities/{quality}/toggle', [HomepageController::class, 'toggleQuality'])->name('qualities.toggle');
+                Route::put('/qualities/{quality}/move', [HomepageController::class, 'moveQuality'])->name('qualities.move');
                 Route::delete('/qualities/{quality}', [HomepageController::class, 'deleteQuality'])->name('qualities.destroy');
 
                 // Navigation
                 Route::get('/navigation', [HomepageController::class, 'navigation'])->name('navigation');
                 Route::post('/navigation', [HomepageController::class, 'storeNavItem'])->name('navigation.store');
                 Route::put('/navigation/{menu}', [HomepageController::class, 'updateNavItem'])->name('navigation.update');
+                Route::put('/navigation/{menu}/toggle', [HomepageController::class, 'toggleNavItem'])->name('navigation.toggle');
                 Route::delete('/navigation/{menu}', [HomepageController::class, 'deleteNavItem'])->name('navigation.destroy');
             });
         });

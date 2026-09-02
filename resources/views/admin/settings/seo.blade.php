@@ -9,6 +9,8 @@
 
     @include('admin.settings.partials.nav', ['active' => 'seo'])
 
+    @include('admin.settings.partials.errors')
+
     <form action="{{ route('admin.settings.seo.update') }}" method="POST">
         @csrf
         @method('PUT')
@@ -101,10 +103,17 @@
                 <div class="card">
                     <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;">
                         <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Robots.txt</h2>
-                        <p style="font-size: 12px; color: #616161; margin: 0.125rem 0 0 0;">Saved to <code style="background: #f6f6f7; padding: 0.125rem 0.25rem; border-radius: 0.25rem; font-size: 12px;">public/robots.txt</code> on submit. HTML is stripped automatically.</p>
+                        <p style="font-size: 12px; color: #616161; margin: 0.125rem 0 0 0;">
+                            @if($robotsIsCustom)
+                                Served from <code style="background: #f6f6f7; padding: 0.125rem 0.25rem; border-radius: 0.25rem; font-size: 12px;">public/robots.txt</code>. Clear the box to go back to the automatic version.
+                            @else
+                                Currently generated automatically from your site URL. Editing this box saves a fixed <code style="background: #f6f6f7; padding: 0.125rem 0.25rem; border-radius: 0.25rem; font-size: 12px;">public/robots.txt</code> that replaces it; clear the box to switch back.
+                            @endif
+                            HTML is stripped automatically.
+                        </p>
                     </div>
                     <div style="padding: 1rem;">
-                        <textarea name="robots_txt" rows="10" class="form-textarea" style="font-family: monospace; font-size: 12px;" placeholder="User-agent: *&#10;Allow: /&#10;Disallow: /admin/&#10;Disallow: /account/">{{ old('robots_txt', $settings['robots_txt'] ?? (is_file(public_path('robots.txt')) ? file_get_contents(public_path('robots.txt')) : '')) }}</textarea>
+                        <textarea name="robots_txt" rows="10" class="form-textarea" style="font-family: monospace; font-size: 12px;" placeholder="User-agent: *&#10;Allow: /&#10;Disallow: /admin/&#10;Disallow: /account/">{{ old('robots_txt', $robotsTxt) }}</textarea>
                     </div>
                 </div>
             </div>

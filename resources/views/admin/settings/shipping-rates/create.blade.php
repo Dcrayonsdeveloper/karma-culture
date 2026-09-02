@@ -11,6 +11,8 @@
     <h1 style="font-size: 1.25rem; font-weight: 600; color: #303030; margin: 0.5rem 0 1.25rem;">Add Shipping Rate</h1>
 
     <div style="max-width: 640px;">
+
+        @include('admin.settings.partials.errors')
         <form action="{{ route('admin.settings.shipping-zones.rates.store', $shippingZone) }}" method="POST">
             @csrf
 
@@ -43,7 +45,7 @@
                     @error('rate') <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p> @enderror
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
                     <div>
                         <label style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.375rem;">Min Order Amount (₹)</label>
                         <input type="number" name="min_order" value="{{ old('min_order') }}" min="0" step="0.01" placeholder="Optional"
@@ -52,6 +54,11 @@
                     <div>
                         <label style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.375rem;">Min Weight (kg)</label>
                         <input type="number" name="min_weight" value="{{ old('min_weight') }}" min="0" step="0.01" placeholder="Optional"
+                               style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #c9cccf; border-radius: 0.5rem; font-size: 13px;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.375rem;">Max Weight (kg)</label>
+                        <input type="number" name="max_weight" value="{{ old('max_weight') }}" min="0" step="0.01" placeholder="Optional"
                                style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #c9cccf; border-radius: 0.5rem; font-size: 13px;">
                     </div>
                 </div>
@@ -71,6 +78,7 @@
 
                 <div>
                     <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="hidden" name="is_active" value="0">
                         <input type="checkbox" name="is_active" value="1" style="width: 1rem; height: 1rem; accent-color: #303030;" {{ old('is_active', true) ? 'checked' : '' }}>
                         <span style="font-size: 13px; color: #303030;">Active</span>
                     </label>

@@ -8,6 +8,8 @@
         </div>
     </x-slot>
 
+    <x-admin.form-errors title="The filter item was not saved" />
+
     <div style="margin-bottom: 0.25rem;">
         <a href="{{ route('admin.homepage.index') }}" style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 13px; color: #005bd3; text-decoration: none;">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M12 16l-6-6 6-6" stroke="#005bd3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -82,6 +84,24 @@
                                     @csrf @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-danger" style="font-size: 11px;">Delete</button>
                                 </form>
+                                {{-- position was stamped once at creation and nothing could
+                                     change it afterwards, so the order on the home page was
+                                     fixed by the order the rows happened to be added in. --}}
+                                @if(! $loop->first)
+                                    <form action="{{ route('admin.homepage.shop-filters.move', $item) }}" method="POST" style="display: inline;">
+                                        @csrf @method('PUT')
+                                        <input type="hidden" name="direction" value="up">
+                                        <button type="submit" class="btn btn-sm btn-secondary" style="font-size: 11px;" aria-label="Move up" title="Move up">&uarr;</button>
+                                    </form>
+                                @endif
+                                @if(! $loop->last)
+                                    <form action="{{ route('admin.homepage.shop-filters.move', $item) }}" method="POST" style="display: inline;">
+                                        @csrf @method('PUT')
+                                        <input type="hidden" name="direction" value="down">
+                                        <button type="submit" class="btn btn-sm btn-secondary" style="font-size: 11px;" aria-label="Move down" title="Move down">&darr;</button>
+                                    </form>
+                                @endif
+
                                     </td>
                             </tr>
                         @empty

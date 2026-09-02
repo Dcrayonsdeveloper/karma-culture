@@ -173,6 +173,68 @@ class ProductMediaLimitTest extends TestCase
         $this->assertStringContainsString('left out.', $this->formHtml('edit'));
     }
 
+    /**
+     * @dataProvider mediaForms
+     */
+    public function test_rejection_messages_survive_a_blocked_toastr_cdn(string $form): void
+    {
+        // toastr comes from a CDN and loads after this page's own scripts, so
+        // the rest of the admin guards every call. An unguarded one would throw
+        // inside the loop and abandon the files not yet examined.
+        $html = $this->formHtml($form);
+
+        $this->assertStringNotContainsString(
+            '{ toastr.error(',
+            $html,
+            "The {$form} form calls toastr without the window.toastr guard the rest of the admin uses."
+        );
+    }
+
+    public function test_dropping_a_file_on_an_upload_zone_does_not_navigate_away(): void
+    {
+        // Without @drop.prevent the browser opens the dropped file and the
+        // half-finished edit goes with it. The create form always bound these;
+        // the edit form did not.
+        $html = $this->formHtml('edit');
+
+        foreach ([
+            'handleMainImage($event.dataTransfer.files[0])',
+            'handleGalleryFiles($event.dataTransfer.files)',
+            'handleVideoFiles($event.dataTransfer.files)',
+        ] as $handler) {
+            $this->assertStringContainsString(
+                '@drop.prevent="'.$handler.'"',
+                $html,
+                'An edit-form upload zone still lets the browser handle the drop.'
+            );
+        }
+
+        $this->assertSame(
+            3,
+            substr_count($html, '@dragover.prevent @dragleave.prevent'),
+            'All three edit-form upload zones must cancel the drag, not just some.'
+        );
+    }
+
+    public function test_the_edit_form_can_show_the_array_level_upload_errors(): void
+    {
+        // The max:10 / max:5 rules report under `images` and `videos`, not
+        // `images.*` - without these blocks the save failed with no message.
+        $html = $this->formHtml('edit');
+
+        $this->assertStringContainsString('Up to 10 per save', $html);
+        $this->assertStringContainsString('Up to 5 per save', $html);
+
+        $source = file_get_contents(resource_path('views/admin/products/edit.blade.php'));
+        foreach (["@error('images')", "@error('videos')"] as $block) {
+            $this->assertStringContainsString(
+                $block,
+                $source,
+                "The edit form cannot render the array-level {$block} message."
+            );
+        }
+    }
+
     public function test_server_rejects_more_than_ten_gallery_images(): void
     {
         Storage::fake('public');
@@ -192,7 +254,9 @@ class ProductMediaLimitTest extends TestCase
             ->post(route('admin.products.store'), $this->productPayload([
                 'images' => $this->fakeImages(10),
             ]))
-            ->assertSessionHasNoErrors();
+            ->assertSessionHasNoErrors()
+            // A 500 also has no session errors, so pin the redirect too.
+            ->assertRedirect();
 
         $this->assertDatabaseHas('products', ['sku' => 'MEDIA-CAP-1']);
     }

@@ -12,7 +12,9 @@ class TaxRateController extends Controller
 {
     public function index(): View
     {
-        $perPage = request()->input('per_page', 10);
+        // Straight off the query string this let ?per_page=999999 pull the
+        // whole table into one render.
+        $perPage = min(max((int) request()->integer('per_page', 10), 5), 100);
         $taxRates = TaxRate::orderBy('name')->paginate($perPage)->withQueryString();
 
         return view('admin.settings.tax-rates.index', compact('taxRates'));
@@ -31,8 +33,12 @@ class TaxRateController extends Controller
             'cgst_rate' => 'required|numeric|min:0|max:100',
             'sgst_rate' => 'required|numeric|min:0|max:100',
             'igst_rate' => 'required|numeric|min:0|max:100',
-            'is_active' => 'boolean',
         ]);
+
+        // An unchecked box submits nothing, so taking is_active out of
+        // $validated meant the record could be activated but never
+        // deactivated. boolean() reads the absent key as false.
+        $validated['is_active'] = $request->boolean('is_active');
 
         TaxRate::create($validated);
 
@@ -52,8 +58,12 @@ class TaxRateController extends Controller
             'cgst_rate' => 'required|numeric|min:0|max:100',
             'sgst_rate' => 'required|numeric|min:0|max:100',
             'igst_rate' => 'required|numeric|min:0|max:100',
-            'is_active' => 'boolean',
         ]);
+
+        // An unchecked box submits nothing, so taking is_active out of
+        // $validated meant the record could be activated but never
+        // deactivated. boolean() reads the absent key as false.
+        $validated['is_active'] = $request->boolean('is_active');
 
         $taxRate->update($validated);
 

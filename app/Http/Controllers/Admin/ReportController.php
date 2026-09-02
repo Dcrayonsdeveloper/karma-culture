@@ -138,75 +138,152 @@ class ReportController extends Controller
         [$startDate, $endDate] = [$range->start, $range->end];
 
         // Real traffic data from product_views table
-        $viewsData = ProductView::where('created_at', '>=', $startDate)
+        $viewsData = ProductView::whereBetween('created_at', [$startDate, $endDate])
             ->selectRaw('DATE(created_at) as date, COUNT(*) as pageviews, COUNT(DISTINCT COALESCE(user_id, session_id)) as visitors')
             ->groupBy('date')
             ->orderBy('date')
             ->get()
             ->keyBy('date');
 
+        // A window may now span more than a year, and "Sep 03" on its own would
+        // then appear twice on the axis for two different years.
+        $axisFormat = $range->start->year === $range->end->year ? 'M d' : 'M d, y';
+
         $trafficData = collect();
-        for ($i = $period - 1; $i >= 0; $i--) {
-            $date = now()->subDays($i);
+        foreach ($range->eachDay() as $date) {
             $dateStr = $date->format('Y-m-d');
             $dayData = $viewsData->get($dateStr);
             $trafficData->push([
-                'date' => $date->format('M d'),
+                'date' => $date->format($axisFormat),
                 'pageviews' => $dayData->pageviews ?? 0,
                 'visitors' => $dayData->visitors ?? 0,
             ]);
         }
 
-        // Real conversion funnel from actual data
-        $totalVisitors = ProductView::where('created_at', '>=', $startDate)
+        $totalProductViews = ProductView::whereBetween('created_at', [$startDate, $endDate])->count();
+
+        // The funnel counts *people*, named the same way at every stage.
+        //
+        // It used to compare populations that were not comparable: visitors
+        // came from product_views, cart activity from carts, and "checkout" was
+        // a count of orders rather than of the people who placed them. Dividing
+        // one by another is how the live report came to show a 137.5%
+        // view-to-cart rate and a 154.5% cart-to-order rate - percentages whose
+        // denominator did not contain their numerator. Each stage below is a
+        // set of visitor keys instead, so the denominators genuinely contain
+        // the numerators and no rate can exceed 100%.
+        $keysFrom = fn ($query, string $keySql) => $query
+            ->selectRaw("{$keySql} as visitor_key")
             ->distinct()
-            ->count(DB::raw('COALESCE(user_id, session_id)'));
+            ->toBase()
+            ->get()
+            ->pluck('visitor_key')
+            ->filter()
+            ->unique()
+            ->values();
 
-        $totalProductViews = ProductView::where('created_at', '>=', $startDate)->count();
+        $viewerKeys = $keysFrom(
+            ProductView::whereBetween('created_at', [$startDate, $endDate]),
+            ProductView::visitorKeySql()
+        );
 
-        $addToCartUsers = CartItem::where('cart_items.created_at', '>=', $startDate)
-            ->join('carts', 'cart_items.cart_id', '=', 'carts.id')
-            ->distinct()
-            ->count(DB::raw('COALESCE(carts.user_id, carts.session_id)'));
+        $cartKeys = $keysFrom(
+            CartItem::whereBetween('cart_items.created_at', [$startDate, $endDate])
+                ->join('carts', 'cart_items.cart_id', '=', 'carts.id'),
+            ProductView::visitorKeySql('carts')
+        );
 
-        $checkoutOrders = Order::where('created_at', '>=', $startDate)->count();
+        // Orders carry no session id, so a guest order cannot be tied back to
+        // the session that browsed; it is keyed to itself and still counts as
+        // one person who reached the end.
+        $orderKeySql = "CASE WHEN orders.user_id IS NOT NULL
+                             THEN CONCAT('u:', orders.user_id)
+                             ELSE CONCAT('o:', orders.id) END";
 
-        $completedOrders = Order::countsAsSale()
-            ->whereBetween('orders.created_at', [$startDate, $endDate])
-            ->count();
+        $ordererKeys = $keysFrom(
+            Order::whereBetween('orders.created_at', [$startDate, $endDate]),
+            $orderKeySql
+        );
+
+        $buyerKeys = $keysFrom(
+            Order::countsAsSale()->whereBetween('orders.created_at', [$startDate, $endDate]),
+            $orderKeySql
+        );
+
+        // Anyone who did any of these was on the site, so the union is the
+        // visitor population every rate divides by. Defining it as a union is
+        // what makes each later stage a subset rather than a separate
+        // population - and so what bounds the percentages.
+        $visitorKeys = $viewerKeys->merge($cartKeys)->merge($ordererKeys)->unique();
 
         $funnel = [
-            'visitors' => $totalVisitors,
+            'visitors' => $visitorKeys->count(),
             'product_views' => $totalProductViews,
-            'add_to_cart' => $addToCartUsers,
-            'checkout' => $checkoutOrders,
-            'completed' => $completedOrders,
+            'viewers' => $viewerKeys->count(),
+            'add_to_cart' => $cartKeys->count(),
+            'checkout' => $ordererKeys->count(),
+            'completed' => $buyerKeys->count(),
         ];
 
-        // Real traffic sources from referrer data
-        $sourcesRaw = ProductView::where('created_at', '>=', $startDate)
+        // Orders are also worth showing as orders: one customer placing three
+        // is three orders but one converted visitor, and the funnel above only
+        // answers the second question.
+        $ordersPlaced = Order::whereBetween('orders.created_at', [$startDate, $endDate])->count();
+
+        // Every rate shares the visitor denominator, which each numerator is a
+        // subset of. Cart-to-order is deliberately not shown as its own rate:
+        // orders hold no session, so a guest order cannot be matched to the
+        // guest cart it came from, and any such figure would be wrong in
+        // whichever direction the store's guest checkout share pushed it.
+        $rate = fn (int $part, int $whole) => $whole > 0 ? round(($part / $whole) * 100, 1) : 0.0;
+
+        $rates = [
+            'visitor_to_cart' => $rate($funnel['add_to_cart'], $funnel['visitors']),
+            'visitor_to_order' => $rate($funnel['checkout'], $funnel['visitors']),
+            'overall' => $rate($funnel['completed'], $funnel['visitors']),
+        ];
+
+        // One row per visitor: the first product view they made in the window.
+        //
+        // Sources and devices are attributes of a person, not of a page view.
+        // Counting rows made a visitor who browsed twenty pages read as twenty
+        // "visitors" from whatever referrer they happened to arrive with, so
+        // the busiest browser drowned out everyone else.
+        $firstTouch = fn () => ProductView::whereBetween('created_at', [$startDate, $endDate])
+            ->selectRaw(ProductView::visitorKeySql() . ' as visitor_key, MIN(id) as first_id')
+            ->groupBy('visitor_key')
+            ->toBase();
+
+        // Internal navigation arrives with our own domain in the referrer. That
+        // is not a traffic source; without this it lands in "Referral" and
+        // invents an inbound channel out of customers clicking around the shop.
+        $host = (string) parse_url((string) config('app.url'), PHP_URL_HOST);
+        $internalClause = $host !== '' ? "WHEN referrer LIKE ? THEN 'Direct'" : '';
+        $internalBinding = $host !== '' ? ['%' . $host . '%'] : [];
+
+        $sourcesRaw = DB::table('product_views')
+            ->joinSub($firstTouch(), 'ft', 'ft.first_id', '=', 'product_views.id')
             ->selectRaw("
                 CASE
                     WHEN referrer IS NULL OR referrer = '' THEN 'Direct'
-                    WHEN referrer LIKE '%google%' OR referrer LIKE '%bing%' OR referrer LIKE '%yahoo%' THEN 'Organic Search'
-                    WHEN referrer LIKE '%facebook%' OR referrer LIKE '%instagram%' OR referrer LIKE '%twitter%' OR referrer LIKE '%youtube%' THEN 'Social Media'
+                    {$internalClause}
+                    WHEN referrer LIKE '%google%' OR referrer LIKE '%bing%' OR referrer LIKE '%yahoo%' OR referrer LIKE '%duckduckgo%' THEN 'Organic Search'
+                    WHEN referrer LIKE '%facebook%' OR referrer LIKE '%instagram%' OR referrer LIKE '%twitter%' OR referrer LIKE '%t.co/%' OR referrer LIKE '%youtube%' OR referrer LIKE '%pinterest%' THEN 'Social Media'
                     WHEN referrer LIKE '%mail%' OR referrer LIKE '%email%' THEN 'Email'
                     ELSE 'Referral'
                 END as source,
                 COUNT(*) as visitors
-            ")
+            ", $internalBinding)
             ->groupBy('source')
             ->orderByDesc('visitors')
             ->get();
 
         $totalSourceVisitors = $sourcesRaw->sum('visitors') ?: 1;
-        $sources = $sourcesRaw->map(function ($item) use ($totalSourceVisitors) {
-            return [
-                'source' => $item->source,
-                'visitors' => $item->visitors,
-                'percentage' => round(($item->visitors / $totalSourceVisitors) * 100),
-            ];
-        });
+        $sources = $sourcesRaw->map(fn ($item) => [
+            'source' => $item->source,
+            'visitors' => (int) $item->visitors,
+            'percentage' => round(($item->visitors / $totalSourceVisitors) * 100),
+        ]);
 
         // Ensure all source types are present
         $sourceTypes = ['Organic Search', 'Direct', 'Social Media', 'Referral', 'Email'];
@@ -217,13 +294,16 @@ class ReportController extends Controller
         }
         $sources = $sources->sortByDesc('visitors')->values();
 
-        // Real order source data for device breakdown
-        $orderSources = Order::where('created_at', '>=', $startDate)
-            ->whereNotNull('user_agent')
+        // Device split across all traffic, not just the handful of people who
+        // reached checkout. Reading it off orders meant the card sat empty
+        // until a sale landed, and then described buyers rather than visitors.
+        $deviceCounts = DB::table('product_views')
+            ->joinSub($firstTouch(), 'ft', 'ft.first_id', '=', 'product_views.id')
+            ->whereNotNull('product_views.user_agent')
             ->selectRaw("
                 CASE
-                    WHEN user_agent LIKE '%Mobile%' OR user_agent LIKE '%Android%' OR user_agent LIKE '%iPhone%' THEN 'mobile'
                     WHEN user_agent LIKE '%iPad%' OR user_agent LIKE '%Tablet%' THEN 'tablet'
+                    WHEN user_agent LIKE '%Mobi%' OR user_agent LIKE '%Android%' OR user_agent LIKE '%iPhone%' THEN 'mobile'
                     ELSE 'desktop'
                 END as device,
                 COUNT(*) as total
@@ -231,26 +311,34 @@ class ReportController extends Controller
             ->groupBy('device')
             ->pluck('total', 'device');
 
-        $totalDevices = $orderSources->sum() ?: 1;
+        $deviceTotal = $deviceCounts->sum();
         $devices = [
-            'mobile' => round(($orderSources->get('mobile', 0) / $totalDevices) * 100),
-            'desktop' => round(($orderSources->get('desktop', 0) / $totalDevices) * 100),
-            'tablet' => round(($orderSources->get('tablet', 0) / $totalDevices) * 100),
+            'mobile' => 0,
+            'desktop' => 0,
+            'tablet' => 0,
         ];
 
-        // Ensure percentages sum to 100 if we have data
-        if ($orderSources->sum() > 0) {
-            $diff = 100 - array_sum($devices);
-            $devices['desktop'] += $diff; // adjust rounding to desktop
+        if ($deviceTotal > 0) {
+            foreach ($devices as $name => $_) {
+                $devices[$name] = (int) round(($deviceCounts->get($name, 0) / $deviceTotal) * 100);
+            }
+
+            // Rounding three shares rarely lands on 100. Settle the remainder
+            // on the largest share, where a point either way is invisible;
+            // parking it on desktop could push an empty bucket to 1% or a
+            // populated one negative.
+            $largest = array_search(max($devices), $devices, true);
+            $devices[$largest] += 100 - array_sum($devices);
         }
 
-        return view('admin.reports.analytics', compact('trafficData', 'funnel', 'sources', 'devices', 'range'));
+        return view('admin.reports.analytics', compact(
+            'trafficData', 'funnel', 'rates', 'ordersPlaced', 'sources', 'devices', 'range'
+        ));
     }
 
     public function products(Request $request): View
     {
         $range = $this->range($request);
-        [$startDate, $endDate] = [$range->start, $range->end];
 
         // Product performance
         $soldInPeriod = $this->soldInPeriod($range);
@@ -287,7 +375,7 @@ class ReportController extends Controller
         [$startDate, $endDate] = [$range->start, $range->end];
 
         // New vs returning
-        $newCustomers = Customer::where('created_at', '>=', $startDate)->count();
+        $newCustomers = Customer::whereBetween('created_at', [$startDate, $endDate])->count();
         $returningCustomers = Order::countsAsSale()
             ->whereBetween('orders.created_at', [$startDate, $endDate])
             ->select('user_id')
@@ -315,7 +403,7 @@ class ReportController extends Controller
         ];
 
         // Customer growth
-        $growth = Customer::where('created_at', '>=', $startDate)
+        $growth = Customer::whereBetween('created_at', [$startDate, $endDate])
             ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
             ->groupBy('date')
             ->orderBy('date')

@@ -8,29 +8,27 @@ use App\Models\ChatbotMessage;
 use App\Models\ChatbotProductClick;
 use App\Models\Lead;
 use App\Models\Product;
+use App\Support\ReportRange;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ChatbotAnalyticsController extends Controller
 {
-    /** Ranges the dashboard offers, in days. */
-    private const RANGES = [7 => 'Last 7 days', 30 => 'Last 30 days', 90 => 'Last 90 days', 0 => 'All time'];
-
     public function index(Request $request): View
     {
-        $days = (int) $request->input('days', 30);
-        if (! array_key_exists($days, self::RANGES)) {
-            $days = 30;
-        }
-
-        $since = $days > 0 ? now()->subDays($days) : null;
+        // This screen offered a "Last 7 / 30 / 90 days / All time" dropdown. It
+        // now takes the same From/To range as every other reporting screen, so
+        // the window is bounded at both ends - "since" alone was fine when the
+        // window always ended today and is not once the end is picked.
+        $range = ReportRange::fromRequest($request);
+        $window = [$range->start, $range->end];
 
         $conversations = ChatbotConversation::query()
-            ->when($since, fn ($q) => $q->where('created_at', '>=', $since));
+            ->whereBetween('created_at', $window);
 
         $messages = ChatbotMessage::query()
-            ->when($since, fn ($q) => $q->where('created_at', '>=', $since));
+            ->whereBetween('created_at', $window);
 
         $stats = [
             'conversations' => (clone $conversations)->count(),
@@ -39,7 +37,7 @@ class ChatbotAnalyticsController extends Controller
             'leads' => (clone $conversations)->where('is_lead', true)->count(),
             'handoffs' => (clone $conversations)->where('last_intent', 'handoff')->count(),
             'clicks' => ChatbotProductClick::query()
-                ->when($since, fn ($q) => $q->where('created_at', '>=', $since))->count(),
+                ->whereBetween('created_at', $window)->count(),
             // Averaged over assistant turns only; user turns have no timing.
             'avg_response_ms' => (int) (clone $messages)->where('role', 'assistant')->avg('response_ms'),
             'signed_in' => (clone $conversations)->whereNotNull('user_id')->count(),
@@ -71,7 +69,7 @@ class ChatbotAnalyticsController extends Controller
             ->values();
 
         $clickedProducts = ChatbotProductClick::query()
-            ->when($since, fn ($q) => $q->where('created_at', '>=', $since))
+            ->whereBetween('created_at', $window)
             ->select('product_id', DB::raw('COUNT(*) as clicks'))
             ->groupBy('product_id')
             ->orderByDesc('clicks')
@@ -80,13 +78,13 @@ class ChatbotAnalyticsController extends Controller
             ->get();
 
         $recentLeads = Lead::where('platform', 'website_chat')
-            ->when($since, fn ($q) => $q->where('created_at', '>=', $since))
+            ->whereBetween('created_at', $window)
             ->latest('id')
             ->limit(10)
             ->get();
 
         $needsHuman = ChatbotConversation::where('last_intent', 'handoff')
-            ->when($since, fn ($q) => $q->where('created_at', '>=', $since))
+            ->whereBetween('created_at', $window)
             ->with(['user:id,first_name,last_name,email'])
             ->latest('last_message_at')
             ->limit(10)
@@ -94,8 +92,7 @@ class ChatbotAnalyticsController extends Controller
 
         return view('admin.chatbot.analytics', [
             'stats' => $stats,
-            'ranges' => self::RANGES,
-            'days' => $days,
+            'range' => $range,
             'topQuestionWords' => $this->commonThemes($recentQuestions),
             'shownProducts' => $shownProducts,
             'clickedProducts' => $clickedProducts,

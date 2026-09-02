@@ -41,6 +41,49 @@ class AppServiceProvider extends ServiceProvider
             // Settings table may not exist during migrations
         }
 
+        // Apply mail settings from Settings > Email.
+        //
+        // That whole tab used to be write-only: the form saved mail_host,
+        // mail_username and the rest to the settings table and reported
+        // success, but nothing anywhere read those keys back, so mail kept
+        // going out over whatever was in .env. Same shape as the timezone
+        // block above - only override a key the admin has actually filled in,
+        // so an empty settings table leaves the .env configuration alone.
+        try {
+            $mail = Setting::getGroup('email');
+
+            $driver = $mail['mail_driver'] ?? null;
+            if ($driver && array_key_exists($driver, config('mail.mailers', []))) {
+                config(['mail.default' => $driver]);
+            }
+
+            foreach (['mail_host' => 'host', 'mail_port' => 'port', 'mail_username' => 'username', 'mail_password' => 'password'] as $key => $option) {
+                if (($mail[$key] ?? '') !== '' && ($mail[$key] ?? null) !== null) {
+                    config(["mail.mailers.smtp.{$option}" => $mail[$key]]);
+                }
+            }
+
+            // Laravel 11 drives the SMTP transport off `scheme`; `encryption`
+            // is the legacy spelling the form still uses. Set both so either
+            // path resolves to the same transport.
+            $encryption = $mail['mail_encryption'] ?? null;
+            if ($encryption) {
+                config([
+                    'mail.mailers.smtp.encryption' => $encryption,
+                    'mail.mailers.smtp.scheme' => $encryption === 'ssl' ? 'smtps' : 'smtp',
+                ]);
+            }
+
+            if (($mail['mail_from_address'] ?? '') !== '') {
+                config(['mail.from.address' => $mail['mail_from_address']]);
+            }
+            if (($mail['mail_from_name'] ?? '') !== '') {
+                config(['mail.from.name' => $mail['mail_from_name']]);
+            }
+        } catch (\Exception $e) {
+            // Settings table may not exist during migrations
+        }
+
         Route::model('address', UserAddress::class);
 
         // The site-wide password policy. Every caller of ValidationRules::password()

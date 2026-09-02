@@ -11,6 +11,8 @@
     <h1 style="font-size: 1.25rem; font-weight: 600; color: #303030; margin: 0 0 1rem 0;">Add Shipping Zone</h1>
 
     <div style="max-width: 800px;">
+
+        @include('admin.settings.partials.errors')
         <form action="{{ route('admin.settings.shipping-zones.store') }}" method="POST">
             @csrf
 
@@ -23,7 +25,17 @@
                         @error('name') <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p> @enderror
                     </div>
                     <div>
+                        <label class="form-label" style="font-size: 13px; color: #303030;">Regions</label>
+                        <textarea name="regions" rows="4" class="form-textarea"
+                                  placeholder="One per line, e.g.&#10;Maharashtra&#10;Gujarat&#10;Karnataka">{{ old('regions') }}</textarea>
+                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
+                            States or postal codes this zone covers. Leave blank to cover everywhere.
+                        </p>
+                        @error('regions') <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="hidden" name="is_active" value="0">
                             <input type="checkbox" name="is_active" value="1" style="width: 1rem; height: 1rem; accent-color: #303030;" {{ old('is_active', true) ? 'checked' : '' }}>
                             <span style="font-size: 13px; color: #303030;">Active</span>
                         </label>

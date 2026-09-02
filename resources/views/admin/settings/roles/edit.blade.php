@@ -11,6 +11,8 @@
     <h1 style="font-size: 1.25rem; font-weight: 600; color: #303030; margin: 0 0 1rem 0;">Edit Role: {{ $role->name }}</h1>
 
     <div style="max-width: 800px;">
+
+        @include('admin.settings.partials.errors')
         <form action="{{ route('admin.settings.roles.update', $role) }}" method="POST">
             @csrf
             @method('PUT')
@@ -30,7 +32,7 @@
                                 @foreach($permissions as $permission)
                                     <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                                         <input type="checkbox" name="permissions[]" value="{{ $permission->id }}" style="width: 1rem; height: 1rem; accent-color: #303030;"
-                                            {{ in_array($permission->id, old('permissions', $rolePermissions)) ? 'checked' : '' }}>
+                                            {{ in_array($permission->id, (session()->hasOldInput() ? old('permissions', []) : $rolePermissions)) ? 'checked' : '' }}>
                                         <span style="font-size: 13px; color: #303030;">{{ $permission->name }}</span>
                                     </label>
                                 @endforeach

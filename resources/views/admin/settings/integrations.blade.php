@@ -9,6 +9,8 @@
 
     @include('admin.settings.partials.nav', ['active' => 'integrations'])
 
+    @include('admin.settings.partials.errors')
+
     {{-- Reusable show/hide script --}}
     <script>
     function secretField(id) {
@@ -164,8 +166,8 @@
                     <div>
                         <label class="form-label">Provider</label>
                         <select name="ai_provider" x-model="provider" class="form-select">
-                            <option value="anthropic">Anthropic (Claude)</option>
-                            <option value="gemini">Google (Gemini)</option>
+                            <option value="anthropic" @selected(old('ai_provider', $settings['ai_provider'] ?? 'anthropic') === 'anthropic')>Anthropic (Claude)</option>
+                            <option value="gemini" @selected(old('ai_provider', $settings['ai_provider'] ?? '') === 'gemini')>Google (Gemini)</option>
                         </select>
                     </div>
                     <div x-show="provider === 'anthropic'" x-cloak x-data="secretField('anthropic_api_key')">
@@ -189,11 +191,11 @@
                         <label class="form-label">Model</label>
                         <select name="anthropic_model" class="form-select">
                             @foreach([
-                                'claude-haiku-4-5-20251001' => 'Claude Haiku 4.5 (fastest, lowest cost)',
-                                'claude-sonnet-4-6'         => 'Claude Sonnet 4.6 (balanced)',
-                                'claude-opus-4-6'           => 'Claude Opus 4.6 (most capable)',
+                                'claude-haiku-4-5' => 'Claude Haiku 4.5 (fastest, lowest cost)',
+                                'claude-sonnet-5'  => 'Claude Sonnet 5 (balanced)',
+                                'claude-opus-5'    => 'Claude Opus 5 (most capable)',
                             ] as $val => $label)
-                                <option value="{{ $val }}" @selected(old('anthropic_model', $settings['anthropic_model'] ?? 'claude-haiku-4-5-20251001') === $val)>{{ $label }}</option>
+                                <option value="{{ $val }}" @selected(old('anthropic_model', $settings['anthropic_model'] ?? 'claude-haiku-4-5') === $val)>{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -255,7 +257,7 @@
             </svg>
             <div>
                 <p style="font-size: 13px; font-weight: 500; color: #8a6d00; margin: 0;">Security notice</p>
-                <p style="font-size: 12px; color: #8a6d00; margin: 0.25rem 0 0 0;">All API keys and secrets are stored encrypted in the database. Never share these credentials. Rotate keys immediately if you suspect a breach.</p>
+                <p style="font-size: 12px; color: #8a6d00; margin: 0.25rem 0 0 0;">These keys are stored in the site database and are visible to anyone with admin access. Never share them, and rotate a key immediately if you suspect a breach.</p>
             </div>
         </div>
 

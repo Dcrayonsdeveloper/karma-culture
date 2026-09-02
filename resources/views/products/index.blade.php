@@ -43,7 +43,21 @@
 
     <div class="container mx-auto px-4 py-6">
         <!-- Active Filters -->
-        @if(request()->hasAny(['category', 'brand', 'size', 'colour', 'min_price', 'max_price', 'rating', 'in_stock', 'on_sale']))
+        @if(request()->hasAny(['category', 'subcategory', 'brand', 'size', 'colour', 'min_price', 'max_price', 'rating', 'in_stock', 'on_sale']))
+            @php
+                // Drops a single value out of a multi-value filter, so removing "Blue"
+                // does not also throw away "Red". fullUrlWithoutQuery() can only take the
+                // whole parameter, which is right for the one-value filters below.
+                $kkWithout = function (string $param, string $value) {
+                    $q = request()->except('page');
+                    $q[$param] = array_values(array_diff((array) request($param, []), [$value]));
+                    if (! $q[$param]) {
+                        unset($q[$param]);
+                    }
+
+                    return request()->url().($q ? '?'.http_build_query($q) : '');
+                };
+            @endphp
             <div class="flex flex-wrap items-center gap-2 mb-5">
                 <span class="text-xs font-medium text-neutral-600 uppercase tracking-wide">Active Filters:</span>
                 @if(request('category'))
@@ -54,16 +68,36 @@
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </a>
                 @endif
-                @if(request('brand'))
-                    @foreach((array) request('brand') as $brandSlug)
-                        @php $brandName = $brands->firstWhere('slug', $brandSlug)?->name ?? $brandSlug; @endphp
-                        <a href="{{ request()->fullUrlWithoutQuery('brand') }}"
-                           class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#6F9CA2]/5 text-[#5B878D] text-xs font-medium rounded-full border border-[#6F9CA2]/30 hover:bg-[#6F9CA2]/10 transition-colors">
-                            {{ $brandName }}
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                        </a>
-                    @endforeach
-                @endif
+                @foreach(array_filter((array) request('subcategory', [])) as $kkSubSlug)
+                    @php $kkSubName = $subcategories->firstWhere('slug', $kkSubSlug)?->name ?? $kkSubSlug; @endphp
+                    <a href="{{ $kkWithout('subcategory', $kkSubSlug) }}"
+                       class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#6F9CA2]/5 text-[#5B878D] text-xs font-medium rounded-full border border-[#6F9CA2]/30 hover:bg-[#6F9CA2]/10 transition-colors">
+                        {{ $kkSubName }}
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </a>
+                @endforeach
+                @foreach(array_filter((array) request('brand', [])) as $brandSlug)
+                    @php $brandName = $brands->firstWhere('slug', $brandSlug)?->name ?? $brandSlug; @endphp
+                    <a href="{{ $kkWithout('brand', $brandSlug) }}"
+                       class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#6F9CA2]/5 text-[#5B878D] text-xs font-medium rounded-full border border-[#6F9CA2]/30 hover:bg-[#6F9CA2]/10 transition-colors">
+                        {{ $brandName }}
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </a>
+                @endforeach
+                @foreach(array_filter((array) request('size', [])) as $kkSize)
+                    <a href="{{ $kkWithout('size', $kkSize) }}"
+                       class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#6F9CA2]/5 text-[#5B878D] text-xs font-medium rounded-full border border-[#6F9CA2]/30 hover:bg-[#6F9CA2]/10 transition-colors">
+                        Size: {{ $kkSize }}
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </a>
+                @endforeach
+                @foreach(array_filter((array) request('colour', [])) as $kkColour)
+                    <a href="{{ $kkWithout('colour', $kkColour) }}"
+                       class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#6F9CA2]/5 text-[#5B878D] text-xs font-medium rounded-full border border-[#6F9CA2]/30 hover:bg-[#6F9CA2]/10 transition-colors">
+                        {{ $kkColour }}
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </a>
+                @endforeach
                 @if(request('min_price') || request('max_price'))
                     <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#6F9CA2]/5 text-[#5B878D] text-xs font-medium rounded-full border border-[#6F9CA2]/30">
                         @price(request('min_price', 0)) - @price(request('max_price', '...'))
@@ -94,11 +128,17 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
                     </svg>
                     Filters
-                    @if(request()->hasAny(['category', 'brand', 'size', 'colour', 'min_price', 'max_price', 'rating', 'in_stock', 'on_sale']))
+                    @if(request()->hasAny(['category', 'subcategory', 'brand', 'size', 'colour', 'min_price', 'max_price', 'rating', 'in_stock', 'on_sale']))
                         <span class="w-5 h-5 bg-[#F8931D] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                            {{-- brand is multi-value, so it is counted per tick rather than
-                                 as one filter - two brands selected read as "1" before. --}}
-                            {{ count(array_filter((array) request('brand'))) + count(array_filter([request('category'), request('min_price'), request('max_price'), request('rating'), request('in_stock'), request('on_sale')])) }}
+                            {{-- brand, size, colour and sub-category are multi-value, so
+                                 they are counted per tick rather than as one filter - two
+                                 brands selected read as "1" before, and a chosen size or
+                                 colour did not register at all. --}}
+                            {{ count(array_filter((array) request('brand')))
+                               + count(array_filter((array) request('size')))
+                               + count(array_filter((array) request('colour')))
+                               + count(array_filter((array) request('subcategory')))
+                               + count(array_filter([request('category'), request('min_price'), request('max_price'), request('rating'), request('in_stock'), request('on_sale')])) }}
                         </span>
                     @endif
                 </button>

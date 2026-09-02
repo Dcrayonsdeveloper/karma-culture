@@ -310,8 +310,8 @@
                 handleMainImage(file) {
                     if (!file) return;
                     // Dropping a file bypasses the input's accept list, so re-check the type.
-                    if (!IMAGE_TYPES.includes(file.type)) { toastr.error(file.name + ' is not a JPG, PNG, WEBP or GIF.'); return; }
-                    if (file.size > IMAGE_MAX_BYTES) { toastr.error(file.name + ' exceeds 2MB.'); return; }
+                    if (!IMAGE_TYPES.includes(file.type)) { if (window.toastr) toastr.error(file.name + ' is not a JPG, PNG, WEBP or GIF.'); return; }
+                    if (file.size > IMAGE_MAX_BYTES) { if (window.toastr) toastr.error(file.name + ' exceeds 2MB.'); return; }
                     const dt = new DataTransfer(); dt.items.add(file);
                     this.$refs.mainFileInput.files = dt.files;
                     const reader = new FileReader();
@@ -322,15 +322,15 @@
                 handleGalleryFiles(files) {
                     let overCap = 0;
                     for (const file of files) {
-                        if (!IMAGE_TYPES.includes(file.type)) { toastr.error(file.name + ' is not a JPG, PNG, WEBP or GIF.'); continue; }
-                        if (file.size > IMAGE_MAX_BYTES) { toastr.error(file.name + ' exceeds 2MB.'); continue; }
+                        if (!IMAGE_TYPES.includes(file.type)) { if (window.toastr) toastr.error(file.name + ' is not a JPG, PNG, WEBP or GIF.'); continue; }
+                        if (file.size > IMAGE_MAX_BYTES) { if (window.toastr) toastr.error(file.name + ' exceeds 2MB.'); continue; }
                         // Count what is attached to the input, not what has been previewed.
                         if (this.galleryFileList.items.length >= GALLERY_MAX) { overCap++; continue; }
                         this.galleryFileList.items.add(file);
                         this.galleryPreviews.push({ url: URL.createObjectURL(file), name: file.name });
                     }
                     this.$refs.galleryInput.files = this.galleryFileList.files;
-                    if (overCap > 0) {
+                    if (overCap > 0 && window.toastr) {
                         toastr.error('Only ' + GALLERY_MAX + ' gallery images allowed - ' + overCap + (overCap === 1 ? ' was' : ' were') + ' left out.');
                     }
                 },

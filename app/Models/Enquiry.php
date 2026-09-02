@@ -40,7 +40,9 @@ class Enquiry extends Model
 
     public function replies(): HasMany
     {
-        return $this->hasMany(EnquiryReply::class)->oldest();
+        // Second-precision timestamps tie when two replies land in the same
+        // second, so fall back to the monotonic id to keep the thread stable.
+        return $this->hasMany(EnquiryReply::class)->oldest()->orderBy('id');
     }
 
     public function scopeUnread($query)

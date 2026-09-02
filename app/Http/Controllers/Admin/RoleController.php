@@ -13,7 +13,9 @@ class RoleController extends Controller
 {
     public function index(): View
     {
-        $perPage = request()->input('per_page', 10);
+        // Straight off the query string this let ?per_page=999999 pull the
+        // whole table into one render.
+        $perPage = min(max((int) request()->integer('per_page', 10), 5), 100);
         $roles = Role::withCount('permissions')->orderBy('name')->paginate($perPage)->withQueryString();
 
         return view('admin.settings.roles.index', compact('roles'));

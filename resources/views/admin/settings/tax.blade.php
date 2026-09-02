@@ -9,6 +9,8 @@
 
     @include('admin.settings.partials.nav', ['active' => 'tax'])
 
+    @include('admin.settings.partials.errors')
+
     <form action="{{ route('admin.settings.tax.update') }}" method="POST">
         @csrf
         @method('PUT')

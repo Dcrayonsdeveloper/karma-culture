@@ -106,7 +106,7 @@
                                         <input type="text" name="full_name" id="kk-co-name" value="{{ old('full_name', $prefill->name ?? '') }}"
                                                minlength="2" maxlength="100" autocomplete="name"
                                                data-kk-chars="personName"
-                                               pattern=" *[\p{L}\p{M}][\p{L}\p{M} \xA0'\u2019.\-]*"
+                                               pattern="{{ \App\Rules\ValidationRules::namePattern() }}"
                                                title="The full name may only contain letters, spaces, hyphens, apostrophes and periods."
                                                class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
                                                placeholder="Full name" :required="addrId === ''" :disabled="addrId !== ''">

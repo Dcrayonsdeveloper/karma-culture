@@ -102,6 +102,26 @@ class Setting extends Model
         return $setting;
     }
 
+    /**
+     * Read a setting as a boolean regardless of how the row is typed.
+     *
+     * Rows seeded with type 'boolean' come back from getValueAttribute() as a
+     * real bool, while rows written by the settings screens come back as the
+     * strings '1'/'0'. Call sites comparing with === '1' therefore silently
+     * evaluated false for any seeded row - which is how Cash on Delivery
+     * disappeared from checkout as soon as PayU was configured.
+     */
+    public static function getBool(string $key, bool $default = false): bool
+    {
+        $value = static::get($key);
+
+        if ($value === null || $value === '') {
+            return $default;
+        }
+
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+
     public static function getGroup(string $group): array
     {
         return Cache::remember("settings.group.{$group}", 3600, function () use ($group) {

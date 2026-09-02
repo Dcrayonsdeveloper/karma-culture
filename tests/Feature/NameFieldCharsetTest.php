@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Rules\PersonName;
+use App\Rules\ValidationRules;
+use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -64,6 +66,11 @@ class NameFieldCharsetTest extends TestCase
 
     /**
      * The pattern attribute exactly as the browser will receive it.
+     *
+     * Every box must echo ValidationRules::namePattern() rather than carry its
+     * own copy. Five hand-copied regexes drifted apart once already, and a copy
+     * that loses the leading-whitespace clause looks fine and quietly blocks
+     * checkout for anyone who pasted their name in.
      */
     private function renderedPattern(string $view, string $id): string
     {
@@ -73,7 +80,13 @@ class NameFieldCharsetTest extends TestCase
             "The {$id} input in {$view} has no pattern attribute."
         );
 
-        return $m[1];
+        $this->assertSame(
+            '{{ \App\Rules\ValidationRules::namePattern() }}',
+            $m[1],
+            "The {$id} input in {$view} carries its own copy of the name pattern instead of echoing the one definition."
+        );
+
+        return ValidationRules::namePattern();
     }
 
     /**
@@ -84,7 +97,9 @@ class NameFieldCharsetTest extends TestCase
      */
     private function asPcre(string $jsSource): string
     {
-        $pcre = preg_replace('/\\\\u([0-9a-fA-F]{4})/', '\x{$1}', $jsSource);
+        // \u{XXXX} is JavaScript's spelling under the u/v flag; PCRE wants \x{}.
+        $pcre = preg_replace('/\\\\u\{([0-9a-fA-F]+)\}/', '\x{$1}', $jsSource);
+        $pcre = preg_replace('/\\\\u([0-9a-fA-F]{4})/', '\x{$1}', $pcre);
         $pcre = preg_replace('/\\\\x([0-9a-fA-F]{2})(?![0-9a-fA-F])/', '\x{$1}', $pcre);
 
         return '/^(?:'.$pcre.')$/u';
@@ -143,8 +158,14 @@ class NameFieldCharsetTest extends TestCase
     #[DataProvider('namesTheServerAccepts')]
     public function test_no_box_rejects_a_name_the_server_accepts(string $name): void
     {
+        // Str::trim, not PHP's trim: it is what the TrimStrings middleware calls,
+        // and it strips Str::INVISIBLE_CHARACTERS - TAB, NBSP, the ideographic
+        // space, the zero-width joiners - which PHP's trim leaves alone. Using
+        // the wrong one here is what let the leading-NBSP defect through: the
+        // fixture looked rejected server-side, so the browser refusing it looked
+        // correct, when in fact the server accepts the name and the box did not.
         $rejected = false;
-        (new PersonName)->validate('full name', trim($name), function () use (&$rejected) {
+        (new PersonName)->validate('full name', Str::trim($name), function () use (&$rejected) {
             $rejected = true;
         });
         $this->assertFalse($rejected, "Fixture is wrong: the server rejects \"{$name}\".");
@@ -162,7 +183,14 @@ class NameFieldCharsetTest extends TestCase
         // The pattern and the keystroke filter are two spellings of one charset.
         // A character the pattern allows but the filter drops can never be typed
         // into the box at all, so the two have to agree character for character.
-        foreach (preg_split('//u', $name, -1, PREG_SPLIT_NO_EMPTY) as $char) {
+        //
+        // Judged on the TRIMMED name: leading and trailing whitespace is what the
+        // server discards anyway, so the filter dropping it changes nothing. What
+        // must survive is every character of the name itself - which is why this
+        // splits by code point, and why the filter had to stop walking UTF-16
+        // code units: a supplementary-plane letter is one character here and two
+        // there, and testing each half alone matches nothing.
+        foreach (preg_split('//u', Str::trim($name), -1, PREG_SPLIT_NO_EMPTY) as $char) {
             $this->assertMatchesRegularExpression(
                 $policy,
                 $char,
@@ -183,15 +211,29 @@ class NameFieldCharsetTest extends TestCase
             'han' => ['山田太郎'],
             'accented' => ['José'],
             'combining marks' => ['Nguyễn Thị Hà'],
-            // TrimStrings drops these server-side, so the box must not block the
-            // submit over a character the customer cannot see.
-            'leading space' => [' Asha'],
-            'trailing space' => ['Asha '],
-            'non-breaking space' => ["Asha\u{00A0}Menon"],
             'all four separators' => ["Jean-Luc O'Brien Jr."],
             // Real Indian city names, since two of these boxes are City.
             'city with a space' => ['Navi Mumbai'],
             'city with a period' => ['St. Thomas Mount'],
+            // A supplementary-plane letter. 𠮟 is a genuine CJK name character,
+            // and both PersonName and the pattern accept it - only the keystroke
+            // filter used to delete it, silently, as the customer typed.
+            'astral CJK letter' => ["\u{20B9F}\u{7530}"],
+            // Everything below is whitespace Str::trim strips at the ends, so the
+            // server never sees it and the box must not block the submit over it.
+            // These are what a pasted name actually carries, and their absence is
+            // what let the browser start refusing names the server accepts.
+            'leading space' => [' Asha'],
+            'trailing space' => ['Asha '],
+            'inner non-breaking space' => ["Asha\u{00A0}Menon"],
+            'leading non-breaking space (Word, WhatsApp Web)' => ["\u{00A0}Asha Menon"],
+            'trailing non-breaking space' => ["Asha Menon\u{00A0}"],
+            'leading tab (spreadsheet paste)' => ["\tAsha Menon"],
+            'trailing tab' => ["Asha Menon\t"],
+            'leading ideographic space' => ["\u{3000}Asha"],
+            'leading narrow non-breaking space' => ["\u{202F}Asha"],
+            'leading zero-width space' => ["\u{200B}Asha"],
+            'trailing byte-order mark' => ["Asha\u{FEFF}"],
         ];
     }
 }

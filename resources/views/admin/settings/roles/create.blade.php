@@ -11,6 +11,8 @@
     <h1 style="font-size: 1.25rem; font-weight: 600; color: #303030; margin: 0 0 1rem 0;">Add Role</h1>
 
     <div style="max-width: 800px;">
+
+        @include('admin.settings.partials.errors')
         <form action="{{ route('admin.settings.roles.store') }}" method="POST">
             @csrf
 

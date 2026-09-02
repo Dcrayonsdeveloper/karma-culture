@@ -10,6 +10,8 @@
     <!-- Settings Navigation -->
     @include('admin.settings.partials.nav', ['active' => 'general'])
 
+    @include('admin.settings.partials.errors')
+
     <form action="{{ route('admin.settings.general.update') }}" method="POST">
         @csrf
         @method('PUT')
@@ -59,29 +61,29 @@
                         <label class="form-label form-label-required" style="font-size: 12px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Timezone</label>
                         <select name="timezone" required class="form-select">
                             @foreach(timezone_identifiers_list() as $tz)
-                                <option value="{{ $tz }}" @selected(($settings['timezone'] ?? 'UTC') === $tz)>{{ $tz }}</option>
+                                <option value="{{ $tz }}" @selected(old('timezone', $settings['timezone'] ?? 'UTC') === $tz)>{{ $tz }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div>
                         <label class="form-label form-label-required" style="font-size: 12px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Date Format</label>
                         <select name="date_format" required class="form-select">
-                            <option value="M d, Y" @selected(($settings['date_format'] ?? 'M d, Y') === 'M d, Y')>{{ now()->format('M d, Y') }}</option>
-                            <option value="d/m/Y" @selected(($settings['date_format'] ?? '') === 'd/m/Y')>{{ now()->format('d/m/Y') }}</option>
-                            <option value="m/d/Y" @selected(($settings['date_format'] ?? '') === 'm/d/Y')>{{ now()->format('m/d/Y') }}</option>
-                            <option value="Y-m-d" @selected(($settings['date_format'] ?? '') === 'Y-m-d')>{{ now()->format('Y-m-d') }}</option>
+                            <option value="M d, Y" @selected(old('date_format', $settings['date_format'] ?? 'M d, Y') === 'M d, Y')>{{ now()->format('M d, Y') }}</option>
+                            <option value="d/m/Y" @selected(old('date_format', $settings['date_format'] ?? '') === 'd/m/Y')>{{ now()->format('d/m/Y') }}</option>
+                            <option value="m/d/Y" @selected(old('date_format', $settings['date_format'] ?? '') === 'm/d/Y')>{{ now()->format('m/d/Y') }}</option>
+                            <option value="Y-m-d" @selected(old('date_format', $settings['date_format'] ?? '') === 'Y-m-d')>{{ now()->format('Y-m-d') }}</option>
                         </select>
                     </div>
                     <div>
                         <label class="form-label form-label-required" style="font-size: 12px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Currency</label>
                         <select name="currency" required class="form-select">
-                            <option value="USD" @selected(($settings['currency'] ?? 'USD') === 'USD')>USD - US Dollar</option>
-                            <option value="EUR" @selected(($settings['currency'] ?? '') === 'EUR')>EUR - Euro</option>
-                            <option value="GBP" @selected(($settings['currency'] ?? '') === 'GBP')>GBP - British Pound</option>
-                            <option value="INR" @selected(($settings['currency'] ?? '') === 'INR')>INR - Indian Rupee</option>
-                            <option value="CAD" @selected(($settings['currency'] ?? '') === 'CAD')>CAD - Canadian Dollar</option>
-                            <option value="AUD" @selected(($settings['currency'] ?? '') === 'AUD')>AUD - Australian Dollar</option>
-                            <option value="JPY" @selected(($settings['currency'] ?? '') === 'JPY')>JPY - Japanese Yen</option>
+                            <option value="USD" @selected(old('currency', $settings['currency'] ?? 'USD') === 'USD')>USD - US Dollar</option>
+                            <option value="EUR" @selected(old('currency', $settings['currency'] ?? '') === 'EUR')>EUR - Euro</option>
+                            <option value="GBP" @selected(old('currency', $settings['currency'] ?? '') === 'GBP')>GBP - British Pound</option>
+                            <option value="INR" @selected(old('currency', $settings['currency'] ?? '') === 'INR')>INR - Indian Rupee</option>
+                            <option value="CAD" @selected(old('currency', $settings['currency'] ?? '') === 'CAD')>CAD - Canadian Dollar</option>
+                            <option value="AUD" @selected(old('currency', $settings['currency'] ?? '') === 'AUD')>AUD - Australian Dollar</option>
+                            <option value="JPY" @selected(old('currency', $settings['currency'] ?? '') === 'JPY')>JPY - Japanese Yen</option>
                         </select>
                     </div>
                     <div>
@@ -92,8 +94,8 @@
                     <div>
                         <label class="form-label form-label-required" style="font-size: 12px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Currency Position</label>
                         <select name="currency_position" required class="form-select">
-                            <option value="before" @selected(($settings['currency_position'] ?? 'before') === 'before')>Before amount ($99.99)</option>
-                            <option value="after" @selected(($settings['currency_position'] ?? '') === 'after')>After amount (99.99$)</option>
+                            <option value="before" @selected(old('currency_position', $settings['currency_position'] ?? 'before') === 'before')>Before amount ($99.99)</option>
+                            <option value="after" @selected(old('currency_position', $settings['currency_position'] ?? '') === 'after')>After amount (99.99$)</option>
                         </select>
                     </div>
                 </div>
@@ -104,4 +106,27 @@
             <button type="submit" class="btn btn-primary" style="font-size: 13px;">Save Settings</button>
         </div>
     </form>
+
+    <!-- Related settings. These pages were previously unreachable: nothing in
+         the admin, including the sidebar, linked to them. -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem;">
+        <div class="card" style="padding: 0.875rem 1rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+                <div>
+                    <h3 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Currencies</h3>
+                    <p style="font-size: 12px; color: #616161; margin: 0;">Add currencies and set exchange rates</p>
+                </div>
+                <a href="{{ route('admin.settings.currencies.index') }}" class="btn btn-secondary" style="font-size: 13px; white-space: nowrap;">Manage Currencies</a>
+            </div>
+        </div>
+        <div class="card" style="padding: 0.875rem 1rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+                <div>
+                    <h3 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Roles &amp; Permissions</h3>
+                    <p style="font-size: 12px; color: #616161; margin: 0;">Control what each staff role can access</p>
+                </div>
+                <a href="{{ route('admin.settings.roles.index') }}" class="btn btn-secondary" style="font-size: 13px; white-space: nowrap;">Manage Roles</a>
+            </div>
+        </div>
+    </div>
 </x-layouts.admin>

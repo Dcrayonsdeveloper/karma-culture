@@ -146,6 +146,7 @@ class InventoryLocationStockTest extends TestCase
             'slug' => 'other-kurti',
             'sku' => 'OK-001',
             'price' => 499,
+            'mrp' => 699,
             'stock_quantity' => 0,
             'category_id' => $this->product->category_id,
             'status' => 'approved',
@@ -166,7 +167,7 @@ class InventoryLocationStockTest extends TestCase
                 'variant_id' => $variant->id,
                 'quantity' => 2,
             ])
-            ->assertSessionHasErrors('variant_id');
+            ->assertSessionHasErrors('variant_id', null, 'addStock');
 
         $this->assertDatabaseMissing('inventory_stocks', [
             'product_id' => $this->product->id,
@@ -225,7 +226,7 @@ class InventoryLocationStockTest extends TestCase
                 'type' => 'remove',
                 'quantity' => 99,
             ])
-            ->assertSessionHasErrors('quantity');
+            ->assertSessionHasErrors('quantity', null, 'adjustStock');
 
         $this->assertSame(20, $this->lineAt($this->main)?->quantity);
         $this->assertSame(20, $this->product->fresh()->stock_quantity);
@@ -320,6 +321,7 @@ class InventoryLocationStockTest extends TestCase
             'slug' => 'unstocked-dupatta',
             'sku' => 'UD-001',
             'price' => 299,
+            'mrp' => 399,
             'stock_quantity' => 0,
             'category_id' => $this->product->category_id,
             'status' => 'approved',
@@ -329,8 +331,8 @@ class InventoryLocationStockTest extends TestCase
         $this->actingAs($this->adminUser, 'admin')
             ->get(route('admin.inventory.index', ['location' => $this->main->id]))
             ->assertOk()
-            ->assertSee('Warehouse Kurti')
-            ->assertDontSee($elsewhere->name);
+            ->assertSee('WK-001')
+            ->assertDontSee('UD-001');
     }
 
     public function test_movements_are_recorded_against_the_location(): void
@@ -461,6 +463,73 @@ class InventoryLocationStockTest extends TestCase
         $this->assertFalse((bool) $created->is_default);
         $this->assertSame(0, InventoryStock::where('location_id', $created->id)->count());
         $this->assertSame(20, $this->lineAt($this->main)?->quantity);
+    }
+
+    public function test_a_refused_adjustment_does_not_speak_for_the_add_product_form(): void
+    {
+        // Both forms on the page post a "quantity". Sharing one error bag put
+        // the adjustment's message and its number on the Add card, which would
+        // then have added that number to a product's sellable stock.
+        $this->actingAs($this->adminUser, 'admin')
+            ->put(route('admin.inventory.locations.stock.update', [$this->main, $this->lineAt($this->main)]), [
+                'type' => 'remove',
+                'quantity' => 99,
+            ])
+            ->assertSessionHasErrors('quantity', null, 'adjustStock')
+            ->assertSessionDoesntHaveErrors('quantity', null, 'addStock');
+    }
+
+    public function test_deleting_a_size_clears_the_shelves_it_was_on(): void
+    {
+        $variant = ProductVariant::create([
+            'product_id' => $this->product->id,
+            'name' => 'XS',
+            'sku' => 'WK-001-XS',
+            'stock_quantity' => 5,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($this->adminUser, 'admin')
+            ->post(route('admin.inventory.locations.stock.store', $this->main), [
+                'product_id' => $this->product->id,
+                'variant_id' => $variant->id,
+                'quantity' => 3,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $variant->delete();
+
+        // inventory_stocks.variant_id has no foreign key to cascade on, and a
+        // surviving row renders as "All sizes" - a phantom line beside the
+        // product's own that inflates the location's totals and blocks it from
+        // being deleted.
+        $this->assertSame(0, InventoryStock::where('variant_id', $variant->id)->count());
+        $this->assertDatabaseHas('inventory_movements', [
+            'variant_id' => $variant->id,
+            'location_id' => $this->main->id,
+            'type' => 'out',
+            'quantity' => 3,
+            'reason' => 'Removed from catalogue',
+        ]);
+    }
+
+    public function test_the_adjust_dialog_is_told_what_each_warehouse_holds(): void
+    {
+        $this->actingAs($this->adminUser, 'admin')
+            ->post(route('admin.inventory.locations.stock.store', $this->overflow), [
+                'product_id' => $this->product->id,
+                'quantity' => 6,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $product = Product::with('inventoryStocks')->findOrFail($this->product->id);
+
+        // The dialog sets stock at one location, so the baseline it shows has
+        // to be that location's rather than the product's total of 26.
+        $this->assertSame([
+            (string) $this->main->id => 20,
+            (string) $this->overflow->id => 6,
+        ], \App\Http\Controllers\Admin\InventoryController::heldByLocation($product));
     }
 
     private function lineAt(InventoryLocation $location): ?InventoryStock

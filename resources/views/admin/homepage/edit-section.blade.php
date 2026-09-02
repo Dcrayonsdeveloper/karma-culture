@@ -49,6 +49,26 @@
         </div>
     </div>
 
+    {{-- A rejected save used to bounce straight back to this page with no
+         explanation and every field reset to what was in the database, so the
+         admin's edit was gone and nothing said why. --}}
+    @if($errors->any())
+        <div style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: #fff0f0; border: 1px solid #f0c2bd; border-radius: 0.5rem;">
+            <div style="font-size: 13px; font-weight: 600; color: #8e1f0b; margin-bottom: 0.25rem;">This section was not saved</div>
+            <ul style="margin: 0; padding-left: 1.1rem; font-size: 13px; color: #8e1f0b;">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    @if(session('success'))
+        <div style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: #eafdf0; border: 1px solid #a9e3bf; border-radius: 0.5rem; font-size: 13px; color: #1a7a2e;">
+            {{ session('success') }}
+        </div>
+    @endif
+
     <form action="{{ route('admin.homepage.sections.update', $section) }}" method="POST" enctype="multipart/form-data">
         @csrf
         @method('PUT')
@@ -66,11 +86,11 @@
                          "This field is required" instead of "Title is required". --}}
                     <div>
                         <label for="section-title" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Title <span style="color: #d72c0d;">*</span></label>
-                        <input type="text" name="title" id="section-title" value="{{ $section->title }}" required minlength="2" maxlength="255" class="form-input">
+                        <input type="text" name="title" id="section-title" value="{{ old('title', $section->title) }}" required minlength="2" maxlength="255" class="form-input">
                     </div>
                     <div>
                         <label for="section-subtitle" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Subtitle</label>
-                        <textarea name="subtitle" id="section-subtitle" rows="2" maxlength="500" class="form-textarea">{{ $section->subtitle }}</textarea>
+                        <textarea name="subtitle" id="section-subtitle" rows="2" maxlength="500" class="form-textarea">{{ old('subtitle', $section->subtitle) }}</textarea>
                     </div>
                     @if($section->image_url !== null || in_array($section->type, ['cta', 'promo']))
                         <div>
@@ -92,7 +112,7 @@
                 <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;">
                     <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Display Options</h2>
                 </div>
-                <div style="padding: 1rem; display: flex; flex-direction: column; gap: 1rem;">
+                <div x-data style="padding: 1rem; display: flex; flex-direction: column; gap: 1rem;">
                     {{-- 'content' belongs here: the About Us block on the home page
                          renders button_text and button_link as its "Our Story" link,
                          so gating these two fields out of a content section left a
@@ -100,15 +120,15 @@
                     @if(in_array($section->type, ['products', 'benefits', 'cta', 'content']))
                         <div>
                             <label for="section-button-text" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Button Text</label>
-                            <input type="text" name="button_text" id="section-button-text" value="{{ $section->button_text }}" maxlength="100" class="form-input" placeholder="e.g. View All, Shop Now">
+                            <input type="text" name="button_text" id="section-button-text" value="{{ old('button_text', $section->button_text) }}" maxlength="100" class="form-input" placeholder="e.g. View All, Shop Now">
                         </div>
                         <div>
                             <label for="section-button-link" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Button Link</label>
                             {{-- A relative path, a full http(s) address, mailto:, tel: or a #anchor.
                                  The About Us section renders this straight into an href, so
                                  `javascript:` here would be stored XSS on the home page. --}}
-                            <input type="text" name="button_link" id="section-button-link" value="{{ $section->button_link }}" maxlength="255"
-                                   pattern="(https?://|mailto:|tel:)\S+|/\S*|#\S*"
+                            <input type="text" name="button_link" id="section-button-link" value="{{ old('button_link', $section->button_link) }}" maxlength="255"
+                                   pattern="(https?://|mailto:|tel:)\S+|/(?!/)\S*|#\S*"
                                    title="Enter a path such as /products, or a full https:// address."
                                    class="form-input" placeholder="e.g. /products, /categories/boys">
                         </div>
@@ -118,23 +138,23 @@
                         <div>
                             <label for="section-background-color" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Background Color</label>
                             <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                <input type="color" name="background_color" id="section-background-color" value="{{ $section->background_color ?? '#6F9CA2' }}" style="width: 2.5rem; height: 2.5rem; border-radius: 0.375rem; border: 1px solid #c9cccf; cursor: pointer; padding: 0.125rem;">
-                                <input type="text" value="{{ $section->background_color ?? '#6F9CA2' }}" aria-label="Background colour hex" class="form-input" style="flex: 1;" readonly>
+                                <input type="color" name="background_color" id="section-background-color" @input="$refs.background_colorHex.value = $event.target.value" value="{{ old('background_color', $section->background_color ?? '#6F9CA2') }}" style="width: 2.5rem; height: 2.5rem; border-radius: 0.375rem; border: 1px solid #c9cccf; cursor: pointer; padding: 0.125rem;">
+                                <input type="text" value="{{ old('background_color', $section->background_color ?? '#6F9CA2') }}" x-ref="background_colorHex" aria-label="Background colour hex" class="form-input" style="flex: 1;" readonly>
                             </div>
                             <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Used when no background image is set</p>
                         </div>
                         <div>
                             <label for="section-text-color" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Text Color</label>
                             <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                <input type="color" name="text_color" id="section-text-color" value="{{ $section->text_color ?? '#ffffff' }}" style="width: 2.5rem; height: 2.5rem; border-radius: 0.375rem; border: 1px solid #c9cccf; cursor: pointer; padding: 0.125rem;">
-                                <input type="text" value="{{ $section->text_color ?? '#ffffff' }}" aria-label="Text colour hex" class="form-input" style="flex: 1;" readonly>
+                                <input type="color" name="text_color" id="section-text-color" @input="$refs.text_colorHex.value = $event.target.value" value="{{ old('text_color', $section->text_color ?? '#ffffff') }}" style="width: 2.5rem; height: 2.5rem; border-radius: 0.375rem; border: 1px solid #c9cccf; cursor: pointer; padding: 0.125rem;">
+                                <input type="text" value="{{ old('text_color', $section->text_color ?? '#ffffff') }}" x-ref="text_colorHex" aria-label="Text colour hex" class="form-input" style="flex: 1;" readonly>
                             </div>
                         </div>
                     @endif
 
                     <div style="display: flex; align-items: center; gap: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e3e3e3;">
-                        <input type="checkbox" name="is_active" value="1" {{ $section->is_active ? 'checked' : '' }} style="width: 1rem; height: 1rem; accent-color: #005bd3;">
-                        <label style="font-size: 13px; font-weight: 500; color: #303030; margin: 0;">Section is visible on homepage</label>
+                        <input type="checkbox" name="is_active" id="section-is-active" value="1" {{ old('is_active', $section->is_active) ? 'checked' : '' }} style="width: 1rem; height: 1rem; accent-color: #005bd3;">
+                        <label for="section-is-active" style="font-size: 13px; font-weight: 500; color: #303030; margin: 0;">Section is visible on homepage</label>
                     </div>
                 </div>
             </div>
@@ -146,7 +166,11 @@
                         <p style="font-size: 12px; color: #616161; margin: 0.25rem 0 0 0;">Available icons: shield, comfort, wash, colors, tagless, heart, shipping, return</p>
                     </div>
                     <div style="padding: 1rem;">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;" x-data="{ items: {{ json_encode($section->content ?? []) }} }">
+                        {{-- Tells updateSection that this form edits the repeater, so
+                             removing the last card saves as an empty list instead of
+                             looking like a form that has no repeater at all. --}}
+                        <input type="hidden" name="has_content_repeater" value="1">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;" x-data="{ items: {{ json_encode(old('content', $section->content ?? [])) }} }">
                             <template x-for="(item, index) in items" :key="index">
                                 <div style="padding: 1rem; background: #f6f6f7; border-radius: 0.5rem; position: relative;">
                                     <button type="button" @click="items.splice(index, 1)" style="position: absolute; top: 0.5rem; right: 0.5rem; color: #d72c0d; background: none; border: none; cursor: pointer; padding: 0.25rem;" title="Remove item">

@@ -95,3 +95,5 @@ firebase-adminsdk*.json
 
 .claude/
 settings.json
+# Cygwin/Git-Bash crash artefacts
+*.stackdump

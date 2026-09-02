@@ -9,6 +9,8 @@
 
     @include('admin.settings.partials.nav', ['active' => 'product-card'])
 
+    @include('admin.settings.partials.errors')
+
     <form action="{{ route('admin.settings.product-card.update') }}" method="POST">
         @csrf
         @method('PUT')
@@ -36,7 +38,7 @@
                         </div>
                         <label class="toggle-switch" style="flex-shrink: 0; margin-left: 1rem;">
                             <input type="hidden" name="product_card_quick_view" value="0">
-                            <input type="checkbox" name="product_card_quick_view" value="1" x-model="enabled">
+                            <input type="checkbox" name="product_card_quick_view" value="1" x-model="enabled" @checked(old('product_card_quick_view', $settings['product_card_quick_view'] ?? '1'))>
                             <div class="toggle-track"></div>
                         </label>
                     </div>
@@ -56,7 +58,7 @@
                         </div>
                         <label class="toggle-switch" style="flex-shrink: 0; margin-left: 1rem;">
                             <input type="hidden" name="product_card_add_to_cart" value="0">
-                            <input type="checkbox" name="product_card_add_to_cart" value="1" x-model="enabled">
+                            <input type="checkbox" name="product_card_add_to_cart" value="1" x-model="enabled" @checked(old('product_card_add_to_cart', $settings['product_card_add_to_cart'] ?? '1'))>
                             <div class="toggle-track"></div>
                         </label>
                     </div>
@@ -76,7 +78,7 @@
                         </div>
                         <label class="toggle-switch" style="flex-shrink: 0; margin-left: 1rem;">
                             <input type="hidden" name="product_card_wishlist" value="0">
-                            <input type="checkbox" name="product_card_wishlist" value="1" x-model="enabled">
+                            <input type="checkbox" name="product_card_wishlist" value="1" x-model="enabled" @checked(old('product_card_wishlist', $settings['product_card_wishlist'] ?? '1'))>
                             <div class="toggle-track"></div>
                         </label>
                     </div>
@@ -109,7 +111,7 @@
                         </div>
                         <label class="toggle-switch" style="flex-shrink: 0; margin-left: 1rem;">
                             <input type="hidden" name="support_tickets_enabled" value="0">
-                            <input type="checkbox" name="support_tickets_enabled" value="1" x-model="enabled">
+                            <input type="checkbox" name="support_tickets_enabled" value="1" x-model="enabled" @checked(old('support_tickets_enabled', $settings['support_tickets_enabled'] ?? '1'))>
                             <div class="toggle-track"></div>
                         </label>
                     </div>

@@ -5,15 +5,8 @@
         <div class="page-header">
             <h1>Product Report</h1>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <form action="{{ route('admin.reports.products') }}" method="GET" style="display: flex; align-items: center; gap: 0.5rem;">
-                    <select name="period" onchange="this.form.submit()" class="form-select" style="font-size: 13px;">
-                        <option value="7" @selected($period == 7)>Last 7 days</option>
-                        <option value="30" @selected($period == 30)>Last 30 days</option>
-                        <option value="90" @selected($period == 90)>Last 90 days</option>
-                        <option value="365" @selected($period == 365)>Last year</option>
-                    </select>
-                </form>
-                <a href="{{ route('admin.reports.export', ['type' => 'products', 'period' => $period]) }}" class="btn btn-secondary" style="font-size: 13px; display: inline-flex; align-items: center; gap: 0.375rem;">
+                <x-admin.date-range-filter :action="route('admin.reports.products')" :range="$range" />
+                <a href="{{ route('admin.reports.export', array_merge(['type' => 'products'], $range->queryParams())) }}" class="btn btn-secondary" style="font-size: 13px; display: inline-flex; align-items: center; gap: 0.375rem;">
                     <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>

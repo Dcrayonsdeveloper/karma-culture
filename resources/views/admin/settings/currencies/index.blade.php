@@ -13,6 +13,8 @@
         <a href="{{ route('admin.settings.currencies.create') }}" class="btn btn-primary" style="font-size: 13px;">Add Currency</a>
     </div>
 
+    @include('admin.settings.partials.errors')
+
     <div class="card">
         @if($currencies->total() > 0)
             <div style="padding: 0.5rem 1rem; border-bottom: 1px solid #e3e3e3;">

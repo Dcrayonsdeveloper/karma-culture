@@ -13,6 +13,8 @@
         <a href="{{ route('admin.settings.roles.create') }}" class="btn btn-primary" style="font-size: 13px;">Add Role</a>
     </div>
 
+    @include('admin.settings.partials.errors')
+
     <div class="card">
         @if($roles->total() > 0)
             <div style="padding: 0.5rem 1rem; border-bottom: 1px solid #e3e3e3;">

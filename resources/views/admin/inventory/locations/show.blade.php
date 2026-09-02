@@ -3,6 +3,8 @@
 
     @php
         $stockBase = url('/admin/inventory/locations/'.$location->id.'/stock');
+        $addFailed = $errors->addStock->isNotEmpty();
+        $addOld = fn (string $field) => $addFailed ? old($field, '') : '';
         // The picker needs each product's sizes to hand, so the size dropdown
         // can narrow itself the moment a product is chosen.
         $pickerProducts = $products->map(fn ($product) => [
@@ -67,7 +69,7 @@
     </div>
 
     {{-- Add a product to this location --}}
-    <div x-data="{ open: {{ $errors->any() ? 'true' : 'false' }} }"
+    <div x-data="{ open: {{ $addFailed ? 'true' : 'false' }} }"
          x-on:open-add-stock.window="open = true; $nextTick(() => $refs.product?.focus())">
         <div class="card" x-show="open" x-cloak style="padding: 1.25rem; margin-bottom: 1rem;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
@@ -78,18 +80,18 @@
             </div>
 
             <form action="{{ route('admin.inventory.locations.stock.store', $location) }}" method="POST"
-                  x-data="kkLocationPicker(@js($pickerProducts))">
+                  x-data="kkLocationPicker(@js($pickerProducts), @js(['productId' => $addOld('product_id'), 'variantId' => $addOld('variant_id')]))">
                 @csrf
                 <div style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.75rem;">
                     <div style="flex: 1 1 260px;">
                         <label for="stock_product_id" class="form-label">Product <span style="color: #d72c0d;">*</span></label>
                         <select name="product_id" id="stock_product_id" x-ref="product" x-model="productId" required class="form-select" style="width: 100%; font-size: 13px;">
                             <option value="">Choose a product...</option>
-                            <template x-for="product in products" :key="product.id">
-                                <option :value="product.id" x-text="product.name + (product.sku ? ' (' + product.sku + ')' : '')"></option>
-                            </template>
+                            @foreach($products as $pickable)
+                                <option value="{{ $pickable->id }}" @selected($addOld('product_id') == $pickable->id)>{{ $pickable->name }}{{ $pickable->sku ? " ({$pickable->sku})" : '' }}</option>
+                            @endforeach
                         </select>
-                        @error('product_id')
+                        @error('product_id', 'addStock')
                             <p class="form-error">{{ $message }}</p>
                         @enderror
                     </div>
@@ -105,7 +107,7 @@
                                 <option :value="variant.id" x-text="variant.name"></option>
                             </template>
                         </select>
-                        @error('variant_id')
+                        @error('variant_id', 'addStock')
                             <p class="form-error">{{ $message }}</p>
                         @enderror
                     </div>
@@ -113,17 +115,17 @@
                     <div style="flex: 0 0 110px;">
                         <label for="stock_add_quantity" class="form-label">Quantity <span style="color: #d72c0d;">*</span></label>
                         <input type="number" name="quantity" id="stock_add_quantity" min="0" max="1000000" step="1" inputmode="numeric"
-                               value="{{ old('quantity') }}" required class="form-input" placeholder="0" style="width: 100%; font-size: 13px;">
-                        @error('quantity')
+                               value="{{ $addOld('quantity') }}" required class="form-input" placeholder="0" style="width: 100%; font-size: 13px;">
+                        @error('quantity', 'addStock')
                             <p class="form-error">{{ $message }}</p>
                         @enderror
                     </div>
 
                     <div style="flex: 1 1 180px;">
                         <label for="stock_add_reason" class="form-label">Reason</label>
-                        <input type="text" name="reason" id="stock_add_reason" maxlength="255" value="{{ old('reason') }}"
+                        <input type="text" name="reason" id="stock_add_reason" maxlength="255" value="{{ $addOld('reason') }}"
                                class="form-input" placeholder="e.g. Received from supplier" style="width: 100%; font-size: 13px;">
-                        @error('reason')
+                        @error('reason', 'addStock')
                             <p class="form-error">{{ $message }}</p>
                         @enderror
                     </div>
@@ -139,6 +141,19 @@
             </form>
         </div>
     </div>
+
+    @if($errors->adjustStock->isNotEmpty())
+        @php
+            $refusedLine = $stocks->firstWhere('id', (int) old('line_id'));
+            $refusedFor = $refusedLine?->product?->name;
+        @endphp
+        <div role="alert" style="margin-bottom: 1rem; padding: 0.75rem 1rem; border: 1px solid #f0b3a8; background: #fff4f1; border-radius: 0.5rem;">
+            <p style="margin: 0; font-size: 13px; color: #b71c00;">
+                <span style="font-weight: 600;">Adjustment not saved{{ $refusedFor ? ' for '.$refusedFor : '' }}.</span>
+                {{ $errors->adjustStock->first() }}
+            </p>
+        </div>
+    @endif
 
     {{-- Lines held here --}}
     <div class="card">
@@ -250,11 +265,13 @@
     <div x-data="{ open: false, id: null, name: '', size: '', onHand: 0 }"
          x-on:open-adjust-line.window="open = true; id = $event.detail.id; name = $event.detail.name; size = $event.detail.size; onHand = $event.detail.onHand"
          x-show="open" x-cloak
-         style="position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;">
+         x-transition.opacity.duration.150ms
+         x-effect="document.body.classList.toggle('kk-modal-open', open)"
+         class="kk-modal">
 
-        <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.5);" x-on:click="open = false"></div>
+        <div class="kk-modal__backdrop" x-on:click="open = false"></div>
 
-        <div style="position: relative; background: #fff; border-radius: 0.75rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); width: 100%; max-width: 28rem; margin: 0 1rem;" x-transition>
+        <div class="kk-modal__card">
             <div style="padding: 1rem; border-bottom: 1px solid #e3e3e3; display: flex; align-items: center; justify-content: space-between;">
                 <div>
                     <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #303030;">Adjust stock at {{ $location->name }}</h3>
@@ -273,6 +290,7 @@
             <form method="POST" x-bind:action="'{{ $stockBase }}/' + id">
                 @csrf
                 @method('PUT')
+                <input type="hidden" name="line_id" x-bind:value="id">
 
                 <div style="padding: 1rem; display: flex; flex-direction: column; gap: 1rem;">
                     <div>
@@ -305,10 +323,13 @@
     </div>
 
     <script>
-        function kkLocationPicker(products) {
+        function kkLocationPicker(products, restore) {
             return {
                 products: products,
-                productId: '',
+                // A rejected submission comes back with the picker open, so the
+                // product it was about has to still be selected. Its options are
+                // rendered by Blade, so this value has something to land on.
+                productId: restore.productId,
                 variantId: '',
                 get variants() {
                     const chosen = this.products.find(p => String(p.id) === String(this.productId));
@@ -316,12 +337,11 @@
                     return chosen ? chosen.variants : [];
                 },
                 init() {
-                    // A rejected submission comes back with the picker open, so
-                    // the product it was about has to still be selected.
-                    this.productId = @js(old('product_id', ''));
-                    this.variantId = @js(old('variant_id', ''));
-
                     this.$watch('productId', () => { this.variantId = ''; });
+
+                    // The size options come from x-for, which has not run yet -
+                    // restoring the choice before they exist selects nothing.
+                    this.$nextTick(() => { this.variantId = restore.variantId; });
                 },
             };
         }

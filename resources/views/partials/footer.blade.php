@@ -2,7 +2,7 @@
     <!-- Main footer -->
     <div class="py-6 lg:py-8">
         <div class="container mx-auto px-4">
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 lg:gap-8">
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 lg:gap-8">
                 <!-- About -->
                 <div class="col-span-2 lg:col-span-2">
                     <a href="{{ url('/') }}" class="flex items-center gap-2 mb-3">
@@ -73,6 +73,13 @@
                         <li><a href="{{ route('faq') }}" class="text-kk-text-muted hover:text-kk-tan-dark transition-colors">FAQs</a></li>
                         <li><a href="{{ route('blog') }}" class="text-kk-text-muted hover:text-kk-tan-dark transition-colors">Blog</a></li>
                         <li><a href="{{ route('size-guide') }}" class="text-kk-text-muted hover:text-kk-tan-dark transition-colors">Size Guide</a></li>
+                        {{-- Extra links added under Online Store > Navigation. They
+                             were stored by the admin and rendered by nothing. --}}
+                        @foreach(\App\Models\NavigationMenu::getByLocation('footer_col1') as $kkNavItem)
+                            <li><a href="{{ $kkNavItem->url }}"
+                                   @if($kkNavItem->open_in_new_tab) target="_blank" rel="noopener" @endif
+                                   class="text-kk-text-muted hover:text-kk-tan-dark transition-colors">{{ $kkNavItem->label }}</a></li>
+                        @endforeach
                     </ul>
                 </div>
 
@@ -84,8 +91,42 @@
                         <li><a href="{{ route('track-order') }}" class="text-kk-text-muted hover:text-kk-tan-dark transition-colors">Track Order</a></li>
                         <li><a href="{{ route('returns') }}" class="text-kk-text-muted hover:text-kk-tan-dark transition-colors">Returns &amp; Refunds</a></li>
                         <li><a href="{{ route('shipping') }}" class="text-kk-text-muted hover:text-kk-tan-dark transition-colors">Shipping Info</a></li>
+                        {{-- Extra links added under Online Store > Navigation. They
+                             were stored by the admin and rendered by nothing. --}}
+                        @foreach(\App\Models\NavigationMenu::getByLocation('footer_col2') as $kkNavItem)
+                            <li><a href="{{ $kkNavItem->url }}"
+                                   @if($kkNavItem->open_in_new_tab) target="_blank" rel="noopener" @endif
+                                   class="text-kk-text-muted hover:text-kk-tan-dark transition-colors">{{ $kkNavItem->label }}</a></li>
+                        @endforeach
                     </ul>
                 </div>
+
+                {{-- Contact email, phone and address are all editable under
+                     Online Store > Site Settings, and were rendered nowhere - so a
+                     shopper had no way to see them and the admin no way to tell. --}}
+                @php
+                    $kkContact = array_filter([
+                        'email'   => trim((string) \App\Models\Setting::get('contact_email', '')),
+                        'phone'   => trim((string) \App\Models\Setting::get('contact_phone', '')),
+                        'address' => trim((string) \App\Models\Setting::get('contact_address', '')),
+                    ], fn ($v) => $v !== '');
+                @endphp
+                @if(!empty($kkContact))
+                <div>
+                    <h4 class="text-xs font-semibold mb-4 text-kk-brown uppercase tracking-[0.18em]">Get in Touch</h4>
+                    <ul class="space-y-2.5 text-sm">
+                        @isset($kkContact['email'])
+                            <li><a href="mailto:{{ $kkContact['email'] }}" class="text-kk-text-muted hover:text-kk-tan-dark transition-colors break-all">{{ $kkContact['email'] }}</a></li>
+                        @endisset
+                        @isset($kkContact['phone'])
+                            <li><a href="tel:{{ preg_replace('/[^0-9+]/', '', $kkContact['phone']) }}" class="text-kk-text-muted hover:text-kk-tan-dark transition-colors">{{ $kkContact['phone'] }}</a></li>
+                        @endisset
+                        @isset($kkContact['address'])
+                            <li class="text-kk-text-muted leading-relaxed">{{ $kkContact['address'] }}</li>
+                        @endisset
+                    </ul>
+                </div>
+                @endif
 
                 <!-- Policies -->
                 <div>
@@ -94,6 +135,13 @@
                         <li><a href="{{ route('privacy') }}" class="text-kk-text-muted hover:text-kk-tan-dark transition-colors">Privacy Policy</a></li>
                         <li><a href="{{ route('terms') }}" class="text-kk-text-muted hover:text-kk-tan-dark transition-colors">Terms of Service</a></li>
                         <li><a href="{{ route('cookie-policy') }}" class="text-kk-text-muted hover:text-kk-tan-dark transition-colors">Cookie Policy</a></li>
+                        {{-- Extra links added under Online Store > Navigation. They
+                             were stored by the admin and rendered by nothing. --}}
+                        @foreach(\App\Models\NavigationMenu::getByLocation('footer_col3') as $kkNavItem)
+                            <li><a href="{{ $kkNavItem->url }}"
+                                   @if($kkNavItem->open_in_new_tab) target="_blank" rel="noopener" @endif
+                                   class="text-kk-text-muted hover:text-kk-tan-dark transition-colors">{{ $kkNavItem->label }}</a></li>
+                        @endforeach
                     </ul>
                 </div>
             </div>
@@ -104,8 +152,12 @@
     <div class="border-t border-kk-cream-dark py-4 bg-kk-cream-light">
         <div class="container mx-auto px-4">
             <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                {{-- footer_copyright is editable under Online Store > Site Settings but
+                     nothing read it, so the line here was fixed no matter what was saved. --}}
+                @php $kkCopyright = trim((string) \App\Models\Setting::get('footer_copyright', '')); @endphp
                 <p class="text-xs text-kk-text-muted">
-                    &copy; {{ date('Y') }} {{ \App\Models\Setting::get('site_name', 'Karmaa Kulture') }}. All rights reserved.
+                    &copy; {{ date('Y') }}
+                    {{ $kkCopyright !== '' ? $kkCopyright : \App\Models\Setting::get('site_name', 'Karmaa Kulture').'. All rights reserved.' }}
                 </p>
                 <div class="flex items-center gap-3">
                     {{-- Visa --}}

@@ -9,6 +9,7 @@ use App\Models\InventoryMovement;
 use App\Models\InventoryStock;
 use App\Rules\ValidationRules as V;
 use App\Services\InventoryStockService;
+use Illuminate\Support\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -16,6 +17,41 @@ use Illuminate\View\View;
 
 class InventoryController extends Controller
 {
+    /**
+     * The catalogue the Adjust Stock dialog picks from, carrying what each
+     * warehouse holds of it.
+     *
+     * The dialog adjusts one location, so the figure it shows has to be that
+     * location's: reading the product-wide total and then typing it into "Set
+     * stock to" quietly set the default warehouse to the sum of every
+     * warehouse, and moved the product total up by the difference.
+     */
+    private function adjustProducts(): Collection
+    {
+        return Product::select('id', 'name', 'stock_quantity')
+            ->with(['inventoryStocks' => fn ($stocks) => $stocks
+                ->select('id', 'product_id', 'variant_id', 'location_id', 'quantity')
+                ->whereNull('variant_id')])
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Product $product) => [
+                'id' => $product->id,
+                'name' => $product->name,
+                'stock' => (int) $product->stock_quantity,
+                'byLocation' => $product->inventoryStocks
+                    ->mapWithKeys(fn ($line) => [(string) $line->location_id => (int) $line->quantity]),
+            ]);
+    }
+
+    /** What each warehouse holds of one product, keyed by location id. */
+    public static function heldByLocation(Product $product): array
+    {
+        return $product->inventoryStocks
+            ->whereNull('variant_id')
+            ->mapWithKeys(fn ($line) => [(string) $line->location_id => (int) $line->quantity])
+            ->all();
+    }
+
     public function index(Request $request): View
     {
         $perPage = min(max((int) $request->input('per_page', 10), 1), 100);
@@ -67,8 +103,9 @@ class InventoryController extends Controller
         ];
 
         $locations = InventoryLocation::orderBy('name')->get(['id', 'name', 'code', 'is_default']);
+        $adjustProducts = $this->adjustProducts();
 
-        return view('admin.inventory.index', compact('products', 'stats', 'locations'));
+        return view('admin.inventory.index', compact('products', 'stats', 'locations', 'adjustProducts'));
     }
 
     public function lowStock(): View
@@ -76,24 +113,30 @@ class InventoryController extends Controller
         $perPage = min(max((int) request()->input('per_page', 10), 1), 100);
         $products = Product::whereColumn('stock_quantity', '<=', 'low_stock_threshold')
             ->where('stock_quantity', '>', 0)
+            ->with(['inventoryStocks' => fn ($stocks) => $stocks->select('id', 'product_id', 'variant_id', 'location_id', 'quantity')])
             ->orderBy('stock_quantity')
             ->paginate($perPage)->withQueryString();
 
         $locations = InventoryLocation::orderBy('name')->get(['id', 'name', 'code', 'is_default']);
 
-        return view('admin.inventory.low-stock', compact('products', 'locations'));
+        $adjustProducts = $this->adjustProducts();
+
+        return view('admin.inventory.low-stock', compact('products', 'locations', 'adjustProducts'));
     }
 
     public function outOfStock(): View
     {
         $perPage = min(max((int) request()->input('per_page', 10), 1), 100);
         $products = Product::where('stock_quantity', '<=', 0)
+            ->with(['inventoryStocks' => fn ($stocks) => $stocks->select('id', 'product_id', 'variant_id', 'location_id', 'quantity')])
             ->orderBy('name')
             ->paginate($perPage)->withQueryString();
 
         $locations = InventoryLocation::orderBy('name')->get(['id', 'name', 'code', 'is_default']);
 
-        return view('admin.inventory.out-of-stock', compact('products', 'locations'));
+        $adjustProducts = $this->adjustProducts();
+
+        return view('admin.inventory.out-of-stock', compact('products', 'locations', 'adjustProducts'));
     }
 
     /**

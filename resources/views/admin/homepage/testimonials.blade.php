@@ -8,6 +8,8 @@
         </div>
     </x-slot>
 
+    <x-admin.form-errors title="The testimonial was not saved" />
+
     <div style="margin-bottom: 0.25rem;">
         <a href="{{ route('admin.homepage.index') }}" style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 13px; color: #005bd3; text-decoration: none;">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M12 16l-6-6 6-6" stroke="#005bd3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -72,13 +74,13 @@
         <!-- Existing Testimonials -->
         <div style="display: flex; flex-direction: column; gap: 0.75rem;">
             @forelse($testimonials as $testimonial)
-                <div class="card" style="padding: 1rem;">
-                    <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+                <div class="card" style="padding: 1rem;" x-data="{ editing: false }">
+                    <div x-show="!editing" style="display: flex; align-items: flex-start; gap: 0.75rem;">
                         <div style="width: 2.5rem; height: 2.5rem; background: #f0f0f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden;">
                             @if($testimonial->avatar_url)
                                 <img src="{{ asset_v('storage/' . $testimonial->avatar_url) }}" alt="{{ $testimonial->name }}" style="width: 100%; height: 100%; object-fit: cover;">
                             @else
-                                <span style="color: #616161; font-weight: 600; font-size: 14px;">{{ substr($testimonial->name, 0, 1) }}</span>
+                                <span style="color: #616161; font-weight: 600; font-size: 14px;">{{ mb_strtoupper(mb_substr($testimonial->name, 0, 1)) }}</span>
                             @endif
                         </div>
                         <div style="flex: 1;">
@@ -114,14 +116,81 @@
                                         {{ $testimonial->is_active ? 'Hide' : 'Show' }}
                                     </button>
                                 </form>
+                                {{-- updateTestimonial and its route have existed since the
+                                     feature was written, but no page ever posted to them, so a
+                                     typo in a review could only be fixed by deleting and retyping. --}}
+                                <button type="button" class="btn btn-secondary" style="font-size: 12px; padding: 0.25rem 0.5rem;" @click="editing = true">Edit</button>
                                 <form action="{{ route('admin.homepage.testimonials.destroy', $testimonial) }}" method="POST" style="display: inline;" onsubmit="return confirm('Delete this testimonial?')">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" style="font-size: 12px; padding: 0.25rem 0.5rem; background: none; border: 1px solid #d72c0d; color: #d72c0d; border-radius: 0.375rem; cursor: pointer;">Delete</button>
                                 </form>
+
+                                {{-- position was set once at creation and never again, so the order
+                                     reviews appear in was fixed by the order they were added. --}}
+                                <span style="margin-left: auto; display: inline-flex; gap: 0.25rem;">
+                                    @if(! $loop->first)
+                                        <form action="{{ route('admin.homepage.testimonials.move', $testimonial) }}" method="POST" style="display: inline;">
+                                            @csrf
+                                            @method('PUT')
+                                            <input type="hidden" name="direction" value="up">
+                                            <button type="submit" class="btn btn-secondary" style="font-size: 12px; padding: 0.25rem 0.45rem;" aria-label="Move up" title="Move up">&uarr;</button>
+                                        </form>
+                                    @endif
+                                    @if(! $loop->last)
+                                        <form action="{{ route('admin.homepage.testimonials.move', $testimonial) }}" method="POST" style="display: inline;">
+                                            @csrf
+                                            @method('PUT')
+                                            <input type="hidden" name="direction" value="down">
+                                            <button type="submit" class="btn btn-secondary" style="font-size: 12px; padding: 0.25rem 0.45rem;" aria-label="Move down" title="Move down">&darr;</button>
+                                        </form>
+                                    @endif
+                                </span>
                             </div>
                         </div>
                     </div>
+
+                    <form x-show="editing" x-cloak action="{{ route('admin.homepage.testimonials.update', $testimonial) }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        @method('PUT')
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <div>
+                                <label for="t{{ $testimonial->id }}-name" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Customer Name <span style="color: #d72c0d;">*</span></label>
+                                <input type="text" name="name" id="t{{ $testimonial->id }}-name" value="{{ $testimonial->name }}" required minlength="2" maxlength="100" autocomplete="off" class="form-input">
+                            </div>
+                            <div>
+                                <label for="t{{ $testimonial->id }}-title" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Title/Role</label>
+                                <input type="text" name="title" id="t{{ $testimonial->id }}-title" value="{{ $testimonial->title }}" maxlength="255" class="form-input">
+                            </div>
+                            <div>
+                                <label for="t{{ $testimonial->id }}-content" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Review <span style="color: #d72c0d;">*</span></label>
+                                <textarea name="content" id="t{{ $testimonial->id }}-content" rows="4" required minlength="3" maxlength="1000" class="form-textarea">{{ $testimonial->content }}</textarea>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                                <div>
+                                    <label for="t{{ $testimonial->id }}-rating" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Rating <span style="color: #d72c0d;">*</span></label>
+                                    <select name="rating" id="t{{ $testimonial->id }}-rating" required class="form-select">
+                                        @for($r = 5; $r >= 1; $r--)
+                                            <option value="{{ $r }}" {{ $testimonial->rating === $r ? 'selected' : '' }}>{{ $r }} {{ $r === 1 ? 'Star' : 'Stars' }}</option>
+                                        @endfor
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="t{{ $testimonial->id }}-product" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Product Name</label>
+                                    <input type="text" name="product_name" id="t{{ $testimonial->id }}-product" value="{{ $testimonial->product_name }}" maxlength="255" class="form-input">
+                                </div>
+                            </div>
+                            <div>
+                                <label for="t{{ $testimonial->id }}-avatar" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Replace Avatar Photo</label>
+                                <input type="file" name="avatar" id="t{{ $testimonial->id }}-avatar" accept="image/jpeg,image/png,image/webp,image/gif" class="form-input">
+                                <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Leave empty to keep the current photo. JPG, PNG, WebP or GIF. Max 2MB.</p>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                                <button type="button" class="btn btn-secondary" style="font-size: 13px;" @click="editing = false">Cancel</button>
+                                <button type="submit" class="btn btn-primary" style="font-size: 13px;">Save Changes</button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             @empty
                 <div class="card" style="padding: 3rem; text-align: center;">
