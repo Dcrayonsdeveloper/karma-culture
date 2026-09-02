@@ -686,7 +686,10 @@
                             </div>
                         </div>
 
-                        <a href="{{ route('home') }}" class="kk-pdp__oos-browse">Browse similar pieces &rsaquo;</a>
+                        {{-- "Similar pieces" means the shelf this one came off, not the
+                             front page: the shopper is here because they wanted this
+                             product, and the home page is not where the nearest ones are. --}}
+                        <a href="{{ $product->category ? route('category.show', $product->category) : route('shop') }}" class="kk-pdp__oos-browse">Browse similar pieces &rsaquo;</a>
                     </div>
                 @endif
 

@@ -272,9 +272,19 @@ class Product extends Model
         return $query->where('is_featured', true);
     }
 
+    /**
+     * Only what a shopper can actually buy.
+     *
+     * Both halves, because that is what isInStock() means and what the product
+     * card paints its "Out of Stock" badge from. On stock_status alone this
+     * matched a product flagged in_stock with an empty shelf, so the assistant
+     * recommended it and "In Stock Only" kept it - and then its own card came
+     * back reading Out of Stock.
+     */
     public function scopeInStock($query)
     {
-        return $query->where('stock_status', 'in_stock');
+        return $query->where('products.stock_status', 'in_stock')
+            ->where('products.stock_quantity', '>', 0);
     }
 
     /**

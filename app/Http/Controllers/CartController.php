@@ -169,6 +169,24 @@ class CartController extends Controller
             return back()->with('error', $error);
         }
 
+        // The product's own flag is the storefront's sell / don't-sell switch: the
+        // card paints its badge from isInStock() and the PDP hides both CTAs on it.
+        // This endpoint read the quantity alone, so the cart drawer's quick-add was
+        // the one door still open on a product every other surface calls sold out.
+        //
+        // Only the stock_status half is mirrored here. product_variants has no such
+        // column, and a blanket isInStock() would also refuse a variant-stocked
+        // product whose parent row happens to sit at 0.
+        if ($product->stock_status !== 'in_stock') {
+            $error = 'This item is currently out of stock.';
+
+            if ($request->wantsJson()) {
+                return response()->json(['error' => $error, 'available' => 0], 422);
+            }
+
+            return back()->with('error', $error);
+        }
+
         $stockQuantity = $variant ? $variant->stock_quantity : $product->stock_quantity;
 
         if ($stockQuantity < $validated['quantity']) {
@@ -577,7 +595,12 @@ class CartController extends Controller
             ->whereIn('category_id', $categoryIds)
             ->whereHas('images')
             ->with('primaryImage')
-            ->inStockFirst()
+            // Filtered, not merely sorted: every tile in the drawer is a bare
+            // "Add to Cart" with no room for an Out of Stock badge, so a sold-out
+            // one is a button that can only ever return an error toast. The cart
+            // PAGE keeps inStockFirst() instead - it renders full product cards,
+            // which do carry the badge.
+            ->inStock()
             ->inRandomOrder()
             ->take(6)
             ->get()
