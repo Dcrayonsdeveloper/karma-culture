@@ -303,12 +303,16 @@ class Product extends Model
         $url = $img?->url;
 
         if ($url) {
-            // If it's a relative path (stored in storage), prefix with /storage/
-            if ($url && ! str_starts_with($url, 'http') && ! str_starts_with($url, '/')) {
-                return asset_v('storage/'.$url);
+            // An external address is not ours to fingerprint. Everything else
+            // is a file we serve: rows written by the admin controller hold
+            // "/storage/products/<hash>.jpg", older ones a bare relative path.
+            if (str_starts_with($url, 'http')) {
+                return $url;
             }
 
-            return $url;
+            return str_starts_with($url, '/')
+                ? asset_v(ltrim($url, '/'))
+                : asset_v('storage/'.$url);
         }
 
         return asset_v('images/no-product-image.svg');

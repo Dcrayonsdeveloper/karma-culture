@@ -20,11 +20,17 @@
 
     @php
         // Media = images + videos (ordered by position). Each item carries a type + optional poster.
+        // Only an external http address is left alone; a rooted
+        // "/storage/products/..." is our own file and needs the fingerprint,
+        // or the gallery is the one place on the site still serving uncached-
+        // busted images.
         $resolveUrl = function ($url) {
-            if ($url && !str_starts_with($url, 'http') && !str_starts_with($url, '/')) {
-                return asset_v('storage/' . $url);
+            if (! $url || str_starts_with($url, 'http')) {
+                return $url;
             }
-            return $url;
+            return str_starts_with($url, '/')
+                ? asset_v(ltrim($url, '/'))
+                : asset_v('storage/' . $url);
         };
         $media = $product->images->sortBy('position')->map(function ($img) use ($resolveUrl) {
             return [
