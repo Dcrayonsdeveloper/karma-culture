@@ -47,40 +47,9 @@
     .layout-admin table tbody tr:last-child td { border-bottom: none; }
     .layout-admin table tbody tr:hover { background: #fafafa; }
 
-    /* Admin responsive overrides */
-    @media (max-width: 768px) {
-        /* Stack all inline grid layouts on mobile */
-        .layout-admin main [style*="grid-template-columns"] {
-            grid-template-columns: 1fr !important;
-        }
-        /* Tables: enforce min-width so they scroll, not squish */
-        .layout-admin table { min-width: 600px; }
-        .layout-admin .card { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        /* Page header: wrap title + button */
-        .layout-admin .page-header { flex-wrap: wrap; }
-        /* Save bars: wrap */
-        .layout-admin main [style*="justify-content: space-between"] {
-            flex-wrap: wrap;
-            gap: 0.75rem;
-        }
-        /* Tab filters: allow horizontal scroll. overflow-y must be pinned to
-           hidden - `auto` is the computed default once overflow-x is set, and
-           the active tab's -1px bottom margin pokes a pixel past the content
-           box, which is enough for a phantom vertical scrollbar. */
-        .layout-admin .card > [style*="border-bottom"][style*="display: flex"] {
-            overflow-x: auto;
-            overflow-y: hidden;
-            -webkit-overflow-scrolling: touch;
-            white-space: nowrap;
-        }
-        /* Search bars: stack vertically */
-        .layout-admin .card > [style*="border-bottom"][style*="gap: 0.5rem"] {
-            flex-wrap: wrap;
-        }
-        .layout-admin .card > [style*="border-bottom"][style*="gap: 0.5rem"] form {
-            flex-wrap: wrap;
-        }
-    }
+    /* Responsive behaviour (grid collapse, wrapping toolbars, scrolling
+       tables) lives in resources/css/app.css under "Responsive: admin shell",
+       so the rules are versioned with the rest of the stylesheet. */
     </style>
 </head>
 <body class="font-sans antialiased layout-admin" style="background: #efeded;" x-data="{ sidebarOpen: false }">
