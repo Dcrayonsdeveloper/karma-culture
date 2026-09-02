@@ -2,7 +2,7 @@
     {{-- Below lg the sidebar sits above the page content, where ten stacked
          links pushed every account page a full screen down. Until lg it is
          one row of chips that scrolls sideways; the column returns at lg. --}}
-    <nav class="bg-white border border-neutral-100 rounded-xl p-3 flex gap-1 overflow-x-auto lg:overflow-visible lg:block lg:space-y-0.5">
+    <nav class="bg-white border border-neutral-100 rounded-xl p-3 flex gap-1 overflow-x-auto scrollbar-thin lg:overflow-visible lg:block lg:space-y-0.5">
         <a href="{{ route('account.dashboard') }}"
            class="flex items-center gap-2.5 px-3 py-2 rounded-lg shrink-0 whitespace-nowrap min-h-10 lg:min-h-0 text-[13px] font-medium {{ request()->routeIs('account.dashboard') ? 'bg-primary-50 text-primary-600' : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900' }} transition-colors">
             <svg class="w-4.5 h-4.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -92,6 +92,11 @@
 
                 <!-- Desktop Navigation (Left side) -->
                 <nav class="hidden lg:flex items-center gap-1 shrink-0">
+                    {{-- /shop is the whole catalogue with the filter sidebar on it,
+                         and until now nothing in the header, the mobile drawer or the
+                         footer pointed at it: a shopper reached it by failing a search
+                         or by clicking a home page hanger that may not exist. --}}
+                    <a href="{{ route('shop') }}" class="px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">Shop All</a>
                     <a href="{{ route('new-arrivals') }}" class="px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">New In</a>
 
                     {{-- Categories: hover-triggered mega menu - clean text layout, data from admin --}}
@@ -401,6 +406,26 @@
                         </div>
                     </div>
                 </div>
+
+                {{-- Filters. Sticky, so it stays in reach however far down a long
+                     grid the shopper has scrolled - the listing's own Filters
+                     button scrolls away with the top of the page, and off a
+                     listing there was no filter control anywhere at all.
+
+                     The event is answered by whichever panel the page has: a
+                     listing's own sidebar (partials/product-filter-sidebar) so
+                     the filters apply to the grid on screen, otherwise the
+                     header's shop-wide drawer (partials/global-filter-drawer).
+                     Hidden from lg on a listing page, where the sidebar column
+                     is already sitting there in full. --}}
+                <button type="button"
+                        @click="$dispatch('open-global-filters')"
+                        class="relative p-2 text-kk-brown hover:text-kk-tan-dark transition-colors kk-filters-btn"
+                        aria-label="Filters" title="Filters">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                    </svg>
+                </button>
 
                 <!-- Wishlist -->
                 <a href="{{ route('wishlist') }}" class="relative p-2.5 lg:p-2 text-kk-brown hover:text-kk-tan-dark transition-colors hidden sm:flex" aria-label="Wishlist">

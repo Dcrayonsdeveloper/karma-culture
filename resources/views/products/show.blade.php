@@ -114,11 +114,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
     .pdp-wrapper { background: #EFE2CB; }
-    /* Below lg the sticky Add to Cart / Buy Now bar (~76px) sits over the foot
-       of the page; this keeps the last of the content and the footer clear of it. */
-    @media (max-width: 1023.98px) {
-        .pdp-wrapper--bar { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
-    }
     .kk-pdp { display: grid; gap: 28px; padding: 24px 0 56px; }
     @media (min-width: 1024px) {
         .kk-pdp { grid-template-columns: 1.2fr 1fr; gap: 56px; align-items: start; }

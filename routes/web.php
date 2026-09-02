@@ -91,6 +91,12 @@ Route::get('/search/suggestions', [App\Http\Controllers\SearchController::class,
 // pointed at the home page, where their filters mean nothing.
 Route::get('/shop', [App\Http\Controllers\ProductController::class, 'index'])->name('shop');
 
+// The filter panel on its own, for the Filters drawer the header now carries on
+// every page. Fetched the first time a shopper opens the drawer rather than
+// rendered into every page, because building the facets is five queries and
+// most visits never open it.
+Route::get('/shop/filters', [App\Http\Controllers\ProductController::class, 'filtersPanel'])->name('shop.filters');
+
 // Legacy paths. These still circulate in already-delivered email and in
 // admin-authored page copy, where they 404'd: /orders/{id} predates the move
 // of order pages under /account, /products predates the all-products page

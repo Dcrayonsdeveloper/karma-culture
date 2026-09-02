@@ -98,25 +98,26 @@
             .kk-btn-cream:hover { background: var(--kk-brown); color: var(--kk-cream); }
 
             /* Hero */
-            .kk-hero { position: relative; width: 100%; overflow: hidden; background: var(--kk-cream); }
-            /* The slide's box, one ratio per breakpoint. It used to be 16/9 on
-               desktop, which no hero file is: the clip the store ships with is
-               a 1426x370 strip, so an image slide stood more than twice as tall
-               as the video slide beside it and the carousel lurched between the
-               two. Both defaults now come from Banner's constants, which is
-               also what the admin screen recommends uploading.
+            .kk-hero { position: relative; width: 100%; overflow: hidden; background: var(--kk-brown-darker); }
+            /* The slide's box: one ratio per breakpoint, the same for every
+               slide in the carousel, and never the media's own.
 
-               A video-led slide overrides its variable to `auto` and takes its
-               height from the file instead; the two breakpoints are set
-               separately, so a banner can play a clip on desktop and show a
-               still on phones. The media itself is fitted by the .kk-media
-               frame wrapped around it - see .kk-hero-media further down. */
+               A video-led slide used to opt out of this and take its height
+               from the file, so the hero stood 370px tall on the strip the
+               store ships with and 1008px on the clip beside it, lurching
+               between the two every six seconds - while an image slide, pinned
+               to the strip ratio, showed its picture small in the middle of a
+               blurred field. Both shapes now come from Banner's constants,
+               which is also what the admin screen recommends uploading, so
+               artwork at that size fills the box with nothing cropped at all;
+               anything else is centre-cropped to it - see .kk-hero-media in the
+               hero's own stylesheet further down the page. */
             .kk-hero-slide {
                 position: relative; width: 100%; overflow: hidden;
-                aspect-ratio: var(--kk-hero-ratio, {{ \App\Models\Banner::HERO_DESKTOP_SIZE[0] }} / {{ \App\Models\Banner::HERO_DESKTOP_SIZE[1] }});
+                aspect-ratio: {{ \App\Models\Banner::HERO_DESKTOP_SIZE[0] }} / {{ \App\Models\Banner::HERO_DESKTOP_SIZE[1] }};
             }
             @media (max-width: 767px) {
-                .kk-hero-slide { aspect-ratio: var(--kk-hero-ratio-mobile, {{ \App\Models\Banner::HERO_MOBILE_SIZE[0] }} / {{ \App\Models\Banner::HERO_MOBILE_SIZE[1] }}); }
+                .kk-hero-slide { aspect-ratio: {{ \App\Models\Banner::HERO_MOBILE_SIZE[0] }} / {{ \App\Models\Banner::HERO_MOBILE_SIZE[1] }}; }
             }
 
             /* Tile cards (Category / Aesthetics / Occasions) */
@@ -687,16 +688,25 @@
     @if($flashSale ?? false)
         <div x-data="flashSalePopup({{ $flashSale->remaining_time }}, '{{ $flashSale->slug }}')"
              x-show="open" x-cloak
+             {{-- data-kk-popup marks this subtree as the popup's own chrome, so a
+                  click on the close button or the backdrop is read as "no thanks"
+                  rather than as the shopper engaging with the page. --}}
+             data-kk-popup="flash"
              @keydown.escape.window="dismiss()"
+             role="dialog" aria-modal="true" aria-labelledby="flash-popup-title"
              class="fixed inset-0 z-60 flex items-center justify-center p-4">
             <div x-show="open" @click="dismiss()" class="absolute inset-0 bg-kk-brown-darker/70 backdrop-blur-sm"></div>
-            <div x-show="open" class="relative w-full max-w-md max-h-[calc(100dvh_-_2rem)] overflow-x-hidden overflow-y-auto rounded-2xl shadow-2xl" @click.stop>
+            {{-- x-trap.noscroll, the same lock the other two popups already use,
+                 replaces the hand-written document.body.style.overflow writes this
+                 component used to make. Alpine restores its own state on teardown;
+                 the raw writes did not, and two of them could fight. --}}
+            <div x-show="open" x-trap.noscroll="open" class="relative w-full max-w-md max-h-[calc(100dvh_-_2rem)] overflow-x-hidden overflow-y-auto rounded-2xl shadow-2xl" @click.stop>
                 <button @click="dismiss()" class="absolute top-3 right-3 w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center text-kk-cream/80 hover:text-kk-cream rounded-full hover:bg-kk-cream/10 z-10">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
                 <div class="relative bg-kk-brown-dark px-6 pt-8 pb-6 text-center text-kk-cream">
                     <p class="text-kk-cream/70 text-[10px] font-semibold tracking-[0.28em] uppercase mb-2">Limited Time Offer</p>
-                    <h2 class="kk-display text-2xl mb-2">{{ $flashSale->name }}</h2>
+                    <h2 id="flash-popup-title" class="kk-display text-2xl mb-2">{{ $flashSale->name }}</h2>
                     @if($flashSale->description)
                         <p class="text-kk-cream/75 text-sm leading-relaxed max-w-xs mx-auto mb-4">{{ Str::limit($flashSale->description, 100) }}</p>
                     @endif
@@ -730,23 +740,55 @@
         <script>
             function flashSalePopup(remainingSeconds, saleSlug) {
                 return {
-                    open: false, remaining: remainingSeconds, timer: null,
+                    open: false, remaining: remainingSeconds, timer: null, dismissed: false,
                     get hours() { return String(Math.floor(this.remaining / 3600)).padStart(2, '0'); },
                     get minutes() { return String(Math.floor((this.remaining % 3600) / 60)).padStart(2, '0'); },
                     get seconds() { return String(this.remaining % 60).padStart(2, '0'); },
                     init() {
                         const key = 'flash_sale_dismissed_' + saleSlug;
                         if (sessionStorage.getItem(key)) return;
-                        setTimeout(() => { this.open = true; document.body.style.overflow = 'hidden'; }, 1500);
+                        // The queue decides when this opens now, so that the offer
+                        // popup can no longer paint over it two seconds later. It is
+                        // reached at runtime rather than at parse time: this script
+                        // runs while the page is parsing, before the deferred app.js
+                        // module has defined Alpine at all.
+                        const q = window.kkPopupQueue && window.kkPopupQueue();
+                        if (!q) return;   // no queue means no popup, and never a stack
+                        q.register('flash', {
+                            priority: 10, delay: 1500, seenStore: 'session',
+                            root: this.$root,
+                            // Never re-open a sale at 00:00:00, and never re-open
+                            // one the shopper has already closed. Dismissing this
+                            // popup writes a per-session key that survives a
+                            // reload, so bringing it back 45s into the same page
+                            // view would contradict the popup's own contract - and
+                            // its countdown stops on dismissal, so the second
+                            // showing would display a clock frozen at the moment
+                            // it was closed. The restart cycle carries the offer
+                            // popup, which has no such explicit dismissal.
+                            canShow: () => this.remaining > 0 && !this.dismissed,
+                            show: () => { this.open = true; },
+                            hide: () => { this.open = false; },
+                        });
+                        this.$watch('open', (v) => { if (!v) q.release('flash'); });
                         this.timer = setInterval(() => {
                             if (this.remaining > 0) { this.remaining--; } else { clearInterval(this.timer); this.dismiss(); }
                         }, 1000);
                     },
                     dismiss() {
-                        this.open = false; document.body.style.overflow = '';
+                        // Escape is bound with .window, so this runs on every
+                        // Escape anywhere on the page - including the ones aimed
+                        // at the cart drawer, the mobile nav or the search overlay.
+                        // Without this guard one of those would mark the sale
+                        // dismissed before it had ever been on screen, and the
+                        // queue would then skip it for the whole visit.
+                        if (!this.open) return;
+                        this.open = false;   // the scroll lock is x-trap.noscroll's job now
+                        this.dismissed = true;
                         sessionStorage.setItem('flash_sale_dismissed_' + saleSlug, '1');
                         if (this.timer) clearInterval(this.timer);
-                    }
+                    },
+                    destroy() { if (window.kkPopupQueue) window.kkPopupQueue().release('flash'); }
                 };
             }
         </script>
@@ -787,22 +829,20 @@
 
                             // ...and it may answer that question differently per
                             // breakpoint. The desktop hero is a wide strip; a phone
-                            // gives the slide a 4:5 portrait box, and the same file
-                            // shrunk into it is barely taller than the caption drawn
-                            // on top. A banner may therefore carry its own mobile
-                            // image, its own mobile clip, or neither - and neither is
-                            // the ordinary case, which renders exactly as it always
-                            // has, one media element with a plain src.
+                            // gives the slide a 3:2 box, and that strip cropped into
+                            // it keeps only two fifths of its width. A banner may
+                            // therefore carry its own mobile image, its own mobile
+                            // clip, or neither - and neither is the ordinary case,
+                            // which renders exactly as it always has, one media
+                            // element with a plain src.
                             $mobileOverride = $banner->has_mobile_media;
                             $desktopIsVideo = $banner->has_video;
                             $mobileIsVideo = $mobileOverride ? $banner->has_mobile_video : $desktopIsVideo;
 
-                            // A video-led breakpoint is sized by its own file, so it
-                            // opts out of the slide's aspect-ratio rather than fitting
-                            // a clip into a box it was not cut for.
-                            $slideStyle = ($desktopIsVideo ? '--kk-hero-ratio: auto;' : '')
-                                .($mobileIsVideo ? '--kk-hero-ratio-mobile: auto;' : '');
-
+                            // Both flags now only decide which file the frame gets and
+                            // whether it needs a poster. Neither decides the slide's
+                            // height any more: a clip that sized its own slide is what
+                            // made the carousel lurch as it advanced.
                             $heroFrames = [[
                                 'device' => 'desktop',
                                 'isVideo' => $desktopIsVideo,
@@ -821,8 +861,7 @@
                                 ];
                             }
                         @endphp
-                        <div class="kk-hero-slide{{ $desktopIsVideo ? ' kk-hero-slide--video-desktop' : '' }}{{ $mobileIsVideo ? ' kk-hero-slide--video-mobile' : '' }}"
-                             @if($slideStyle) style="{{ $slideStyle }}" @endif
+                        <div class="kk-hero-slide"
                              @if($heroCount > 1)
                                  x-show="current === {{ $i }}"
                                  x-transition:enter="kk-fade-enter" x-transition:enter-start="kk-fade-start"
@@ -846,27 +885,26 @@
                                    aria-label="{{ $banner->title ?: $heroName }}{{ $bannerOffsite ? ' (opens in a new tab)' : '' }}">
                             @endif
 
-                            {{-- Contained, not cropped. A banner carries its own headline
-                                 and product shot, and cover cut them off the sides on
-                                 desktop and off the top and bottom on the 4/5 mobile box.
-                                 A blurred copy of the artwork fills what is left over so
-                                 an off-ratio banner does not read as letterboxed. --}}
+                            {{-- Filled, not contained. Every other .kk-media frame in the
+                                 store shows its subject whole over a blurred copy of
+                                 itself, because a product shot arrives in whatever shape
+                                 the supplier sent. The hero is the one place the shape is
+                                 known in advance: the admin screen names the exact size,
+                                 and artwork at that size fills the box with nothing lost.
+                                 Contain here just left the banner floating small in the
+                                 middle of a blurred field. --}}
                             @foreach($heroFrames as $frame)
                                 {{-- One frame per breakpoint, and only one of them is ever
                                      drawn. Where a banner has mobile media the source is
                                      handed over by the script below the carousel rather than
                                      written into `src` here, so the hidden frame is never
                                      fetched: a phone should not pull down a 15 MB desktop
-                                     clip on its way to the portrait one. A banner without
+                                     clip on its way to the phone-sized one. A banner without
                                      mobile media renders a single frame with a plain `src`,
                                      which the preload scanner still finds. --}}
-                                <div class="kk-media kk-media--dark kk-hero-media{{ $frame['isVideo'] ? ' kk-hero-media--video' : '' }}{{ $mobileOverride ? ' kk-hero-media--'.$frame['device'] : '' }}">
+                                <div class="kk-media kk-media--dark kk-hero-media{{ $mobileOverride ? ' kk-hero-media--'.$frame['device'] : '' }}">
                                     @if($frame['isVideo'])
-                                        {{-- No blurred copy behind a hero video: the slide sizes
-                                             itself to the file, so there is no margin to fill and
-                                             a second copy of a full-bleed clip is not worth it. --}}
-                                        <video class="kk-hero-video"
-                                               @if($mobileOverride)
+                                        <video @if($mobileOverride)
                                                    data-kk-for="{{ $frame['device'] }}" data-kk-src="{{ $frame['src'] }}"
                                                    @if($frame['poster']) data-kk-poster="{{ $frame['poster'] }}" @endif
                                                @else
@@ -876,13 +914,6 @@
                                                autoplay muted loop playsinline preload="{{ $i === 0 ? 'auto' : 'metadata' }}"
                                                aria-label="{{ $banner->title ?: $heroName }} hero video"></video>
                                     @else
-                                        <img class="kk-media__fill" alt="" aria-hidden="true"
-                                             @if($mobileOverride)
-                                                 data-kk-for="{{ $frame['device'] }}" data-kk-src="{{ $frame['src'] }}"
-                                             @else
-                                                 src="{{ $frame['src'] }}"
-                                             @endif
-                                             @if($i === 0) fetchpriority="high" @else loading="lazy" @endif decoding="async">
                                         <img alt="{{ $banner->title ?: $heroName }}"
                                              @if($mobileOverride)
                                                  data-kk-for="{{ $frame['device'] }}" data-kk-src="{{ $frame['src'] }}"
@@ -974,10 +1005,9 @@
                 @endif
             @else
                 <div class="kk-hero-viewport">
-                    <div class="kk-hero-slide kk-hero-slide--video-desktop kk-hero-slide--video-mobile" style="--kk-hero-ratio: auto; --kk-hero-ratio-mobile: auto;">
-                        <div class="kk-media kk-media--dark kk-hero-media kk-hero-media--video">
-                            <video class="kk-hero-video"
-                                   src="{{ asset_v('images/karmaa-kulture-web-banner-v3.mp4') }}"
+                    <div class="kk-hero-slide">
+                        <div class="kk-media kk-media--dark kk-hero-media">
+                            <video src="{{ asset_v('images/karmaa-kulture-web-banner-v3.mp4') }}"
                                    autoplay muted loop playsinline preload="auto"
                                    aria-label="{{ $heroName }} hero video"></video>
                             <span class="kk-media__fallback" aria-hidden="true">
@@ -1005,31 +1035,44 @@
                 overflow: hidden;
             }
             .kk-hero-viewport { position: relative; }
-            .kk-hero-slide--video-desktop,
-            .kk-hero-slide--video-mobile { background: var(--kk-brown-dark); overflow: hidden; }
-            .kk-hero-video {
-                width: 100%;
-                height: auto;
-                display: block;
-            }
             .kk-hero-link { display: block; color: inherit; text-decoration: none; }
 
-            /* An image slide takes its height from the slide's aspect-ratio, so the
-               frame is pinned to it - and the link with it, since the link wraps the
-               frame and would otherwise collapse to nothing to click on. A video slide
-               sets --kk-hero-ratio to auto and is sized by the file, so both stay in
-               flow. Each breakpoint decides on its own, because a banner may play a
-               clip on desktop and show a still on phones. */
-            .kk-hero-slide:not(.kk-hero-slide--video-desktop) .kk-hero-link,
-            .kk-hero-slide:not(.kk-hero-slide--video-desktop) .kk-hero-media { position: absolute; inset: 0; }
-            @media (max-width: 767px) {
-                .kk-hero-slide:not(.kk-hero-slide--video-mobile) .kk-hero-link,
-                .kk-hero-slide:not(.kk-hero-slide--video-mobile) .kk-hero-media { position: absolute; inset: 0; }
-                /* Doubled class to match the specificity of the :not() rule above,
-                   which would otherwise keep pinning a slide that is image-led on
-                   desktop and video-led here. */
-                .kk-hero-slide.kk-hero-slide--video-mobile .kk-hero-link { position: static; inset: auto; }
-                .kk-hero-slide.kk-hero-slide--video-mobile .kk-hero-media { position: relative; inset: auto; }
+            /* Nothing in a slide carries its own height any more, so the frame is
+               pinned to the slide's box - and the link with it, since the link wraps
+               the frame and would otherwise collapse to nothing to click on. This
+               used to be decided per breakpoint, with a video-led one left in flow
+               to be sized by its file and a doubled class to un-pin it again; that
+               whole apparatus was the height jump. */
+            .kk-hero-link,
+            .kk-hero-media { position: absolute; inset: 0; }
+
+            /* The one frame in the store that crops. Everywhere else .kk-media shows
+               its subject whole over a blurred copy of itself (resources/css/app.css),
+               which is right for a product shot that arrives in whatever shape the
+               supplier sent. Here the shape is known in advance - the admin screen
+               names it - so the banner fills the box edge to edge instead of floating
+               small in the middle of it.
+
+               The selector is heavier than it looks for a reason. app.css's
+               `.kk-media > img:not(.kk-media__fill)` is (0,2,1); a plain
+               `.kk-hero-media > img` is only (0,1,1) and loses outright, which is
+               exactly how the two `height: auto` rules that used to sit here came
+               to do nothing at all. Repeating .kk-media and keeping the :not()
+               brings this to (0,3,1), so it wins on specificity rather than on
+               being further down the page.
+
+               `display` is deliberately not set here. app.css already gives these
+               elements `display: block`, and its later
+               `.kk-media.is-broken > img { display: none }` is (0,2,1) - which a
+               `display` declaration in this block would outrank, leaving a 404'd
+               banner showing a broken-image glyph across the top of the home page
+               instead of the designed missing-media surface. */
+            .kk-media.kk-hero-media > img:not(.kk-media__fill),
+            .kk-media.kk-hero-media > video:not(.kk-media__fill) {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                object-position: center;
             }
 
             /* Only one breakpoint's frame is drawn, and only banners carrying media
@@ -1039,12 +1082,6 @@
                 .kk-hero-media--desktop { display: none; }
                 .kk-hero-media--mobile { display: block; }
             }
-
-            .kk-hero-media--video > video { height: auto; }
-            /* A video that fails to load is hidden, which would leave the frame with
-               no height at all, so the broken state borrows the slide's own box. */
-            .kk-hero-media--video.is-broken { aspect-ratio: {{ \App\Models\Banner::HERO_DESKTOP_SIZE[0] }} / {{ \App\Models\Banner::HERO_DESKTOP_SIZE[1] }}; }
-            @media (max-width: 767px) { .kk-hero-media--video.is-broken { aspect-ratio: {{ \App\Models\Banner::HERO_MOBILE_SIZE[0] }} / {{ \App\Models\Banner::HERO_MOBILE_SIZE[1] }}; } }
 
             /* Caption. Only drawn when the admin filled in a heading, subtitle
                or button, so a plain image banner stays a plain image banner. */

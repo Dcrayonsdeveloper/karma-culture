@@ -89,6 +89,17 @@
                     Home
                 </a>
 
+                {{-- The filterable catalogue. The drawer offered New Arrivals,
+                     Bestsellers, Deals and the category tree but never the shop
+                     itself, so the one page with the full sidebar had no entry
+                     point on a phone. --}}
+                <a href="{{ route('shop') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-neutral-700 hover:bg-neutral-50 {{ request()->routeIs('shop') ? 'text-[#2D1810]! bg-[#2D1810]/5 font-medium' : '' }}">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                    </svg>
+                    Shop All
+                </a>
+
                 <a href="{{ route('new-arrivals') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-neutral-700 hover:bg-neutral-50">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>

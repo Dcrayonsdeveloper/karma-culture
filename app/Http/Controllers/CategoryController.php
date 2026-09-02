@@ -119,6 +119,10 @@ class CategoryController extends Controller
             'filterPanel' => $filters->facets([
                 'subcategories' => $subcategories,
                 'active_subcategories' => $activeSubcategorySlugs,
+                // The tick this page put there itself, as opposed to one the
+                // shopper asked for. The sidebar draws it as settled rather than
+                // as a checkbox that ignores being clicked.
+                'pinned_subcategory' => ($subSlugs === [] && $isSubPage) ? $category->slug : null,
                 'empty' => [
                     'title' => 'Nothing in this collection yet',
                     'text' => "There's nothing in this collection yet. Check back soon.",

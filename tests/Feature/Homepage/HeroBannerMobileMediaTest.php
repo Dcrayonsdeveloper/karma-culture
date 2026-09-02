@@ -10,13 +10,13 @@ use Tests\TestCase;
  * A hero banner may carry its own artwork for phones.
  *
  * The desktop hero is a wide strip - 1426x370, the shape of the clip the store
- * ships with - and a phone gives the slide a 4:5 portrait box. The same file
- * shrunk into that box is barely taller than the caption drawn over it, so the
- * admin screen now takes a mobile image and a mobile clip alongside the
- * desktop pair, and the home page picks whichever belongs to the viewport.
+ * ships with - and a phone gives the slide a 3:2 box. That strip cropped into
+ * a 3:2 box keeps only two fifths of its width, so the admin screen takes a
+ * mobile image and a mobile clip alongside the desktop pair, and the home page
+ * picks whichever belongs to the viewport.
  *
  * The point of the picking is that only one is fetched: a phone pulling down a
- * 15 MB desktop clip on its way to the portrait one would cost more than the
+ * 15 MB desktop clip on its way to the phone-sized one would cost more than the
  * crop it was meant to fix.
  */
 class HeroBannerMobileMediaTest extends TestCase
@@ -88,7 +88,7 @@ class HeroBannerMobileMediaTest extends TestCase
         $this->assertStringNotContainsString(' src="'.asset_v('storage/banners/mobile/portrait.jpg').'"', $html);
     }
 
-    public function test_a_mobile_video_makes_only_the_mobile_breakpoint_video_led(): void
+    public function test_a_mobile_video_gives_the_phone_a_clip_and_the_desktop_a_still(): void
     {
         $this->hero([
             'video_url' => null,
@@ -97,21 +97,47 @@ class HeroBannerMobileMediaTest extends TestCase
 
         $html = $this->heroMarkup();
 
-        $this->assertStringContainsString('kk-hero-slide--video-mobile', $html);
-        $this->assertStringNotContainsString('kk-hero-slide--video-desktop', $html);
-        $this->assertStringContainsString('--kk-hero-ratio-mobile: auto;', $html);
-        $this->assertStringNotContainsString('--kk-hero-ratio: auto;', $html);
+        // Desktop keeps the still, the phone gets the clip - handed over by the
+        // script, so neither frame names a source the browser fetches by itself.
+        $this->assertStringContainsString('kk-hero-media--desktop', $html);
+        $this->assertStringContainsString('kk-hero-media--mobile', $html);
+        $this->assertStringContainsString('data-kk-src="'.asset_v('storage/banners/mobile/video/reel.mp4').'"', $html);
+        $this->assertStringContainsString('data-kk-src="'.asset_v('storage/banners/desktop.jpg').'"', $html);
     }
 
-    public function test_a_desktop_video_with_no_mobile_media_is_video_led_at_both_sizes(): void
+    public function test_a_desktop_video_with_no_mobile_media_plays_at_both_sizes(): void
     {
         $this->hero(['image_url' => null, 'video_url' => 'banners/video/wide.mp4']);
 
         $html = $this->heroMarkup();
 
-        $this->assertStringContainsString('kk-hero-slide--video-desktop', $html);
-        $this->assertStringContainsString('kk-hero-slide--video-mobile', $html);
+        // One frame, one plain src - the preload scanner can still find it.
         $this->assertStringContainsString('src="'.asset_v('storage/banners/video/wide.mp4').'"', $html);
+        $this->assertStringNotContainsString('data-kk-src', $html);
+        $this->assertStringNotContainsString('kk-hero-media--mobile', $html);
+    }
+
+    /**
+     * The height of the hero is the point of this one.
+     *
+     * A video slide used to opt out of the slide's box and take its height from
+     * its own file, so the carousel lurched from a 370px strip to a 1008px clip
+     * as it advanced. No slide may size itself any more - whatever it carries.
+     */
+    public function test_no_slide_sizes_itself_from_its_own_media(): void
+    {
+        $this->hero(['image_url' => null, 'video_url' => 'banners/video/wide.mp4']);
+
+        $html = $this->get('/')->getContent();
+
+        // Neither the escape hatch nor anything that used to reach for it.
+        $this->assertStringNotContainsString('--kk-hero-ratio', $html);
+        $this->assertStringNotContainsString('kk-hero-slide--video', $html);
+
+        // And the slide carries no inline style of its own to size itself with.
+        // (.kk-quality--plain elsewhere on this page legitimately sets
+        // `aspect-ratio: auto`, so that string is not the thing to look for.)
+        $this->assertStringContainsString('<div class="kk-hero-slide"', $this->heroMarkup());
     }
 
     public function test_the_slide_box_matches_the_size_the_admin_screen_recommends(): void
@@ -123,8 +149,34 @@ class HeroBannerMobileMediaTest extends TestCase
         [$deskW, $deskH] = Banner::HERO_DESKTOP_SIZE;
         [$mobW, $mobH] = Banner::HERO_MOBILE_SIZE;
 
-        $this->assertStringContainsString("var(--kk-hero-ratio, {$deskW} / {$deskH})", $html);
-        $this->assertStringContainsString("var(--kk-hero-ratio-mobile, {$mobW} / {$mobH})", $html);
+        $this->assertStringContainsString("aspect-ratio: {$deskW} / {$deskH}", $html);
+        $this->assertStringContainsString("aspect-ratio: {$mobW} / {$mobH}", $html);
+    }
+
+    /**
+     * And the artwork fills that box rather than sitting inside it.
+     *
+     * The hero is the one .kk-media frame in the store that crops, and app.css's
+     * `object-fit: contain` is (0,2,1) - so the rule has to reach (0,3,1) to win
+     * on specificity rather than on being further down the page. Matching the
+     * declaration *inside* its own block matters: `object-fit: cover` appears
+     * elsewhere on this page, so asserting the bare string would stay green with
+     * the hero's copy of it deleted.
+     */
+    public function test_the_hero_fills_its_box_instead_of_letterboxing(): void
+    {
+        $this->hero();
+
+        $html = $this->get('/')->getContent();
+
+        $this->assertMatchesRegularExpression(
+            '/\.kk-media\.kk-hero-media > video:not\(\.kk-media__fill\)\s*\{[^}]*object-fit:\s*cover/s',
+            $html
+        );
+
+        // The blurred stand-in for the margin went with the margin - and with it
+        // a second full-size decode of the largest image on the page.
+        $this->assertStringNotContainsString('kk-media__fill', $this->heroMarkup());
     }
 
     public function test_a_mobile_image_on_a_cdn_is_not_rewritten_as_a_storage_path(): void

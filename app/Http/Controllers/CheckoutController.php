@@ -6,6 +6,7 @@ use App\Events\OrderPlaced;
 use App\Models\Cart;
 use App\Models\Coupon;
 use App\Models\CouponUsage;
+use App\Support\OfferClaims;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Setting;
@@ -83,8 +84,19 @@ class CheckoutController extends Controller
 
         $user = request()->user();
 
+        // Both checkout routes are auth-gated, so this is the point at which a
+        // claim made by a guest - possibly days ago, on another device - finally
+        // has an account to be matched against. It is also the last screen that
+        // quotes a total, so the discount has to be settled before it renders.
+        $claimedOffer = OfferClaims::applyTo($cart, $user);
+
+        if ($claimedOffer['attached_now']) {
+            $cart->refresh()->load(['items.product', 'items.variant', 'coupon']);
+        }
+
         return view('checkout.index', [
             'cart'           => $cart,
+            'claimedOffer'   => $claimedOffer,
             'paymentMethods' => self::availablePaymentMethods(),
             // Saved addresses are the whole point of the account Addresses page;
             // without these the customer retypes the same details every order.
@@ -316,6 +328,12 @@ class CheckoutController extends Controller
                 // Empty the cart.
                 $cart->items()->delete();
                 $cart->update(['coupon_id' => null, 'discount' => 0]);
+
+                // The flag means "I removed the coupon from THIS basket", and
+                // this basket is now an order. Left set it outlives the order
+                // and suppresses every coupon - auto-applied and claimed alike -
+                // on the customer's next basket for the rest of the session.
+                session()->forget('coupon_dismissed');
 
                 return $order;
             });

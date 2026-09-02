@@ -193,6 +193,29 @@
                                         <span class="text-sm font-semibold text-neutral-800">Apply Coupon</span>
                                     </div>
 
+                                    {{-- Shown only on the request that actually attached it.
+                                         After that the green pill and the discount row below
+                                         already say everything true, and a banner that never
+                                         goes away stops being read. Server-rendered rather
+                                         than pushed through formatCouponData(): that shape
+                                         feeds four endpoints and syncCouponData(), and a
+                                         one-shot notice does not belong on the wire. --}}
+                                    @if($claimedOffer['attached_now'] ?? false)
+                                        {{-- Bound to the same Alpine state as the pill below it.
+                                             Everything in this panel mutates in place - Remove,
+                                             Apply, delete-item and clear-cart all go through
+                                             syncCouponData() without a reload - so a static
+                                             server-rendered notice would go on asserting the
+                                             discount was applied after the customer removed it. --}}
+                                        <template x-if="coupon && coupon.code === @js($claimedOffer['coupon']->code)">
+                                            <div class="mb-2 px-3 py-2 rounded-md bg-primary-50 border border-primary-200">
+                                                <p class="text-[11px] text-primary-700 font-medium">
+                                                    Your claimed offer is on - {{ $claimedOffer['coupon']->code }}, applied automatically.
+                                                </p>
+                                            </div>
+                                        </template>
+                                    @endif
+
                                     <template x-if="coupon">
                                         <div>
                                             <div class="flex items-center justify-between px-3 py-2.5 bg-success-50 border border-dashed border-success-300 rounded-md">

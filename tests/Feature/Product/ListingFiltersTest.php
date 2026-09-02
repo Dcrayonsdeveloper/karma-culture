@@ -195,4 +195,171 @@ class ListingFiltersTest extends TestCase
             ->assertSee('Active Filters')
             ->assertSee('Clear all');
     }
+
+    /**
+     * The rating rows are a floor, not an exact score, and have to say so.
+     *
+     * The labels were bare numerals - "4" plus one star - while the query behind
+     * them is `rating >= 4`, so the control claimed to mean "rated four" and
+     * quietly returned everything above it too.
+     */
+    public function test_rating_rows_say_they_are_a_floor_and_can_be_cleared(): void
+    {
+        $response = $this->get('/shop')->assertOk();
+
+        $response->assertSee('name="rating" value="5"', false)
+            ->assertSee('name="rating" value="1"', false)
+            ->assertSee('&amp; up', false)
+            ->assertSee('4 stars and up', false);
+
+        // The empty option is the only thing in the sidebar that can take a
+        // chosen rating back off; a radio group without one can be set but
+        // never unset.
+        $response->assertSee('name="rating" value=""', false)
+            ->assertSee('Any rating');
+    }
+
+    /** And the floor is what the query actually applies. */
+    public function test_the_rating_filter_keeps_everything_at_or_above_the_chosen_star(): void
+    {
+        // Both fixture products are rated 4.
+        $this->assertSame(2, $this->get('/shop?rating=4')->assertOk()->viewData('products')->total());
+        $this->assertSame(2, $this->get('/shop?rating=1')->assertOk()->viewData('products')->total());
+        $this->assertSame(0, $this->get('/shop?rating=5')->assertOk()->viewData('products')->total());
+    }
+
+    /**
+     * products.rating only moves when a review is approved, so on a catalogue
+     * with no reviews yet every one of the five options returned an empty grid -
+     * the section was five ways to break the page.
+     */
+    public function test_the_rating_section_is_absent_when_nothing_is_rated(): void
+    {
+        Product::query()->update(['rating' => 0]);
+
+        // Asserted on the control, not the word: "Best Rating" is also an
+        // option in the sort dropdown and would match either way.
+        $this->get('/shop')->assertOk()->assertDontSee('name="rating"', false);
+    }
+
+    /**
+     * A page with a default_sort of its own (deals, bestsellers, new arrivals)
+     * carries no ?sort when the shopper picks the ordering that page opens on.
+     * The sidebar only emitted a hidden sort input when the value was not
+     * 'newest', so applying a filter on /deals threw an explicit "Newest" away
+     * and handed back discount order.
+     */
+    public function test_a_chosen_sort_survives_a_filter_submit(): void
+    {
+        foreach (['/deals', '/bestsellers', '/new-arrivals'] as $url) {
+            $this->get($url.'?sort=newest')
+                ->assertOk()
+                ->assertSee('name="sort" value="newest"', false);
+        }
+    }
+
+    /**
+     * A "Shop It Your Way" hanger links to /shop?shade=Indigo, and the shop
+     * merges `shade` into `colour` before the panel is built. The chip stripped
+     * only `colour`, so the URL it handed back still said `shade=` and the next
+     * request re-derived the very filter the shopper had just removed.
+     */
+    public function test_a_hanger_filter_can_be_taken_off_again(): void
+    {
+        $this->get('/shop?shade=Black')
+            ->assertOk()
+            ->assertSee('Active Filters')
+            ->assertDontSee('shade=Black', false);
+
+        $this->get('/shop?price_min=100&price_max=2000')
+            ->assertOk()
+            ->assertSee('Active Filters')
+            ->assertDontSee('price_min=100', false);
+    }
+
+    /**
+     * The category page applies its own bound and passes owns_category => false,
+     * so ?category= never reaches its query. The chip drew anyway, offering to
+     * remove a filter that was already doing nothing.
+     */
+    public function test_no_category_chip_where_the_page_does_not_own_the_facet(): void
+    {
+        $this->get('/category/men?category=men')
+            ->assertOk()
+            ->assertDontSee('Active Filters');
+
+        // On the shop, which does own it, the same parameter is a real filter.
+        $this->get('/shop?category=men')
+            ->assertOk()
+            ->assertSee('Active Filters');
+    }
+
+    /**
+     * The Filters button in the header reaches every page, including the ones
+     * with no listing behind them - before this, a shopper away from a listing
+     * had no filter control anywhere, and /shop was not linked from the header,
+     * the mobile drawer or the footer.
+     */
+    public function test_every_page_carries_the_header_filters_button(): void
+    {
+        foreach (['/shop', '/wishlist', '/brands'] as $url) {
+            $this->get($url)->assertOk()->assertSee('open-global-filters', false);
+        }
+
+        // A listing answers the button with its own sidebar, so the filters
+        // apply to the grid on screen; anywhere else the header's shop-wide
+        // drawer takes it. This marker is how the drawer tells them apart.
+        // Asserted on the sidebar's own Alpine state, not on the marker
+        // attribute: the drawer's querySelector mentions that attribute by name,
+        // so the literal string is on every page whether a sidebar is there or
+        // not. `mobileOpen` belongs to the sidebar alone.
+        $this->get('/shop')->assertOk()
+            ->assertSee('data-kk-filter-sidebar', false)
+            ->assertSee('mobileOpen', false);
+        $this->get('/wishlist')->assertOk()->assertDontSee('mobileOpen', false);
+    }
+
+    /**
+     * The collection a sub-category page IS gets a settled row, not a checkbox
+     * that swallows clicks.
+     *
+     * The page ticks its own slug when the request carries no subcategory, and
+     * re-ticks it on every submit - so unticking the box reloaded the same page
+     * with the box ticked again, and the one control in the sidebar that looked
+     * most obviously undoable was the one that could not be undone.
+     */
+    public function test_the_pages_own_subcategory_is_settled_rather_than_a_dead_checkbox(): void
+    {
+        $this->get('/category/shirts')
+            ->assertOk()
+            ->assertSee('You are browsing this collection', false);
+
+        // On the parent the very same box is a live filter again.
+        $this->get('/category/men')
+            ->assertOk()
+            ->assertSee('name="subcategory[]" value="shirts"', false)
+            ->assertDontSee('You are browsing this collection', false);
+    }
+
+    /** And /shop is reachable from the navigation rather than only by accident. */
+    public function test_the_shop_is_linked_from_the_navigation(): void
+    {
+        $this->get('/wishlist')->assertOk()->assertSee('href="'.route('shop').'"', false);
+    }
+
+    /** The drawer fetches the panel on first open rather than on every page load. */
+    public function test_the_filter_panel_endpoint_returns_a_usable_form(): void
+    {
+        $this->get('/shop/filters')
+            ->assertOk()
+            ->assertSee('action="'.route('shop').'"', false)
+            ->assertSee('name="size[]" value="M"', false)
+            ->assertSee('name="rating"', false);
+
+        // Filters already in the URL are reflected, so opening the drawer after
+        // arriving from a hanger shows that hanger's picks ticked.
+        $this->get('/shop/filters?shade=Black')
+            ->assertOk()
+            ->assertSee('name="colour[]" value="Black"', false);
+    }
 }

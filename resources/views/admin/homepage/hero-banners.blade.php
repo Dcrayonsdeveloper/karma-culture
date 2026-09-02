@@ -17,7 +17,7 @@
         [$kkDeskW, $kkDeskH] = \App\Models\Banner::HERO_DESKTOP_SIZE;
         [$kkMobW, $kkMobH] = \App\Models\Banner::HERO_MOBILE_SIZE;
 
-        // "4:5" reads better than "0.8:1", but reducing 1426x370 gives 713:185,
+        // "3:2" reads better than "1.5:1", but reducing 1426x370 gives 713:185,
         // which reads worse than "3.85:1" - so the tidy form is used only when
         // it actually is tidy.
         $kkRatio = function (int $w, int $h): string {
@@ -195,12 +195,14 @@
                                 </div>
 
                                 <!-- Thumbnail: a banner may be video-only, so do not assume an image exists -->
-                                {{-- Contained, so the thumbnail matches what the slide actually
-                                     shows. A 3:2 crop of a wide banner cut off the headline
-                                     baked into the artwork, which is the one thing the admin
-                                     needs to check here. The admin layout carries no delegated
-                                     media-error handler, so a banner whose file has gone marks
-                                     its own frame rather than sitting as an empty grey box. --}}
+                                {{-- Contained, deliberately unlike the slide. The storefront
+                                     crops a banner to fill its box; this thumbnail is how the
+                                     admin identifies which banner a row is, and a crop of a
+                                     wide banner cuts off the headline baked into the artwork -
+                                     the one thing worth recognising here. The admin layout
+                                     carries no delegated media-error handler, so a banner whose
+                                     file has gone marks its own frame rather than sitting as an
+                                     empty grey box. --}}
                                 @php
                                     // A banner saved with neither file leaves the same hole a 404
                                     // does, so it gets the same designed "missing" surface up front.

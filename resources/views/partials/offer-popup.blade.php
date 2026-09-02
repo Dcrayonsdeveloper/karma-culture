@@ -9,6 +9,10 @@
     x-data="offerPopup()"
     x-cloak
     x-show="open"
+    {{-- Marks this subtree as the popup's own chrome: a click on the close
+         button, the backdrop or the form is the shopper declining, not the
+         engagement signal that stops the popup cycle. --}}
+    data-kk-popup="offer"
     @keydown.escape.window="close()"
     class="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4"
     role="dialog" aria-modal="true" aria-labelledby="offer-popup-title"

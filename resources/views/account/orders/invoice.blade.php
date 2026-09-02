@@ -77,8 +77,11 @@
            five-column table all ran off the right edge. Screen only - the
            printed page keeps its layout. */
         .invoice-number, .address-name, .address-line { overflow-wrap: anywhere; }
-        .table-wrap { max-width: 100%; overflow-x: auto; }
         @media screen and (max-width: 639.98px) {
+            /* Scroll wrapper is screen-only: a scroll container is monolithic
+               when paginated, so leaving it on in print could clip a long
+               item list to the first page. */
+            .table-wrap { max-width: 100%; overflow-x: auto; }
             .toolbar { padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
             .btn { min-height: 40px; }
             .invoice { padding: 24px 16px; }
