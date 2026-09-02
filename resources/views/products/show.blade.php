@@ -1744,8 +1744,15 @@
 
             async buyNow() {
                 if (!this.requireSelection()) return;
-                await Alpine.store('cart').add({{ $product->id }}, this.quantity, this.selectedVariant, this.selectedSize, this.selectedColor);
-                Alpine.store('cart').close();
+                // Add quietly - the drawer used to open and then get closed again a
+                // frame later, which read as a glitch on the way to checkout.
+                const added = await Alpine.store('cart').add(
+                    {{ $product->id }}, this.quantity, this.selectedVariant, this.selectedSize, this.selectedColor,
+                    { reveal: false }
+                );
+                // A failed add (stock gone, session expired) has already shown its own
+                // error toast, and there would be nothing to check out with.
+                if (!added) return;
                 window.location.href = '{{ route("checkout.index") }}';
             },
 

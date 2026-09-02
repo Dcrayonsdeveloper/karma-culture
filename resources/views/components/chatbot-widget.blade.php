@@ -97,8 +97,12 @@
             x-ref="messageList"
             {{-- overflow-x-hidden: a single long word (the assistant quotes full
                  product URLs) is wider than the panel and would otherwise give
-                 the whole conversation a horizontal scrollbar. --}}
-            class="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-3 bg-neutral-50/60"
+                 the whole conversation a horizontal scrollbar.
+
+                 overscroll-contain: without it, scrolling past either end of the
+                 conversation hands the gesture to the page underneath, so the
+                 storefront slides around behind an open chat panel. --}}
+            class="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-3 space-y-3 bg-neutral-50/60"
         >
             {{-- Empty / Welcome state --}}
             <template x-if="messages.length === 0">

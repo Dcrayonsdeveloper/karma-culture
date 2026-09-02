@@ -142,7 +142,11 @@ Alpine.store('cart', {
         }
     },
 
-    async add(productId, quantity = 1, variantId = null, size = null, colour = null) {
+    // `reveal: false` puts the item in the cart without the toast, the drawer or
+    // the recommendations request that normally confirm it. Buy Now needs that:
+    // it is about to navigate to checkout, so opening the drawer only flashes it
+    // on screen for a frame. Returns whether the item actually made it in.
+    async add(productId, quantity = 1, variantId = null, size = null, colour = null, { reveal = true } = {}) {
         this.isLoading = true;
         try {
             const response = await axios.post('/cart/add', {
@@ -152,18 +156,22 @@ Alpine.store('cart', {
                 size: size,
                 colour: colour
             });
-            Alpine.store('toast').success(response.data.message || 'Added to cart');
             // Update count immediately from response
             if (response.data.cart_count !== undefined) {
                 this.itemCount = response.data.cart_count;
             }
-            await this.fetch();
-            this.open();
-            this.fetchRecommendations();
+            if (reveal) {
+                Alpine.store('toast').success(response.data.message || 'Added to cart');
+                await this.fetch();
+                this.open();
+                this.fetchRecommendations();
+            }
+            return true;
         } catch (error) {
             const msg = error.response?.data?.error || 'Failed to add to cart';
             Alpine.store('toast').error(msg);
             console.error('Failed to add to cart:', error);
+            return false;
         } finally {
             this.isLoading = false;
         }
