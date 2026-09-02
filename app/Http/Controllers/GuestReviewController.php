@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\Review;
+use App\Rules\ValidationRules as V;
 use App\Support\ReviewMediaUploader;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,7 +14,12 @@ class GuestReviewController extends Controller
     public function store(Request $request, Product $product): RedirectResponse
     {
         $validated = $request->validate([
-            'guest_name' => 'required|string|max:100',
+            // Was 'string|max:100'. This name is PUBLISHED under the review on
+            // the product page, so a length was the only thing standing between
+            // a drive-by "686876988" - or a URL - and the storefront. V::name()
+            // is the same PersonName charset every other name box on the site
+            // uses, and the form's pattern spells it out for the browser.
+            'guest_name' => V::name(max: 100),
             'guest_email' => 'required|email|max:255',
             'rating' => 'required|integer|min:1|max:5',
             'title' => 'nullable|string|max:255',
