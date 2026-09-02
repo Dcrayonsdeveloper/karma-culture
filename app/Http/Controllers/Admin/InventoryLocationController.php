@@ -38,8 +38,8 @@ class InventoryLocationController extends Controller
     public function index(): View
     {
         $perPage = min(max((int) request()->input('per_page', 10), 1), 100);
-        $locations = InventoryLocation::withCount('stocks')
-            ->withSum('stocks as units_count', 'quantity')
+        $locations = InventoryLocation::withCount(['stocks' => fn ($stocks) => $stocks->whereHas('product')])
+            ->withSum(['stocks as units_count' => fn ($stocks) => $stocks->whereHas('product')], 'quantity')
             ->orderBy('name')
             ->paginate($perPage)
             ->withQueryString();
@@ -56,6 +56,10 @@ class InventoryLocationController extends Controller
         $perPage = min(max((int) $request->input('per_page', 10), 1), 100);
 
         $stocks = $location->stocks()
+            // Lines whose product has been deleted are not stock anyone can
+            // sell; listing them put rows reading "Deleted product" beside the
+            // real ones and counted their units in the totals.
+            ->whereHas('product')
             ->with(['product:id,name,sku,stock_quantity,low_stock_threshold', 'variant:id,product_id,name,sku,stock_quantity'])
             ->when($request->filled('search'), function ($query) use ($request) {
                 $search = trim((string) $request->input('search'));
@@ -71,7 +75,7 @@ class InventoryLocationController extends Controller
 
         // LINES is a reserved word in MariaDB, so the aliases are quoted - the
         // unquoted one made this whole page a 500.
-        $totals = $location->stocks()->toBase()->selectRaw(
+        $totals = $location->stocks()->whereHas('product')->toBase()->selectRaw(
             'COUNT(*) as `lines`, COALESCE(SUM(quantity), 0) as `units`, '.
             'COALESCE(SUM(reserved_quantity), 0) as `reserved`, COALESCE(SUM(available_quantity), 0) as `available`'
         )->first();
@@ -128,7 +132,7 @@ class InventoryLocationController extends Controller
         // Stock rows cascade with the location, so deleting a warehouse that
         // still holds units would erase the record of where they are while the
         // storefront carries on offering them.
-        if ($location->stocks()->where('quantity', '>', 0)->exists()) {
+        if ($location->stocks()->whereHas('product')->where('quantity', '>', 0)->exists()) {
             return back()->with('error', 'This location still holds stock. Remove its products before deleting it.');
         }
 

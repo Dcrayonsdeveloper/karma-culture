@@ -532,6 +532,67 @@ class InventoryLocationStockTest extends TestCase
         ], $product->heldByLocation());
     }
 
+    public function test_a_deleted_products_line_is_left_out_of_the_warehouse_view(): void
+    {
+        $doomed = $this->makeProduct('Doomed Dupatta', 'DOOM-001', 9);
+
+        $this->assertSame(9, InventoryStock::where('product_id', $doomed->id)
+            ->where('location_id', $this->main->id)
+            ->value('quantity'));
+
+        $doomed->delete();
+
+        // Its units are not sellable any more, so they are not on hand either -
+        // the row used to render as a "Deleted product" line beside the real
+        // ones and its units counted towards the location's totals.
+        $this->actingAs($this->adminUser, 'admin')
+            ->get(route('admin.inventory.locations.show', $this->main))
+            ->assertOk()
+            ->assertSee('WK-001')
+            ->assertDontSee('DOOM-001');
+
+        // The row stays, so restoring the product brings its shelf back with it.
+        $this->assertDatabaseHas('inventory_stocks', [
+            'product_id' => $doomed->id,
+            'location_id' => $this->main->id,
+        ]);
+    }
+
+    public function test_a_location_left_holding_only_deleted_products_can_be_deleted(): void
+    {
+        $doomed = $this->makeProduct('Doomed Kurti', 'DOOM-002', 4);
+
+        $this->actingAs($this->adminUser, 'admin')
+            ->post(route('admin.inventory.locations.stock.store', $this->overflow), [
+                'product_id' => $doomed->id,
+                'quantity' => 4,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $doomed->delete();
+
+        $this->actingAs($this->adminUser, 'admin')
+            ->delete(route('admin.inventory.locations.destroy', $this->overflow))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseMissing('inventory_locations', ['id' => $this->overflow->id]);
+    }
+
+    private function makeProduct(string $name, string $sku, int $stock): Product
+    {
+        return Product::create([
+            'name' => $name,
+            'slug' => \Illuminate\Support\Str::slug($name),
+            'sku' => $sku,
+            'price' => 499,
+            'mrp' => 699,
+            'stock_quantity' => $stock,
+            'category_id' => $this->product->category_id,
+            'status' => 'approved',
+            'is_active' => true,
+        ]);
+    }
+
     private function lineAt(InventoryLocation $location): ?InventoryStock
     {
         return InventoryStock::where('product_id', $this->product->id)
