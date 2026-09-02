@@ -47,9 +47,6 @@
                                     @case('cta')
                                         Promotional banner
                                         @break
-                                    @case('testimonials')
-                                        Customer reviews carousel
-                                        @break
                                     @case('newsletter')
                                         Email subscription form
                                         @break

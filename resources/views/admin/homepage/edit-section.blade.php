@@ -33,9 +33,6 @@
                     @case('cta')
                         <strong>Promo Banner</strong> - A full-width promotional call-to-action banner displayed between product sections. Upload a background image for a visual banner, or set a background color.
                         @break
-                    @case('testimonials')
-                        <strong>Testimonials Section</strong> - Controls the heading and subtitle of the testimonials carousel. To manage individual reviews, go to <a href="{{ route('admin.homepage.testimonials') }}" style="color: #005bd3; text-decoration: underline; font-weight: 500;">Testimonials Management</a>.
-                        @break
                     @case('newsletter')
                         <strong>Newsletter Section</strong> - Controls the heading and subtitle of the email subscription section at the bottom of the homepage.
                         @break

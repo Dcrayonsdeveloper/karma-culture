@@ -9,7 +9,6 @@ use App\Models\HomepageSection;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\Setting;
-use App\Models\Testimonial;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
@@ -23,7 +22,6 @@ class BeautySeeder extends Seeder
         $this->seedProducts();
         $this->seedBanners();
         $this->seedHomepageSections();
-        $this->seedTestimonials();
     }
 
     private function seedSettings(): void
@@ -410,13 +408,6 @@ class BeautySeeder extends Seeder
                 'position' => 6,
             ],
             [
-                'key' => 'testimonials',
-                'title' => 'What Parents Say',
-                'subtitle' => 'Real reviews from real parents who trust ForeverKids',
-                'type' => 'testimonials',
-                'position' => 7,
-            ],
-            [
                 'key' => 'newsletter',
                 'title' => 'Join the ForeverKids Family',
                 'subtitle' => 'Subscribe for exclusive offers, parenting tips, and 15% off your first order',
@@ -436,67 +427,6 @@ class BeautySeeder extends Seeder
             HomepageSection::updateOrCreate(
                 ['key' => $section['key']],
                 array_merge($section, ['is_active' => true])
-            );
-        }
-    }
-
-    private function seedTestimonials(): void
-    {
-        $testimonials = [
-            [
-                'name' => 'Priya Sharma',
-                'title' => 'Happy Parent',
-                'content' => 'The cotton frocks are so soft and comfortable - my daughter loves wearing them! The quality is amazing for the price. We\'ve ordered multiple times now and every piece has been perfect.',
-                'rating' => 5,
-                'product_name' => 'Cotton Floral Frock',
-                'position' => 1,
-            ],
-            [
-                'name' => 'Rahul Verma',
-                'title' => 'Father of Two',
-                'content' => 'Bought the kurta pajama set for my son\'s birthday party and he looked so handsome! The fabric is premium quality and the embroidery is beautiful. Will definitely order again for Diwali.',
-                'rating' => 5,
-                'product_name' => 'Cotton Kurta Pajama Set',
-                'position' => 2,
-            ],
-            [
-                'name' => 'Sneha Patel',
-                'title' => 'Mom of a Toddler',
-                'content' => 'The organic cotton bodysuits are a lifesaver! So soft on my baby\'s skin and the snap closures make diaper changes so easy. I love that they use safe, organic fabrics.',
-                'rating' => 5,
-                'product_name' => 'Organic Cotton Bodysuit Set',
-                'position' => 3,
-            ],
-            [
-                'name' => 'Ananya Reddy',
-                'title' => 'Regular Customer',
-                'content' => 'My daughter is obsessed with the LED sneakers! They\'re not just fun - they\'re actually well-made and comfortable. She gets compliments at school every day.',
-                'rating' => 5,
-                'product_name' => 'LED Light-Up Sneakers',
-                'position' => 4,
-            ],
-            [
-                'name' => 'Meera Iyer',
-                'title' => 'Fashion-loving Mom',
-                'content' => 'ForeverKids has become our go-to store for all kids\' clothing. The quality is fantastic and the designs are so trendy. The sharara set we got for my daughter\'s dance recital was absolutely stunning!',
-                'rating' => 5,
-                'product_name' => 'Sharara Set',
-                'position' => 5,
-            ],
-            [
-                'name' => 'Deepak Joshi',
-                'title' => 'Proud Dad',
-                'content' => 'The puffer jacket kept my son warm throughout the winter trip to Manali. It\'s lightweight, water-resistant, and he says it\'s the most comfortable jacket he\'s ever had.',
-                'rating' => 4,
-                'product_name' => 'Puffer Jacket',
-                'position' => 6,
-            ],
-        ];
-
-        foreach ($testimonials as $testimonial) {
-            Testimonial::updateOrCreate(
-                ['name' => $testimonial['name']],
-                array_merge($testimonial, ['is_active' => true])
             );
         }
     }
