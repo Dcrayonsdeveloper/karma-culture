@@ -1,6 +1,20 @@
 <x-layouts.app>
     <x-slot name="title">Write a Review</x-slot>
 
+    @php
+        // Where every line-item well on this page lands when its picture is
+        // missing, so a deleted product or a file that has gone from disk still
+        // shows something rather than an empty box.
+        $placeholder = asset_v('images/no-product-image.svg');
+    @endphp
+
+    {{-- These wells are only 44-80px across, and the shared frame is tuned for a
+         full-size card: its 24px blur fades out before it reaches an edge this
+         close, and its 30px glyph does not fit. Scale both down to the well. --}}
+    <style>
+        .kk-media--thumb { background: #f5f5f5; }
+    </style>
+
     <div class="bg-neutral-50 min-h-screen">
         <div class="container mx-auto px-4 py-8">
             <div class="flex flex-col lg:flex-row gap-8">
@@ -30,9 +44,19 @@
                         {{-- Product Info --}}
                         <div class="bg-white rounded-xl border border-neutral-200 p-4 mb-4">
                             <div class="flex items-center gap-4">
-                                <div class="w-16 h-16 rounded-lg overflow-hidden bg-neutral-100 shrink-0">
-                                    <img src="{{ $product->primary_image_url ?? '' }}" alt="{{ $product->name }}"
-                                         class="w-full h-full object-cover">
+                                {{-- Contained: this header is the only confirmation of which product the
+                                     review is being written about, so it must not be a crop. --}}
+                                <div class="kk-media kk-media--thumb w-16 h-16 rounded-lg overflow-hidden shrink-0">
+                                    <img class="kk-media__fill" src="{{ $product->primary_image_url ?? $placeholder }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
+                                    <img src="{{ $product->primary_image_url ?? $placeholder }}" alt="{{ $product->name }}"
+                                         data-fallback="{{ $placeholder }}" loading="lazy" decoding="async">
+                                    <span class="kk-media__fallback" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                            <rect x="3" y="4" width="18" height="16" rx="2"/>
+                                            <circle cx="8.5" cy="9.5" r="1.5"/>
+                                            <path d="M21 15l-5-5L5 20"/>
+                                        </svg>
+                                    </span>
                                 </div>
                                 <div class="min-w-0">
                                     <a href="{{ route('product.show', $product) }}" class="text-sm font-semibold text-neutral-900 hover:text-[#6F9CA2] transition-colors line-clamp-1">

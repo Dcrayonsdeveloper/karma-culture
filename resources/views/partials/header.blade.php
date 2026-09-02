@@ -82,7 +82,9 @@
                 <a href="{{ url('/') }}" class="absolute inset-0 flex items-center justify-center pointer-events-none sm:static sm:inset-auto sm:justify-start sm:pointer-events-auto shrink-0 sm:mr-3 lg:mr-8">
                     @php $siteLogo = \App\Models\Setting::get('site_logo', ''); @endphp
                     @if($siteLogo)
-                        <img id="site-logo" src="{{ asset_v('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-16 lg:h-20 object-contain pointer-events-auto">
+                        {{-- A custom logo whose file has gone missing used to leave a hole
+                             where the brand mark should be; fall back to the bundled one. --}}
+                        <img id="site-logo" src="{{ asset_v('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-16 lg:h-20 object-contain pointer-events-auto" data-fallback="{{ asset_v('images/karmaa-kulture-logo.png') }}">
                     @else
                         <img id="site-logo" src="{{ asset_v('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-16 lg:h-20 object-contain pointer-events-auto">
                     @endif
@@ -371,7 +373,14 @@
                                 <template x-for="result in results" :key="result.id">
                                     <li>
                                         <a :href="result.url" class="flex items-center gap-2.5 px-3 py-2 hover:bg-kk-cream transition-colors">
-                                            <img :src="result.image" :alt="result.name" class="w-8 h-8 object-cover rounded">
+                                            {{-- Contained, not cropped: at 32px a cover crop of a
+                                                 tall product shot showed nothing but fabric, so the
+                                                 suggestion was unrecognisable. The blurred copy
+                                                 behind it fills the frame instead. --}}
+                                            <div class="kk-media kk-media--thumb w-8 h-8 rounded shrink-0">
+                                                <img class="kk-media__fill" :src="result.image" alt="" aria-hidden="true">
+                                                <img :src="result.image" :alt="result.name" data-fallback="{{ asset_v('images/no-product-image.svg') }}">
+                                            </div>
                                             <div class="min-w-0">
                                                 <div class="text-sm text-kk-text truncate" x-text="result.name"></div>
                                                 <div class="text-xs text-kk-text-muted" x-text="result.category"></div>

@@ -1,6 +1,20 @@
 <x-layouts.app>
     <x-slot name="title">My Orders</x-slot>
 
+    @php
+        // Where every line-item well on this page lands when its picture is
+        // missing, so a deleted product or a file that has gone from disk still
+        // shows something rather than an empty box.
+        $placeholder = asset_v('images/no-product-image.svg');
+    @endphp
+
+    {{-- These wells are only 44-80px across, and the shared frame is tuned for a
+         full-size card: its 24px blur fades out before it reaches an edge this
+         close, and its 30px glyph does not fit. Scale both down to the well. --}}
+    <style>
+        .kk-media--thumb { background: #f5f5f5; }
+    </style>
+
     <div class="bg-neutral-50 min-h-screen">
         <div class="container mx-auto px-4 py-8">
             <x-breadcrumb :items="[['label' => 'Account', 'url' => route('account.dashboard')], ['label' => 'My Orders']]" />
@@ -79,9 +93,21 @@
                                     {{-- Product thumbnails --}}
                                     <div class="flex -space-x-2">
                                         @foreach($order->items->take(4) as $item)
-                                            <div class="w-11 h-11 rounded-lg border-2 border-white overflow-hidden bg-neutral-100 shrink-0">
+                                            {{-- The overlapping wells stay 44px so the stack keeps its shape,
+                                                 but the shot inside is contained: cropped to a square, four
+                                                 garments in a row all looked like the same scrap of fabric. --}}
+                                            <div class="kk-media kk-media--thumb w-11 h-11 rounded-lg border-2 border-white overflow-hidden shrink-0">
                                                 @if($item->product && $item->product->primary_image_url)
-                                                    <img src="{{ $item->product->primary_image_url }}" alt="{{ $item->product->name }}" class="w-full h-full object-cover">
+                                                    <img class="kk-media__fill" src="{{ $item->product->primary_image_url }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
+                                                    <img src="{{ $item->product->primary_image_url }}" alt="{{ $item->product->name }}"
+                                                         data-fallback="{{ $placeholder }}" loading="lazy" decoding="async">
+                                                    <span class="kk-media__fallback" aria-hidden="true">
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                                            <rect x="3" y="4" width="18" height="16" rx="2"/>
+                                                            <circle cx="8.5" cy="9.5" r="1.5"/>
+                                                            <path d="M21 15l-5-5L5 20"/>
+                                                        </svg>
+                                                    </span>
                                                 @else
                                                     <div class="w-full h-full flex items-center justify-center">
                                                         <svg class="w-4 h-4 text-neutral-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>

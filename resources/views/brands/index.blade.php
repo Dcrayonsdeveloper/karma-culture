@@ -12,17 +12,27 @@
 
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             @foreach($brands as $brand)
+                @php $logoSrc = $brand->logo_src; @endphp
                 <a href="{{ route('brands.show', $brand) }}" class="group card overflow-hidden">
-                    <div class="aspect-square bg-neutral-100 overflow-hidden flex items-center justify-center p-4">
-                        @if($brand->logo_url)
-                            <img src="{{ $brand->logo_src }}"
+                    {{-- A logo stays contained on the flat tile - it is a mark,
+                         not a photo, so it gets no blurred backdrop. The initials
+                         stand in both for a brand with no logo and for one whose
+                         file 404s, which used to leave an empty square. --}}
+                    <div class="aspect-square bg-neutral-100 overflow-hidden flex items-center justify-center p-4"
+                         @if($logoSrc) x-data="{ logoBroken: false }" @endif>
+                        @if($logoSrc)
+                            {{-- x-init also catches a logo that already failed
+                                 before Alpine booted; the error event is gone by
+                                 then. --}}
+                            <img src="{{ $logoSrc }}"
                                  alt="{{ $brand->name }}"
-                                 class="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300">
-                        @else
-                            <div class="w-full h-full flex items-center justify-center">
-                                <span class="text-2xl font-bold text-neutral-300">{{ substr($brand->name, 0, 2) }}</span>
-                            </div>
+                                 class="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                                 x-init="logoBroken = $el.complete && $el.naturalWidth === 0"
+                                 x-on:error="logoBroken = true"
+                                 x-show="!logoBroken">
                         @endif
+                        <span class="text-2xl font-bold text-neutral-300"
+                              @if($logoSrc) x-show="logoBroken" x-cloak @endif>{{ substr($brand->name, 0, 2) }}</span>
                     </div>
                     <div class="p-4 text-center">
                         <h3 class="font-semibold text-neutral-900 group-hover:text-primary-500 mb-1">

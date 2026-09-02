@@ -7,9 +7,12 @@
     chatbot_messages on load rather than starting empty.
 --}}
 @php
+    // Bundled mark kept in its own variable so a custom logo whose file has gone
+    // missing degrades to it instead of leaving empty discs down the transcript.
+    $kkBotLogoFallback = asset_v('images/karmaa-kulture-logo.png');
     $kkBotLogo = \App\Models\Setting::get('site_logo', '')
         ? asset_v('storage/' . \App\Models\Setting::get('site_logo'))
-        : asset_v('images/karmaa-kulture-logo.png');
+        : $kkBotLogoFallback;
 @endphp
 
 <x-layouts.app>
@@ -31,7 +34,7 @@
             {{-- Header --}}
             <div class="flex items-center gap-3 mb-5">
                 <div class="w-11 h-11 rounded-full bg-[#2D1810] flex items-center justify-center shrink-0">
-                    <img src="{{ $kkBotLogo }}" alt="" class="w-6 h-6 object-contain">
+                    <img src="{{ $kkBotLogo }}" alt="" class="w-6 h-6 object-contain" data-fallback="{{ $kkBotLogoFallback }}">
                 </div>
                 <div class="min-w-0">
                     <h1 class="text-xl sm:text-2xl font-bold text-neutral-900 leading-tight">Shopping Assistant</h1>
@@ -73,7 +76,7 @@
                     <template x-if="!isLoading && messages.length === 0">
                         <div class="h-full flex flex-col items-center justify-center text-center px-6">
                             <div class="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center mb-4">
-                                <img src="{{ $kkBotLogo }}" alt="" class="w-8 h-8 object-contain">
+                                <img src="{{ $kkBotLogo }}" alt="" class="w-8 h-8 object-contain" data-fallback="{{ $kkBotLogoFallback }}">
                             </div>
                             <p class="text-lg font-semibold text-neutral-900">Hi there! &#128075;</p>
                             <p class="mt-1 text-sm text-neutral-600 max-w-sm">
@@ -98,7 +101,7 @@
                             <template x-if="msg.role === 'assistant'">
                                 <div class="flex gap-2.5">
                                     <div class="w-8 h-8 rounded-full bg-[#2D1810] flex items-center justify-center shrink-0 mt-0.5">
-                                        <img src="{{ $kkBotLogo }}" alt="" class="w-4 h-4 object-contain">
+                                        <img src="{{ $kkBotLogo }}" alt="" class="w-4 h-4 object-contain" data-fallback="{{ $kkBotLogoFallback }}">
                                     </div>
                                     <div class="flex-1 min-w-0">
                                         <div class="px-4 py-3 rounded-2xl rounded-tl-sm bg-white border border-neutral-200 text-sm text-neutral-800 leading-relaxed shadow-sm [overflow-wrap:anywhere]"
@@ -111,12 +114,17 @@
                                                     <a :href="product.url"
                                                        @click="trackProductClick(product.id)"
                                                        class="group bg-white rounded-xl border border-neutral-200 overflow-hidden hover:shadow-md hover:border-[#6F9CA2]/40 transition-all">
-                                                        <div class="relative w-full aspect-square bg-neutral-50 overflow-hidden">
-                                                            <img :src="product.image || '/images/no-product-image.svg'" :alt="product.name" loading="lazy"
-                                                                 onerror="this.src='/images/no-product-image.svg'"
-                                                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                                                        {{-- Contained: the assistant recommends whatever the
+                                                             catalogue holds, and a cover crop of a flat-lay or a
+                                                             size chart cut the product out of its own card. The
+                                                             blurred copy behind fills the square. --}}
+                                                        <div class="kk-media kk-media--zoom w-full aspect-square">
+                                                            <img class="kk-media__fill" :src="product.image || '{{ asset_v('images/no-product-image.svg') }}'"
+                                                                 alt="" aria-hidden="true" loading="lazy">
+                                                            <img :src="product.image || '{{ asset_v('images/no-product-image.svg') }}'" :alt="product.name" loading="lazy"
+                                                                 data-fallback="{{ asset_v('images/no-product-image.svg') }}">
                                                             <template x-if="!product.in_stock">
-                                                                <span class="absolute inset-x-0 bottom-0 bg-neutral-900/75 text-white text-[10px] text-center py-1">
+                                                                <span class="absolute inset-x-0 bottom-0 z-10 bg-neutral-900/75 text-white text-[10px] text-center py-1">
                                                                     Out of stock
                                                                 </span>
                                                             </template>
@@ -144,7 +152,7 @@
                     <template x-if="isTyping">
                         <div class="flex gap-2.5">
                             <div class="w-8 h-8 rounded-full bg-[#2D1810] flex items-center justify-center shrink-0">
-                                <img src="{{ $kkBotLogo }}" alt="" class="w-4 h-4 object-contain">
+                                <img src="{{ $kkBotLogo }}" alt="" class="w-4 h-4 object-contain" data-fallback="{{ $kkBotLogoFallback }}">
                             </div>
                             <div class="px-4 py-3 rounded-2xl rounded-tl-sm bg-white border border-neutral-200 shadow-sm">
                                 <div class="flex gap-1">

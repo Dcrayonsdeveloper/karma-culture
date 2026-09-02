@@ -1,6 +1,20 @@
 <x-layouts.app>
     <x-slot name="title">Tracking - {{ $order->order_number }}</x-slot>
 
+    @php
+        // Where every line-item well on this page lands when its picture is
+        // missing, so a deleted product or a file that has gone from disk still
+        // shows something rather than an empty box.
+        $placeholder = asset_v('images/no-product-image.svg');
+    @endphp
+
+    {{-- These wells are only 44-80px across, and the shared frame is tuned for a
+         full-size card: its 24px blur fades out before it reaches an edge this
+         close, and its 30px glyph does not fit. Scale both down to the well. --}}
+    <style>
+        .kk-media--thumb { background: #f5f5f5; }
+    </style>
+
     <div class="bg-neutral-50 border-b border-neutral-100">
         <div class="container mx-auto px-4 py-3">
             <x-breadcrumb :items="[
@@ -317,8 +331,21 @@
                 <div class="divide-y divide-neutral-100">
                     @foreach($order->items as $item)
                         <div class="px-5 py-4 flex gap-3.5">
-                            <img src="{{ $item->product->primary_image_url ?? '' }}" alt="{{ $item->product_name }}"
-                                 class="w-14 h-14 rounded-lg object-cover bg-neutral-100 shrink-0">
+                            {{-- src used to fall back to an empty string, so an item whose product row
+                                 is gone rendered as a bare grey square on the one screen a guest opens
+                                 to check their order is real. --}}
+                            <div class="kk-media kk-media--thumb w-14 h-14 rounded-lg shrink-0">
+                                <img class="kk-media__fill" src="{{ $item->product->primary_image_url ?? $placeholder }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
+                                <img src="{{ $item->product->primary_image_url ?? $placeholder }}" alt="{{ $item->product_name }}"
+                                     data-fallback="{{ $placeholder }}" loading="lazy" decoding="async">
+                                <span class="kk-media__fallback" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <rect x="3" y="4" width="18" height="16" rx="2"/>
+                                        <circle cx="8.5" cy="9.5" r="1.5"/>
+                                        <path d="M21 15l-5-5L5 20"/>
+                                    </svg>
+                                </span>
+                            </div>
                             <div class="flex-1 min-w-0">
                                 <h3 class="text-[13px] font-medium text-neutral-900 truncate">{{ $item->product_name }}</h3>
                                 @if($item->variant_name)

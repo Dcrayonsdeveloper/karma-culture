@@ -108,10 +108,12 @@
 
                     {{-- Featured Image --}}
                     @if($post->featured_image)
-                        <div class="rounded-xl overflow-hidden mb-6 aspect-video bg-neutral-100">
-                            <img src="{{ asset_v('storage/' . $post->featured_image) }}" alt="{{ $post->title }}"
-                                 class="w-full h-full object-cover">
-                        </div>
+                        {{-- Contained, not cropped: the cover is whatever ratio the author
+                             uploaded, and the 16:9 crop was cutting its edges away. --}}
+                        <x-media :src="asset_v('storage/' . $post->featured_image)"
+                                 :alt="$post->title"
+                                 loading="eager"
+                                 class="rounded-xl overflow-hidden mb-6 aspect-video" />
                     @endif
 
                     {{-- Content --}}
@@ -160,11 +162,15 @@
                                     @foreach($related as $rPost)
                                         <a href="{{ route('blog.show', $rPost->slug) }}"
                                            class="flex items-start gap-3 p-3 hover:bg-neutral-50 transition-colors group">
-                                            {{-- Thumbnail --}}
-                                            <div class="w-16 h-12 rounded-lg overflow-hidden bg-neutral-100 shrink-0">
+                                            {{-- Thumbnail. This frame carries no fallback glyph:
+                                                 at 64x48 the mark would be clipped, and the plain
+                                                 .is-broken plate reads fine on its own that small. --}}
+                                            <div class="kk-media kk-media--zoom kk-media--thumb w-16 h-12 rounded-lg overflow-hidden shrink-0">
                                                 @if($rPost->featured_image)
+                                                    <img class="kk-media__fill" src="{{ asset_v('storage/' . $rPost->featured_image) }}"
+                                                         alt="" aria-hidden="true" loading="lazy" decoding="async">
                                                     <img src="{{ asset_v('storage/' . $rPost->featured_image) }}" alt="{{ $rPost->title }}"
-                                                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200">
+                                                         loading="lazy" decoding="async">
                                                 @else
                                                     <div class="w-full h-full flex items-center justify-center bg-neutral-50">
                                                         <svg class="w-5 h-5 text-neutral-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">

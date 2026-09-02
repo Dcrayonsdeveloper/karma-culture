@@ -421,7 +421,12 @@
                     <template x-for="item in $store.cart.items" :key="item.id">
                         <div class="flex gap-3 py-3" style="border-bottom:1px solid #f0f0f0;">
                             <a :href="'/product/' + item.slug" class="shrink-0">
-                                <img :src="item.image" :alt="item.product_name" class="rounded" style="width:64px;height:64px;object-fit:cover;background:#f8f8f8;">
+                                {{-- Contained, not cropped: a half-cut garment in the drawer
+                                     leaves the shopper unable to tell what they added. --}}
+                                <div class="kk-media kk-media--thumb rounded" style="width:64px;height:64px;background:#f8f8f8;">
+                                    <img class="kk-media__fill" :src="item.image" alt="" aria-hidden="true">
+                                    <img :src="item.image" :alt="item.product_name" data-fallback="{{ asset_v('images/no-product-image.svg') }}">
+                                </div>
                             </a>
                             <div class="flex-1 min-w-0">
                                 <a :href="'/product/' + item.slug" class="text-sm font-medium line-clamp-2 block" style="color:#222;" x-text="item.product_name"></a>
@@ -459,7 +464,10 @@
                             <template x-for="rec in $store.cart.recommendations" :key="rec.id">
                                 <div class="shrink-0" style="width:130px;">
                                     <a :href="rec.url" class="block">
-                                        <img :src="rec.image" :alt="rec.name" class="rounded" style="width:130px;height:130px;object-fit:cover;background:#f0f0f0;">
+                                        <div class="kk-media kk-media--thumb rounded" style="width:130px;height:130px;background:#f0f0f0;">
+                                            <img class="kk-media__fill" :src="rec.image" alt="" aria-hidden="true">
+                                            <img :src="rec.image" :alt="rec.name" data-fallback="{{ asset_v('images/no-product-image.svg') }}">
+                                        </div>
                                     </a>
                                     <a :href="rec.url" class="text-xs font-medium line-clamp-2 mt-1.5 block" style="color:#222;" x-text="rec.name"></a>
                                     <div class="flex items-center gap-1.5 mt-0.5">
@@ -722,6 +730,48 @@
     </script>
 
     {{ $scripts ?? '' }}
+
+    {{-- Broken media never leaves a hole.
+
+         An <img> or <video> that 404s renders as an empty rectangle, so a card
+         keeps its slot in the grid while showing nothing at all - that is how
+         blank tiles appeared in the category rows and the qualities slider.
+         error does not bubble, so this listens in the capture phase, which
+         also catches media added after load (carousels, quick view). --}}
+    <script>
+        document.addEventListener('error', function (e) {
+            var el = e.target;
+            if (!el || !el.tagName) return;
+
+            // <video> reports failure on its <source> child, not on itself.
+            if (el.tagName === 'SOURCE') el = el.parentNode;
+            if (!el || (el.tagName !== 'IMG' && el.tagName !== 'VIDEO')) return;
+
+            // The blurred backdrop is decoration. If it cannot load, drop it
+            // and let the subject decide whether the frame is really broken.
+            if (el.classList && el.classList.contains('kk-media__fill')) {
+                el.remove();
+                return;
+            }
+
+            var frame = el.closest ? el.closest('.kk-media') : null;
+
+            // Try the declared placeholder once, then give up - a fallback that
+            // 404s too would otherwise re-fire this handler forever.
+            var fb = el.getAttribute && el.getAttribute('data-fallback');
+            if (fb && !el.hasAttribute('data-fallback-tried')) {
+                el.setAttribute('data-fallback-tried', '');
+                el.src = fb;
+                if (frame) {
+                    var fill = frame.querySelector('.kk-media__fill');
+                    if (fill) fill.src = fb;
+                }
+                return;
+            }
+
+            if (frame) frame.classList.add('is-broken');
+        }, true);
+    </script>
 
     {{-- Pages that @push('scripts') rendered nothing without this, and the
          failure is silent: the markup ships, the JS behind it never does. --}}

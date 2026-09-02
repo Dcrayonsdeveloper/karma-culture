@@ -1,6 +1,20 @@
 <x-layouts.app>
     <x-slot name="title">Shopping Cart - {{ config('app.name') }}</x-slot>
 
+    @php
+        // Where every line-item well on this page lands when its picture is
+        // missing, so a deleted product or a file that has gone from disk still
+        // shows something rather than an empty box.
+        $placeholder = asset_v('images/no-product-image.svg');
+    @endphp
+
+    {{-- These wells are only 44-80px across, and the shared frame is tuned for a
+         full-size card: its 24px blur fades out before it reaches an edge this
+         close, and its 30px glyph does not fit. Scale both down to the well. --}}
+    <style>
+        .kk-media--thumb { background: #f5f5f5; }
+    </style>
+
     <div class="bg-neutral-50" x-data="cartPage()" x-cloak>
         <div class="container mx-auto px-4 py-4">
             <x-breadcrumb :items="[['label' => 'Shopping Cart', 'url' => null]]" />
@@ -69,10 +83,22 @@
                                 <div class="bg-white rounded-lg border border-neutral-100 p-3 sm:p-4">
                                     <div class="flex gap-3">
                                         <!-- Product Image -->
-                                        <a :href="item.product_url" class="shrink-0 self-start block" style="height: 60px; width: 60px;">
-                                            <img :src="item.image" :alt="item.name"
-                                                 class="rounded border border-neutral-100 bg-neutral-50"
-                                                 style="height: 60px; width: auto; max-width: 60px; object-fit: contain;">
+                                        {{-- The 60px well keeps every row the same height while the picture
+                                             inside is shown whole, over a blurred copy of itself so an
+                                             off-square shot does not read as bars. --}}
+                                        <a :href="item.product_url"
+                                           class="kk-media kk-media--thumb shrink-0 self-start block rounded border border-neutral-100"
+                                           style="height: 60px; width: 60px;">
+                                            <img class="kk-media__fill" :src="item.image || '{{ $placeholder }}'" alt="" aria-hidden="true" loading="lazy" decoding="async">
+                                            <img :src="item.image || '{{ $placeholder }}'" :alt="item.name"
+                                                 data-fallback="{{ $placeholder }}" loading="lazy" decoding="async">
+                                            <span class="kk-media__fallback" aria-hidden="true">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                                    <rect x="3" y="4" width="18" height="16" rx="2"/>
+                                                    <circle cx="8.5" cy="9.5" r="1.5"/>
+                                                    <path d="M21 15l-5-5L5 20"/>
+                                                </svg>
+                                            </span>
                                         </a>
 
                                         <!-- Product Details + Price -->

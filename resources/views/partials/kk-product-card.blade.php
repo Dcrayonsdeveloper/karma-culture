@@ -8,16 +8,22 @@
     // Show the product's actual admin-uploaded image; fall back to placeholder
     // only when the product has none.
     $img = $product->primary_image_url ?? asset_v('images/placeholder-boys.svg');
+    $placeholder = asset_v('images/placeholder-boys.svg');
 @endphp
 
 <div class="kk-product">
+    {{-- The media well shows the upload whole (contain) over a blurred copy of
+         itself, so a portrait or square photo is not cropped to the 4:5 tile.
+         The placeholder is wired through data-fallback rather than onerror so
+         a URL that 404s lands on it once and then degrades to .is-broken
+         instead of leaving an empty tile. --}}
     <a href="{{ route('product.show', $product) }}" class="kk-product__media block">
-        <img src="{{ $img }}" alt="{{ $product->name }}" loading="lazy"
-             onerror="this.src='{{ asset_v('images/placeholder-boys.svg') }}'">
-        @if($tag)<span class="kk-product__tag">{{ Str::upper($tag) }}</span>@endif
-        @if($hasDiscount && $discount > 0)
-            <span class="kk-product__discount">{{ $discount }}% OFF</span>
-        @endif
+        <x-media :src="$img" :alt="$product->name" :fallback="$placeholder" class="h-full">
+            @if($tag)<span class="kk-product__tag">{{ Str::upper($tag) }}</span>@endif
+            @if($hasDiscount && $discount > 0)
+                <span class="kk-product__discount">{{ $discount }}% OFF</span>
+            @endif
+        </x-media>
     </a>
     <div class="kk-product__body">
         {{-- Eyebrow is always rendered (brand, else category, else blank) so the

@@ -1,3 +1,10 @@
+@php
+    // The store already substitutes this when a product has no image at all, but
+    // a row pointing at a file that has since gone missing still 404'd into an
+    // empty tile, so the frame gets it as an explicit fallback too.
+    $placeholder = asset_v('images/no-product-image.svg');
+@endphp
+
 <x-layouts.app>
     <x-slot name="title">My Wishlist - {{ config('app.name') }}</x-slot>
 
@@ -28,13 +35,30 @@
             <div x-show="!$store.wishlist.isLoading && $store.wishlist.items.length > 0" x-cloak class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 <template x-for="item in $store.wishlist.items" :key="item.id">
                     <div class="bg-white rounded-xl border border-neutral-100 overflow-hidden group flex flex-col">
-                        <a :href="item.url" class="relative block aspect-[4/5] bg-neutral-50 overflow-hidden">
-                            <img :src="item.image" :alt="item.name" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy">
+                        {{-- The tile stays 4:5 so the grid lines up, but the saved
+                             product is shown whole rather than cropped to that ratio -
+                             a wishlist is the one place the customer is checking they
+                             saved the right thing. The blurred copy behind it fills
+                             what contain leaves over. --}}
+                        <a :href="item.url" class="kk-media kk-media--zoom relative block aspect-[4/5] overflow-hidden">
+                            <img class="kk-media__fill" :src="item.image" alt="" aria-hidden="true" loading="lazy" decoding="async">
+                            <img :src="item.image" :alt="item.name" data-fallback="{{ $placeholder }}" loading="lazy" decoding="async">
+                            <span class="kk-media__fallback" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <rect x="3" y="4" width="18" height="16" rx="2"/>
+                                    <circle cx="8.5" cy="9.5" r="1.5"/>
+                                    <path d="M21 15l-5-5L5 20"/>
+                                </svg>
+                            </span>
+                            {{-- The frame lifts the image to z-1, so the badge and the
+                                 remove button have to be lifted clear of it - without
+                                 this the button paints under the image and the click
+                                 lands on the link instead. --}}
                             <template x-if="item.discount > 0">
-                                <span class="absolute top-2 left-2 bg-[#8c5c34] text-white text-[10px] font-bold px-2 py-0.5 rounded-md" x-text="item.discount + '% Off'"></span>
+                                <span class="absolute top-2 left-2 z-10 bg-[#8c5c34] text-white text-[10px] font-bold px-2 py-0.5 rounded-md" x-text="item.discount + '% Off'"></span>
                             </template>
                             <button @click.prevent="$store.wishlist.remove(item.id)"
-                                    class="absolute top-2 right-2 w-8 h-8 flex items-center justify-center bg-white/90 rounded-full text-[#8c5c34] hover:bg-white shadow-sm"
+                                    class="absolute top-2 right-2 z-10 w-8 h-8 flex items-center justify-center bg-white/90 rounded-full text-[#8c5c34] hover:bg-white shadow-sm"
                                     aria-label="Remove from wishlist">
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
                             </button>

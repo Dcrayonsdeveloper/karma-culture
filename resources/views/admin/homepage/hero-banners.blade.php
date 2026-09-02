@@ -144,14 +144,38 @@
                                 </div>
 
                                 <!-- Thumbnail: a banner may be video-only, so do not assume an image exists -->
-                                <div style="width: 11rem; height: 6rem; background: #f6f6f7; border-radius: 0.5rem; overflow: hidden; flex-shrink: 0; position: relative;">
+                                {{-- Contained, so the thumbnail matches what the slide actually
+                                     shows. A 3:2 crop of a wide banner cut off the headline
+                                     baked into the artwork, which is the one thing the admin
+                                     needs to check here. The admin layout carries no delegated
+                                     media-error handler, so a banner whose file has gone marks
+                                     its own frame rather than sitting as an empty grey box. --}}
+                                @php
+                                    // A banner saved with neither file leaves the same hole a 404
+                                    // does, so it gets the same designed "missing" surface up front.
+                                    $kkThumbClass = 'kk-media'
+                                        . ($banner->image_url ? '' : ' kk-media--dark')
+                                        . ($banner->image_url || $banner->video_url ? '' : ' is-broken');
+                                @endphp
+                                <div class="{{ $kkThumbClass }}" style="width: 11rem; height: 6rem; border-radius: 0.5rem; flex-shrink: 0;">
                                     @if($banner->image_url)
-                                        <img src="{{ $banner->image }}" alt="{{ $banner->name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                        <img class="kk-media__fill" src="{{ $banner->image }}" alt="" aria-hidden="true" onerror="this.remove()">
+                                        <img src="{{ $banner->image }}" alt="{{ $banner->name }}" onerror="this.closest('.kk-media').classList.add('is-broken')">
                                     @elseif($banner->video_url)
-                                        <video src="{{ $banner->video }}" muted playsinline preload="metadata" style="width: 100%; height: 100%; object-fit: cover;"></video>
+                                        <video class="kk-media__fill" src="{{ $banner->video }}" muted playsinline preload="metadata" aria-hidden="true" tabindex="-1" onerror="this.remove()"></video>
+                                        <video src="{{ $banner->video }}" muted playsinline preload="metadata" onerror="this.closest('.kk-media').classList.add('is-broken')"></video>
                                     @endif
+                                    <span class="kk-media__fallback" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                            <rect x="3" y="4" width="18" height="16" rx="2"/>
+                                            <circle cx="8.5" cy="9.5" r="1.5"/>
+                                            <path d="M21 15l-5-5L5 20"/>
+                                        </svg>
+                                        File missing
+                                    </span>
                                     @if($banner->video_url)
-                                        <span style="position: absolute; bottom: 0.25rem; left: 0.25rem; display: inline-flex; align-items: center; gap: 0.2rem; padding: 0.1rem 0.4rem; border-radius: 0.75rem; font-size: 11px; font-weight: 600; background: rgba(0,0,0,0.72); color: #fff;">
+                                        {{-- z-index 3: above the frame's own fallback layer (2). --}}
+                                        <span style="position: absolute; z-index: 3; bottom: 0.25rem; left: 0.25rem; display: inline-flex; align-items: center; gap: 0.2rem; padding: 0.1rem 0.4rem; border-radius: 0.75rem; font-size: 11px; font-weight: 600; background: rgba(0,0,0,0.72); color: #fff;">
                                             <svg style="width: 0.7rem; height: 0.7rem;" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Video
                                         </span>
                                     @endif

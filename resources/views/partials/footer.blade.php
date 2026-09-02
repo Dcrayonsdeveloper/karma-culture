@@ -11,7 +11,9 @@
                             $footerAbout = \App\Models\Setting::get('footer_about', 'Curated fashion for the modern individual. Discover timeless pieces crafted with care and devotion to our culture.');
                         @endphp
                         @if($footerLogo)
-                            <img src="{{ asset_v('storage/' . $footerLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-14 object-contain">
+                            {{-- Missing custom logo falls back to the bundled brand mark rather
+                                 than leaving the footer's first column blank. --}}
+                            <img src="{{ asset_v('storage/' . $footerLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-14 object-contain" data-fallback="{{ asset_v('images/karmaa-kulture-logo.png') }}">
                         @else
                             <img src="{{ asset_v('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-14 object-contain">
                         @endif

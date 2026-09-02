@@ -81,12 +81,32 @@
                         <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Media</h2>
                         <div style="display: flex; align-items: flex-start; gap: 1rem;">
                             <div style="width: 5rem; height: 5rem; border-radius: 0.75rem; background: #f6f6f7; border: 2px dashed #c9cccf; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+                                {{-- Contained: this well is the only look the admin gets at the
+                                     tile they are publishing, and a cover crop of a wide banner
+                                     or a tall poster hid exactly the edges that later went
+                                     missing on the storefront. --}}
                                 <template x-if="preview">
-                                    <img :src="preview" style="width: 100%; height: 100%; object-fit: cover; border-radius: 0.5rem;">
+                                    <div class="kk-media" style="width: 100%; height: 100%; border-radius: 0.5rem;">
+                                        <img class="kk-media__fill" :src="preview" alt="" aria-hidden="true">
+                                        <img :src="preview" alt="Selected category image preview">
+                                    </div>
                                 </template>
                                 <template x-if="!preview && !removing">
                                     @if($category->image_url)
-                                        <img src="{{ asset_v('storage/' . $category->image_url) }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 0.5rem;">
+                                        {{-- The admin layout has no delegated media-error handler, so a
+                                             saved image whose file has gone marks its own frame. --}}
+                                        <div class="kk-media" style="width: 100%; height: 100%; border-radius: 0.5rem;">
+                                            <img class="kk-media__fill" src="{{ asset_v('storage/' . $category->image_url) }}" alt="" aria-hidden="true" onerror="this.remove()">
+                                            <img src="{{ asset_v('storage/' . $category->image_url) }}" alt="Current category image"
+                                                 onerror="this.closest('.kk-media').classList.add('is-broken')">
+                                            <span class="kk-media__fallback" aria-hidden="true">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                                    <rect x="3" y="4" width="18" height="16" rx="2"/>
+                                                    <circle cx="8.5" cy="9.5" r="1.5"/>
+                                                    <path d="M21 15l-5-5L5 20"/>
+                                                </svg>
+                                            </span>
+                                        </div>
                                     @else
                                         <svg width="32" height="32" fill="none" stroke="#c9cccf" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>

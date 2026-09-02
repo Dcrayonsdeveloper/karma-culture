@@ -1,6 +1,20 @@
 <x-layouts.app>
     <x-slot name="title">Order Confirmed</x-slot>
 
+    @php
+        // Where every line-item well on this page lands when its picture is
+        // missing, so a deleted product or a file that has gone from disk still
+        // shows something rather than an empty box.
+        $placeholder = asset_v('images/no-product-image.svg');
+    @endphp
+
+    {{-- These wells are only 44-80px across, and the shared frame is tuned for a
+         full-size card: its 24px blur fades out before it reaches an edge this
+         close, and its 30px glyph does not fit. Scale both down to the well. --}}
+    <style>
+        .kk-media--thumb { background: #f5f5f5; }
+    </style>
+
     <div class="bg-neutral-50 min-h-screen">
         <div class="container mx-auto px-4 py-10">
             <div class="max-w-2xl mx-auto">
@@ -42,8 +56,20 @@
                         @foreach($order->items as $item)
                             <div class="flex gap-3.5 p-4">
                                 @if($item->product && $item->product->primary_image_url)
-                                    <img src="{{ $item->product->primary_image_url }}" alt="{{ $item->product_name }}"
-                                         class="w-14 h-14 object-cover rounded-lg border border-neutral-100 shrink-0">
+                                    {{-- Contained, not cropped: this thumbnail is how the customer checks
+                                         that what they just paid for is what they picked. --}}
+                                    <div class="kk-media kk-media--thumb w-14 h-14 rounded-lg border border-neutral-100 shrink-0">
+                                        <img class="kk-media__fill" src="{{ $item->product->primary_image_url }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
+                                        <img src="{{ $item->product->primary_image_url }}" alt="{{ $item->product_name }}"
+                                             data-fallback="{{ $placeholder }}" loading="lazy" decoding="async">
+                                        <span class="kk-media__fallback" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                                <rect x="3" y="4" width="18" height="16" rx="2"/>
+                                                <circle cx="8.5" cy="9.5" r="1.5"/>
+                                                <path d="M21 15l-5-5L5 20"/>
+                                            </svg>
+                                        </span>
+                                    </div>
                                 @else
                                     <div class="w-14 h-14 rounded-lg bg-neutral-100 flex items-center justify-center shrink-0">
                                         <svg class="w-6 h-6 text-neutral-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">

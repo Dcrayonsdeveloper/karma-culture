@@ -100,15 +100,24 @@
             /* Hero */
             .kk-hero { position: relative; width: 100%; overflow: hidden; background: var(--kk-cream); }
             .kk-hero-slide { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; }
-            .kk-hero-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+            /* The banner itself is fitted by the .kk-media frame wrapped around it -
+               see .kk-hero-media further down with the rest of the hero styles. */
             @media (max-width: 767px) { .kk-hero-slide { aspect-ratio: 4 / 5; } }
 
             /* Tile cards (Category / Aesthetics / Occasions) */
             .kk-tile { position: relative; display: block; overflow: hidden; border-radius: 4px; color: var(--kk-cream); text-decoration: none; background: var(--kk-cream-dark); aspect-ratio: 4/5; }
-            .kk-tile img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s ease; }
-            .kk-tile:hover img { transform: scale(1.04); }
-            .kk-tile-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(45,24,16,.72) 0%, rgba(45,24,16,.15) 45%, transparent 70%); }
-            .kk-tile-label { position: absolute; left: 0; right: 0; bottom: 18px; text-align: center; }
+            /* The tile is a .kk-media frame, so the size and the fit of the picture
+               come from there: a poster or an off-ratio shot is shown whole over a
+               blurred copy of itself instead of losing its edges to the 4/5 crop.
+               The zoom is aimed at the subject only - scaling the backdrop back down
+               would pull its blurred edge inside the frame. */
+            .kk-tile > img:not(.kk-media__fill),
+            .kk-tile > video:not(.kk-media__fill) { transition: transform .5s ease; }
+            .kk-tile:hover > img:not(.kk-media__fill),
+            .kk-tile:hover > video:not(.kk-media__fill) { transform: scale(1.04); }
+            /* Above the media, which the frame lifts to z-index 1. */
+            .kk-tile-overlay { position: absolute; inset: 0; z-index: 2; background: linear-gradient(to top, rgba(45,24,16,.72) 0%, rgba(45,24,16,.15) 45%, transparent 70%); }
+            .kk-tile-label { position: absolute; left: 0; right: 0; bottom: 18px; z-index: 2; text-align: center; }
             .kk-tile-label .pill { display: inline-block; background: var(--kk-brown-dark); color: var(--kk-cream); padding: 8px 22px; border-radius: 999px; font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase; font-weight: 600; }
             .kk-tile-label .kk-tile-pill-lg { padding: 12px 36px; font-size: 13px; letter-spacing: 0.32em; }
             .kk-tile-banner { aspect-ratio: 16/9; }
@@ -158,12 +167,6 @@
                 transform: translateY(-5px);
                 box-shadow: 0 18px 38px rgba(45, 24, 16, 0.20);
             }
-            .kk-catgrid .kk-tile video {
-                width: 100%; height: 100%;
-                object-fit: cover; display: block;
-                transition: transform .5s ease;
-            }
-            .kk-catgrid .kk-tile:hover video { transform: scale(1.04); }
             .kk-catgrid .kk-tile-label { bottom: 16px; }
             .kk-catgrid .kk-tile-label .pill {
                 background: rgba(31, 17, 9, 0.78);
@@ -435,8 +438,11 @@
             @media (max-width: 640px)  { .kk-product-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
             .kk-product { background: var(--kk-cream-lighter); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; }
             .kk-product__media { position: relative; aspect-ratio: 4/5; overflow: hidden; background: var(--kk-cream-dark); }
-            .kk-product__media img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s; }
-            .kk-product:hover .kk-product__media img { transform: scale(1.03); }
+            .kk-product__media img { width: 100%; height: 100%; object-fit: contain; display: block; transition: transform .5s; }
+            /* The backdrop is the one layer that still covers - filling the frame
+               around a contained shot is the whole point of it. */
+            .kk-product__media img.kk-media__fill { object-fit: cover; }
+            .kk-product:hover .kk-product__media img:not(.kk-media__fill) { transform: scale(1.03); }
             .kk-product__tag { position: absolute; top: 9px; left: 9px; background: var(--kk-brown-dark); color: var(--kk-cream); padding: 3px 8px; border-radius: 999px; font-size: 8px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; }
             .kk-product__discount { position: absolute; top: 9px; right: 9px; background: var(--kk-tan-dark); color: var(--kk-cream); padding: 3px 8px; border-radius: 999px; font-size: 9px; font-weight: 700; letter-spacing: 0.04em; }
             .kk-product__body { padding: 12px 12px 14px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
@@ -472,16 +478,14 @@
                 background: var(--kk-brown-darker);
                 box-shadow: 0 24px 60px rgba(45, 24, 16, 0.20);
             }
-            .kk-about-reel video,
-            .kk-about-reel img {
-                width: 100%; height: 100%;
-                object-fit: cover;
-                display: block;
-            }
+            /* The reel is a .kk-media frame: the clip is contained, so a landscape
+               capture keeps its edges instead of being cropped to a ribbon of its
+               middle by the 9/16 box. */
             .kk-about-reel::after {
                 content: '';
                 position: absolute;
                 inset: 0;
+                z-index: 2;                 /* above the clip, which the frame lifts to z-index 1 */
                 background: linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(45,24,16,0.28) 100%);
                 pointer-events: none;
             }
@@ -541,14 +545,11 @@
 
             /* Still-image background, uploaded per card in admin. Deliberately not
                reusing __video: the reduced-motion rule below hides that layer, and a
-               still photo has no motion to reduce — it should stay visible. */
-            .kk-quality__media {
-                position: absolute; inset: 0;
-                width: 100%; height: 100%;
-                object-fit: cover;
-                z-index: 0;
-                transition: transform 0.6s ease;
-            }
+               still photo has no motion to reduce — it should stay visible.
+               Where it sits, how big it is and how it fits now come from the .kk-media
+               frame on the card, so the photo is shown whole over a blurred copy of
+               itself rather than cropped to the card's 4/5. */
+            .kk-quality__media { transition: transform 0.6s ease; }
             .kk-quality:hover .kk-quality__media { transform: scale(1.06); }
 
             /* No image on the card. The tile exists to hold a picture, so without one
@@ -573,7 +574,7 @@
             .kk-quality--plain:hover { border-color: rgba(184, 137, 90, 0.45); }
 
             .kk-quality__num {
-                position: absolute; top: 12px; right: 20px; z-index: 1;
+                position: absolute; top: 12px; right: 20px; z-index: 2;
                 font-family: var(--kk-display);
                 font-size: 62px; line-height: 1; font-weight: 700;
                 /* 0.09 alpha put this at roughly 1.1:1 against the card, and the
@@ -583,7 +584,15 @@
                 letter-spacing: -0.02em;
                 pointer-events: none;
                 user-select: none;
+                display: none;
             }
+            /* The numeral is the stand-in for a card with no picture, and a card whose
+               picture 404s ends up in exactly the same place - it has an image_url, so
+               it never gets --plain, and it used to render as a tall empty box. The
+               runtime marks that frame .is-broken, which paints the same wash, so it
+               gets the numeral too and the two empty states look alike. */
+            .kk-quality--plain .kk-quality__num,
+            .kk-quality.is-broken .kk-quality__num { display: block; }
 
             .kk-quality__overlay {
                 position: absolute; inset: 0; z-index: 1;
@@ -772,16 +781,35 @@
                                    aria-label="{{ $banner->title ?: $heroName }} (opens in a new tab)">
                             @endif
 
-                            @if($banner->has_video)
-                                <video class="kk-hero-video"
-                                       src="{{ $banner->video }}"
-                                       @if($banner->image_url) poster="{{ $banner->image }}" @endif
-                                       autoplay muted loop playsinline preload="{{ $i === 0 ? 'auto' : 'metadata' }}"
-                                       aria-label="{{ $banner->title ?: $heroName }} hero video"></video>
-                            @else
-                                <img src="{{ $banner->image }}" alt="{{ $banner->title ?: $heroName }}"
-                                     @if($i === 0) fetchpriority="high" @else loading="lazy" @endif>
-                            @endif
+                            {{-- Contained, not cropped. A banner carries its own headline
+                                 and product shot, and cover cut them off the sides on
+                                 desktop and off the top and bottom on the 4/5 mobile box.
+                                 A blurred copy of the artwork fills what is left over so
+                                 an off-ratio banner does not read as letterboxed. --}}
+                            <div class="kk-media kk-media--dark kk-hero-media {{ $banner->has_video ? 'kk-hero-media--video' : '' }}">
+                                @if($banner->has_video)
+                                    {{-- No blurred copy behind a hero video: the slide sizes
+                                         itself to the file, so there is no margin to fill and
+                                         a second copy of a full-bleed clip is not worth it. --}}
+                                    <video class="kk-hero-video"
+                                           src="{{ $banner->video }}"
+                                           @if($banner->image_url) poster="{{ $banner->image }}" @endif
+                                           autoplay muted loop playsinline preload="{{ $i === 0 ? 'auto' : 'metadata' }}"
+                                           aria-label="{{ $banner->title ?: $heroName }} hero video"></video>
+                                @else
+                                    <img class="kk-media__fill" src="{{ $banner->image }}" alt="" aria-hidden="true"
+                                         @if($i === 0) fetchpriority="high" @else loading="lazy" @endif decoding="async">
+                                    <img src="{{ $banner->image }}" alt="{{ $banner->title ?: $heroName }}"
+                                         @if($i === 0) fetchpriority="high" @else loading="lazy" @endif>
+                                @endif
+                                <span class="kk-media__fallback" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <rect x="3" y="4" width="18" height="16" rx="2"/>
+                                        <circle cx="8.5" cy="9.5" r="1.5"/>
+                                        <path d="M21 15l-5-5L5 20"/>
+                                    </svg>
+                                </span>
+                            </div>
 
                             {{-- Heading, subtitle and button were editable in the admin
                                  and stored, but no template ever printed them, and the
@@ -826,10 +854,19 @@
             @else
                 <div class="kk-hero-viewport">
                     <div class="kk-hero-slide kk-hero-slide--video">
-                        <video class="kk-hero-video"
-                               src="{{ asset_v('images/karmaa-kulture-web-banner-v3.mp4') }}"
-                               autoplay muted loop playsinline preload="auto"
-                               aria-label="{{ $heroName }} hero video"></video>
+                        <div class="kk-media kk-media--dark kk-hero-media kk-hero-media--video">
+                            <video class="kk-hero-video"
+                                   src="{{ asset_v('images/karmaa-kulture-web-banner-v3.mp4') }}"
+                                   autoplay muted loop playsinline preload="auto"
+                                   aria-label="{{ $heroName }} hero video"></video>
+                            <span class="kk-media__fallback" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <rect x="3" y="4" width="18" height="16" rx="2"/>
+                                    <circle cx="8.5" cy="9.5" r="1.5"/>
+                                    <path d="M21 15l-5-5L5 20"/>
+                                </svg>
+                            </span>
+                        </div>
                     </div>
                 </div>
             @endif
@@ -858,6 +895,18 @@
                 display: block;
             }
             .kk-hero-link { display: block; color: inherit; text-decoration: none; }
+
+            /* An image slide takes its height from the slide's aspect-ratio, so the
+               frame is pinned to it - and the link with it, since the link wraps the
+               frame and would otherwise collapse to nothing to click on. A video slide
+               is sized by the file (aspect-ratio: auto above), so both stay in flow. */
+            .kk-hero-slide:not(.kk-hero-slide--video) .kk-hero-link,
+            .kk-hero-slide:not(.kk-hero-slide--video) .kk-hero-media { position: absolute; inset: 0; }
+            .kk-hero-media--video > video { height: auto; }
+            /* A video that fails to load is hidden, which would leave the frame with
+               no height at all, so the broken state borrows the slide's own box. */
+            .kk-hero-media--video.is-broken { aspect-ratio: 16 / 9; }
+            @media (max-width: 767px) { .kk-hero-media--video.is-broken { aspect-ratio: 4 / 5; } }
 
             /* Caption. Only drawn when the admin filled in a heading, subtitle
                or button, so a plain image banner stays a plain image banner. */
@@ -994,13 +1043,25 @@
                     </button>
                     <div class="kk-catgrid__track" x-ref="track" @scroll.debounce.80ms="update()">
                     @foreach($mensKids as $i => $child)
-                        <a href="{{ route('category.show', $child) }}" class="kk-tile">
+                        <a href="{{ route('category.show', $child) }}" class="kk-tile kk-media">
+                            {{-- Media well: the subject is contained so a poster or a wide
+                                 shot keeps its edges, and the blurred copy behind it fills
+                                 the 4/5 tile. A file that 404s no longer leaves a flat
+                                 rectangle with the name pill floating over nothing - the
+                                 runtime marks the frame .is-broken and it gets the same
+                                 designed wash as a subcategory with no picture at all. --}}
                             @if($child->video_url)
-                                <video autoplay muted loop playsinline preload="metadata"
-                                       src="{{ str_starts_with($child->video_url, 'http') ? $child->video_url : asset_v($child->video_url) }}"
-                                       style="width:100%; height:100%; object-fit:cover; display:block;"></video>
+                                @php $tileVideo = str_starts_with($child->video_url, 'http') ? $child->video_url : asset_v($child->video_url); @endphp
+                                {{-- No blurred copy behind a tile video: these rails run up
+                                     to 12 clips each, and a second decoder per tile can
+                                     cross the browser's concurrent-decode cap, at which
+                                     point clips stop painting - the blank tile this frame
+                                     exists to prevent. The dark frame carries the margin. --}}
+                                <video src="{{ $tileVideo }}" autoplay muted loop playsinline preload="metadata"></video>
                             @elseif($child->image_url)
-                                <img src="{{ asset_v('storage/' . $child->image_url) }}" alt="{{ $child->name }}" loading="lazy">
+                                @php $tileImage = asset_v('storage/' . $child->image_url); @endphp
+                                <img class="kk-media__fill" src="{{ $tileImage }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
+                                <img src="{{ $tileImage }}" alt="{{ $child->name }}" loading="lazy">
                             @else
                                 <div class="w-full h-full" style="background: linear-gradient(135deg, {{ $mensTints[$i % count($mensTints)] }} 0%, var(--kk-brown-dark) 100%);"></div>
                             @endif
@@ -1033,13 +1094,19 @@
                     </button>
                     <div class="kk-catgrid__track" x-ref="track" @scroll.debounce.80ms="update()">
                     @foreach($womensKids as $i => $child)
-                        <a href="{{ route('category.show', $child) }}" class="kk-tile">
+                        <a href="{{ route('category.show', $child) }}" class="kk-tile kk-media">
                             @if($child->video_url)
-                                <video autoplay muted loop playsinline preload="metadata"
-                                       src="{{ str_starts_with($child->video_url, 'http') ? $child->video_url : asset_v($child->video_url) }}"
-                                       style="width:100%; height:100%; object-fit:cover; display:block;"></video>
+                                @php $tileVideo = str_starts_with($child->video_url, 'http') ? $child->video_url : asset_v($child->video_url); @endphp
+                                {{-- No blurred copy behind a tile video: these rails run up
+                                     to 12 clips each, and a second decoder per tile can
+                                     cross the browser's concurrent-decode cap, at which
+                                     point clips stop painting - the blank tile this frame
+                                     exists to prevent. The dark frame carries the margin. --}}
+                                <video src="{{ $tileVideo }}" autoplay muted loop playsinline preload="metadata"></video>
                             @elseif($child->image_url)
-                                <img src="{{ asset_v('storage/' . $child->image_url) }}" alt="{{ $child->name }}" loading="lazy">
+                                @php $tileImage = asset_v('storage/' . $child->image_url); @endphp
+                                <img class="kk-media__fill" src="{{ $tileImage }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
+                                <img src="{{ $tileImage }}" alt="{{ $child->name }}" loading="lazy">
                             @else
                                 <div class="w-full h-full" style="background: linear-gradient(135deg, {{ $womensTints[$i % count($womensTints)] }} 0%, var(--kk-brown-dark) 100%);"></div>
                             @endif
@@ -1201,11 +1268,10 @@
 
                 <div class="kk-about-reels">
                     @foreach($aboutVideos as $aboutVideo)
-                        <div class="kk-about-reel">
-                            <video autoplay muted loop playsinline preload="metadata">
-                                <source src="{{ $aboutVideo }}" type="video/mp4">
-                            </video>
-                        </div>
+                        {{-- Admin-set clips of any ratio, so they are shown whole: a
+                             landscape capture used to be cropped to a ribbon of its
+                             middle by the 9/16 reel. --}}
+                        <x-media class="kk-about-reel" :src="$aboutVideo" video dark />
                     @endforeach
                 </div>
 
@@ -1371,12 +1437,17 @@
                      @mouseenter="stop()" @mouseleave="autoplay && start()">
                     <div class="kk-qslider__track" x-ref="track" @scroll.debounce.100ms="update()" tabindex="0" aria-label="Our qualities">
                         @foreach($qualities as $q)
-                            <div class="kk-quality @if(! $q->image_url) kk-quality--plain @endif">
+                            <div class="kk-quality @if($q->image_url) kk-media kk-media--dark @else kk-quality--plain @endif">
                                 @if($q->image_url)
+                                    {{-- Contained over a blurred copy of itself: these are
+                                         admin-uploaded photos of any shape and cover was
+                                         cutting the subject out of the 4/5 card. --}}
+                                    <img class="kk-media__fill" src="{{ $q->image }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
                                     <img class="kk-quality__media" src="{{ $q->image }}" alt="{{ $q->title }}" loading="lazy" decoding="async">
-                                @else
-                                    <span class="kk-quality__num" aria-hidden="true">{{ str_pad($loop->iteration, 2, '0', STR_PAD_LEFT) }}</span>
                                 @endif
+                                {{-- Always rendered; CSS shows it on a card with no picture
+                                     and on one whose picture failed to load. --}}
+                                <span class="kk-quality__num" aria-hidden="true">{{ str_pad($loop->iteration, 2, '0', STR_PAD_LEFT) }}</span>
                                 <div class="kk-quality__overlay"></div>
                                 <div class="kk-quality__content">
                                     <span class="kk-quality__icon">
@@ -1441,13 +1512,16 @@
                             <blockquote class="kk-treview__text">{{ $t->content }}</blockquote>
                             <figcaption class="kk-treview__by">
                                 <span class="kk-treview__avatar" aria-hidden="true">
+                                    {{-- mb_substr, not substr: the name validator accepts scripts
+                                         whose first character is several bytes wide, and slicing
+                                         one byte off those produced a broken glyph. --}}
+                                    {{ mb_strtoupper(mb_substr($t->name, 0, 1)) }}
                                     @if($t->avatar_url)
-                                        <img src="{{ asset_v('storage/' . $t->avatar_url) }}" alt="" loading="lazy" decoding="async">
-                                    @else
-                                        {{-- mb_substr, not substr: the name validator accepts scripts
-                                             whose first character is several bytes wide, and slicing
-                                             one byte off those produced a broken glyph. --}}
-                                        {{ mb_strtoupper(mb_substr($t->name, 0, 1)) }}
+                                        {{-- Laid over the initial rather than instead of it, so an
+                                             avatar that 404s falls back to the letter instead of an
+                                             empty circle. --}}
+                                        <img src="{{ asset_v('storage/' . $t->avatar_url) }}" alt="" loading="lazy" decoding="async"
+                                             onerror="this.remove()">
                                     @endif
                                 </span>
                                 <span>
@@ -1480,12 +1554,16 @@
             }
             .kk-treview__by { display: flex; align-items: center; gap: 10px; margin-top: auto; }
             .kk-treview__avatar {
+                position: relative;
                 width: 34px; height: 34px; flex: 0 0 34px; border-radius: 999px; overflow: hidden;
                 display: flex; align-items: center; justify-content: center;
                 background: var(--kk-brown); color: var(--kk-cream);
                 font-size: 13px; font-weight: 600;
             }
-            .kk-treview__avatar img { width: 100%; height: 100%; object-fit: cover; }
+            /* Cover, not contain: this is a circular crop of a face, and a contained
+               portrait in a 34px circle reads as a mistake. Absolute so it sits over
+               the initial underneath it. */
+            .kk-treview__avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
             .kk-treview__name { display: block; font-size: 13px; font-weight: 600; color: var(--kk-text); }
             .kk-treview__meta { display: block; font-size: 12px; color: var(--kk-text-muted); }
         </style>

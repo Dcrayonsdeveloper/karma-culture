@@ -35,7 +35,9 @@
             <a href="{{ url('/') }}" class="flex items-center">
                 @php $navLogo = \App\Models\Setting::get('site_logo', ''); @endphp
                 @if($navLogo)
-                    <img src="{{ asset_v('storage/' . $navLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-12 object-contain">
+                    {{-- Missing custom logo falls back to the bundled brand mark rather
+                         than leaving the drawer header blank. --}}
+                    <img src="{{ asset_v('storage/' . $navLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-12 object-contain" data-fallback="{{ asset_v('images/karmaa-kulture-logo.png') }}">
                 @else
                     <img src="{{ asset_v('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-12 object-contain">
                 @endif
@@ -56,11 +58,16 @@
                 </div>
             @else
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-[#2D1810]/10 rounded-full flex items-center justify-center shrink-0">
+                    {{-- Avatar stays cropped to fill the circle - a contained face in a
+                         round well reads as a shrunken sticker. The initial sits
+                         underneath as the base layer, so an avatar URL that 404s drops
+                         its <img> and reveals the initial instead of an empty disc. --}}
+                    <div class="relative w-10 h-10 bg-[#2D1810]/10 rounded-full flex items-center justify-center shrink-0 overflow-hidden">
+                        <span class="text-sm font-semibold text-[#2D1810]">{{ substr(auth()->user()->first_name, 0, 1) }}</span>
                         @if(auth()->user()->avatar_url)
-                            <img src="{{ auth()->user()->avatar_url }}" alt="{{ auth()->user()->full_name }}" class="w-full h-full rounded-full object-cover">
-                        @else
-                            <span class="text-sm font-semibold text-[#2D1810]">{{ substr(auth()->user()->first_name, 0, 1) }}</span>
+                            <img src="{{ auth()->user()->avatar_url }}" alt="{{ auth()->user()->full_name }}"
+                                 class="absolute inset-0 w-full h-full rounded-full object-cover"
+                                 onerror="this.remove()">
                         @endif
                     </div>
                     <div class="min-w-0">

@@ -1,6 +1,20 @@
 <x-layouts.app>
     <x-slot name="title">My Account - {{ config('app.name') }}</x-slot>
 
+    @php
+        // Where every line-item well on this page lands when its picture is
+        // missing, so a deleted product or a file that has gone from disk still
+        // shows something rather than an empty box.
+        $placeholder = asset_v('images/no-product-image.svg');
+    @endphp
+
+    {{-- These wells are only 44-80px across, and the shared frame is tuned for a
+         full-size card: its 24px blur fades out before it reaches an edge this
+         close, and its 30px glyph does not fit. Scale both down to the well. --}}
+    <style>
+        .kk-media--thumb { background: #f5f5f5; }
+    </style>
+
     <div class="bg-neutral-50 border-b border-neutral-100">
         <div class="container mx-auto px-4 py-3">
             <x-breadcrumb :items="[['label' => 'My Account', 'url' => null]]" />
@@ -17,11 +31,15 @@
                 <!-- Welcome Banner -->
                 <div class="rounded-xl p-5 sm:p-6 mb-6 bg-linear-to-r from-primary-500 to-primary-600 text-white">
                     <div class="flex items-center gap-4">
-                        <div class="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center shrink-0">
+                        {{-- A face stays on cover - contained in a circle it reads as a floating
+                             cut-out. The initial is always drawn underneath rather than in a branch,
+                             so an avatar that 404s falls back to it rather than to an empty circle. --}}
+                        <div class="relative w-14 h-14 bg-white/20 rounded-full flex items-center justify-center shrink-0">
+                            <span class="text-xl font-bold">{{ substr($user->first_name, 0, 1) }}</span>
                             @if($user->avatar_url)
-                                <img src="{{ $user->avatar_url }}" alt="{{ $user->full_name }}" class="w-full h-full rounded-full object-cover">
-                            @else
-                                <span class="text-xl font-bold">{{ substr($user->first_name, 0, 1) }}</span>
+                                <img src="{{ $user->avatar_url }}" alt="{{ $user->full_name }}"
+                                     class="absolute inset-0 w-full h-full rounded-full object-cover"
+                                     onerror="this.remove()">
                             @endif
                         </div>
                         <div>
@@ -95,9 +113,20 @@
                             @foreach($recentOrders as $order)
                                 <div class="px-5 py-4 flex items-center justify-between gap-4">
                                     <div class="flex items-center gap-3.5">
-                                        <div class="w-11 h-11 bg-neutral-50 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+                                        {{-- Contained in the fixed 44px well so the row keeps its height
+                                             and the order is still recognisable from its first item. --}}
+                                        <div class="kk-media kk-media--thumb w-11 h-11 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
                                             @if($order->items->first()?->product?->primary_image_url)
-                                                <img src="{{ $order->items->first()->product->primary_image_url }}" alt="{{ $order->items->first()->product->name }}" class="w-full h-full object-cover">
+                                                <img class="kk-media__fill" src="{{ $order->items->first()->product->primary_image_url }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
+                                                <img src="{{ $order->items->first()->product->primary_image_url }}" alt="{{ $order->items->first()->product->name }}"
+                                                     data-fallback="{{ $placeholder }}" loading="lazy" decoding="async">
+                                                <span class="kk-media__fallback" aria-hidden="true">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                                        <rect x="3" y="4" width="18" height="16" rx="2"/>
+                                                        <circle cx="8.5" cy="9.5" r="1.5"/>
+                                                        <path d="M21 15l-5-5L5 20"/>
+                                                    </svg>
+                                                </span>
                                             @else
                                                 <svg class="w-5 h-5 text-neutral-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>

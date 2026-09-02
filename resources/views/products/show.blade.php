@@ -32,9 +32,21 @@
                 ? asset_v(ltrim($url, '/'))
                 : asset_v('storage/' . $url);
         };
-        $media = $product->images->sortBy('position')->map(function ($img) use ($resolveUrl) {
+        // Every media frame on this page points at the same placeholder. The
+        // layout's delegated error handler swaps it in once, then marks the frame
+        // .is-broken - a 404 used to leave a blank rectangle holding its slot.
+        $noMediaFallback = asset_v('images/no-product-image.svg');
+        // The glyph .is-broken reveals, kept in one place because the same markup
+        // ends up in every media frame on this page.
+        $mediaFallback = '<span class="kk-media__fallback" aria-hidden="true">'
+            . '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">'
+            . '<rect x="3" y="4" width="18" height="16" rx="2"/>'
+            . '<circle cx="8.5" cy="9.5" r="1.5"/>'
+            . '<path d="M21 15l-5-5L5 20"/></svg></span>';
+
+        $media = $product->images->sortBy('position')->map(function ($img) use ($resolveUrl, $noMediaFallback) {
             return [
-                'url'   => $resolveUrl($img->url) ?: asset_v('images/no-product-image.svg'),
+                'url'   => $resolveUrl($img->url) ?: $noMediaFallback,
                 'type'  => $img->media_type ?? 'image',
                 'thumb' => $img->thumbnail_url ? $resolveUrl($img->thumbnail_url) : null,
             ];
@@ -118,9 +130,18 @@
         padding: 0; border: 1px solid #e3d2b3; border-radius: 8px; overflow: hidden;
         background: #fff; cursor: pointer; aspect-ratio: 3/4; transition: border-color .15s ease;
     }
-    .kk-pdp__thumb img, .kk-pdp__thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    /* Contained, so a thumbnail previews the same whole frame that clicking it
+       shows. :not() leaves the blurred .kk-media__fill backdrop on cover. */
+    .kk-pdp__thumb img:not(.kk-media__fill), .kk-pdp__thumb video { width: 100%; height: 100%; object-fit: contain; display: block; }
+    /* The shared 24px blur and 30px glyph are sized for a full card; across a
+       74px tile they flatten to one colour and crowd the frame. */
+    .kk-pdp__thumb .kk-media__fill { filter: blur(10px) saturate(1.2) brightness(.92); }
+    .kk-pdp__thumb .kk-media__fallback svg { width: 20px; height: 20px; }
     .kk-pdp__thumb--video { position: relative; }
-    .kk-pdp__thumb-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; background: rgba(0,0,0,.18); text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+    /* z-index 2 keeps the badge above the subject, which .kk-media puts on 1. */
+    .kk-pdp__thumb-play { position: absolute; inset: 0; z-index: 2; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; background: rgba(0,0,0,.18); text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+    /* Nothing loaded, so there is nothing to play. */
+    .kk-pdp__thumb.is-broken .kk-pdp__thumb-play { display: none; }
     .kk-pdp__thumb:hover { border-color: #c9b393; }
     .kk-pdp__thumb.is-active { border-color: #2d1810; }
 
@@ -130,8 +151,11 @@
         aspect-ratio: 4/5; max-height: min(580px, calc(100vh - 80px));
         border-radius: 10px; overflow: hidden; background: #fff; cursor: zoom-in;
     }
-    .kk-pdp__main-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
-    .kk-pdp__main-video { object-fit: contain; background: #000; cursor: default; }
+    /* One .kk-media frame per slide rather than one around the whole stack: the
+       error handler marks the frame it finds, so a single missing file would
+       otherwise blank out every other image in the gallery. */
+    .kk-pdp__slide { position: absolute; inset: 0; background: #fff; }
+    .kk-pdp__slide--video { background: #000; cursor: default; }
     .kk-pdp__counter {
         position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
         background: rgba(31,17,9,.72); color: #efe2cb; font-size: 12px; letter-spacing: .05em;
@@ -389,20 +413,23 @@
                 @if(count($media) > 1)
                     <div class="kk-pdp__thumbs">
                         @foreach($media as $i => $m)
-                            <button type="button" class="kk-pdp__thumb {{ $m['type'] === 'video' ? 'kk-pdp__thumb--video' : '' }}"
+                            <button type="button" class="kk-media kk-pdp__thumb {{ $m['type'] === 'video' ? 'kk-pdp__thumb--video' : '' }}"
                                     :class="currentImage === {{ $i }} ? 'is-active' : ''"
                                     @click="currentImage = {{ $i }}"
                                     aria-label="View media {{ $i + 1 }}">
                                 @if($m['type'] === 'video')
                                     @if($m['thumb'])
-                                        <img src="{{ $m['thumb'] }}" alt="{{ $product->name }} - video {{ $i + 1 }}" loading="lazy">
+                                        <img class="kk-media__fill" src="{{ $m['thumb'] }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
+                                        <img src="{{ $m['thumb'] }}" alt="{{ $product->name }} - video {{ $i + 1 }}" loading="lazy" data-fallback="{{ $noMediaFallback }}">
                                     @else
                                         <video src="{{ $m['url'] }}#t=0.1" muted playsinline preload="metadata"></video>
                                     @endif
                                     <span class="kk-pdp__thumb-play" aria-hidden="true">&#9654;</span>
                                 @else
-                                    <img src="{{ $m['url'] }}" alt="{{ $product->name }} - thumbnail {{ $i + 1 }}" loading="lazy">
+                                    <img class="kk-media__fill" src="{{ $m['url'] }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
+                                    <img src="{{ $m['url'] }}" alt="{{ $product->name }} - thumbnail {{ $i + 1 }}" loading="lazy" data-fallback="{{ $noMediaFallback }}">
                                 @endif
+                                {!! $mediaFallback !!}
                             </button>
                         @endforeach
                     </div>
@@ -411,18 +438,30 @@
                      @touchstart.passive="onTouchStart($event)" @touchend="onTouchEnd($event)">
                     @foreach($media as $i => $m)
                         @if($m['type'] === 'video')
-                            <video class="kk-pdp__main-img kk-pdp__main-video" controls playsinline preload="metadata"
-                                   controlsList="nodownload noplaybackrate noremoteplayback" disablepictureinpicture
-                                   @if($m['thumb']) poster="{{ $m['thumb'] }}" @endif
-                                   x-show="currentImage === {{ $i }}" @if($i !== 0) x-cloak @endif>
-                                <source src="{{ $m['url'] }}">
-                            </video>
+                            <div class="kk-media kk-pdp__slide kk-pdp__slide--video"
+                                 x-show="currentImage === {{ $i }}" @if($i !== 0) x-cloak @endif>
+                                <video controls playsinline preload="metadata"
+                                       controlsList="nodownload noplaybackrate noremoteplayback" disablepictureinpicture
+                                       @if($m['thumb']) poster="{{ $m['thumb'] }}" @endif>
+                                    <source src="{{ $m['url'] }}">
+                                </video>
+                                {!! $mediaFallback !!}
+                            </div>
                         @else
-                            <img src="{{ $m['url'] }}" alt="{{ $product->name }}" class="kk-pdp__main-img"
+                            {{-- The whole photo, over a blurred copy of itself. A cropped hero
+                                 is the worst version of this bug: whatever the 4/5 frame cut
+                                 off is the one thing the shopper came here to look at. --}}
+                            <div class="kk-media kk-pdp__slide"
                                  @click="showZoom = true"
-                                 x-show="currentImage === {{ $i }}" @if($i !== 0) x-cloak @endif
-                                 sizes="(max-width: 1024px) 100vw, 50vw" decoding="async"
-                                 loading="{{ $i === 0 ? 'eager' : 'lazy' }}" @if($i === 0) fetchpriority="high" @endif>
+                                 x-show="currentImage === {{ $i }}" @if($i !== 0) x-cloak @endif>
+                                <img class="kk-media__fill" src="{{ $m['url'] }}" alt="" aria-hidden="true"
+                                     loading="{{ $i === 0 ? 'eager' : 'lazy' }}" decoding="async">
+                                <img src="{{ $m['url'] }}" alt="{{ $product->name }}"
+                                     data-fallback="{{ $noMediaFallback }}"
+                                     sizes="(max-width: 1024px) 100vw, 50vw" decoding="async"
+                                     loading="{{ $i === 0 ? 'eager' : 'lazy' }}" @if($i === 0) fetchpriority="high" @endif>
+                                {!! $mediaFallback !!}
+                            </div>
                         @endif
                     @endforeach
                     @if(count($media) > 1)
@@ -1107,6 +1146,7 @@
                             <img class="kk-aplus__img"
                                  src="{{ $aplus->image_url }}"
                                  alt="{{ $aplus->alt_text ?: $product->name }}"
+                                 data-fallback="{{ $noMediaFallback }}"
                                  @if($aplus->width && $aplus->height) width="{{ $aplus->width }}" height="{{ $aplus->height }}" @endif
                                  @if($style = $aplus->display_style) style="{{ $style }}" @endif
                                  loading="{{ $loop->first ? 'eager' : 'lazy' }}" decoding="async">
@@ -1363,19 +1403,23 @@
                                              menu -- user-agent chrome that page CSS cannot theme. The tile
                                              is a poster with a play badge; the real player opens in the
                                              modal at the foot of this block, where the controls fit. --}}
-                                        <button type="button" class="kk-rev__media-item kk-rev__media-item--video"
+                                        <button type="button" class="kk-media kk-media--dark kk-rev__media-item kk-rev__media-item--video"
                                                 @click="openRevVideo(@js($reviewMedia->display_url))"
                                                 aria-label="Play customer review video">
                                             @if($reviewMedia->display_thumbnail)
-                                                <img src="{{ $reviewMedia->display_thumbnail }}" alt="Customer review video" loading="lazy">
+                                                <img class="kk-media__fill" src="{{ $reviewMedia->display_thumbnail }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
+                                                <img src="{{ $reviewMedia->display_thumbnail }}" alt="Customer review video" loading="lazy" data-fallback="{{ $noMediaFallback }}">
                                             @else
                                                 <video src="{{ $reviewMedia->display_url }}#t=0.1" muted playsinline preload="metadata" tabindex="-1"></video>
                                             @endif
                                             <span class="kk-rev__media-play" aria-hidden="true">&#9654;</span>
+                                            {!! $mediaFallback !!}
                                         </button>
                                     @else
-                                        <a href="{{ $reviewMedia->display_url }}" target="_blank" rel="noopener" class="kk-rev__media-item kk-rev__media-item--img">
-                                            <img src="{{ $reviewMedia->display_url }}" alt="{{ $reviewMedia->alt_text ?? 'Customer review photo' }}" loading="lazy">
+                                        <a href="{{ $reviewMedia->display_url }}" target="_blank" rel="noopener" class="kk-media kk-media--dark kk-rev__media-item kk-rev__media-item--img">
+                                            <img class="kk-media__fill" src="{{ $reviewMedia->display_url }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
+                                            <img src="{{ $reviewMedia->display_url }}" alt="{{ $reviewMedia->alt_text ?? 'Customer review photo' }}" loading="lazy" data-fallback="{{ $noMediaFallback }}">
+                                            {!! $mediaFallback !!}
                                         </a>
                                     @endif
                                 @endforeach
@@ -1436,15 +1480,24 @@
             /* Uploaded review media (Task 10) */
             .kk-rev__media { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
             .kk-rev__media-item { position: relative; width: 72px; height: 72px; padding: 0; border-radius: 10px; overflow: hidden; border: 1px solid #e3d2b3; display: block; background: #000; }
-            .kk-rev__media-item img, .kk-rev__media-item video { width: 100%; height: 100%; object-fit: cover; display: block; }
+            /* Shopper photos arrive in every ratio; contained, the tile shows the
+               whole shot instead of a crop out of its middle. :not() leaves the
+               blurred .kk-media__fill backdrop on cover. */
+            .kk-rev__media-item img:not(.kk-media__fill), .kk-rev__media-item video { width: 100%; height: 100%; object-fit: contain; display: block; }
             .kk-rev__media-item video { background: #000; }
+            /* The shared blur and glyph are sized for a full card, not a 72px tile. */
+            .kk-rev__media-item .kk-media__fill { filter: blur(10px) saturate(1.2) brightness(.75); }
+            .kk-rev__media-item .kk-media__fallback svg { width: 22px; height: 22px; }
             .kk-rev__media-item--video { cursor: pointer; }
             .kk-rev__media-item:focus-visible { outline: 2px solid #2d1810; outline-offset: 2px; }
+            /* z-index 2 keeps the badge above the subject, which .kk-media puts on 1. */
             .kk-rev__media-play {
-                position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+                position: absolute; inset: 0; z-index: 2; display: flex; align-items: center; justify-content: center;
                 color: #fff; font-size: 15px; padding-left: 2px; text-shadow: 0 1px 4px rgba(0,0,0,.65);
                 background: linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.42));
             }
+            /* Nothing loaded, so there is nothing to play. */
+            .kk-rev__media-item.is-broken .kk-rev__media-play { display: none; }
             @media (max-width: 640px) { .kk-rev__media-item { width: 64px; height: 64px; } }
             .kk-rev__lightbox { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.9); padding: 16px; }
             .kk-rev__lightbox-panel { position: relative; width: 100%; max-width: 720px; }
@@ -1703,19 +1756,6 @@
                 text-decoration: none;
                 color: #2d1810;
             }
-            .kk-related__imgwrap {
-                position: relative;
-                aspect-ratio: 3/4;
-                overflow: hidden;
-                background: #fff;
-                margin-bottom: 12px;
-            }
-            .kk-related__img {
-                width: 100%; height: 100%;
-                object-fit: cover; display: block;
-                transition: transform .5s ease;
-            }
-            .kk-related__card:hover .kk-related__img { transform: scale(1.03); }
             .kk-related__add {
                 display: block;
                 width: 100%;
@@ -1785,7 +1825,12 @@
             .kk-pnotif { position: fixed; left: 18px; bottom: 18px; z-index: 55; display: flex; align-items: center; gap: 14px;
                 background: #ffffff; border: 2px solid #f26a21; border-radius: 16px; box-shadow: 0 10px 30px rgba(17,24,39,0.14);
                 padding: 14px 44px 14px 14px; max-width: 400px; }
-            .kk-pnotif__thumb { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; flex-shrink: 0; background: #f3f4f6; }
+            /* A frame now rather than the image itself: the product shot is contained
+               inside it so an off-ratio photo keeps its edges, and a missing file
+               gets the placeholder instead of the empty grey square this left. */
+            .kk-pnotif__thumb { width: 72px; height: 72px; border-radius: 10px; flex-shrink: 0; background: #f3f4f6; }
+            .kk-pnotif__thumb .kk-media__fill { filter: blur(10px) saturate(1.2) brightness(.92); }
+            .kk-pnotif__thumb .kk-media__fallback svg { width: 22px; height: 22px; }
             .kk-pnotif__body { flex: 1; min-width: 0; }
             /* Three stacked lines: what happened, what was bought, when.
                app.css forces `font-weight:700 !important` on every storefront <p>
@@ -1813,7 +1858,11 @@
              x-transition:leave="transition ease-in duration-200"
              x-transition:leave-end="opacity-0"
              class="kk-pnotif" role="status" aria-live="polite">
-            <img class="kk-pnotif__thumb" :src="thumb" :alt="productName">
+            <div class="kk-media kk-pnotif__thumb">
+                <img class="kk-media__fill" :src="thumb" alt="" aria-hidden="true">
+                <img :src="thumb" :alt="productName" data-fallback="{{ $noMediaFallback }}">
+                {!! $mediaFallback !!}
+            </div>
             <div class="kk-pnotif__body">
                 <p class="kk-pnotif__lead">Someone purchased</p>
                 <p class="kk-pnotif__name">{{ \Illuminate\Support\Str::limit($product->name, 40) }}</p>
@@ -1862,7 +1911,8 @@
                              x-transition:enter-start="opacity-0"
                              x-transition:enter-end="opacity-100"
                              src="{{ $m['url'] }}"
-                             alt="{{ $product->name }}">
+                             alt="{{ $product->name }}"
+                             data-fallback="{{ $noMediaFallback }}">
                     @endif
                 @endforeach
             </div>

@@ -54,13 +54,17 @@
 
                         <!-- Main image upload -->
                         <div class="flex items-start gap-4 mb-4">
-                            <div x-show="mainPreview" x-transition class="relative w-28 h-28 rounded-lg overflow-hidden shrink-0" style="border: 2px solid #005bd3;">
-                                <img :src="mainPreview" style="width: 100%; height: 100%; object-fit: cover;">
+                            {{-- Contained: a cropped preview shows the admin something other
+                                 than the file they picked, which is how off-ratio shots got
+                                 published without anyone noticing their edges were gone. --}}
+                            <div x-show="mainPreview" x-transition class="kk-media relative w-28 h-28 rounded-lg overflow-hidden shrink-0" style="border: 2px solid #005bd3;">
+                                <img class="kk-media__fill" :src="mainPreview" alt="" aria-hidden="true">
+                                <img :src="mainPreview" alt="Main image preview">
                                 <button type="button" @click="removeMainImage()"
-                                        class="absolute top-1 right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm">
+                                        class="absolute top-1 right-1 z-10 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm">
                                     <svg style="width: 0.875rem; height: 0.875rem; color: #d72c0d;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                 </button>
-                                <span class="absolute bottom-0 left-0 right-0 px-2 py-0.5 text-[10px] font-semibold text-center text-white" style="background: rgba(0,91,211,0.85);">Main</span>
+                                <span class="absolute bottom-0 left-0 right-0 z-10 px-2 py-0.5 text-[10px] font-semibold text-center text-white" style="background: rgba(0,91,211,0.85);">Main</span>
                             </div>
 
                             <div class="flex-1 border border-dashed rounded-lg p-5 text-center cursor-pointer transition-colors"
@@ -99,10 +103,11 @@
                         <div x-show="galleryPreviews.length > 0" x-transition class="mt-3">
                             <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
                                 <template x-for="(preview, index) in galleryPreviews" :key="index">
-                                    <div class="relative group rounded-lg overflow-hidden aspect-square" style="border: 1px solid #e3e3e3;">
-                                        <img :src="preview.url" style="width: 100%; height: 100%; object-fit: cover;">
+                                    <div class="kk-media relative group rounded-lg overflow-hidden aspect-square" style="border: 1px solid #e3e3e3;">
+                                        <img class="kk-media__fill" :src="preview.url" alt="" aria-hidden="true">
+                                        <img :src="preview.url" alt="Gallery image preview">
                                         <button type="button" @click="removeGalleryImage(index)"
-                                                class="absolute top-1 right-1 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                                                class="absolute top-1 right-1 z-10 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
                                             <svg style="width: 0.75rem; height: 0.75rem; color: #d72c0d;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                         </button>
                                     </div>

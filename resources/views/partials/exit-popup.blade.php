@@ -30,7 +30,14 @@
         {{-- Banner / image side --}}
         <div class="relative min-h-[110px] md:min-h-[330px] overflow-hidden" style="background: linear-gradient(150deg, #8c5c34 0%, #4a2d1a 55%, #2d1810 100%);">
             @if($exit['image'])
-                <img src="{{ $exit['image'] }}" alt="Karmaa Kulture offer" class="absolute inset-0 w-full h-full object-cover" loading="lazy">
+                {{-- Same as the offer popup: the banner is contained over a blurred copy
+                     of itself so the whole artwork shows, positioned and kept transparent
+                     inline so .kk-media does not override it and so a missing file degrades
+                     to the gradient behind, which stands on its own. --}}
+                <div class="kk-media" style="position: absolute; inset: 0; background: transparent;">
+                    <img class="kk-media__fill" src="{{ $exit['image'] }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
+                    <img src="{{ $exit['image'] }}" alt="Karmaa Kulture offer" loading="lazy" decoding="async">
+                </div>
                 <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
             @endif
             <div class="relative h-full flex flex-col justify-center items-center text-center p-5 text-kk-cream">

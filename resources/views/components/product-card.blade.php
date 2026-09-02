@@ -30,16 +30,14 @@
     {{-- Compact card for horizontal scrollable rows --}}
     <div {{ $attributes->merge(['class' => 'group shrink-0 w-full']) }}>
         <a href="{{ route('product.show', $product) }}" class="block relative">
-            <div class="aspect-square bg-neutral-50 rounded-[20px] overflow-hidden mb-2">
-                <img src="{{ $product->primary_image_url }}"
-                     alt="{{ $product->name }}"
-                     class="w-full h-full object-cover transition-transform duration-300"
-                     style="will-change:transform;"
-                     onmouseenter="this.style.transform='scale(1.05)'"
-                     onmouseleave="this.style.transform='scale(1)'"
-                     loading="lazy"
-                     onerror="this.src='{{ $placeholderImage }}'">
-            </div>
+            {{-- Same square tile as before, but the shot is contained over a
+                 blurred copy of itself so nothing gets cropped away, and the
+                 placeholder is tried via data-fallback when the URL 404s. --}}
+            <x-media :src="$product->primary_image_url"
+                     :alt="$product->name"
+                     :fallback="$placeholderImage"
+                     zoom
+                     class="aspect-square bg-neutral-50 rounded-[20px] overflow-hidden mb-2" />
             @if($hasDiscount)
                 <span class="absolute top-2 left-2 bg-[#F8931D] text-white font-bold rounded-full text-[8px] w-8 h-8 flex items-center justify-center sm:w-auto sm:h-auto sm:text-[10px] sm:px-2 sm:py-0.5 sm:rounded-md">{{ round($discount) }}%<span class="hidden sm:inline">&nbsp;Off</span></span>
             @endif
@@ -123,15 +121,18 @@
     <div {{ $attributes->merge(['class' => 'group card-product flex flex-col bg-white rounded-[20px] overflow-hidden']) }}>
         {{-- Image Section --}}
         <div class="relative aspect-square overflow-hidden bg-neutral-50">
-            <a href="{{ route('product.show', $product) }}">
-                <img src="{{ $product->primary_image_url }}"
-                     alt="{{ $product->name }}"
-                     class="w-full h-full object-cover transition-transform duration-300"
-                     style="will-change:transform;"
-                     onmouseenter="this.style.transform='scale(1.05)'"
-                     onmouseleave="this.style.transform='scale(1)'"
-                     loading="lazy"
-                     onerror="this.src='{{ $placeholderImage }}'">
+            {{-- The square frame is kept so every card in a row stays the same
+                 height, but the shot inside it is contained over a blurred copy
+                 of itself - an off-ratio product photo is shown whole instead of
+                 having its edges cut off. The placeholder rides on data-fallback
+                 so a broken URL falls back once and then degrades to a designed
+                 frame rather than an empty rectangle. --}}
+            <a href="{{ route('product.show', $product) }}" class="block h-full">
+                <x-media :src="$product->primary_image_url"
+                         :alt="$product->name"
+                         :fallback="$placeholderImage"
+                         zoom
+                         class="h-full" />
             </a>
 
             {{-- Top-left badges --}}

@@ -1,6 +1,20 @@
 <x-layouts.app>
     <x-slot name="title">Checkout - {{ config('app.name') }}</x-slot>
 
+    @php
+        // Where every line-item well on this page lands when its picture is
+        // missing, so a deleted product or a file that has gone from disk still
+        // shows something rather than an empty box.
+        $placeholder = asset_v('images/no-product-image.svg');
+    @endphp
+
+    {{-- These wells are only 44-80px across, and the shared frame is tuned for a
+         full-size card: its 24px blur fades out before it reaches an edge this
+         close, and its 30px glyph does not fit. Scale both down to the well. --}}
+    <style>
+        .kk-media--thumb { background: #f5f5f5; }
+    </style>
+
     <div class="bg-neutral-50 min-h-screen">
         <div class="container mx-auto px-4 py-4">
             <x-breadcrumb :items="[['label' => 'Cart', 'url' => route('cart.index')], ['label' => 'Checkout', 'url' => null]]" />
@@ -273,8 +287,20 @@
                                 <div class="space-y-3 max-h-52 overflow-y-auto">
                                     @foreach($cart->items as $item)
                                         <div class="flex gap-2.5">
-                                            <img src="{{ $item->product->primary_image_url }}" alt="{{ $item->product->name }}"
-                                                 class="w-12 h-12 rounded border border-neutral-100 bg-neutral-50 object-contain shrink-0">
+                                            {{-- The order summary is the last look the customer gets at what
+                                                 they are about to pay for, so nothing is cropped away. --}}
+                                            <div class="kk-media kk-media--thumb w-12 h-12 rounded border border-neutral-100 shrink-0">
+                                                <img class="kk-media__fill" src="{{ $item->product->primary_image_url }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
+                                                <img src="{{ $item->product->primary_image_url }}" alt="{{ $item->product->name }}"
+                                                     data-fallback="{{ $placeholder }}" loading="lazy" decoding="async">
+                                                <span class="kk-media__fallback" aria-hidden="true">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                                        <rect x="3" y="4" width="18" height="16" rx="2"/>
+                                                        <circle cx="8.5" cy="9.5" r="1.5"/>
+                                                        <path d="M21 15l-5-5L5 20"/>
+                                                    </svg>
+                                                </span>
+                                            </div>
                                             <div class="flex-1 min-w-0">
                                                 <p class="text-[13px] font-medium text-neutral-800 line-clamp-1">{{ $item->product->name }}</p>
                                                 @if($item->size || $item->colour)

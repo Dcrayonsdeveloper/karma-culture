@@ -6,9 +6,12 @@
 --}}
 
 @php
+    // Bundled mark kept in its own variable so a custom logo whose file has gone
+    // missing degrades to it instead of leaving an empty disc in the chat header.
+    $kkBotLogoFallback = asset_v('images/karmaa-kulture-logo.png');
     $kkBotLogo = \App\Models\Setting::get('site_logo', '')
         ? asset_v('storage/' . \App\Models\Setting::get('site_logo'))
-        : asset_v('images/karmaa-kulture-logo.png');
+        : $kkBotLogoFallback;
 @endphp
 <style>
     /* --kk-chat-stack is everything the panel sits on top of inside the flex
@@ -106,7 +109,7 @@
              style="background: linear-gradient(135deg, #2D1810 0%, #6B4227 55%, #8C5C34 100%); border-bottom: 2px solid #6F9CA2;">
             <div class="flex items-center gap-2.5">
                 <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm" style="background: white;">
-                    <img src="{{ $kkBotLogo }}" alt="Karmaa Kulture" class="w-5 h-5 object-contain">
+                    <img src="{{ $kkBotLogo }}" alt="Karmaa Kulture" class="w-5 h-5 object-contain" data-fallback="{{ $kkBotLogoFallback }}">
                 </div>
                 <div>
                     <p class="kk-chat-header-title text-sm leading-tight" style="color: #FFFFFF;">Shopping Assistant</p>
@@ -162,7 +165,7 @@
             <template x-if="messages.length === 0">
                 <div class="flex flex-col items-center justify-center h-full text-center px-4 py-6">
                     <div class="w-14 h-14 rounded-full bg-[#8C5C34]/10 flex items-center justify-center mb-3">
-                        <img src="{{ $kkBotLogo }}" alt="Karmaa Kulture" class="w-9 h-9 object-contain">
+                        <img src="{{ $kkBotLogo }}" alt="Karmaa Kulture" class="w-9 h-9 object-contain" data-fallback="{{ $kkBotLogoFallback }}">
                     </div>
                     @auth
                         {{-- First name only: a full name makes the greeting stiff. --}}
@@ -216,7 +219,7 @@
                     <template x-if="msg.role === 'assistant'">
                         <div class="flex items-start gap-2">
                             <div class="w-7 h-7 rounded-full bg-[#8C5C34] flex items-center justify-center shrink-0 mt-0.5">
-                                <img src="{{ $kkBotLogo }}" alt="Karmaa Kulture" class="w-4 h-4 object-contain">
+                                <img src="{{ $kkBotLogo }}" alt="Karmaa Kulture" class="w-4 h-4 object-contain" data-fallback="{{ $kkBotLogoFallback }}">
                             </div>
                             <div class="flex-1 min-w-0">
                                 <div
@@ -232,19 +235,29 @@
                                                 @click="trackProductClick(product.id)"
                                                 class="shrink-0 w-[108px] bg-white rounded-xl border border-neutral-100 overflow-hidden hover:shadow-md hover:border-[#6F9CA2]/30 transition-all block"
                                             >
-                                                <div class="relative w-full aspect-square bg-neutral-50 overflow-hidden">
+                                                {{-- Contained: this strip is only 108px wide, so a cover
+                                                     crop of an off-ratio shot left the customer looking at
+                                                     a patch of sleeve. The blurred copy behind fills the
+                                                     square so the tile still reads as a solid card. --}}
+                                                <div class="kk-media w-full aspect-square">
                                                     <img
-                                                        :src="product.image || '/images/no-product-image.svg'"
-                                                        :alt="product.name"
-                                                        class="w-full h-full object-cover"
+                                                        class="kk-media__fill"
+                                                        :src="product.image || '{{ asset_v('images/no-product-image.svg') }}'"
+                                                        alt=""
+                                                        aria-hidden="true"
                                                         loading="lazy"
-                                                        onerror="this.src='/images/no-product-image.svg'"
+                                                    >
+                                                    <img
+                                                        :src="product.image || '{{ asset_v('images/no-product-image.svg') }}'"
+                                                        :alt="product.name"
+                                                        loading="lazy"
+                                                        data-fallback="{{ asset_v('images/no-product-image.svg') }}"
                                                     >
                                                     <template x-if="product.has_discount">
-                                                        <span class="absolute top-1 left-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full text-white" style="background-color: #8C5C34;">SALE</span>
+                                                        <span class="absolute top-1 left-1 z-10 text-[8px] font-bold px-1.5 py-0.5 rounded-full text-white" style="background-color: #8C5C34;">SALE</span>
                                                     </template>
                                                     <template x-if="!product.in_stock">
-                                                        <div class="absolute inset-0 bg-white/75 flex items-center justify-center">
+                                                        <div class="absolute inset-0 z-10 bg-white/75 flex items-center justify-center">
                                                             <span class="text-[9px] font-semibold text-neutral-600 text-center leading-tight px-1">Out of Stock</span>
                                                         </div>
                                                     </template>
@@ -273,7 +286,7 @@
             <template x-if="isTyping">
                 <div class="flex items-start gap-2">
                     <div class="w-7 h-7 rounded-full bg-[#8C5C34] flex items-center justify-center shrink-0 mt-0.5">
-                        <img src="{{ $kkBotLogo }}" alt="Karmaa Kulture" class="w-4 h-4 object-contain">
+                        <img src="{{ $kkBotLogo }}" alt="Karmaa Kulture" class="w-4 h-4 object-contain" data-fallback="{{ $kkBotLogoFallback }}">
                     </div>
                     <div class="px-4 py-3 rounded-2xl rounded-tl-sm bg-white border border-neutral-100 shadow-sm flex items-center gap-1">
                         <span class="w-1.5 h-1.5 rounded-full bg-neutral-400 animate-bounce" style="animation-delay: 0ms; animation-duration: 0.9s;"></span>
@@ -369,7 +382,7 @@
             <template x-if="!isOpen">
                 <div class="flex flex-col items-center gap-0.5">
                     <span class="w-7 h-7 rounded-full bg-white flex items-center justify-center">
-                        <img src="{{ $kkBotLogo }}" alt="" class="w-5 h-5 object-contain">
+                        <img src="{{ $kkBotLogo }}" alt="" class="w-5 h-5 object-contain" data-fallback="{{ $kkBotLogoFallback }}">
                     </span>
                     <span class="text-[7px] font-bold tracking-wider uppercase leading-none">Ask AI</span>
                 </div>

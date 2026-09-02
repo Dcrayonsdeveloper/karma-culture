@@ -61,23 +61,38 @@
                         <!-- Existing media grid (sortable) -->
                         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-3" x-ref="mediaList">
                             @foreach($allMedia as $image)
-                            <div class="relative group rounded-lg overflow-hidden aspect-square media-tile"
+                            {{-- Contained, so the tile shows the file as uploaded rather than a
+                                 centre crop of it. The admin layout carries no delegated error
+                                 handler (that lives in the storefront layout), so a saved file
+                                 that has since gone missing marks its own frame instead of
+                                 leaving a blank square that still looks like real media. --}}
+                            <div class="kk-media {{ $image->is_video ? 'kk-media--dark' : '' }} relative group rounded-lg overflow-hidden aspect-square media-tile"
                                  style="border: 1px solid #e3e3e3; cursor: grab;"
                                  draggable="true" data-id="{{ $image->id }}"
                                  @dragstart="onDragStart($event)" @dragover.prevent="onDragOver($event)"
                                  @drop.prevent="onDrop($event)" @dragend="onDragEnd()"
                                  x-show="!deletedIds.includes({{ $image->id }})">
                                 @if($image->is_video)
-                                    <video src="{{ $image->display_url }}" muted playsinline preload="metadata" style="width: 100%; height: 100%; object-fit: cover; background:#000;"></video>
-                                    <span class="absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[10px] font-semibold rounded text-white" style="background: rgba(0,0,0,0.7);">&#9654; Video</span>
+                                    <video class="kk-media__fill" src="{{ $image->display_url }}" muted playsinline preload="metadata" aria-hidden="true" tabindex="-1" onerror="this.remove()"></video>
+                                    <video src="{{ $image->display_url }}" muted playsinline preload="metadata" onerror="this.closest('.kk-media').classList.add('is-broken')"></video>
+                                    <span class="absolute top-1.5 left-1.5 z-10 px-1.5 py-0.5 text-[10px] font-semibold rounded text-white" style="background: rgba(0,0,0,0.7);">&#9654; Video</span>
                                 @else
-                                    <img src="{{ $image->display_url }}" alt="{{ $image->alt_text }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                    <img class="kk-media__fill" src="{{ $image->display_url }}" alt="" aria-hidden="true" onerror="this.remove()">
+                                    <img src="{{ $image->display_url }}" alt="{{ $image->alt_text }}" onerror="this.closest('.kk-media').classList.add('is-broken')">
                                     @if($image->is_primary)
-                                        <span class="absolute bottom-0 left-0 right-0 px-2 py-1 text-[10px] font-semibold text-center text-white" style="background: rgba(0,91,211,0.85);">Main</span>
+                                        <span class="absolute bottom-0 left-0 right-0 z-10 px-2 py-1 text-[10px] font-semibold text-center text-white" style="background: rgba(0,91,211,0.85);">Main</span>
                                     @endif
                                 @endif
+                                <span class="kk-media__fallback" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <rect x="3" y="4" width="18" height="16" rx="2"/>
+                                        <circle cx="8.5" cy="9.5" r="1.5"/>
+                                        <path d="M21 15l-5-5L5 20"/>
+                                    </svg>
+                                    File missing
+                                </span>
                                 <button type="button" @click="markForDelete({{ $image->id }})"
-                                        class="absolute top-1.5 right-1.5 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                                        class="absolute top-1.5 right-1.5 z-10 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
                                     <svg style="width: 0.875rem; height: 0.875rem; color: #d72c0d;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                 </button>
                             </div>
@@ -85,20 +100,22 @@
 
                             <!-- New image previews -->
                             <template x-for="(preview, index) in galleryPreviews" :key="'img'+index">
-                                <div class="relative group rounded-lg overflow-hidden aspect-square" style="border: 1px solid #e3e3e3;">
-                                    <img :src="preview.url" style="width: 100%; height: 100%; object-fit: cover;">
-                                    <span class="absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[10px] font-semibold rounded text-white" style="background: #2a9d3e;">New</span>
-                                    <button type="button" @click="removeGalleryImage(index)" class="absolute top-1.5 right-1.5 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm">
+                                <div class="kk-media relative group rounded-lg overflow-hidden aspect-square" style="border: 1px solid #e3e3e3;">
+                                    <img class="kk-media__fill" :src="preview.url" alt="" aria-hidden="true">
+                                    <img :src="preview.url" alt="New image preview">
+                                    <span class="absolute top-1.5 left-1.5 z-10 px-1.5 py-0.5 text-[10px] font-semibold rounded text-white" style="background: #2a9d3e;">New</span>
+                                    <button type="button" @click="removeGalleryImage(index)" class="absolute top-1.5 right-1.5 z-10 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm">
                                         <svg style="width: 0.875rem; height: 0.875rem; color: #d72c0d;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                     </button>
                                 </div>
                             </template>
                             <!-- New video previews -->
                             <template x-for="(preview, index) in videoPreviews" :key="'vid'+index">
-                                <div class="relative group rounded-lg overflow-hidden aspect-square" style="border: 1px solid #e3e3e3;">
-                                    <video :src="preview.url" muted playsinline style="width: 100%; height: 100%; object-fit: cover; background:#000;"></video>
-                                    <span class="absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[10px] font-semibold rounded text-white" style="background: #2a9d3e;">New &#9654;</span>
-                                    <button type="button" @click="removeVideo(index)" class="absolute top-1.5 right-1.5 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm">
+                                <div class="kk-media kk-media--dark relative group rounded-lg overflow-hidden aspect-square" style="border: 1px solid #e3e3e3;">
+                                    <video class="kk-media__fill" :src="preview.url" muted playsinline aria-hidden="true" tabindex="-1"></video>
+                                    <video :src="preview.url" muted playsinline></video>
+                                    <span class="absolute top-1.5 left-1.5 z-10 px-1.5 py-0.5 text-[10px] font-semibold rounded text-white" style="background: #2a9d3e;">New &#9654;</span>
+                                    <button type="button" @click="removeVideo(index)" class="absolute top-1.5 right-1.5 z-10 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm">
                                         <svg style="width: 0.875rem; height: 0.875rem; color: #d72c0d;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                     </button>
                                 </div>

@@ -30,7 +30,16 @@
         {{-- Image / brand side (top band on mobile, left column on desktop) --}}
         <div class="relative min-h-[110px] md:min-h-[330px] overflow-hidden" style="background: linear-gradient(150deg, #4a2d1a 0%, #2d1810 55%, #1f1109 100%);">
             @if($offer['image'])
-                <img src="{{ $offer['image'] }}" alt="Karmaa Kulture" class="absolute inset-0 w-full h-full object-cover" loading="lazy">
+                {{-- The poster is an admin upload of any shape, so it is contained over a
+                     blurred copy of itself rather than cropped to the panel. Position and
+                     background are inline because .kk-media sets both itself and wins over
+                     the utilities; leaving it transparent also means a missing file falls
+                     back to the gradient below, which is this panel's finished no-image
+                     design. --}}
+                <div class="kk-media" style="position: absolute; inset: 0; background: transparent;">
+                    <img class="kk-media__fill" src="{{ $offer['image'] }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
+                    <img src="{{ $offer['image'] }}" alt="Karmaa Kulture" loading="lazy" decoding="async">
+                </div>
                 <div class="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent"></div>
             @endif
             <div class="relative h-full flex flex-col justify-end p-5 md:p-6 text-kk-cream">

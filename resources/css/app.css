@@ -432,21 +432,27 @@ body:not(.layout-admin) a.text-white {
     overflow: hidden;
     background: var(--kk-cream-dark);
 }
-.kk-product__media img {
+/* The subject is contained so an off-ratio upload is shown whole instead of
+   having its edges cropped away; the blurred .kk-media__fill copy behind it
+   fills what contain leaves over, so it keeps its own cover + over-scale and
+   is excluded here. The :not() also lifts this above the older
+   object-fit: cover copy of the rule still inlined in home.blade.php. */
+.kk-product__media img:not(.kk-media__fill) {
     width: 100%; height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     display: block;
     transition: transform .5s;
 }
-.kk-product:hover .kk-product__media img { transform: scale(1.03); }
+.kk-product:hover .kk-product__media img:not(.kk-media__fill) { transform: scale(1.03); }
+/* Above the media: the contained subject inside the frame carries z-index 1. */
 .kk-product__tag {
-    position: absolute; top: 12px; left: 12px;
+    position: absolute; top: 12px; left: 12px; z-index: 2;
     background: var(--kk-brown-dark); color: var(--kk-cream);
     padding: 4px 10px; border-radius: 999px;
     font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 700;
 }
 .kk-product__discount {
-    position: absolute; top: 12px; right: 12px;
+    position: absolute; top: 12px; right: 12px; z-index: 2;
     background: var(--kk-tan-dark); color: var(--kk-cream);
     padding: 4px 10px; border-radius: 999px;
     font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
@@ -1959,3 +1965,125 @@ body.kk-modal-open {
 body.kk-modal-open main {
     overflow: hidden;
 }
+
+/* ========================================
+   Media frames - show the whole picture
+   ========================================
+   Cards keep a fixed aspect ratio so every tile in a row stays the same
+   height. The media inside is *contained*, not cropped: posters, infographics,
+   screenshots and off-ratio product shots are shown whole instead of having
+   their edges cut away by object-fit: cover.
+
+   Contain on its own leaves dead bars around an off-ratio file, so a blurred,
+   over-scaled copy of the same source sits behind it and fills that margin.
+   The result reads as a deliberate backdrop rather than letterboxing, and the
+   subject stays completely visible. */
+.kk-media {
+    position: relative;
+    overflow: hidden;
+    background: var(--kk-cream-dark);
+    isolation: isolate;                 /* keeps the blurred fill under the subject */
+}
+
+/* The fill is also a direct child, and `.kk-media > img` out-specifies
+   `.kk-media__fill`, so without this exclusion the backdrop would take the
+   subject's position/fit and push the real image out of the frame. */
+.kk-media > img:not(.kk-media__fill),
+.kk-media > video:not(.kk-media__fill) {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;                /* the whole frame, never a crop */
+    display: block;
+}
+
+/* Blurred backdrop, same source as the subject. aria-hidden in markup - it is
+   decoration, and a screen reader announcing the image twice is noise. */
+.kk-media__fill {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scale(1.2);              /* over-scale so blur has no soft edge */
+    filter: blur(24px) saturate(1.2) brightness(0.92);
+    pointer-events: none;
+    user-select: none;
+}
+
+/* On a dark card the cream default flashes before the fill paints. */
+.kk-media--dark { background: var(--kk-brown-darker); }
+.kk-media--dark .kk-media__fill { filter: blur(24px) saturate(1.1) brightness(0.7); }
+
+/* Broken or missing media. A 404 leaves a bare coloured rectangle - the card
+   still occupies its slot but shows nothing at all, which is how empty tiles
+   ended up in the category rows and quality slider. Marking the frame instead
+   of leaving it blank gives it a designed surface, and the fill copy is
+   dropped so a broken URL is not requested a second time. */
+.kk-media.is-broken {
+    background:
+        radial-gradient(115% 85% at 86% 6%, rgba(184, 137, 90, 0.26) 0%, rgba(184, 137, 90, 0) 60%),
+        linear-gradient(155deg, #351a0f 0%, #26120a 55%, #1b0e07 100%);
+}
+.kk-media.is-broken .kk-media__fill { display: none; }
+.kk-media.is-broken > img,
+.kk-media.is-broken > video { display: none; }
+
+/* Fallback mark shown in place of media that failed to load. */
+.kk-media__fallback {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+    text-align: center;
+    color: rgba(239, 226, 203, 0.72);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+.kk-media.is-broken .kk-media__fallback { display: flex; }
+.kk-media__fallback svg { width: 30px; height: 30px; opacity: 0.55; }
+
+/* Hover zoom, opt-in per card. Scaling a contained image keeps it whole. */
+.kk-media--zoom > img,
+.kk-media--zoom > video { transition: transform .5s ease; }
+.group:hover .kk-media--zoom > img,
+.kk-media--zoom:hover > img,
+.kk-media--zoom:hover > video { transform: scale(1.04); }
+
+@media (prefers-reduced-motion: reduce) {
+    .kk-media--zoom > img,
+    .kk-media--zoom > video { transition: none; transform: none !important; }
+}
+
+/* The zoom rules above match every direct img/video child of the frame, and
+   that includes the blurred backdrop: hovering a zoom card pulled the fill off
+   its scale(1.2) down to scale(1.04), which let the blur's soft edge show at
+   the frame corners (and prefers-reduced-motion dropped it to none entirely).
+   The backdrop is decoration - it must stay over-scaled while the subject
+   moves. */
+.group:hover .kk-media--zoom > .kk-media__fill,
+.kk-media--zoom:hover > .kk-media__fill { transform: scale(1.2); }
+
+@media (prefers-reduced-motion: reduce) {
+    .kk-media--zoom > .kk-media__fill { transform: scale(1.2) !important; }
+}
+
+/* Small wells (line-item thumbs, search suggestions, avatars-sized frames).
+   A 24px blur across a 64px box averages the whole picture to one flat colour,
+   so the backdrop stops reading as the artwork behind it - small frames get a
+   proportionally smaller radius and a wider over-scale. */
+.kk-media--thumb .kk-media__fill {
+    filter: blur(9px) saturate(1.2) brightness(0.95);
+    transform: scale(1.35);
+}
+.kk-media--thumb .kk-media__fallback { padding: 4px; }
+.kk-media--thumb .kk-media__fallback svg { width: 18px; height: 18px; }
