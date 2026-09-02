@@ -14,9 +14,9 @@ use Tests\TestCase;
  *
  * The screen used to take one image and one clip and recommend "1920x700px"
  * for them, which was the size of nothing: the hero plays at 1426x370 on
- * desktop and is given a 4:5 portrait box on phones. Each device now has its
- * own section, headed by the size that device actually draws at, and its own
- * pair of files.
+ * desktop and is given a 3:2 box on phones. Each device now has its own
+ * section, headed by the size that device actually draws at, and its own pair
+ * of files.
  */
 class HeroBannerMobileUploadTest extends TestCase
 {
@@ -48,7 +48,7 @@ class HeroBannerMobileUploadTest extends TestCase
             ->post(route('admin.homepage.hero-banners.store'), [
                 'name' => 'Campaign',
                 'image' => UploadedFile::fake()->image('wide.jpg', 1426, 370),
-                'mobile_image' => UploadedFile::fake()->image('tall.jpg', 1080, 1350),
+                'mobile_image' => UploadedFile::fake()->image('tall.jpg', 1080, 720),
             ])
             ->assertSessionHasNoErrors();
 
@@ -70,7 +70,7 @@ class HeroBannerMobileUploadTest extends TestCase
         $this->actingAs($this->admin(), 'admin')
             ->post(route('admin.homepage.hero-banners.store'), [
                 'name' => 'Campaign',
-                'mobile_image' => UploadedFile::fake()->image('tall.jpg', 1080, 1350),
+                'mobile_image' => UploadedFile::fake()->image('tall.jpg', 1080, 720),
             ])
             ->assertSessionHasErrors('image');
     }
@@ -91,7 +91,7 @@ class HeroBannerMobileUploadTest extends TestCase
 
         $this->actingAs($this->admin(), 'admin')
             ->put(route('admin.homepage.hero-banners.update', $banner), [
-                'mobile_image' => UploadedFile::fake()->image('new.jpg', 1080, 1350),
+                'mobile_image' => UploadedFile::fake()->image('new.jpg', 1080, 720),
             ])
             ->assertSessionHasNoErrors();
 

@@ -19,23 +19,35 @@ class Banner extends Model
      * The shape the desktop hero is drawn at, as [width, height] in pixels.
      *
      * Taken from the hero clip the storefront ships with
-     * (public/images/karmaa-kulture-web-banner-v3.mp4, 1426x370), because a
-     * video slide is sized by its own file: an image slide cut to some other
-     * ratio made the carousel jump in height between slides, and the size the
-     * admin screen recommended - 1920x700 - matched neither.
+     * (public/images/karmaa-kulture-web-banner-v3.mp4, 1426x370). Every slide
+     * is drawn in this box now - a video no longer takes its height from its
+     * own file, which is what made the carousel lurch between a 370px strip
+     * and a 1008px clip as it advanced.
      *
      * The home page reads these into the slide's `aspect-ratio` and the admin
      * screen prints them as the recommended upload size, so the advice and the
-     * layout cannot drift apart.
+     * layout cannot drift apart. Since the box is fixed and the artwork now
+     * fills it, these are not merely a suggestion: anything uploaded at other
+     * proportions is centre-cropped to fit.
      */
     const HERO_DESKTOP_SIZE = [1426, 370];
 
     /**
-     * The same for phones, where the slide is a 4:5 portrait box. A desktop
-     * strip letterboxed into it is barely taller than the caption drawn on
-     * top, which is why a banner may carry its own mobile media.
+     * The same for phones, as a 3:2 box.
+     *
+     * It used to be 4:5 portrait, on the reasoning that a banner would carry
+     * its own phone artwork. Almost none do, and a 3.85:1 desktop strip
+     * cropped into a 4:5 box keeps only a fifth of its width - while the strip
+     * ratio itself, at phone widths, is a 101px sliver with no room for the
+     * caption drawn over it.
+     *
+     * 3:2 is the balance point between the two shapes this box actually
+     * receives: it keeps 39% of a desktop strip's width, or 53% of a portrait
+     * asset's height, and is 260px tall on a 390px phone - enough to read as a
+     * header. It is also the native frame of a camera export, so artwork that
+     * is photographed rather than composed for the web fits with no crop.
      */
-    const HERO_MOBILE_SIZE = [1080, 1350];
+    const HERO_MOBILE_SIZE = [1080, 720];
 
     protected $fillable = [
         'name',
