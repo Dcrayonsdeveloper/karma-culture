@@ -70,7 +70,7 @@ class Brand extends Model
             return $path;
         }
         if (str_starts_with($path, '/')) {
-            return asset(ltrim($path, '/'));
+            return asset_v(ltrim($path, '/'));
         }
 
         return asset_v('storage/'.$path);

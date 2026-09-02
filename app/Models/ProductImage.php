@@ -57,8 +57,16 @@ class ProductImage extends Model
         if (! $path) {
             return '';
         }
-        if (str_starts_with($path, 'http') || str_starts_with($path, '/')) {
+        if (str_starts_with($path, 'http')) {
             return $path;
+        }
+
+        // The admin controller records uploads as "/storage/products/<hash>.jpg"
+        // while older rows hold a bare relative path. Both are files we serve
+        // ourselves, so both are fingerprinted; returning the rooted form raw
+        // was skipping the cache-bust on every product image on the site.
+        if (str_starts_with($path, '/')) {
+            return asset_v(ltrim($path, '/'));
         }
 
         return asset_v('storage/'.$path);

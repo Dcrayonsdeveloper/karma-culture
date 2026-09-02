@@ -72,7 +72,7 @@
                         <label for="{{ $kkAboutVideo['url'] }}" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">{{ $kkAboutVideo['label'] }}</label>
                         @if($settings[$kkAboutVideo['url']] ?? '')
                             <div style="margin: 0.5rem 0;">
-                                <video src="{{ str_starts_with($settings[$kkAboutVideo['url']], 'http') ? $settings[$kkAboutVideo['url']] : asset($settings[$kkAboutVideo['url']]) }}"
+                                <video src="{{ str_starts_with($settings[$kkAboutVideo['url']], 'http') ? $settings[$kkAboutVideo['url']] : asset_v($settings[$kkAboutVideo['url']]) }}"
                                        controls muted controlsList="nodownload noplaybackrate noremoteplayback" disablepictureinpicture
                                        style="max-width: 100%; max-height: 200px; border-radius: 10px;"></video>
                             </div>

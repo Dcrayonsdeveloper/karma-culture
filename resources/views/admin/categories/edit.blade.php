@@ -120,7 +120,7 @@
                         <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e3e3e3;">
                             <label for="video_url_text" class="form-label">Video</label>
                             @if($category->video_url)
-                                <video src="{{ str_starts_with($category->video_url, 'http') ? $category->video_url : asset($category->video_url) }}"
+                                <video src="{{ str_starts_with($category->video_url, 'http') ? $category->video_url : asset_v($category->video_url) }}"
                                        controls muted controlsList="nodownload noplaybackrate noremoteplayback" disablepictureinpicture
                                        style="max-width: 220px; max-height: 140px; border-radius: 10px; margin: 0.5rem 0;"></video>
                             @endif

@@ -992,7 +992,7 @@
                         <a href="{{ route('category.show', $child) }}" class="kk-tile">
                             @if($child->video_url)
                                 <video autoplay muted loop playsinline preload="metadata"
-                                       src="{{ str_starts_with($child->video_url, 'http') ? $child->video_url : asset($child->video_url) }}"
+                                       src="{{ str_starts_with($child->video_url, 'http') ? $child->video_url : asset_v($child->video_url) }}"
                                        style="width:100%; height:100%; object-fit:cover; display:block;"></video>
                             @elseif($child->image_url)
                                 <img src="{{ asset_v('storage/' . $child->image_url) }}" alt="{{ $child->name }}" loading="lazy">
@@ -1031,7 +1031,7 @@
                         <a href="{{ route('category.show', $child) }}" class="kk-tile">
                             @if($child->video_url)
                                 <video autoplay muted loop playsinline preload="metadata"
-                                       src="{{ str_starts_with($child->video_url, 'http') ? $child->video_url : asset($child->video_url) }}"
+                                       src="{{ str_starts_with($child->video_url, 'http') ? $child->video_url : asset_v($child->video_url) }}"
                                        style="width:100%; height:100%; object-fit:cover; display:block;"></video>
                             @elseif($child->image_url)
                                 <img src="{{ asset_v('storage/' . $child->image_url) }}" alt="{{ $child->name }}" loading="lazy">
@@ -1183,8 +1183,8 @@
             foreach ($aboutVideoKeys as $ai => $ak) {
                 $val = \App\Models\Setting::get($ak, '');
                 $aboutVideos[] = $val
-                    ? (str_starts_with($val, 'http') ? $val : asset($val))
-                    : asset($aboutVideoDefaults[$ai]);
+                    ? (str_starts_with($val, 'http') ? $val : asset_v($val))
+                    : asset_v($aboutVideoDefaults[$ai]);
             }
         @endphp
         @if($aboutVisible)

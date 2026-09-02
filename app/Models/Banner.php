@@ -63,13 +63,13 @@ class Banner extends Model
     public function getImageAttribute(): string
     {
         if (!$this->image_url) {
-            return asset('images/placeholder-banner.jpg');
+            return asset_v('images/placeholder-banner.jpg');
         }
         if (str_starts_with($this->image_url, 'http')) {
             return $this->image_url;
         }
         if (str_starts_with($this->image_url, '/')) {
-            return asset(ltrim($this->image_url, '/'));
+            return asset_v(ltrim($this->image_url, '/'));
         }
         return asset_v('storage/' . $this->image_url);
     }
@@ -91,7 +91,7 @@ class Banner extends Model
             return $this->video_url;
         }
         if (str_starts_with($this->video_url, '/')) {
-            return asset(ltrim($this->video_url, '/'));
+            return asset_v(ltrim($this->video_url, '/'));
         }
 
         return asset_v('storage/' . $this->video_url);
