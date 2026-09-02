@@ -4,7 +4,12 @@
     <x-slot name="header">
         <div class="page-header">
             <h1>Newsletter</h1>
-            <a href="{{ route('admin.newsletter.export') }}{{ request()->hasAny(['status']) ? '?' . request()->getQueryString() : '' }}"
+            {{-- The export follows whatever is on screen. It used to carry the
+                 query string only when a status tab was open, and the endpoint
+                 read nothing but `status` anyway, so searching for one
+                 subscriber and hitting Export downloaded the whole list. --}}
+            @php $exportQuery = http_build_query(request()->only(['status', 'search', 'source'])); @endphp
+            <a href="{{ route('admin.newsletter.export') }}{{ $exportQuery ? '?'.$exportQuery : '' }}"
                class="btn btn-secondary" style="font-size: 13px;">
                 <svg style="width: 16px; height: 16px; margin-right: 6px; display: inline-block; vertical-align: middle;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
@@ -40,21 +45,11 @@
     {{-- Card with tabs + search + table --}}
     <div style="background: white; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); overflow: hidden;"
          x-data="{
-             tab: '{{ request('status', 'all') }}',
-             search: '{{ request('search', '') }}',
              selected: [],
              toggleAll(checked, ids) { this.selected = checked ? ids : []; },
              toggle(id) {
                  const idx = this.selected.indexOf(id);
                  idx === -1 ? this.selected.push(id) : this.selected.splice(idx, 1);
-             },
-             navigate() {
-                 let url = '{{ route('admin.newsletter.index') }}';
-                 let params = [];
-                 if (this.tab !== 'all') params.push('status=' + this.tab);
-                 if (this.search) params.push('search=' + encodeURIComponent(this.search));
-                 if (params.length) url += '?' + params.join('&');
-                 window.location.href = url;
              }
          }">
 
@@ -87,10 +82,26 @@
                 <svg style="width: 16px; height: 16px; color: #616161; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                 </svg>
-                <input type="text" name="search" maxlength="100" aria-label="Search" value="{{ request('search') }}" placeholder="Search subscribers..."
+                <input type="text" name="search" maxlength="100" aria-label="Search" value="{{ request('search') }}" placeholder="Search by email, name or mobile..."
                        style="flex: 1; border: none; outline: none; font-size: 13px; color: #303030; background: transparent;">
-                @if(request('search'))
-                    <a href="{{ route('admin.newsletter.index', request()->except('search', 'page')) }}" style="color: #616161; font-size: 12px; text-decoration: none; white-space: nowrap;"
+
+                {{-- The controller has always filtered on `source` and passed the
+                     distinct list down; nothing rendered it, so signups could be
+                     counted per source but never listed per source. --}}
+                @if($stats['sources']->count() > 1)
+                    <select name="source" aria-label="Filter by source" onchange="this.form.submit()"
+                            style="border: 1px solid #e3e3e3; border-radius: 0.5rem; padding: 0.25rem 0.5rem; font-size: 12px; color: #303030; background: white;">
+                        <option value="">All sources</option>
+                        @foreach($stats['sources'] as $sourceOption)
+                            <option value="{{ $sourceOption }}" @selected(request('source') === $sourceOption)>
+                                {{ \Illuminate\Support\Str::headline($sourceOption) }}
+                            </option>
+                        @endforeach
+                    </select>
+                @endif
+
+                @if(request('search') || request('source'))
+                    <a href="{{ route('admin.newsletter.index', request()->except('search', 'source', 'page')) }}" style="color: #616161; font-size: 12px; text-decoration: none; white-space: nowrap;"
                        onmouseover="this.style.color='#303030'" onmouseout="this.style.color='#616161'">Clear</a>
                 @endif
             </form>
@@ -136,6 +147,7 @@
                         </th>
                         <th style="padding: 0.5rem 1rem; text-align: left; font-weight: 500; color: #616161; font-size: 12px;">Email</th>
                         <th style="padding: 0.5rem 1rem; text-align: left; font-weight: 500; color: #616161; font-size: 12px;">Name</th>
+                        <th style="padding: 0.5rem 1rem; text-align: left; font-weight: 500; color: #616161; font-size: 12px;">Mobile</th>
                         <th style="padding: 0.5rem 1rem; text-align: left; font-weight: 500; color: #616161; font-size: 12px;">Source</th>
                         <th style="padding: 0.5rem 1rem; text-align: left; font-weight: 500; color: #616161; font-size: 12px;">Status</th>
                         <th style="padding: 0.5rem 1rem; text-align: left; font-weight: 500; color: #616161; font-size: 12px;">Subscribed</th>
@@ -158,8 +170,20 @@
                             <td style="padding: 0.625rem 1rem; color: #616161;">
                                 {{ $subscriber->name ?? '-' }}
                             </td>
+                            {{-- The offer popup makes the mobile number mandatory and the
+                                 popup promises offers over WhatsApp, but the number was
+                                 written to the database and shown nowhere. --}}
+                            <td style="padding: 0.625rem 1rem; color: #616161; white-space: nowrap;">
+                                @if($subscriber->phone)
+                                    <a href="tel:{{ $subscriber->phone }}" style="color: #616161; text-decoration: none;">{{ $subscriber->phone }}</a>
+                                @else
+                                    -
+                                @endif
+                            </td>
                             <td style="padding: 0.625rem 1rem;">
-                                <span style="display: inline-block; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 12px; font-weight: 500; background: #f1f1f1; color: #616161;">{{ ucfirst($subscriber->source) }}</span>
+                                {{-- headline(), not ucfirst(): the stored values are snake_case,
+                                     so the badge read "Offer_popup" and "Exit_intent". --}}
+                                <span style="display: inline-block; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 12px; font-weight: 500; background: #f1f1f1; color: #616161; white-space: nowrap;">{{ \Illuminate\Support\Str::headline($subscriber->source) }}</span>
                             </td>
                             <td style="padding: 0.625rem 1rem;">
                                 @if($subscriber->is_active)
@@ -206,7 +230,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" style="padding: 3rem 1rem; text-align: center;">
+                            <td colspan="8" style="padding: 3rem 1rem; text-align: center;">
                                 <div style="display: flex; flex-direction: column; align-items: center;">
                                     <div style="width: 3rem; height: 3rem; background: #f1f1f1; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 0.75rem;">
                                         <svg style="width: 1.5rem; height: 1.5rem; color: #616161;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
