@@ -98,7 +98,7 @@
         </div>
 
         <!-- Submit -->
-        <button type="submit" class="btn-primary w-full">
+        <button type="submit" class="btn btn-primary w-full">
             Create account
         </button>
     </form>

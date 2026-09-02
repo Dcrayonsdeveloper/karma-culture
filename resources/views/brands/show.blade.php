@@ -63,7 +63,7 @@
                 </svg>
                 <h3 class="text-lg font-medium text-neutral-900 mb-2">No products found</h3>
                 <p class="text-neutral-600 mb-4">This brand doesn't have any products yet.</p>
-                <a href="{{ route('brands.index') }}" class="btn-primary">View All Brands</a>
+                <a href="{{ route('brands.index') }}" class="btn btn-primary">View All Brands</a>
             </div>
         @endif
     </div>

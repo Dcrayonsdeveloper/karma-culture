@@ -39,7 +39,7 @@
                 </svg>
                 <h3 class="text-lg font-medium text-neutral-900 mb-2">No deals available</h3>
                 <p class="text-neutral-600 mb-4">Check back soon for new deals and discounts.</p>
-                <a href="{{ route('home') }}" class="btn-primary">Browse Products</a>
+                <a href="{{ route('home') }}" class="btn btn-primary">Browse Products</a>
             </div>
         @endif
     </div>

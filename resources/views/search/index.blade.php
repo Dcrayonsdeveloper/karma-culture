@@ -90,9 +90,13 @@
                                 </div>
                             </div>
 
-                            <div class="flex flex-wrap items-center gap-2">
-                                <button type="submit" class="btn-primary flex-1 min-w-[7rem] text-sm">Apply Price</button>
-                                <a href="{{ route('search', ['q' => $query]) }}" class="btn-outline text-sm whitespace-nowrap">Clear</a>
+                            {{-- `btn` is the base class - .btn-primary and .btn-outline carry
+                                 colour and nothing else. Without it these were raw browser
+                                 boxes: an unpadded teal bar and a square-cornered link that
+                                 ran to the edge of a 16rem panel instead of sitting inside it. --}}
+                            <div class="flex items-center gap-2">
+                                <button type="submit" class="btn btn-primary flex-1 text-sm">Apply Price</button>
+                                <a href="{{ route('search', ['q' => $query]) }}" class="btn btn-outline text-sm shrink-0 whitespace-nowrap">Clear</a>
                             </div>
                         </form>
                     </div>
@@ -172,7 +176,7 @@
                         <h3 class="text-sm font-medium text-neutral-700 mb-4">Popular Categories</h3>
                         <div class="flex flex-wrap justify-center gap-2">
                             @foreach($categories as $category)
-                                <a href="{{ route('category.show', $category) }}" class="btn-outline text-sm">
+                                <a href="{{ route('category.show', $category) }}" class="btn btn-outline text-sm">
                                     {{ $category->name }}
                                 </a>
                             @endforeach
