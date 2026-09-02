@@ -199,8 +199,12 @@ class ProductFilters
             $query->where('products.rating', '>=', $f['rating']);
         }
 
+        // In Stock Only, read through the one predicate the card's badge uses.
+        // On quantity alone this kept a product flagged out_of_stock that still
+        // had units on hand, and then drew "Out of Stock" across the card it had
+        // just let through. StockPredicateTest pins both halves.
         if ($f['in_stock']) {
-            $query->where('products.stock_quantity', '>', 0);
+            $query->inStock();
         }
 
         // On sale: priced under its own MRP.
