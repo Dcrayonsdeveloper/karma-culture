@@ -29,17 +29,83 @@ class NameFieldCharsetTest extends TestCase
 {
     /**
      * Every field expected to carry the PersonName charset, as
-     * [view, input id, the label used in failure messages].
+     * [view, the attribute that identifies the input, its value].
+     *
+     * Identified by `name` where the box has no id - the admin staff form
+     * labels its inputs without one.
      */
     public static function nameFields(): array
     {
         return [
-            'checkout full name' => ['checkout/index.blade.php', 'kk-co-name'],
-            'address book full name (create)' => ['account/addresses/create.blade.php', 'name'],
-            'address book city (create)' => ['account/addresses/create.blade.php', 'city'],
-            'address book full name (edit)' => ['account/addresses/edit.blade.php', 'name'],
-            'address book city (edit)' => ['account/addresses/edit.blade.php', 'city'],
+            'checkout full name' => ['checkout/index.blade.php', 'id', 'kk-co-name'],
+            'address book full name (create)' => ['account/addresses/create.blade.php', 'id', 'name'],
+            'address book city (create)' => ['account/addresses/create.blade.php', 'id', 'city'],
+            'address book full name (edit)' => ['account/addresses/edit.blade.php', 'id', 'name'],
+            'address book city (edit)' => ['account/addresses/edit.blade.php', 'id', 'city'],
+            // The reported box: it asked for a length and nothing else, so
+            // "686876988" could be typed into it in full.
+            'offer popup name' => ['partials/offer-popup.blade.php', 'id', 'offer-name'],
+            'admin staff first name (create)' => ['admin/staff/create.blade.php', 'name', 'first_name'],
+            'admin staff last name (create)' => ['admin/staff/create.blade.php', 'name', 'last_name'],
+            'admin staff first name (edit)' => ['admin/staff/edit.blade.php', 'name', 'first_name'],
+            'admin staff last name (edit)' => ['admin/staff/edit.blade.php', 'name', 'last_name'],
         ];
+    }
+
+    /**
+     * The autocomplete tokens app.js infers the personName policy from.
+     *
+     * Read out of the bundle rather than retyped, so a box that earns its
+     * filter by inference is tested against the list that actually ships.
+     */
+    private function inferredNameTokens(): array
+    {
+        $js = file_get_contents(resource_path('js/app.js'));
+
+        $this->assertSame(
+            1,
+            preg_match('/const NAME_AUTOCOMPLETE = new Set\(\[(.*?)\]\);/s', $js, $m),
+            'app.js has no NAME_AUTOCOMPLETE set.'
+        );
+
+        preg_match_all("/'([a-z-]+)'/", $m[1], $tokens);
+
+        return $tokens[1];
+    }
+
+    /**
+     * A box earns the keystroke filter one of two ways, and charPolicy() in
+     * app.js reads them in this order: an explicit data-kk-chars, or - failing
+     * that - an autocomplete token that says the field holds a person's name.
+     * Either is fine; neither is not.
+     */
+    private function assertRefusesCharactersAsTyped(string $tag, string $where): void
+    {
+        if (preg_match('/\bdata-kk-chars="([^"]*)"/', $tag, $m)) {
+            $this->assertSame(
+                'personName',
+                $m[1],
+                "The {$where} input names the {$m[1]} character policy, not personName."
+            );
+
+            return;
+        }
+
+        $this->assertSame(
+            1,
+            preg_match('/\bautocomplete="([^"]*)"/', $tag, $a),
+            "The {$where} input has neither data-kk-chars nor an autocomplete token, so nothing refuses a disallowed character as it is typed."
+        );
+
+        // autocomplete is a token list and the field type is its last token,
+        // which is how charPolicy() reads it.
+        $parts = preg_split('/\s+/', trim(strtolower($a[1])), -1, PREG_SPLIT_NO_EMPTY);
+
+        $this->assertContains(
+            end($parts),
+            $this->inferredNameTokens(),
+            "The {$where} input relies on autocomplete=\"{$a[1]}\" for its keystroke filter, but app.js does not infer a name policy from that token."
+        );
     }
 
     /**
@@ -49,19 +115,19 @@ class NameFieldCharsetTest extends TestCase
      * Scanning to the next `>` is not enough: `value="{{ $address->full_name }}"`
      * puts one inside an attribute. Consuming quoted runs whole steps over those.
      */
-    private function inputTag(string $view, string $id): string
+    private function inputTag(string $view, string $attr, string $value): string
     {
         $blade = file_get_contents(resource_path('views/'.$view));
 
         preg_match_all('/<input\b(?:[^>"]|"[^"]*")*>/', $blade, $tags);
 
         foreach ($tags[0] as $tag) {
-            if (preg_match('/\bid="'.preg_quote($id, '/').'"/', $tag)) {
+            if (preg_match('/\b'.preg_quote($attr, '/').'="'.preg_quote($value, '/').'"/', $tag)) {
                 return $tag;
             }
         }
 
-        $this->fail("No <input> with id=\"{$id}\" in {$view}.");
+        $this->fail("No <input> with {$attr}=\"{$value}\" in {$view}.");
     }
 
     /**
@@ -72,18 +138,18 @@ class NameFieldCharsetTest extends TestCase
      * that loses the leading-whitespace clause looks fine and quietly blocks
      * checkout for anyone who pasted their name in.
      */
-    private function renderedPattern(string $view, string $id): string
+    private function renderedPattern(string $view, string $attr, string $value): string
     {
         $this->assertSame(
             1,
-            preg_match('/\bpattern="([^"]*)"/', $this->inputTag($view, $id), $m),
-            "The {$id} input in {$view} has no pattern attribute."
+            preg_match('/\bpattern="([^"]*)"/', $this->inputTag($view, $attr, $value), $m),
+            "The {$value} input in {$view} has no pattern attribute."
         );
 
         $this->assertSame(
             '{{ \App\Rules\ValidationRules::namePattern() }}',
             $m[1],
-            "The {$id} input in {$view} carries its own copy of the name pattern instead of echoing the one definition."
+            "The {$value} input in {$view} carries its own copy of the name pattern instead of echoing the one definition."
         );
 
         return ValidationRules::namePattern();
@@ -122,20 +188,16 @@ class NameFieldCharsetTest extends TestCase
     }
 
     #[DataProvider('nameFields')]
-    public function test_the_box_asks_for_a_charset_and_not_just_a_length(string $view, string $id): void
+    public function test_the_box_asks_for_a_charset_and_not_just_a_length(string $view, string $attr, string $value): void
     {
-        $tag = $this->inputTag($view, $id);
+        $tag = $this->inputTag($view, $attr, $value);
 
-        $this->assertMatchesRegularExpression(
-            '/\bdata-kk-chars="personName"/',
-            $tag,
-            "The {$id} input in {$view} should refuse a disallowed character as it is typed."
-        );
+        $this->assertRefusesCharactersAsTyped($tag, "{$value} in {$view}");
 
         $this->assertMatchesRegularExpression(
             '/\btitle="[^"]+"/',
             $tag,
-            "The {$id} input in {$view} has a pattern but no title, which leaves the browser to invent the message."
+            "The {$value} input in {$view} has a pattern but no title, which leaves the browser to invent the message."
         );
     }
 
@@ -143,12 +205,12 @@ class NameFieldCharsetTest extends TestCase
      * The shape from the bug report: length alone let it through.
      */
     #[DataProvider('nameFields')]
-    public function test_the_box_refuses_a_name_of_symbols(string $view, string $id): void
+    public function test_the_box_refuses_a_name_of_symbols(string $view, string $attr, string $value): void
     {
         $this->assertDoesNotMatchRegularExpression(
-            $this->asPcre($this->renderedPattern($view, $id)),
+            $this->asPcre($this->renderedPattern($view, $attr, $value)),
             'chirag raw arakn@#@!#q13123123',
-            "The {$id} input in {$view} still accepts the reported name."
+            "The {$value} input in {$view} still accepts the reported name."
         );
     }
 
@@ -172,9 +234,9 @@ class NameFieldCharsetTest extends TestCase
 
         $policy = $this->keystrokePolicy();
 
-        foreach (self::nameFields() as $label => [$view, $id]) {
+        foreach (self::nameFields() as $label => [$view, $attr, $value]) {
             $this->assertMatchesRegularExpression(
-                $this->asPcre($this->renderedPattern($view, $id)),
+                $this->asPcre($this->renderedPattern($view, $attr, $value)),
                 $name,
                 "The {$label} box would refuse \"{$name}\", which the server accepts."
             );

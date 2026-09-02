@@ -1304,6 +1304,22 @@ Alpine.start();
         personName: { allow: /[\p{L}\p{M} \u00A0'\u2019.\-]/u, message: 'Names can only contain letters, spaces, hyphens, apostrophes and periods.' },
     };
 
+    // The autocomplete tokens that describe a PERSON's name, as opposed to a
+    // company's. A field that tells the browser's autofill it holds a human
+    // name has told this filter the same thing, so the inference below can
+    // read it rather than waiting for someone to remember data-kk-chars on
+    // each new form - which is exactly how the offer popup's name box ended up
+    // as the one signup field on the site that accepted "686876988".
+    //
+    // `organization` and `nickname` are deliberately absent: a business name
+    // legitimately carries digits and an ampersand, and a nickname is not a
+    // name on a parcel.
+    const NAME_AUTOCOMPLETE = new Set([
+        'name', 'given-name', 'additional-name', 'family-name',
+        'honorific-prefix', 'honorific-suffix',
+        'cc-name', 'cc-given-name', 'cc-additional-name', 'cc-family-name',
+    ]);
+
     function charPolicy(field) {
         const named = field.getAttribute && field.getAttribute('data-kk-chars');
         if (named) return CHAR_POLICIES[named] || null;
@@ -1311,6 +1327,18 @@ Alpine.start();
         // Inferred, so every existing tel/numeric input is covered without
         // touching thirteen blade files, and new ones get it for free.
         if (field.type === 'tel') return CHAR_POLICIES.phone;
+
+        // Same bargain for names. personName, never `letters`: an inferred
+        // policy lands on checkout and address boxes, where the name is the
+        // one on the parcel and "O'Connor" has to stay typeable. The two forms
+        // specified as letters-and-spaces say so with an explicit
+        // data-kk-chars="letters", which is read above and wins over this.
+        //
+        // autocomplete is a token list - "shipping name", "section-b billing
+        // given-name" - and the field type is always its LAST token, so a
+        // decorated attribute is matched rather than skipped.
+        const auto = (field.getAttribute && field.getAttribute('autocomplete') || '').trim().toLowerCase();
+        if (auto && NAME_AUTOCOMPLETE.has(auto.split(/\s+/).pop())) return CHAR_POLICIES.personName;
 
         const mode = (field.getAttribute && field.getAttribute('inputmode') || '').toLowerCase();
         if (mode === 'numeric') return CHAR_POLICIES.digits;

@@ -65,7 +65,17 @@
                 <form @submit.prevent="submit()" novalidate class="space-y-3">
                     <div>
                         <label for="offer-name" class="sr-only">Name</label>
+                        {{-- Length was all this box asked for, so "686876988" was typed in
+                             full and only refused once the whole form had been submitted.
+                             The keystroke filter now refuses the character as it arrives -
+                             inferred from autocomplete="name", the same way the mobile box
+                             below earns it from inputmode="numeric" (see NAME_AUTOCOMPLETE
+                             in app.js). The pattern is App\Rules\PersonName's own charset,
+                             so what the box accepts and what the endpoint accepts cannot
+                             drift apart. --}}
                         <input id="offer-name" type="text" x-model="form.name" required minlength="2" maxlength="100" placeholder="Your name *" autocomplete="name"
+                            pattern="{{ \App\Rules\ValidationRules::namePattern() }}"
+                            title="The name may only contain letters, spaces, hyphens, apostrophes and periods."
                             class="w-full rounded-lg border border-kk-cream-dark bg-kk-cream-lighter px-3.5 py-2.5 text-sm text-kk-brown focus:outline-none focus:ring-2 focus:ring-kk-tan focus:bg-white transition">
                     </div>
                     <div>
