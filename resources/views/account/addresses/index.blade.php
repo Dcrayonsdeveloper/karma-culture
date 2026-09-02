@@ -11,9 +11,12 @@
                 <!-- Main Content -->
                 <div class="flex-1">
                     <!-- Header -->
-                    <div class="flex items-center justify-between mb-6">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center">
+                    {{-- flex-wrap + gap: at 320-380px the title and the Add Address
+                         button were on one non-wrapping row, so they collided and
+                         the button ran off the edge. --}}
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center shrink-0">
                                 <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -36,7 +39,12 @@
                     @if($addresses->count())
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             @foreach($addresses as $address)
-                                <div class="bg-white rounded-xl border {{ $address->is_default ? 'border-primary-200 ring-1 ring-primary-100' : 'border-neutral-100' }} p-5 relative group hover:shadow-sm transition-all">
+                                {{-- min-w-0: a grid item defaults to min-width:auto, so it refuses to
+                                     shrink below its content and one long unbroken string (a pasted
+                                     address, or junk input) pushes the card straight out of its
+                                     column and across the page. overflow-hidden keeps the rounded
+                                     border honest; the wrapping itself is on the text below. --}}
+                                <div class="min-w-0 overflow-hidden bg-white rounded-xl border {{ $address->is_default ? 'border-primary-200 ring-1 ring-primary-100' : 'border-neutral-100' }} p-5 relative group hover:shadow-sm transition-all">
                                     <!-- Label & Default Badge -->
                                     <div class="flex items-center gap-2 mb-3">
                                         @if($address->label)
@@ -62,12 +70,15 @@
                                         @endif
                                     </div>
 
+                                    {{-- overflow-wrap:anywhere, not break-words: break-words only
+                                         breaks *between* words, so a single 200-character run with
+                                         no spaces still overflows. anywhere breaks mid-token. --}}
                                     <!-- Name & Phone -->
-                                    <h3 class="text-sm font-semibold text-neutral-900">{{ $address->full_name }}</h3>
-                                    <p class="text-[13px] text-neutral-600 mt-0.5">{{ $address->phone }}</p>
+                                    <h3 class="text-sm font-semibold text-neutral-900 wrap-anywhere">{{ $address->full_name }}</h3>
+                                    <p class="text-[13px] text-neutral-600 mt-0.5 wrap-anywhere">{{ $address->phone }}</p>
 
                                     <!-- Address -->
-                                    <p class="text-[13px] text-neutral-600 mt-2 leading-relaxed">
+                                    <p class="text-[13px] text-neutral-600 mt-2 leading-relaxed wrap-anywhere">
                                         {{ $address->address_line_1 }}@if($address->address_line_2), {{ $address->address_line_2 }}@endif<br>
                                         {{ $address->city }}, {{ $address->state }} {{ $address->postal_code }}
                                     </p>

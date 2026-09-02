@@ -125,11 +125,11 @@
                         @php $shipping = $order->shipping_address_snapshot; @endphp
                         @if($shipping)
                             <div class="text-[13px] text-neutral-600 leading-relaxed">
-                                <p class="font-medium text-neutral-800">{{ $shipping['name'] ?? '' }}</p>
+                                <p class="font-medium text-neutral-800 wrap-anywhere">{{ $shipping['name'] ?? '' }}</p>
                                 @if(!empty($shipping['phone']))
                                     <p class="text-neutral-600 text-[12px]">{{ $shipping['phone'] }}</p>
                                 @endif
-                                <p class="mt-1">
+                                <p class="mt-1 wrap-anywhere">
                                     {{ $shipping['address_line_1'] ?? '' }}@if(!empty($shipping['address_line_2'])), {{ $shipping['address_line_2'] }}@endif<br>
                                     {{ $shipping['city'] ?? '' }}, {{ $shipping['state'] ?? '' }} {{ $shipping['postal_code'] ?? '' }}
                                 </p>

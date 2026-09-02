@@ -121,9 +121,9 @@
                                 <h2 class="text-sm font-bold text-neutral-900">Reason</h2>
                             </div>
                             <div class="px-5 py-3.5">
-                                <p class="text-sm font-medium text-neutral-800">{{ $return->reason }}</p>
+                                <p class="text-sm font-medium text-neutral-800 wrap-anywhere">{{ $return->reason }}</p>
                                 @if($return->description)
-                                    <p class="text-sm text-neutral-600 mt-1">{{ $return->description }}</p>
+                                    <p class="text-sm text-neutral-600 mt-1 wrap-anywhere">{{ $return->description }}</p>
                                 @endif
                             </div>
                         </div>
@@ -178,7 +178,7 @@
                                             @endif
                                         </div>
                                         @if($item->reason)
-                                            <p class="text-xs text-neutral-600 mt-2 italic">"{{ $item->reason }}"</p>
+                                            <p class="text-xs text-neutral-600 mt-2 italic wrap-anywhere">"{{ $item->reason }}"</p>
                                         @endif
                                     </div>
                                 </div>
@@ -200,7 +200,7 @@
                                         </svg>
                                     </div>
                                     <div class="flex-1">
-                                        <p class="text-sm font-semibold text-neutral-900">{{ $return->pickupPartner->user->full_name }}</p>
+                                        <p class="text-sm font-semibold text-neutral-900 wrap-anywhere">{{ $return->pickupPartner->user->full_name }}</p>
                                         @if($return->pickupPartner->phone)
                                             <a href="tel:{{ $return->pickupPartner->phone }}" class="text-xs text-[#6F9CA2] hover:text-[#5B878D]">{{ $return->pickupPartner->phone }}</a>
                                         @endif

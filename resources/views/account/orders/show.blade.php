@@ -167,11 +167,11 @@
                                     @php $shipping = $order->shipping_address_snapshot; @endphp
                                     @if($shipping)
                                         <div class="text-[13px] text-neutral-600 leading-relaxed">
-                                            <p class="font-medium text-neutral-800">{{ $shipping['name'] ?? '' }}</p>
+                                            <p class="font-medium text-neutral-800 wrap-anywhere">{{ $shipping['name'] ?? '' }}</p>
                                             @if(!empty($shipping['phone']))
                                                 <p class="text-neutral-600 text-[12px]">{{ $shipping['phone'] }}</p>
                                             @endif
-                                            <p class="mt-1">
+                                            <p class="mt-1 wrap-anywhere">
                                                 {{ $shipping['address_line_1'] ?? '' }}@if(!empty($shipping['address_line_2'])), {{ $shipping['address_line_2'] }}@endif<br>
                                                 {{ $shipping['city'] ?? '' }}, {{ $shipping['state'] ?? '' }} {{ $shipping['postal_code'] ?? '' }}
                                             </p>
@@ -190,8 +190,8 @@
                                     @php $billing = $order->billing_address_snapshot; @endphp
                                     @if($billing)
                                         <div class="text-[13px] text-neutral-600 leading-relaxed">
-                                            <p class="font-medium text-neutral-800">{{ $billing['name'] ?? '' }}</p>
-                                            <p class="mt-1">
+                                            <p class="font-medium text-neutral-800 wrap-anywhere">{{ $billing['name'] ?? '' }}</p>
+                                            <p class="mt-1 wrap-anywhere">
                                                 {{ $billing['address_line_1'] ?? '' }}<br>
                                                 {{ $billing['city'] ?? '' }}, {{ $billing['state'] ?? '' }} {{ $billing['postal_code'] ?? '' }}
                                             </p>
@@ -313,7 +313,7 @@
                                                 </svg>
                                             </div>
                                             <div>
-                                                <p class="text-[13px] font-medium text-neutral-800">{{ $order->deliveryPartner->user->full_name }}</p>
+                                                <p class="text-[13px] font-medium text-neutral-800 wrap-anywhere">{{ $order->deliveryPartner->user->full_name }}</p>
                                                 @if($order->deliveryPartner->vehicle_type)
                                                     <p class="text-[11px] text-neutral-600">{{ ucfirst($order->deliveryPartner->vehicle_type) }}</p>
                                                 @endif

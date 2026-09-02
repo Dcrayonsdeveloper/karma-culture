@@ -74,7 +74,7 @@
                                         @endif
 
                                         {{-- Content --}}
-                                        <p class="text-sm text-neutral-600 line-clamp-2">{{ $review->content }}</p>
+                                        <p class="text-sm text-neutral-600 line-clamp-2 wrap-anywhere">{{ $review->content }}</p>
 
                                         {{-- Pros / Cons --}}
                                         @if($review->pros || $review->cons)

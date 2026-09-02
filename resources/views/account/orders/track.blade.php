@@ -220,7 +220,7 @@
                                     </svg>
                                 </div>
                                 <div class="flex-1">
-                                    <p class="text-sm font-semibold text-neutral-900">{{ $order->deliveryPartner->user->full_name }}</p>
+                                    <p class="text-sm font-semibold text-neutral-900 wrap-anywhere">{{ $order->deliveryPartner->user->full_name }}</p>
                                     @if($order->deliveryPartner->vehicle_type)
                                         <p class="text-xs text-neutral-600 mt-0.5">{{ ucfirst($order->deliveryPartner->vehicle_type) }}{{ $order->deliveryPartner->vehicle_number ? ' - ' . $order->deliveryPartner->vehicle_number : '' }}</p>
                                     @endif

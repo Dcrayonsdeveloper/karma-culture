@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Account;
 
 use App\Http\Controllers\Controller;
 use App\Models\UserAddress;
+use App\Rules\ValidationRules as V;
+use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,18 +28,36 @@ class AddressController extends Controller
     public function store(Request $request): RedirectResponse|JsonResponse
     {
         $request->validate([
-            'name' => 'required|string|min:2|max:255',
-            'phone' => ['required', 'string', 'regex:/^(\+91[\s\-]?)?[6-9]\d{9}$/'],
-            'address_line1' => 'required|string|min:5|max:255',
-            'address_line2' => 'nullable|string|max:255',
-            'city' => 'required|string|min:2|max:100',
-            'state' => 'required|string|min:2|max:100',
-            'postal_code' => ['required', 'string', 'regex:/^\d{6}$/'],
+            // Was min:2|max:255 with no character rule, which let
+            // "!%@#%$ @FDASDF" through as a recipient name and a 200-character
+            // run of junk through as a street. V::name() applies PersonName
+            // (Unicode letters, marks and the separators real names use); the
+            // closure guards the two varchar(50) columns this one field is
+            // split across, which max:255 alone did not.
+            'name' => [
+                ...V::name(max: 100),
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    if (! is_string($value)) {
+                        return;
+                    }
+
+                    $parts = explode(' ', trim($value), 2);
+
+                    if (mb_strlen($parts[0]) > 50 || mb_strlen(trim($parts[1] ?? '')) > 50) {
+                        $fail('Please enter a first and last name, each 50 characters or fewer.');
+                    }
+                },
+            ],
+            'phone' => V::mobile(),
+            'address_line1' => V::addressLine(),
+            'address_line2' => V::addressLine(required: false),
+            'city' => V::name(max: 100),
+            'state' => V::name(max: 100),
+            'postal_code' => V::pincode(),
             'country' => 'required|string|size:2|alpha',
-            'label' => 'nullable|string|max:50',
-            'is_default' => 'boolean',
+            'label' => V::text(required: false, max: 50),
+            'is_default' => V::boolean(),
         ], [
-            'phone.regex' => 'Please enter a valid 10-digit Indian mobile number.',
             'postal_code.regex' => 'Please enter a valid 6-digit PIN code.',
         ]);
 
@@ -89,18 +109,36 @@ class AddressController extends Controller
         abort_if($address->user_id !== $request->user()->id, 403);
 
         $request->validate([
-            'name' => 'required|string|min:2|max:255',
-            'phone' => ['required', 'string', 'regex:/^(\+91[\s\-]?)?[6-9]\d{9}$/'],
-            'address_line1' => 'required|string|min:5|max:255',
-            'address_line2' => 'nullable|string|max:255',
-            'city' => 'required|string|min:2|max:100',
-            'state' => 'required|string|min:2|max:100',
-            'postal_code' => ['required', 'string', 'regex:/^\d{6}$/'],
+            // Was min:2|max:255 with no character rule, which let
+            // "!%@#%$ @FDASDF" through as a recipient name and a 200-character
+            // run of junk through as a street. V::name() applies PersonName
+            // (Unicode letters, marks and the separators real names use); the
+            // closure guards the two varchar(50) columns this one field is
+            // split across, which max:255 alone did not.
+            'name' => [
+                ...V::name(max: 100),
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    if (! is_string($value)) {
+                        return;
+                    }
+
+                    $parts = explode(' ', trim($value), 2);
+
+                    if (mb_strlen($parts[0]) > 50 || mb_strlen(trim($parts[1] ?? '')) > 50) {
+                        $fail('Please enter a first and last name, each 50 characters or fewer.');
+                    }
+                },
+            ],
+            'phone' => V::mobile(),
+            'address_line1' => V::addressLine(),
+            'address_line2' => V::addressLine(required: false),
+            'city' => V::name(max: 100),
+            'state' => V::name(max: 100),
+            'postal_code' => V::pincode(),
             'country' => 'required|string|size:2|alpha',
-            'label' => 'nullable|string|max:50',
-            'is_default' => 'boolean',
+            'label' => V::text(required: false, max: 50),
+            'is_default' => V::boolean(),
         ], [
-            'phone.regex' => 'Please enter a valid 10-digit Indian mobile number.',
             'postal_code.regex' => 'Please enter a valid 6-digit PIN code.',
         ]);
 
