@@ -1375,8 +1375,6 @@ erDiagram
         string link
         int priority
         boolean is_active
-        timestamp starts_at
-        timestamp ends_at
         timestamp created_at
         timestamp updated_at
     }
