@@ -1051,24 +1051,42 @@
                Size comes from per-image custom properties set in the admin panel, falling back to the responsive
                default. Custom properties (not inline width/height) so the mobile rule below can still win -
                an inline declaration would outrank any stylesheet rule and break narrow screens. */
-            /* One banner at a time. The slide is capped to a slice of the viewport
-               height and the image is contained inside it, so a whole banner is
-               always visible without scrolling the page. */
-            .kk-aplus__viewport { position: relative; overflow: hidden; }
-            .kk-aplus__track { display: flex; transition: transform .55s cubic-bezier(.4,.0,.2,1); will-change: transform; }
+            /* One banner at a time. Every slide is laid out at once in a flex row, so
+               the frame would be as tall as the tallest banner and a short one would sit
+               in a column of cream; fit() below pins it to the slide on screen instead.
+               Left auto until the script measures, so a no-JS page still shows banners
+               whole rather than collapsed. */
+            .kk-aplus__viewport { position: relative; overflow: hidden;
+                transition: height .55s cubic-bezier(.4,.0,.2,1); }
+            /* flex-start, not the default stretch: a stretched slide takes the height of
+               the tallest banner in the track, which is what left a 90px banner floating
+               in 560px of cream put there by its neighbour. Each slide sizes to its own
+               image now, which is also what makes fit()'s measurement mean anything. */
+            .kk-aplus__track { display: flex; align-items: flex-start; transition: transform .55s cubic-bezier(.4,.0,.2,1); will-change: transform; }
             .kk-aplus__slide { flex: 0 0 100%; min-width: 100%; display: flex; align-items: center; justify-content: center; }
             .kk-aplus__img {
                 display: block;
+                /* Both admin sizes are caps and the image takes its size from its own
+                   ratio. A definite width and a capped height cannot both hold: the
+                   browser clamps the height alone and leaves a box wider than the
+                   picture, i.e. the banner letterboxed inside its own bars. As caps the
+                   banner scales down whole and the box always matches what is painted.
+                   The price is that a banner narrower than its cap now renders at its own
+                   size instead of being blown up to it - the sharper of the two anyway. */
+                width: auto;
+                height: auto;
                 /* Fallback reproduces the previous 1120px cap; an admin value replaces
-                   it outright, so sizes above 1120px now take effect. */
-                width: var(--kk-aplus-w, 1120px);
-                height: var(--kk-aplus-h, auto);
-                max-width: 100%;      /* = viewport width now the section is full-bleed, so a very
-                                         large value lands at the screen edges and never overflows */
-                /* The guarantee that a banner fits on screen. object-fit keeps the whole
-                   image visible inside that cap rather than cropping it. */
-                max-height: 78vh;
-                object-fit: contain;
+                   it outright, so sizes above 1120px now take effect. 100% is the viewport
+                   width now the section is full-bleed, so a very large value lands at the
+                   screen edges and never overflows. */
+                max-width: min(var(--kk-aplus-w, 1120px), 100%);
+                /* The guarantee that a banner fits on screen whatever the admin typed.
+                   min() takes lengths only, which is why the model omits the property for
+                   "auto": min(auto, 78vh) is invalid, and the browser would drop the
+                   declaration and the fit-on-screen cap with it. */
+                max-height: min(var(--kk-aplus-h, 78vh), 78vh);
+                object-fit: contain;  /* nothing to do while both axes are caps; keeps any future
+                                         definite size from stretching a banner out of shape */
                 margin: 0 auto;       /* centred whenever narrower than the viewport */
                 border: 0;
             }
@@ -1098,13 +1116,12 @@
             .kk-aplus__nav { display: flex; gap: 8px; }
             @media (max-width: 640px) {
                 .kk-aplus { margin-top: 32px; }
-                /* Only the height is reset: max-width already scales the width down, and
-                   forcing width:100% here would override a deliberately narrow setting.
-                   A fixed px height against that reduced width would distort the image. */
-                .kk-aplus__img { height: auto; max-height: 62vh; }
+                /* Only the height cap tightens: max-width already scales the banner down,
+                   and forcing a width here would override a deliberately narrow setting. */
+                .kk-aplus__img { max-height: min(var(--kk-aplus-h, 62vh), 62vh); }
                 .kk-aplus__bar { gap: 8px; padding: 0 10px; }
             }
-            @media (prefers-reduced-motion: reduce) { .kk-aplus__track { transition: none; } }
+            @media (prefers-reduced-motion: reduce) { .kk-aplus__track, .kk-aplus__viewport { transition: none; } }
         </style>
         @php $aplusCount = $product->aplusImages->count(); @endphp
         <section class="kk-aplus"
@@ -1116,10 +1133,19 @@
                     playing: true,
                     timer: null,
                     tx: 0,
+                    h: null,
                     init() {
                         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) this.playing = false;
+                        this.$watch('i', () => this.fit());
+                        this.fit();
                         this.start();
                     },
+                    /* Slides all sit in the flow side by side, so the frame keeps the
+                       tallest one's height until it is told otherwise, and only script
+                       knows which slide is showing. Re-measured on slide change, on load
+                       (a lazy image has no height before it arrives) and on resize. Stays
+                       null if the ref is missing, leaving the height auto, never zero. */
+                    fit() { const s = this.$refs.track?.children[this.i]; if (s) this.h = s.offsetHeight; },
                     start() { this.stop(); if (this.playing && this.n > 1) this.timer = setInterval(() => this.next(), 5000); },
                     stop() { if (this.timer) { clearInterval(this.timer); this.timer = null; } },
                     toggle() { this.playing = !this.playing; this.playing ? this.start() : this.stop(); },
@@ -1129,17 +1155,19 @@
                  }"
                  @mouseenter="stop()"
                  @mouseleave="start()"
+                 @resize.window.debounce.150ms="fit()"
                  @keydown.arrow-right.prevent="next(); start()"
                  @keydown.arrow-left.prevent="prev(); start()"
                  tabindex="0">
 
             <div class="kk-aplus__viewport"
+                 :style="h ? 'height: ' + h + 'px' : ''"
                  @touchstart.passive="tx = $event.changedTouches[0].clientX"
                  @touchend.passive="
                     const dx = $event.changedTouches[0].clientX - tx;
                     if (Math.abs(dx) > 40) { dx < 0 ? next() : prev(); start(); }
                  ">
-                <div class="kk-aplus__track" :style="'transform: translateX(-' + (i * 100) + '%)'">
+                <div class="kk-aplus__track" x-ref="track" :style="'transform: translateX(-' + (i * 100) + '%)'">
                     @foreach($product->aplusImages as $aplus)
                         <div class="kk-aplus__slide"
                              role="group"
@@ -1152,6 +1180,7 @@
                                  data-fallback="{{ $noMediaFallback }}"
                                  @if($aplus->width && $aplus->height) width="{{ $aplus->width }}" height="{{ $aplus->height }}" @endif
                                  @if($style = $aplus->display_style) style="{{ $style }}" @endif
+                                 @load="fit()"
                                  loading="{{ $loop->first ? 'eager' : 'lazy' }}" decoding="async">
                         </div>
                     @endforeach

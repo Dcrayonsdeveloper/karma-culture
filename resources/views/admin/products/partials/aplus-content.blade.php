@@ -30,6 +30,9 @@
         <p class="text-xs mb-4" style="color:#616161; line-height:1.6;">
             Rich banner images shown stacked at the bottom of the product's <span class="font-semibold" style="color:#005bd3;">Description</span> tab (like Amazon A+ content). They display top-to-bottom in the order below. Max 20 images, 5MB each.
         </p>
+        <p class="text-xs mb-4" style="color:#616161; line-height:1.6;">
+            W and H take a bare number as pixels ("600" is 600px), or a length like 600px or 50vh. Width also accepts a percentage of the screen (50%); height does not, because the banner is what gives the row its height. Both are maximums - a banner keeps its aspect ratio and is never stretched or cropped to fit them.
+        </p>
 
         {{-- Saved banners (drag to reorder, or use the arrows) --}}
         <div class="space-y-2 mb-4" x-ref="list">
@@ -41,18 +44,18 @@
                     <span class="text-xs w-4 text-center shrink-0 select-none" style="color:#8a8a8a; cursor:grab;" x-text="index + 1"></span>
                     <img :src="img.url" alt="" class="rounded border shrink-0" style="width:72px; height:44px; object-fit:cover; border-color:#e3e3e3;">
 
-                    {{-- Display size. Blank = responsive default (100% wide, auto height). --}}
+                    {{-- Display size. Both fields are caps: blank = the storefront default (up to 1120px wide, height from the image). --}}
                     <div class="flex items-center gap-1.5 shrink-0">
                         <label class="text-[11px] shrink-0" style="color:#8a8a8a;" :for="'aplus-w-' + img.id">W</label>
                         <input type="text" class="aplus-size" :id="'aplus-w-' + img.id"
                                placeholder="auto" maxlength="20" aria-label="Banner width"
-                               title="Width - e.g. 600px, 50%, auto. Blank = full width."
+                               title="Width - a bare number is pixels. e.g. 600, 600px, 50%, auto. Blank = up to 1120px wide."
                                x-model="img.display_width"
                                @change="saveSize(img)" @keydown.enter.prevent="$event.target.blur()">
                         <label class="text-[11px] shrink-0" style="color:#8a8a8a;" :for="'aplus-h-' + img.id">H</label>
                         <input type="text" class="aplus-size" :id="'aplus-h-' + img.id"
                                placeholder="auto" maxlength="20" aria-label="Banner height"
-                               title="Height - e.g. 400px, auto. Blank = keeps aspect ratio."
+                               title="Height - a bare number is pixels. e.g. 400, 400px, 50vh, auto. A cap only; the aspect ratio is always kept."
                                x-model="img.display_height"
                                @change="saveSize(img)" @keydown.enter.prevent="$event.target.blur()">
                     </div>
