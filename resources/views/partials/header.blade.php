@@ -446,7 +446,12 @@
         function syncSpacer() {
             var hdr = document.getElementById('main-header');
             var spc = document.getElementById('header-spacer');
-            if (hdr && spc) spc.style.height = hdr.offsetHeight + 'px';
+            if (!hdr) return;
+            if (spc) spc.style.height = hdr.offsetHeight + 'px';
+            // The header is sticky, so it always covers the top of the viewport.
+            // Publish its height so bottom-anchored overlays (the chat panel)
+            // can stop short of it instead of sliding underneath.
+            document.documentElement.style.setProperty('--kk-header-h', hdr.offsetHeight + 'px');
         }
         syncSpacer();
         window.addEventListener('resize', syncSpacer);

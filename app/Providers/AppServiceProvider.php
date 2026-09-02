@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -41,6 +42,20 @@ class AppServiceProvider extends ServiceProvider
         }
 
         Route::model('address', UserAddress::class);
+
+        // The site-wide password policy. Every caller of ValidationRules::password()
+        // - registration, password reset, the profile screens and the API - resolves
+        // Password::defaults() at validation time, so this one callback is the whole
+        // policy and there is nothing to keep in sync per form.
+        //
+        // Deliberately expressed as Laravel's composable rules rather than the
+        // equivalent regex. A pattern such as
+        //   ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$
+        // enforces the same four classes but also *closes the character set*: it
+        // rejects '#', '_', '-', '~' and spaces, which throws out stronger
+        // passwords than it admits and breaks password managers that generate
+        // them. ->symbols() asks for at least one symbol without limiting which.
+        Password::defaults(fn () => Password::min(8)->mixedCase()->numbers()->symbols());
 
         // Named limiters, one bucket each.
         //

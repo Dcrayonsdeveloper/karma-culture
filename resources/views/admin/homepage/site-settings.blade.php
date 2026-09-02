@@ -66,7 +66,8 @@
                         @if($settings[$kkAboutVideo['url']] ?? '')
                             <div style="margin: 0.5rem 0;">
                                 <video src="{{ str_starts_with($settings[$kkAboutVideo['url']], 'http') ? $settings[$kkAboutVideo['url']] : asset($settings[$kkAboutVideo['url']]) }}"
-                                       controls muted style="max-width: 100%; max-height: 200px; border-radius: 6px;"></video>
+                                       controls muted controlsList="nodownload noplaybackrate noremoteplayback" disablepictureinpicture
+                                       style="max-width: 100%; max-height: 200px; border-radius: 10px;"></video>
                             </div>
                         @endif
                         <input type="text" name="{{ $kkAboutVideo['url'] }}" value="{{ $settings[$kkAboutVideo['url']] ?? '' }}" class="form-input" placeholder="https://… or storage/storefront/about/video.mp4">

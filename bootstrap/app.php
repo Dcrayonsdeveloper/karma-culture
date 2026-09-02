@@ -90,7 +90,17 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->routeIs('logout', 'admin.logout') || $request->is('logout', 'admin/logout')) {
                 $wasAdmin = $request->routeIs('admin.logout') || $request->is('admin/logout');
 
-                \Illuminate\Support\Facades\Auth::logout();
+                // Log out per guard, not via the facade's default. `Auth::logout()`
+                // only touches the `web` guard, so an expired-token admin logout left
+                // the `remember_admin_*` recaller cookie on the browser and the DB
+                // remember_token uncycled — invalidating the session does not remove
+                // either, so the very next request signed the admin straight back in.
+                foreach (['web', 'admin'] as $guard) {
+                    if (\Illuminate\Support\Facades\Auth::guard($guard)->check()) {
+                        \Illuminate\Support\Facades\Auth::guard($guard)->logout();
+                    }
+                }
+
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
 

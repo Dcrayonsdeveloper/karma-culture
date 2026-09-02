@@ -55,5 +55,5 @@ We will send you another email once your order has been shipped. If you have any
 Thank you for shopping with us!
 
 Warm regards,
-**ForeverKids**
+**{{ config('app.name') }}**
 @endcomponent

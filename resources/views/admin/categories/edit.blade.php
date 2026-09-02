@@ -115,7 +115,8 @@
                             <label class="form-label">Video (optional)</label>
                             @if($category->video_url)
                                 <video src="{{ str_starts_with($category->video_url, 'http') ? $category->video_url : asset($category->video_url) }}"
-                                       controls muted style="max-width: 220px; max-height: 140px; border-radius: 6px; margin: 0.5rem 0;"></video>
+                                       controls muted controlsList="nodownload noplaybackrate noremoteplayback" disablepictureinpicture
+                                       style="max-width: 220px; max-height: 140px; border-radius: 10px; margin: 0.5rem 0;"></video>
                             @endif
                             <input type="text" name="video_url_text" value="{{ old('video_url_text', $category->video_url) }}" class="form-input" placeholder="https://… or storage/categories/videos/file.mp4">
                             <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Paste a URL above OR upload an mp4/webm below. Used in the home page bento tile when shown.</p>

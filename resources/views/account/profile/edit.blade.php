@@ -46,6 +46,8 @@
                                 <div>
                                     <label for="first_name" class="block text-xs font-medium text-neutral-600 mb-1">First Name</label>
                                     <input type="text" name="first_name" id="first_name" value="{{ old('first_name', $user->first_name) }}" required
+                                           minlength="2" maxlength="50" autocomplete="given-name"
+                                           title="Enter your first name, 2 to 50 characters."
                                            class="w-full rounded-lg border {{ $errors->has('first_name') ? 'border-red-300' : 'border-neutral-200' }} text-sm px-3 py-2.5 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50">
                                     @error('first_name')
                                         <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
@@ -53,8 +55,10 @@
                                 </div>
 
                                 <div>
-                                    <label for="last_name" class="block text-xs font-medium text-neutral-600 mb-1">Last Name</label>
-                                    <input type="text" name="last_name" id="last_name" value="{{ old('last_name', $user->last_name) }}" required
+                                    <label for="last_name" class="block text-xs font-medium text-neutral-600 mb-1">Last Name <span class="text-neutral-400 font-normal">(optional)</span></label>
+                                    <input type="text" name="last_name" id="last_name" value="{{ old('last_name', $user->last_name) }}"
+                                           minlength="2" maxlength="50" autocomplete="family-name"
+                                           title="Enter your last name, 2 to 50 characters."
                                            class="w-full rounded-lg border {{ $errors->has('last_name') ? 'border-red-300' : 'border-neutral-200' }} text-sm px-3 py-2.5 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50">
                                     @error('last_name')
                                         <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
@@ -69,6 +73,8 @@
                                         <svg class="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                                     </div>
                                     <input type="email" name="email" id="email" value="{{ old('email', $user->email) }}" required
+                                           maxlength="255" autocomplete="email"
+                                           title="Enter a valid email address, like you@example.com."
                                            class="w-full rounded-lg border {{ $errors->has('email') ? 'border-red-300' : 'border-neutral-200' }} text-sm pl-9 pr-3 py-2.5 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50">
                                 </div>
                                 @error('email')
@@ -82,8 +88,14 @@
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <span class="text-xs text-neutral-600 font-medium">+91</span>
                                     </div>
+                                    {{-- The pattern tolerates the spacing and +91/0 prefixes the server
+                                         also accepts, so a number already stored as "78657 86785" is not
+                                         rejected here before it can be saved and canonicalised. --}}
                                     <input type="tel" name="phone" id="phone" value="{{ old('phone', $user->phone) }}"
                                            placeholder="9876543210"
+                                           maxlength="20" inputmode="numeric" autocomplete="tel-national"
+                                           pattern="(\+?91[\s\-]?)?0?[6-9][0-9\s\-]{9,}"
+                                           title="Enter a 10-digit Indian mobile number starting with 6, 7, 8 or 9."
                                            class="w-full rounded-lg border {{ $errors->has('phone') ? 'border-red-300' : 'border-neutral-200' }} text-sm pl-11 pr-3 py-2.5 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50">
                                 </div>
                                 @error('phone')

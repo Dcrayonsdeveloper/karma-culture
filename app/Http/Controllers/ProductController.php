@@ -356,7 +356,9 @@ class ProductController extends Controller
             })
             ->whereRaw('(usage_limit IS NULL OR times_used < usage_limit)')
             ->orderByDesc('value')
-            ->take(3)
+            // Four fills the offers grid on the product page; the view filters
+            // out any whose minimum spend this product cannot reach.
+            ->take(4)
             ->get();
 
         // Recent-purchase social proof. Real order data first (with buyer city);

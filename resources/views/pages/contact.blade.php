@@ -21,7 +21,7 @@
             'description' => "Kids' clothing store offering fashionable and comfortable outfits for children.",
             'url' => url('/'),
             'telephone' => '+919311796900',
-            'email' => 'support@foreverkids.com',
+            'email' => 'support@karmaakulture.com',
             'address' => [
                 '@type' => 'PostalAddress',
                 'streetAddress' => 'D-12/140, Rohini Sector-7',
@@ -97,7 +97,7 @@
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label for="name" class="block text-sm font-medium text-neutral-700 mb-1.5">Your Name <span class="text-red-400">*</span></label>
-                                    <input type="text" name="name" id="name" value="{{ old('name') }}" required
+                                    <input type="text" name="name" id="name" value="{{ old('name') }}" required minlength="2" maxlength="100"
                                            class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all @error('name') border-red-300 bg-red-50 @enderror"
                                            placeholder="John Doe">
                                     @error('name')
@@ -107,7 +107,7 @@
 
                                 <div>
                                     <label for="email" class="block text-sm font-medium text-neutral-700 mb-1.5">Email Address <span class="text-red-400">*</span></label>
-                                    <input type="email" name="email" id="email" value="{{ old('email') }}" required
+                                    <input type="email" name="email" id="email" value="{{ old('email') }}" required maxlength="255"
                                            class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all @error('email') border-red-300 bg-red-50 @enderror"
                                            placeholder="you@example.com">
                                     @error('email')
@@ -119,6 +119,8 @@
                             <div>
                                 <label for="phone" class="block text-sm font-medium text-neutral-700 mb-1.5">Phone Number</label>
                                 <input type="tel" name="phone" id="phone" value="{{ old('phone') }}"
+                                       maxlength="20" inputmode="tel" pattern="[+\s()-]*(?:\d[+\s()-]*){10,15}"
+                                       title="Enter a phone number with 10 to 15 digits. Spaces, brackets, hyphens and a leading + are fine."
                                        class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all @error('phone') border-red-300 bg-red-50 @enderror"
                                        placeholder="+91 93117 96900">
                                 @error('phone')
@@ -128,7 +130,7 @@
 
                             <div>
                                 <label for="subject" class="block text-sm font-medium text-neutral-700 mb-1.5">Subject <span class="text-red-400">*</span></label>
-                                <input type="text" name="subject" id="subject" value="{{ old('subject') }}" required
+                                <input type="text" name="subject" id="subject" value="{{ old('subject') }}" required minlength="3" maxlength="200"
                                        class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all @error('subject') border-red-300 bg-red-50 @enderror"
                                        placeholder="How can we help?">
                                 @error('subject')
@@ -138,7 +140,7 @@
 
                             <div class="flex-1">
                                 <label for="message" class="block text-sm font-medium text-neutral-700 mb-1.5">Message <span class="text-red-400">*</span></label>
-                                <textarea name="message" id="message" rows="6" required
+                                <textarea name="message" id="message" rows="6" required minlength="10" maxlength="5000"
                                           class="w-full h-[calc(100%-1.75rem)] min-h-[140px] px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all resize-none @error('message') border-red-300 bg-red-50 @enderror"
                                           placeholder="Tell us more about your inquiry...">{{ old('message') }}</textarea>
                                 @error('message')
@@ -200,7 +202,7 @@
                                 </div>
                                 <div>
                                     <p class="text-sm font-medium text-neutral-900">Email</p>
-                                    <a href="mailto:support@foreverkids.com" class="text-[13px] text-[#6F9CA2] hover:text-[#5B878D] transition-colors">support@foreverkids.com</a>
+                                    <a href="mailto:support@karmaakulture.com" class="text-[13px] text-[#6F9CA2] hover:text-[#5B878D] transition-colors">support@karmaakulture.com</a>
                                 </div>
                             </div>
 

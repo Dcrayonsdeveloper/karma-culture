@@ -11,8 +11,57 @@
         : asset('images/karmaa-kulture-logo.png');
 @endphp
 <style>
-    .chatbot-widget-root { bottom: 73px !important; right: 1rem !important; }
-    @media (min-width: 640px) { .chatbot-widget-root { bottom: 1.5rem !important; right: 1.5rem !important; } }
+    /* --kk-chat-stack is everything the panel sits on top of inside the flex
+       column: the launcher (3.5rem), the column gap (0.75rem) and the root's
+       own bottom offset. The panel subtracts it - plus the sticky header -
+       from the viewport so it never rides up over the header. */
+    .chatbot-widget-root {
+        bottom: 73px !important;
+        right: 1rem !important;
+        --kk-chat-stack: calc(3.5rem + 0.75rem + 73px);
+    }
+    @media (min-width: 640px) {
+        .chatbot-widget-root {
+            bottom: 1.5rem !important;
+            right: 1.5rem !important;
+            --kk-chat-stack: calc(3.5rem + 0.75rem + 1.5rem);
+        }
+    }
+    /* --kk-header-h is measured and published by partials/header.blade.php.
+       The 6.5rem fallback is a touch taller than the real header, so the panel
+       still clears it if that script has not run yet. */
+    .chatbot-panel {
+        height: max(220px, min(520px, calc(100dvh - var(--kk-header-h, 6.5rem) - var(--kk-chat-stack) - 0.75rem)));
+    }
+
+    /* Message typography.
+
+       The storefront base sheet sets every <p> to 18px and forces
+       font-weight 700 on p/span/li/textarea (resources/css/app.css). Both
+       reached inside the chat bubbles: a reply rendered a size larger than
+       the bullet list directly above it, and the whole conversation read as
+       bold. The rules below are unlayered, so they outrank those layered
+       base and utility declarations. Scoped to the bubbles and the composer
+       so the surrounding chrome -- headings, chips, buttons -- keeps its own
+       weights. */
+    .kk-chat-msg,
+    .kk-chat-msg p,
+    .kk-chat-msg li,
+    .kk-chat-msg a,
+    .kk-chat-msg span { font-weight: 400 !important; }
+    .kk-chat-msg strong { font-weight: 600 !important; }
+    .kk-chat-msg,
+    .kk-chat-msg p,
+    .kk-chat-msg li { font-size: 13px; line-height: 1.55; }
+    /* Consecutive paragraphs carry no margin under the Tailwind reset, so a
+       multi-paragraph reply ran together as one block. */
+    .kk-chat-msg p + p,
+    .kk-chat-msg ul + p { margin-top: 0.45em; }
+
+    .kk-chat-header-title { font-weight: 600 !important; }
+    .kk-chat-input,
+    .kk-chat-input::placeholder { font-weight: 400 !important; }
+    .kk-chat-input { font-size: 13px; line-height: 1.55; }
 </style>
 <div
     x-data="chatbotWidget()"
@@ -39,26 +88,31 @@
              the whole page sideways. Size it against the viewport instead, and
              cap it at the old 384px so nothing changes on desktop.
 
-             Height: 520px is taller than the usable area on a short phone once
-             the URL bar and the 73px bottom nav are accounted for. dvh tracks
-             the URL bar as it hides and shows; the 520px cap keeps desktop as
-             it was. --}}
-        class="w-[calc(100vw-2rem)] max-w-[384px] sm:w-96 bg-white rounded-2xl shadow-2xl border border-neutral-100 flex flex-col overflow-hidden"
-        style="height: min(520px, calc(100dvh - 8rem)); transform-origin: bottom right;"
+             Height: see .chatbot-panel in the <style> block above - it is
+             capped so the top edge stays below the sticky header and above the
+             launcher, with dvh tracking the mobile URL bar. --}}
+        class="chatbot-panel w-[calc(100vw-2rem)] max-w-[384px] sm:w-96 bg-white rounded-2xl shadow-2xl border border-neutral-100 flex flex-col overflow-hidden"
+        style="transform-origin: bottom right;"
         role="dialog"
         aria-label="Shopping Assistant"
     >
         {{-- ── Header ──────────────────────────────────────────────────── --}}
-        <div class="px-4 py-3 flex items-center justify-between shrink-0" style="background: linear-gradient(to right, #8C5C34, #2D1810);">
+        {{-- Header palette: the espresso-to-tan gradient runs diagonally with the
+             lighter end under the controls, and the teal hairline picks up the
+             accent already used on the quick chips and product cards. The labels
+             are white -- they were #111 and rgba(0,0,0,.55) on a dark brown
+             fill, which left the title and status line barely legible. --}}
+        <div class="px-4 py-3 flex items-center justify-between shrink-0"
+             style="background: linear-gradient(135deg, #2D1810 0%, #6B4227 55%, #8C5C34 100%); border-bottom: 2px solid #6F9CA2;">
             <div class="flex items-center gap-2.5">
                 <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm" style="background: white;">
                     <img src="{{ $kkBotLogo }}" alt="Karmaa Kulture" class="w-5 h-5 object-contain">
                 </div>
                 <div>
-                    <p class="font-semibold text-sm leading-tight" style="color: #111;">Shopping Assistant</p>
+                    <p class="kk-chat-header-title text-sm leading-tight" style="color: #FFFFFF;">Shopping Assistant</p>
                     <div class="flex items-center gap-1.5 mt-0.5">
-                        <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background: #4ade80;"></span>
-                        <span class="text-[10px] font-medium" style="color: rgba(0,0,0,0.55);">Online • AI Powered</span>
+                        <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background: #86EFAC;"></span>
+                        <span class="text-[10px] font-medium" style="color: rgba(255,255,255,0.72);">Online • AI Powered</span>
                     </div>
                 </div>
             </div>
@@ -151,7 +205,7 @@
                     <template x-if="msg.role === 'user'">
                         <div class="flex justify-end">
                             <div
-                                class="max-w-[82%] px-3.5 py-2.5 rounded-2xl rounded-br-sm text-sm text-white leading-relaxed [overflow-wrap:anywhere]"
+                                class="kk-chat-msg max-w-[82%] px-3.5 py-2.5 rounded-2xl rounded-br-sm whitespace-pre-wrap text-white [overflow-wrap:anywhere]"
                                 style="background-color: #8C5C34;"
                                 x-text="msg.content"
                             ></div>
@@ -166,7 +220,7 @@
                             </div>
                             <div class="flex-1 min-w-0">
                                 <div
-                                    class="max-w-full px-3.5 py-2.5 rounded-2xl rounded-tl-sm text-sm text-neutral-800 bg-white border border-neutral-100 leading-relaxed shadow-sm [overflow-wrap:anywhere]"
+                                    class="kk-chat-msg max-w-full px-3.5 py-2.5 rounded-2xl rounded-tl-sm text-neutral-800 bg-white border border-neutral-100 shadow-sm [overflow-wrap:anywhere]"
                                     x-html="formatBotMessage(msg.content)"
                                 ></div>
                                 {{-- Product cards --}}
@@ -254,18 +308,23 @@
                     Sign in to start chatting
                 </a>
             @else
-            <div class="flex items-center gap-2">
-                <input
+            {{-- A textarea, not an input: Shift+Enter has to be able to add a
+                 line. Enter on its own still sends -- see composerKeydown(). --}}
+            <div class="flex items-end gap-2">
+                <textarea
                     x-ref="chatInput"
                     x-model="inputText"
-                    type="text"
+                    rows="1"
                     maxlength="300"
+                    enterkeyhint="send"
                     placeholder="Ask about products, orders, offers..."
                     :disabled="isTyping"
-                    @keydown.enter.prevent="sendMessage()"
-                    class="flex-1 px-3.5 py-2 text-sm bg-neutral-100 rounded-full border-0 text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#8C5C34]/30 disabled:opacity-50 transition-all"
+                    @keydown="composerKeydown($event)"
+                    @input="autoGrowInput()"
+                    class="kk-chat-input flex-1 resize-none overflow-y-auto px-3.5 py-2 bg-neutral-100 rounded-2xl border-0 text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/40 disabled:opacity-50 transition-all"
+                    style="max-height: 96px;"
                     autocomplete="off"
-                >
+                ></textarea>
                 <button
                     @click="sendMessage()"
                     :disabled="!inputText.trim() || isTyping"
@@ -455,11 +514,39 @@ function chatbotWidget() {
             this.isOpen = false;
         },
 
+        /**
+         * Enter sends, Shift+Enter starts a new line.
+         *
+         * Matched by hand rather than with `@keydown.enter`: Alpine has no
+         * `.exact` modifier, so a plain `.enter` handler fires for the Shift
+         * chord too and the newline would never survive. Keydowns raised
+         * mid-IME composition (Android soft keyboards report keyCode 229) are
+         * a predictive-text commit, not a send.
+         */
+        composerKeydown(event) {
+            if (event.key !== 'Enter' && event.keyCode !== 13) return;
+            if (event.shiftKey || event.isComposing || event.keyCode === 229) return;
+
+            event.preventDefault();
+            this.sendMessage();
+        },
+
+        // The composer opens one row tall and grows with the text until it
+        // hits the max-height on the element, which then scrolls.
+        autoGrowInput() {
+            const el = this.$refs.chatInput;
+            if (!el) return;
+            el.style.height = 'auto';
+            el.style.height = el.scrollHeight + 'px';
+        },
+
         async sendMessage() {
             const text = this.inputText.trim();
             if (!text || this.isTyping) return;
 
             this.inputText = '';
+            // Collapse the box back to one row now that it is empty.
+            this.$nextTick(() => this.autoGrowInput());
             this.messages.push({ role: 'user', content: text });
             this.isTyping = true;
 

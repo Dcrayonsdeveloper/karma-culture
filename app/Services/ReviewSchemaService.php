@@ -42,7 +42,7 @@ class ReviewSchemaService
                 : 'https://schema.org/OutOfStock',
             'seller' => [
                 '@type' => 'Organization',
-                'name' => config('app.name', 'ForeverKids'),
+                'name' => config('app.name', 'Karmaa Kulture'),
             ],
         ];
 

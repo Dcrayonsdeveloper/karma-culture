@@ -3,7 +3,7 @@
 
 Hi {{ $review->user?->first_name ?? $review->guest_name ?? 'there' }},
 
-Thank you for sharing your experience with **{{ $review->product->name }}**. Your review helps other parents make great choices for their little ones!
+Thank you for sharing your experience with **{{ $review->product->name }}**. Your review helps other shoppers choose with confidence!
 
 ---
 
@@ -25,5 +25,5 @@ Shop Now & Save
 Simply enter the code at checkout to enjoy your discount. Happy shopping!
 
 Warm regards,
-**{{ config('app.name', 'ForeverKids') }}**
+**{{ config('app.name') }}**
 @endcomponent

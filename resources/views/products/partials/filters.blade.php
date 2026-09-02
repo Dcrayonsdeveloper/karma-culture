@@ -139,7 +139,8 @@
                             <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded-md border transition-all
                                          border-neutral-200 text-neutral-700 bg-white hover:border-neutral-500
                                          peer-checked:border-neutral-900 peer-checked:text-neutral-900 peer-checked:font-semibold
-                                         peer-checked:ring-2 peer-checked:ring-neutral-900/15 peer-checked:shadow-sm">
+                                         peer-checked:ring-2 peer-checked:ring-neutral-900/15 peer-checked:shadow-sm
+                                         peer-checked:hover:border-neutral-900">
                                 <span style="width:12px;height:12px;border-radius:50%;background-color: {{ $kkC['hex'] ?: '#ddd' }}; border:1px solid rgba(0,0,0,.2);"></span>
                                 <span>{{ $kkC['name'] }}</span>
                             </span>

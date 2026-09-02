@@ -642,6 +642,27 @@ const _seen = (k) => { try { if (localStorage.getItem(k)) return true; } catch (
 const _markSeen = (k) => { try { localStorage.setItem(k, '1'); } catch (e) {} document.cookie = `${k}=1; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`; };
 const _validPhone = (v) => /^[0-9]{10}$/.test((v || '').replace(/\D/g, ''));
 
+// Client-side mirror of App\Rules\PersonName (see also ValidationRules::name).
+// Kept message-for-message identical to the server so a name the popup accepts
+// is never bounced back by the endpoint, and vice versa. Returns '' when valid.
+const _NAME_CHARSET = /^[\p{L}\p{M}][\p{L}\p{M}  '’.\-]*$/u;
+const _NAME_MASHED = /(\p{L})\1{4,}/u;
+const _NAME_URLISH = /(?:https?|ftp|file|javascript|data|vbscript):|(?:^|\s)www\.|\.(?:com|net|org|edu|gov|io|co|in|uk|ru|de|fr|xyz|info|biz|shop|online|site|top|club|live|app|dev)(?:\b|$)/iu;
+
+const _nameError = (v) => {
+    const name = (v || '').trim();
+    if (!name) return 'Please enter your name.';
+    // Count code points, not UTF-16 units: an emoji or an astral-plane letter is
+    // one character to the user and to PHP's mb_strlen, but two to `.length`.
+    const len = [...name].length;
+    if (len < 2) return 'Please enter your full name.';
+    if (len > 100) return 'Please keep your name under 100 characters.';
+    if (!_NAME_CHARSET.test(name)) return 'The name may only contain letters, spaces, hyphens, apostrophes and periods.';
+    if (_NAME_URLISH.test(name)) return 'The name may not contain a web address.';
+    if (_NAME_MASHED.test(name)) return 'Please enter a real name.';
+    return '';
+};
+
 Alpine.data('offerPopup', () => ({
     open: false, submitting: false, done: false, error: '',
     form: { name: '', email: '', phone: '' },
@@ -653,6 +674,8 @@ Alpine.data('offerPopup', () => ({
     close() { this.open = false; },
     async submit() {
         this.error = '';
+        const nameError = _nameError(this.form.name);
+        if (nameError) { this.error = nameError; return; }
         if (!this.form.email) { this.error = 'Please enter your email address.'; return; }
         if (!_validPhone(this.form.phone)) { this.error = 'Please enter a valid 10-digit mobile number.'; return; }
         this.submitting = true;
@@ -751,6 +774,28 @@ Alpine.data('exitPopup', (code = 'KARMAA10', minutes = 10) => ({
         } catch (e) { this.error = 'Network error. Please try again.'; }
         finally { this.submitting = false; }
     },
+}));
+
+Alpine.data('saleCountdown', (seconds = 0) => ({
+    hours: '00', minutes: '00', secs: '00',
+    _end: 0, _tick: null,
+    init() {
+        // Anchor to a wall-clock deadline instead of decrementing a counter:
+        // browsers throttle setInterval in background tabs, so a self-decrementing
+        // timer drifts minutes behind after the shopper switches away and back.
+        this._end = Date.now() + Math.max(0, seconds) * 1000;
+        this.render();
+        this._tick = window.setInterval(() => this.render(), 1000);
+    },
+    render() {
+        const left = Math.max(0, Math.floor((this._end - Date.now()) / 1000));
+        this.hours = String(Math.floor(left / 3600)).padStart(2, '0');
+        this.minutes = String(Math.floor((left % 3600) / 60)).padStart(2, '0');
+        this.secs = String(left % 60).padStart(2, '0');
+        if (left <= 0) this.stop();
+    },
+    stop() { if (this._tick) { window.clearInterval(this._tick); this._tick = null; } },
+    destroy() { this.stop(); },
 }));
 
 // ========================================

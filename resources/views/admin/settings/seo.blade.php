@@ -40,13 +40,13 @@
 
                     <div>
                         <label class="form-label">Open Graph Image URL</label>
-                        <input type="url" name="og_image" value="{{ old('og_image', $settings['og_image'] ?? '') }}" placeholder="https://foreverkids.dcrayons.app/images/og-image.jpg" class="form-input">
+                        <input type="url" name="og_image" value="{{ old('og_image', $settings['og_image'] ?? '') }}" placeholder="https://karmaakulture.com/images/og-image.jpg" class="form-input">
                         <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Recommended size: 1200&times;630 pixels</p>
                     </div>
 
                     <div>
                         <label class="form-label">Twitter / X Site Handle</label>
-                        <input type="text" name="twitter_site" value="{{ old('twitter_site', $settings['twitter_site'] ?? '') }}" placeholder="@ForeverKids" class="form-input">
+                        <input type="text" name="twitter_site" value="{{ old('twitter_site', $settings['twitter_site'] ?? '') }}" placeholder="@KarmaaKulture" class="form-input">
                         <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Used for Twitter Card meta tags</p>
                     </div>
                 </div>

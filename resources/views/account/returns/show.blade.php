@@ -105,7 +105,7 @@
                             </div>
                             <div class="px-5 py-3.5">
                                 <p class="text-[10px] uppercase tracking-wider text-neutral-600 font-semibold mb-1">Refund</p>
-                                @if($return->refund_amount)
+                                @if((float) $return->refund_amount > 0)
                                     <p class="text-sm font-bold text-emerald-600">{{ format_price($return->refund_amount) }}</p>
                                 @else
                                     <p class="text-sm text-neutral-600">Pending</p>
@@ -221,7 +221,7 @@
                     @endif
 
                     {{-- Refund Completed --}}
-                    @if($return->status === 'completed' && $return->refund_amount)
+                    @if($return->status === 'completed' && (float) $return->refund_amount > 0)
                         <div class="bg-emerald-50 border border-emerald-200 rounded-xl mt-4 p-4">
                             <div class="flex items-center gap-3">
                                 <div class="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center shrink-0">

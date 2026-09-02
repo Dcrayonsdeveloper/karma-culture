@@ -325,6 +325,52 @@
         padding: 0 18px; letter-spacing: 0.02em; transition: all .18s ease;
     }
     .kk-pdp__guide:hover { border-color: #2d1810; background: #f7eedb; }
+
+    /* ===== Fullscreen image zoom modal =====
+       Layout lives in classes, never in the inline `style` attribute: Alpine's
+       x-show removes the inline `display` property when it reveals an element,
+       so an inline `display:flex`/`display:block` is silently dropped after the
+       first open - which left the overlay as a plain block and the image stuck
+       top-left instead of centred. Sizing is relative to the fixed overlay
+       (not `vh`) so mobile browser chrome never crops the image. */
+    .kk-zoom {
+        position: fixed; inset: 0; z-index: 60;
+        display: flex; align-items: center; justify-content: center;
+        padding: 64px 76px; background: rgba(0,0,0,.92);
+    }
+    .kk-zoom__stage {
+        position: relative; width: 100%; height: 100%; max-width: 56rem;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .kk-zoom__media {
+        display: block; margin: auto;
+        max-width: 100%; max-height: 100%; object-fit: contain;
+    }
+    video.kk-zoom__media { width: 100%; background: #000; border-radius: 14px; }
+    .kk-zoom__btn {
+        position: absolute; z-index: 2; padding: 0;
+        display: flex; align-items: center; justify-content: center;
+        border: none; border-radius: 50%; cursor: pointer;
+        background: rgba(255,255,255,.12); color: #fff;
+        -webkit-tap-highlight-color: transparent; transition: background .15s ease;
+    }
+    .kk-zoom__btn:hover { background: rgba(255,255,255,.24); }
+    .kk-zoom__btn svg { width: 22px; height: 22px; }
+    .kk-zoom__close { top: calc(12px + env(safe-area-inset-top)); right: 12px; width: 44px; height: 44px; }
+    .kk-zoom__nav { top: 50%; transform: translateY(-50%); width: 48px; height: 48px; }
+    .kk-zoom__nav--prev { left: 14px; }
+    .kk-zoom__nav--next { right: 14px; }
+    .kk-zoom__counter {
+        position: absolute; left: 50%; transform: translateX(-50%);
+        bottom: calc(18px + env(safe-area-inset-bottom));
+        font-size: 13px; letter-spacing: .06em; color: rgba(255,255,255,.75);
+    }
+    @media (max-width: 640px) {
+        /* No room for side arrows beside the image on a phone - swipe instead,
+           the same trade-off the inline gallery makes above. */
+        .kk-zoom { padding: 60px 12px calc(56px + env(safe-area-inset-bottom)); }
+        .kk-zoom__nav { display: none; }
+    }
     </style>
     <div class="pdp-wrapper">
     <div class="container mx-auto px-4" x-data="productPage()">
@@ -360,6 +406,7 @@
                     @foreach($media as $i => $m)
                         @if($m['type'] === 'video')
                             <video class="kk-pdp__main-img kk-pdp__main-video" controls playsinline preload="metadata"
+                                   controlsList="nodownload noplaybackrate noremoteplayback" disablepictureinpicture
                                    @if($m['thumb']) poster="{{ $m['thumb'] }}" @endif
                                    x-show="currentImage === {{ $i }}" @if($i !== 0) x-cloak @endif>
                                 <source src="{{ $m['url'] }}">
@@ -646,16 +693,27 @@
                     .kk-offers__apply:hover { text-decoration: underline; }
                     .kk-offers__type { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: #9b8a72; margin-top: 8px; padding-top: 7px; border-top: 1px solid #f0e6d2; }
                 </style>
+                {{-- These were four hardcoded "bank offers" (Paytm/Axis/SBI) shown on
+                     every product, whose Apply button only fired a toast reading
+                     "Offer applied at checkout" — no discount was ever applied and
+                     no such offers existed. $activeCoupons holds the store's real,
+                     currently-valid coupons; the controller has always passed it and
+                     the view simply never used it. --}}
                 @php
-                    $bankOffers = [
-                        ['amt' => 50, 'name' => 'Paytm',     'type' => 'UPI • Cashback',         'best' => true],
-                        ['amt' => 22, 'name' => 'Axis Bank', 'type' => 'Debit Card • Cashback',  'best' => false],
-                        ['amt' => 22, 'name' => 'Axis Bank', 'type' => 'Credit Card • Cashback', 'best' => false],
-                        ['amt' => 22, 'name' => 'SBI Card',  'type' => 'Credit Card • Cashback', 'best' => false],
-                    ];
-                    $bestPrice = max(1, round($product->price) - 50);
+                    $offerCoupons = ($activeCoupons ?? collect())
+                        ->filter(fn ($c) => $c->min_order_amount === null
+                            || $product->price >= $c->min_order_amount)
+                        ->take(4)
+                        ->values();
+
+                    $bestSaving = (float) ($offerCoupons
+                        ->map(fn ($c) => (float) $c->calculateDiscount((float) $product->price))
+                        ->max() ?? 0);
+
+                    $bestPrice = max(1, round($product->price - $bestSaving));
                 @endphp
-                <div class="kk-offers" x-data="{ offersOpen: false }">
+                @if($offerCoupons->isNotEmpty())
+                <div class="kk-offers" x-data="{ offersOpen: false, copied: null }">
                     <button type="button" class="kk-offers__head" @click="offersOpen = !offersOpen" :aria-expanded="offersOpen">
                         <span class="kk-offers__badge">OFFERS</span>
                         <span class="kk-offers__headtext">Apply offers for maximum savings</span>
@@ -664,25 +722,52 @@
                         </svg>
                     </button>
                     <div class="kk-offers__body" x-show="offersOpen" x-collapse.duration.250ms x-cloak>
-                        <div class="kk-offers__price">Buy at ₹{{ number_format($bestPrice) }}</div>
-                        <div class="kk-offers__subtitle">Bank offers</div>
+                        @if($bestSaving > 0)
+                            <div class="kk-offers__price">Buy at ₹{{ number_format($bestPrice) }}</div>
+                        @endif
+                        <div class="kk-offers__subtitle">Coupons</div>
                         <div class="kk-offers__grid">
-                            @foreach($bankOffers as $o)
+                            @foreach($offerCoupons as $i => $c)
+                                @php $saving = (float) $c->calculateDiscount((float) $product->price); @endphp
                                 <div class="kk-offers__card">
-                                    @if($o['best'])<span class="kk-offers__tag">Best value for you</span>@endif
+                                    @if($saving > 0 && $saving >= $bestSaving)<span class="kk-offers__tag">Best value for you</span>@endif
                                     <div class="kk-offers__row">
                                         <div>
-                                            <div class="kk-offers__amt">₹{{ $o['amt'] }} off</div>
-                                            <div class="kk-offers__name">{{ $o['name'] }}</div>
+                                            <div class="kk-offers__amt">
+                                                @if($c->type === 'free_shipping')
+                                                    Free shipping
+                                                @elseif($c->type === 'percentage')
+                                                    {{ rtrim(rtrim(number_format($c->value, 2), '0'), '.') }}% off
+                                                @else
+                                                    {{ format_price($c->value) }} off
+                                                @endif
+                                            </div>
+                                            <div class="kk-offers__name">{{ $c->code }}</div>
                                         </div>
-                                        <button type="button" class="kk-offers__apply" @click="$store.toast && $store.toast.show ? $store.toast.show('Offer applied at checkout') : null">Apply</button>
+                                        {{-- Copy the code and send them to the cart, where
+                                             applyCoupon() actually validates and applies it. --}}
+                                        <button type="button" class="kk-offers__apply"
+                                                @click="navigator.clipboard?.writeText(@js($c->code)); copied = {{ $i }}; $store.toast?.success?.('Code ' + @js($c->code) + ' copied — apply it in your cart')">
+                                            <span x-show="copied !== {{ $i }}">Copy code</span>
+                                            <span x-show="copied === {{ $i }}" x-cloak>Copied</span>
+                                        </button>
                                     </div>
-                                    <div class="kk-offers__type"><span>{{ $o['type'] }}</span><span aria-hidden="true">&rsaquo;</span></div>
+                                    <div class="kk-offers__type">
+                                        <span>
+                                            @if($c->min_order_amount)
+                                                On orders over {{ format_price($c->min_order_amount) }}
+                                            @else
+                                                No minimum spend
+                                            @endif
+                                        </span>
+                                        <a href="{{ route('cart.index') }}" aria-label="Go to cart">&rsaquo;</a>
+                                    </div>
                                 </div>
                             @endforeach
                         </div>
                     </div>
                 </div>
+                @endif
 
                 @php
                     $tier1 = max(1, round($product->price * 0.85));
@@ -1125,7 +1210,24 @@
             .kk-rev__empty { text-align: center; padding: 32px 0; font-size: 14px; color: #7a6555; }
             .kk-rev__demo-note { text-align: center; font-size: 11px; color: #9b8a72; font-style: italic; margin: 16px 0 0; }
         </style>
-        <div class="kk-rev" id="customer-reviews" x-data="{ showForm: {{ ($errors->any() || session('success') || session('error')) ? 'true' : 'false' }} }">
+        <div class="kk-rev" id="customer-reviews" x-data="{
+                showForm: {{ ($errors->any() || session('success') || session('error')) ? 'true' : 'false' }},
+                revVideo: null,
+                openRevVideo(url) {
+                    this.revVideo = url;
+                    // Not the autoplay attribute: pause() clears the element's
+                    // can-autoplay flag, so it would only ever fire on the first
+                    // open. Playing from the click keeps the user gesture too,
+                    // which an unmuted video needs to get past autoplay policy.
+                    this.$nextTick(() => this.$refs.revPlayer?.play().catch(() => {}));
+                },
+                closeRevVideo() {
+                    // Dropping the src alone does not reliably stop buffered audio.
+                    const player = this.$refs.revPlayer;
+                    if (player) { player.pause(); }
+                    this.revVideo = null;
+                },
+             }">
             <h2 class="kk-rev__title">Customer Reviews</h2>
 
             @php
@@ -1250,9 +1352,21 @@
                                 {{-- would leak the last row into it, breaking the lightbox below. --}}
                                 @foreach($review->images as $reviewMedia)
                                     @if($reviewMedia->is_video)
-                                        <video class="kk-rev__media-item" controls preload="metadata" playsinline @if($reviewMedia->display_thumbnail) poster="{{ $reviewMedia->display_thumbnail }}" @endif>
-                                            <source src="{{ $reviewMedia->display_url }}">
-                                        </video>
+                                        {{-- A 72px <video controls> leaves the browser no room for its
+                                             control bar, so it folds every button into its own overflow
+                                             menu -- user-agent chrome that page CSS cannot theme. The tile
+                                             is a poster with a play badge; the real player opens in the
+                                             modal at the foot of this block, where the controls fit. --}}
+                                        <button type="button" class="kk-rev__media-item kk-rev__media-item--video"
+                                                @click="openRevVideo(@js($reviewMedia->display_url))"
+                                                aria-label="Play customer review video">
+                                            @if($reviewMedia->display_thumbnail)
+                                                <img src="{{ $reviewMedia->display_thumbnail }}" alt="Customer review video" loading="lazy">
+                                            @else
+                                                <video src="{{ $reviewMedia->display_url }}#t=0.1" muted playsinline preload="metadata" tabindex="-1"></video>
+                                            @endif
+                                            <span class="kk-rev__media-play" aria-hidden="true">&#9654;</span>
+                                        </button>
                                     @else
                                         <a href="{{ $reviewMedia->display_url }}" target="_blank" rel="noopener" class="kk-rev__media-item kk-rev__media-item--img">
                                             <img src="{{ $reviewMedia->display_url }}" alt="{{ $reviewMedia->alt_text ?? 'Customer review photo' }}" loading="lazy">
@@ -1267,6 +1381,34 @@
             @endif
 
             <!-- ===== WRITE A REVIEW FORM (open to any user / guest; moderated) ===== -->
+            @php
+                // Upload caps advertised to the browser. These mirror the rules in
+                // GuestReviewController, but can never promise more than PHP itself
+                // accepts: a POST over post_max_size is discarded before Laravel sees
+                // it, which surfaces to the shopper as a bare 419 after a long upload.
+                $iniBytes = static function (?string $value): int {
+                    $value = trim((string) $value);
+                    if ($value === '') {
+                        return 0;
+                    }
+                    $num = (int) $value;
+
+                    return match (strtolower(substr($value, -1))) {
+                        'g' => $num * 1024 ** 3,
+                        'm' => $num * 1024 ** 2,
+                        'k' => $num * 1024,
+                        default => $num,
+                    };
+                };
+                $noCap = 1024 ** 4; // stand-in for "unlimited" that stays JS-safe
+                $perFileCap = $iniBytes(ini_get('upload_max_filesize')) ?: $noCap;
+                $postCap = $iniBytes(ini_get('post_max_size')) ?: $noCap;
+                $imageCap = min(5 * 1024 * 1024, $perFileCap);
+                $videoCap = min(20 * 1024 * 1024, $perFileCap);
+                // Headroom for the text fields, CSRF token and multipart boundaries.
+                $totalCap = max(0, $postCap - 262144);
+                $asMb = static fn (int $bytes): string => rtrim(rtrim(number_format($bytes / 1024 / 1024, 1, '.', ''), '0'), '.').'MB';
+            @endphp
             <style>
             .kk-revform { background: #fbf5e8; border: 1px solid #e3d2b3; border-radius: 14px; padding: 26px 28px; margin-top: 22px; }
             .kk-revform__title { font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 700; color: #2d1810; margin: 0 0 18px; }
@@ -1287,19 +1429,44 @@
             .kk-rev__write[disabled] { opacity: .5; cursor: not-allowed; transform: none; }
             /* Uploaded review media (Task 10) */
             .kk-rev__media { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-            .kk-rev__media-item { width: 72px; height: 72px; border-radius: 8px; overflow: hidden; border: 1px solid #e3d2b3; display: block; background: #000; }
+            .kk-rev__media-item { position: relative; width: 72px; height: 72px; padding: 0; border-radius: 10px; overflow: hidden; border: 1px solid #e3d2b3; display: block; background: #000; }
             .kk-rev__media-item img, .kk-rev__media-item video { width: 100%; height: 100%; object-fit: cover; display: block; }
             .kk-rev__media-item video { background: #000; }
+            .kk-rev__media-item--video { cursor: pointer; }
+            .kk-rev__media-item:focus-visible { outline: 2px solid #2d1810; outline-offset: 2px; }
+            .kk-rev__media-play {
+                position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+                color: #fff; font-size: 15px; padding-left: 2px; text-shadow: 0 1px 4px rgba(0,0,0,.65);
+                background: linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.42));
+            }
             @media (max-width: 640px) { .kk-rev__media-item { width: 64px; height: 64px; } }
+            .kk-rev__lightbox { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.9); padding: 16px; }
+            .kk-rev__lightbox-panel { position: relative; width: 100%; max-width: 720px; }
+            .kk-rev__lightbox-panel video { width: 100%; max-height: 82vh; display: block; border-radius: 14px; background: #000; }
+            .kk-rev__lightbox-close {
+                position: absolute; top: -48px; right: 0; width: 40px; height: 40px; display: flex;
+                align-items: center; justify-content: center; border-radius: 50%; border: none;
+                background: rgba(255,255,255,.12); color: #fff; font-size: 24px; line-height: 1; cursor: pointer;
+            }
+            /* Short viewports have no room above the panel, so tuck the button inside. */
+            @media (max-height: 560px), (max-width: 640px) { .kk-rev__lightbox-close { top: 8px; right: 8px; background: rgba(0,0,0,.6); } }
             /* Upload controls in the review form */
             .kk-revform__uploads { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
             @media (max-width: 600px) { .kk-revform__uploads { grid-template-columns: 1fr; } }
             .kk-revform__file { font-size: 12px; color: #7a6555; }
-            .kk-revform__file span { display: block; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #2d1810; margin-bottom: 6px; }
+            .kk-revform__file > label > span { display: block; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #2d1810; margin-bottom: 6px; }
             .kk-revform__file input[type="file"] { width: 100%; font-size: 12px; color: #2d1810; }
             /* Photos and videos are never required, so say so beside the label. */
             .kk-revform__file span em { font-style: normal; font-weight: 400; text-transform: none; letter-spacing: 0; color: #9b8a72; }
             .kk-revform__hint { font-size: 11px; color: #9b8a72; margin-top: 4px; }
+            /* Chosen-file list + rejection notices for the upload guards */
+            .kk-revform__files { list-style: none; margin: 6px 0 0; padding: 0; font-size: 11px; color: #5c4a3a; }
+            .kk-revform__files li { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; }
+            .kk-revform__files li span { color: #9b8a72; flex-shrink: 0; }
+            .kk-revform__files li b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .kk-revform__clear { background: none; border: none; padding: 0; margin-top: 4px; font: inherit; font-size: 11px; color: #b71c00; text-decoration: underline; cursor: pointer; }
+            .kk-revform__reject { margin: 6px 0 0; padding: 0; list-style: none; font-size: 11px; color: #b71c00; }
+            .kk-revform__reject li { padding: 1px 0; }
             </style>
             <div id="write-review-form" x-show="showForm" x-collapse x-cloak class="kk-revform">
                 <h3 class="kk-revform__title">Write a Review</h3>
@@ -1316,7 +1483,15 @@
                     </div>
                 @endif
 
-                <form action="{{ route('product.guest-review', $product) }}" method="POST" enctype="multipart/form-data" x-data="{ rating: {{ (int) old('rating', 0) }}, hover: 0 }">
+                <form action="{{ route('product.guest-review', $product) }}" method="POST" enctype="multipart/form-data"
+                      x-data="kkReviewForm({
+                          rating: {{ (int) old('rating', 0) }},
+                          caps: {
+                              images: { count: 5, bytes: {{ $imageCap }}, noun: 'photo', types: ['image/jpeg','image/jpg','image/png','image/webp'] },
+                              videos: { count: 2, bytes: {{ $videoCap }}, noun: 'video', types: ['video/mp4','video/webm','video/quicktime'] },
+                              total: {{ $totalCap }}
+                          }
+                      })">
                     @csrf
                     {{-- anti-spam honeypot: must stay empty --}}
                     <div style="position:absolute; left:-9999px;" aria-hidden="true">
@@ -1343,21 +1518,126 @@
 
                     {{-- Photo & video uploads (Task 10) --}}
                     <div class="kk-revform__uploads">
-                        <label class="kk-revform__file">
-                            <span>Add Photos <em>(optional)</em></span>
-                            <input type="file" name="images[]" accept="image/jpeg,image/png,image/webp" multiple>
-                            <p class="kk-revform__hint">Up to 5 images (JPG/PNG/WEBP, max 5MB each).</p>
-                        </label>
-                        <label class="kk-revform__file">
-                            <span>Add Videos <em>(optional)</em></span>
-                            <input type="file" name="videos[]" accept="video/mp4,video/webm,video/quicktime" multiple>
-                            <p class="kk-revform__hint">Up to 2 short videos (MP4/WEBM/MOV, max 20MB each).</p>
-                        </label>
+                        {{-- The status block sits outside the <label> so its "Remove all"
+                             button cannot re-open the file picker. --}}
+                        <div class="kk-revform__file">
+                            <label>
+                                <span>Add Photos <em>(optional)</em></span>
+                                <input type="file" name="images[]" accept="image/jpeg,image/png,image/webp" multiple
+                                       x-ref="images" @change="pick('images', $event)">
+                            </label>
+                            <p class="kk-revform__hint">Up to 5 images (JPG/PNG/WEBP, max {{ $asMb($imageCap) }} each).</p>
+                            @include('products.partials.review-upload-status', ['kind' => 'images'])
+                        </div>
+                        <div class="kk-revform__file">
+                            <label>
+                                <span>Add Videos <em>(optional)</em></span>
+                                <input type="file" name="videos[]" accept="video/mp4,video/webm,video/quicktime" multiple
+                                       x-ref="videos" @change="pick('videos', $event)">
+                            </label>
+                            <p class="kk-revform__hint">Up to 2 short videos (MP4/WEBM/MOV, max {{ $asMb($videoCap) }} each).</p>
+                            @include('products.partials.review-upload-status', ['kind' => 'videos'])
+                        </div>
                     </div>
 
-                    <button type="submit" class="kk-rev__write" :disabled="rating < 1">Submit Review</button>
+                    <ul class="kk-revform__reject" x-show="overBudget" x-cloak>
+                        <li>These files total <span x-text="human(totalBytes)"></span>, over the {{ $asMb($totalCap) }} this
+                            site accepts per upload. Remove one before submitting.</li>
+                    </ul>
+
+                    <button type="submit" class="kk-rev__write" :disabled="rating < 1 || overBudget">Submit Review</button>
                     <p class="kk-revform__note">Open to everyone - no account needed. Your review is published after moderation; your email is never shown publicly.</p>
                 </form>
+            </div>
+
+            <script>
+                document.addEventListener('alpine:init', () => {
+                    // Enforces the review upload rules at selection time. The server still
+                    // validates everything; this only spares shoppers a long upload that
+                    // ends in a wall of "must not be greater than…" errors.
+                    Alpine.data('kkReviewForm', (opts = {}) => ({
+                        rating: opts.rating || 0,
+                        hover: 0,
+                        caps: opts.caps,
+                        picked: { images: [], videos: [] },
+                        notices: { images: [], videos: [] },
+
+                        get totalBytes() {
+                            return this.picked.images.concat(this.picked.videos)
+                                .reduce((sum, file) => sum + file.size, 0);
+                        },
+
+                        get overBudget() {
+                            return this.totalBytes > this.caps.total;
+                        },
+
+                        pick(kind, event) {
+                            const input = event.target;
+                            const cap = this.caps[kind];
+                            const notices = [];
+                            const accepted = [];
+
+                            for (const file of Array.from(input.files)) {
+                                if (accepted.length >= cap.count) {
+                                    notices.push(`Only ${cap.count} ${cap.noun}${cap.count === 1 ? '' : 's'} allowed — “${file.name}” was left out.`);
+                                } else if (file.size > cap.bytes) {
+                                    notices.push(`“${file.name}” is ${this.human(file.size)}, over the ${this.human(cap.bytes)} limit.`);
+                                } else if (file.type && !cap.types.includes(file.type)) {
+                                    notices.push(`“${file.name}” is not a supported ${cap.noun} format.`);
+                                } else {
+                                    accepted.push(file);
+                                }
+                            }
+
+                            // Rebuild the FileList so only the accepted files are ever sent.
+                            let rebuilt = null;
+                            try {
+                                rebuilt = new DataTransfer();
+                            } catch (e) {
+                                rebuilt = null;
+                            }
+
+                            if (rebuilt) {
+                                accepted.forEach((file) => rebuilt.items.add(file));
+                                input.files = rebuilt.files;
+                            } else if (notices.length) {
+                                // No DataTransfer support: drop the whole selection rather
+                                // than let rejected files through.
+                                input.value = '';
+                                accepted.length = 0;
+                                notices.push('Please choose files that meet the limits above.');
+                            }
+
+                            this.picked[kind] = accepted.map((file) => ({ name: file.name, size: file.size }));
+                            this.notices[kind] = notices;
+                        },
+
+                        clear(kind) {
+                            if (this.$refs[kind]) {
+                                this.$refs[kind].value = '';
+                            }
+                            this.picked[kind] = [];
+                            this.notices[kind] = [];
+                        },
+
+                        human(bytes) {
+                            if (bytes >= 1024 * 1024) {
+                                const mb = bytes / 1024 / 1024;
+                                return `${mb >= 10 ? Math.round(mb) : mb.toFixed(1)}MB`;
+                            }
+                            return `${Math.max(1, Math.round(bytes / 1024))}KB`;
+                        },
+                    }));
+                });
+            </script>
+
+            <div class="kk-rev__lightbox" x-show="revVideo" x-cloak x-transition.opacity
+                 @click="closeRevVideo()" @keydown.escape.window="closeRevVideo()">
+                <div class="kk-rev__lightbox-panel" @click.stop>
+                    <button type="button" class="kk-rev__lightbox-close" @click="closeRevVideo()" aria-label="Close video">&times;</button>
+                    <video x-ref="revPlayer" :src="revVideo" controls autoplay playsinline
+                           controlsList="nodownload noplaybackrate noremoteplayback" disablepictureinpicture></video>
+                </div>
             </div>
         </div>
 
@@ -1537,51 +1817,51 @@
         @endif
 
         <!-- ===== IMAGE ZOOM MODAL ===== -->
-        <div x-show="showZoom" x-cloak
-             style="position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.9);"
+        <div x-show="showZoom" x-cloak class="kk-zoom"
              @click="showZoom = false"
              @keydown.escape.window="showZoom = false"
-             @keydown.left.window="showZoom && (currentImage = currentImage > 0 ? currentImage - 1 : {{ count($images) - 1 }})"
-             @keydown.right.window="showZoom && (currentImage = currentImage < {{ count($images) - 1 }} ? currentImage + 1 : 0)">
+             @keydown.left.window="showZoom && prevImage()"
+             @keydown.right.window="showZoom && nextImage()">
 
-            <button @click="showZoom = false" style="position:absolute;top:1rem;right:1rem;width:2.5rem;height:2.5rem;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(255,255,255,0.1);color:#fff;border:none;cursor:pointer;z-index:10;" aria-label="Close zoom">
-                <svg style="width:1.5rem;height:1.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            <button type="button" class="kk-zoom__btn kk-zoom__close" @click="showZoom = false" aria-label="Close zoom">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
 
-            @if(count($images) > 1)
-            <button @click.stop="currentImage = currentImage > 0 ? currentImage - 1 : {{ count($images) - 1 }}"
-                    style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);width:3rem;height:3rem;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(255,255,255,0.1);color:#fff;border:none;cursor:pointer;z-index:10;">
-                <svg style="width:1.5rem;height:1.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            @if(count($media) > 1)
+            <button type="button" class="kk-zoom__btn kk-zoom__nav kk-zoom__nav--prev" @click.stop="prevImage()" aria-label="Previous">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
             </button>
-            <button @click.stop="currentImage = currentImage < {{ count($images) - 1 }} ? currentImage + 1 : 0"
-                    style="position:absolute;right:1rem;top:50%;transform:translateY(-50%);width:3rem;height:3rem;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(255,255,255,0.1);color:#fff;border:none;cursor:pointer;z-index:10;">
-                <svg style="width:1.5rem;height:1.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            <button type="button" class="kk-zoom__btn kk-zoom__nav kk-zoom__nav--next" @click.stop="nextImage()" aria-label="Next">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </button>
             @endif
 
-            <div @click.stop style="max-width:56rem;max-height:90vh;width:100%;padding:0 1rem;">
+            {{-- Swipe to change media, matching the inline gallery (the side
+                 arrows are hidden on phones). --}}
+            <div class="kk-zoom__stage"
+                 @touchstart.passive="onTouchStart($event)" @touchend="onTouchEnd($event)">
                 @foreach($media as $i => $m)
                     @if($m['type'] === 'video')
-                        <video x-show="currentImage === {{ $i }}" controls playsinline
-                               @if($m['thumb']) poster="{{ $m['thumb'] }}" @endif
-                               style="max-width:100%;max-height:90vh;margin:0 auto;display:block;background:#000;">
+                        <video class="kk-zoom__media" @click.stop x-show="currentImage === {{ $i }}" controls playsinline
+                               controlsList="nodownload noplaybackrate noremoteplayback" disablepictureinpicture
+                               @if($m['thumb']) poster="{{ $m['thumb'] }}" @endif>
                             <source src="{{ $m['url'] }}">
                         </video>
                     @else
-                        <img x-show="currentImage === {{ $i }}"
+                        <img class="kk-zoom__media" @click.stop
+                             x-show="currentImage === {{ $i }}"
                              x-transition:enter="transition ease-out duration-200"
                              x-transition:enter-start="opacity-0"
                              x-transition:enter-end="opacity-100"
                              src="{{ $m['url'] }}"
-                             alt="{{ $product->name }}"
-                             style="max-width:100%;max-height:90vh;object-fit:contain;margin:0 auto;display:block;">
+                             alt="{{ $product->name }}">
                     @endif
                 @endforeach
             </div>
 
-            @if(count($images) > 1)
-            <div style="position:absolute;bottom:1.5rem;left:50%;transform:translateX(-50%);font-size:14px;color:rgba(255,255,255,0.7);">
-                <span x-text="(currentImage + 1) + ' / {{ count($images) }}'"></span>
+            @if(count($media) > 1)
+            <div class="kk-zoom__counter">
+                <span x-text="(currentImage + 1) + ' / {{ count($media) }}'"></span>
             </div>
             @endif
         </div>
@@ -1669,7 +1949,11 @@
                 // Pause any playing gallery/zoom video when the active item or zoom changes,
                 // so audio never keeps playing after the user navigates away.
                 this.$watch('currentImage', () => this.pauseVideos());
-                this.$watch('showZoom', () => this.pauseVideos());
+                this.$watch('showZoom', (open) => {
+                    this.pauseVideos();
+                    // Stop the page scrolling behind the fullscreen viewer (mobile especially).
+                    document.body.style.overflow = open ? 'hidden' : '';
+                });
             },
 
             pauseVideos() {

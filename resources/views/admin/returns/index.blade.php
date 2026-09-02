@@ -131,7 +131,7 @@
                                 </span>
                             </td>
                             <td style="text-align: right;">
-                                @if($return->refund_amount)
+                                @if((float) $return->refund_amount > 0)
                                     <span style="font-size: 13px; font-weight: 600; color: #1a7a2e;">@price($return->refund_amount)</span>
                                 @else
                                     <span style="font-size: 13px; color: #616161;">-</span>

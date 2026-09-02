@@ -77,7 +77,7 @@
 
                             {{-- Footer --}}
                             <div class="px-4 py-2.5 bg-neutral-50 border-t border-neutral-100 flex items-center justify-between">
-                                @if($return->refund_amount)
+                                @if((float) $return->refund_amount > 0)
                                     <span class="text-xs text-neutral-600">Refund: <span class="font-semibold text-emerald-600">{{ format_price($return->refund_amount) }}</span></span>
                                 @else
                                     <span></span>

@@ -28,11 +28,28 @@ class NewsletterController extends Controller
         'product',
     ];
 
+    /**
+     * The signup forms that actually render a name input, and so may require it.
+     *
+     * This one endpoint serves both popups: the offer popup asks for a name,
+     * the exit-intent popup has no name field at all. Requiring `name` for
+     * every source would reject every exit-intent claim outright, so the
+     * requirement is bound to the form that shows the input. `source` is
+     * client-controlled, which is fine here - this decides whether a blank name
+     * is an error, not whether a bad one is. The charset guard below applies to
+     * every source whenever a name is present.
+     */
+    private const SOURCES_REQUIRING_NAME = [
+        'offer_popup',
+    ];
+
     public function subscribe(Request $request): JsonResponse
     {
+        $nameRequired = in_array($request->input('source'), self::SOURCES_REQUIRING_NAME, true);
+
         $validated = $request->validate([
             'email' => V::email(),
-            'name' => V::name(required: false),
+            'name' => V::name(required: $nameRequired),
             // Mobile: optional for plain newsletter signups, required by the offer popup
             // client-side. Validated on the DIGIT count rather than with the Indian
             // mobile rule on purpose - a newsletter list is the one place a genuine
@@ -48,6 +65,7 @@ class NewsletterController extends Controller
         ], [
             'email.required' => 'Please enter your email address.',
             'email.email' => 'Enter a valid email address, like you@example.com.',
+            'name.required' => 'Please enter your name.',
             'name.min' => 'Please enter your full name.',
             'name.max' => 'Please keep your name under 100 characters.',
             'phone.regex' => 'Please enter a valid mobile number (10-15 digits).',

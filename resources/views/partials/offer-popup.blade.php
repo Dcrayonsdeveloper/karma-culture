@@ -60,7 +60,7 @@
                 <form @submit.prevent="submit()" novalidate class="space-y-3">
                     <div>
                         <label for="offer-name" class="sr-only">Name</label>
-                        <input id="offer-name" type="text" x-model="form.name" placeholder="Your name (optional)" autocomplete="name"
+                        <input id="offer-name" type="text" x-model="form.name" required minlength="2" maxlength="100" placeholder="Your name *" autocomplete="name"
                             class="w-full rounded-lg border border-kk-cream-dark bg-kk-cream-lighter px-3.5 py-2.5 text-sm text-kk-brown focus:outline-none focus:ring-2 focus:ring-kk-tan focus:bg-white transition">
                     </div>
                     <div>

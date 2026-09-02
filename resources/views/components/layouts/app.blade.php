@@ -237,7 +237,7 @@
                 </form>
 
                 <p class="mt-4 text-center text-sm text-neutral-600">
-                    New to ForeverKids?
+                    New to {{ config('app.name') }}?
                     <button @click="$store.authModal.switchMode('register')" class="font-semibold text-[#6F9CA2] hover:text-[#5B878D]">Create an account</button>
                 </p>
             </div>
@@ -304,7 +304,7 @@
             {{-- Footer --}}
             <div class="px-6 pb-5 pt-2 text-center">
                 <p class="text-[11px] text-neutral-600 leading-relaxed">
-                    By continuing, I agree to ForeverKids'
+                    By continuing, I agree to {{ config('app.name') }}'
                     <a href="{{ route('terms') }}" class="text-neutral-600 underline">T&C</a>,
                     <a href="{{ route('privacy') }}" class="text-neutral-600 underline">Privacy Policy</a>
                 </p>
@@ -559,14 +559,6 @@
                             if (event.error === 'no-speech') { this.micPanel = 'nospeech'; return; }
                             if (event.error === 'aborted') { this.micPanel = null; return; }
                             this.micPanel = 'error';
-                            return;
-                            if (event.error === 'not-allowed') {
-                                alert('Microphone is blocked for this site.\n\nClick the icon to the left of the address bar, choose Site settings, set Microphone to Allow, then reload the page.');
-                            } else if (event.error === 'network') {
-                                alert('Voice search needs an internet connection.');
-                            } else if (event.error !== 'aborted' && event.error !== 'no-speech') {
-                                alert('Voice search error: ' + event.error);
-                            }
                         };
                         this.recognition.onend = () => {
                             this.listening = false;
@@ -725,6 +717,10 @@
     </script>
 
     {{ $scripts ?? '' }}
+
+    {{-- Pages that @push('scripts') rendered nothing without this, and the
+         failure is silent: the markup ships, the JS behind it never does. --}}
+    @stack('scripts')
 
     <!-- WhatsApp Chat Button -->
     @php $waNumber = \App\Models\Setting::get('whatsapp_number', ''); @endphp

@@ -18,7 +18,7 @@ class WelcomeUser extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Welcome to ForeverKids!',
+            subject: 'Welcome to ' . config('app.name') . '!',
         );
     }
 

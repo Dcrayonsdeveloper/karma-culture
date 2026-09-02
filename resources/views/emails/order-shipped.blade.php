@@ -51,5 +51,5 @@ We will notify you once your order has been delivered. If you have any questions
 Happy shopping!
 
 Warm regards,
-**ForeverKids**
+**{{ config('app.name') }}**
 @endcomponent

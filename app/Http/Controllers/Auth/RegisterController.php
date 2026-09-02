@@ -57,9 +57,13 @@ class RegisterController extends Controller
             // already stored can be shut out by it.
             'email' => [...V::email(), Rule::unique('users', 'email')],
 
-            // Genuinely optional - the form says so and the column is nullable.
+            // Required at signup: the store calls and SMSes on every delivery, so
+            // an account without a reachable number costs a support cycle later.
+            // V::mobile() accepts the shapes people actually type (+91, leading
+            // 0, spaces, hyphens) and IndianMobile::normalize() below reduces
+            // them to the bare ten digits the column holds.
             'phone' => [
-                ...V::mobile(required: false),
+                ...V::mobile(),
                 function (string $attribute, mixed $value, Closure $fail): void {
                     $normalized = IndianMobile::normalize(is_scalar($value) ? (string) $value : null);
 
@@ -90,10 +94,18 @@ class RegisterController extends Controller
             'email.email' => 'Enter a valid email address, like you@example.com.',
             'email.max' => 'That email address is too long.',
             'email.unique' => 'An account already exists for this email address. Try signing in instead.',
+            'phone.required' => 'Please enter your mobile number.',
             'phone.max' => 'That phone number is too long.',
             'password.required' => 'Please choose a password.',
             'password.confirmed' => 'The two passwords do not match.',
             'password.max' => 'Your password must be 255 characters or fewer.',
+            // Password::defaults() (AppServiceProvider) reports each unmet
+            // requirement separately; these replace the framework wording with
+            // one consistent sentence per rule.
+            'password.min' => 'Your password must be at least 8 characters long.',
+            'password.mixed' => 'Your password must include both an uppercase and a lowercase letter.',
+            'password.numbers' => 'Your password must include at least one number.',
+            'password.symbols' => 'Your password must include at least one special character, such as @ # ! or ?.',
             'terms.accepted' => 'Please accept the Terms and Privacy Policy to continue.',
         ]);
 
@@ -106,7 +118,7 @@ class RegisterController extends Controller
             'email' => $validated['email'],
             // Store the canonical ten digits, which is what the column already
             // holds elsewhere, rather than whatever spacing the visitor typed.
-            'phone' => IndianMobile::normalize($validated['phone'] ?? null),
+            'phone' => IndianMobile::normalize($validated['phone']),
             'password' => Hash::make($validated['password']),
             // Hard-coded, never taken from the request: `role` and `is_active`
             // are the two columns a mass-assigned signup would want to reach.

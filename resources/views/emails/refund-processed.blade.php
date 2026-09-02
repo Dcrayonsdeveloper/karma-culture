@@ -46,5 +46,5 @@ If you do not see the refund within the expected timeframe, please contact our s
 Thank you for your patience, and we hope to see you shopping with us again soon!
 
 Warm regards,
-**ForeverKids**
+**{{ config('app.name') }}**
 @endcomponent

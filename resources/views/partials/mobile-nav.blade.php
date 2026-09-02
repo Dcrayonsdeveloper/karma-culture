@@ -104,20 +104,17 @@
                 </a>
 
                 <!-- Categories Section -->
+                {{-- $navCategories is supplied by the view composer registered for this
+                     partial in AppServiceProvider: every active top-level category with its
+                     active children, in the order admin set. This block used to run its own
+                     query for the slugs "mens" and "womens", so on a store whose roots are
+                     named anything else the heading rendered above an empty list. The desktop
+                     mega menu had the same bug and was fixed the same way. --}}
+                @if($navCategories->isNotEmpty())
                 <div class="mt-2 pt-2 border-t border-neutral-100">
                     <p class="px-4 py-2 text-[11px] font-semibold text-neutral-600 uppercase tracking-wider">Shop by Category</p>
 
-                    @php
-                        // Only the Men's & Women's roots; each expands to show its categories.
-                        $genderRoots = \App\Models\Category::whereIn('slug', ['mens', 'womens'])
-                            ->where('is_active', true)
-                            ->with(['children' => fn ($q) => $q->where('is_active', true)->orderBy('name')])
-                            ->get()
-                            ->sortBy(fn ($c) => $c->slug === 'womens' ? 1 : 0)
-                            ->values();
-                    @endphp
-
-                    @foreach($genderRoots as $cat)
+                    @foreach($navCategories as $cat)
                         @if($cat->children->count())
                             <div x-data="{ expanded: false }">
                                 <button @click="expanded = !expanded"
@@ -147,6 +144,7 @@
                         @endif
                     @endforeach
                 </div>
+                @endif
 
                 <!-- Account Links -->
                 @auth

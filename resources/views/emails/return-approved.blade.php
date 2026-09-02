@@ -50,5 +50,5 @@ View Return Details
 If you have any questions about the return process, please do not hesitate to contact our support team.
 
 Warm regards,
-**ForeverKids**
+**{{ config('app.name') }}**
 @endcomponent

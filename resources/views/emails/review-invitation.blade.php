@@ -3,7 +3,7 @@
 
 Hi {{ $order->user->first_name }},
 
-We hope you and your little one are enjoying your recent purchase! We would love to hear your thoughts on the items from order **#{{ $order->order_number }}**.
+We hope you are enjoying your recent purchase! We would love to hear your thoughts on the items from order **#{{ $order->order_number }}**.
 
 ---
 
@@ -30,5 +30,5 @@ Review Your Purchases
 Your feedback helps other parents make the best choices for their kids.
 
 Warm regards,
-**{{ config('app.name', 'ForeverKids') }}**
+**{{ config('app.name') }}**
 @endcomponent

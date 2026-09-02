@@ -22,10 +22,10 @@
             @endif
 
             @if($isLive && $remainingSeconds > 0)
-                <div x-data="kkSaleCountdown({{ $remainingSeconds }})" x-init="start()" class="flex items-center justify-center gap-2 mt-5">
-                    @foreach(['hours' => 'Hours', 'minutes' => 'Mins', 'seconds' => 'Secs'] as $key => $label)
+                <div x-data="saleCountdown({{ $remainingSeconds }})" class="flex items-center justify-center gap-2 mt-5">
+                    @foreach(['hours' => 'Hours', 'minutes' => 'Mins', 'secs' => 'Secs'] as $key => $label)
                         <div style="background:#2d1810; color:#efe2cb; border-radius:10px; padding:10px 14px; min-width:64px;">
-                            <div class="text-xl font-bold leading-none" x-text="String({{ $key }}).padStart(2, '0')">00</div>
+                            <div class="text-xl font-bold leading-none" x-text="{{ $key }}">00</div>
                             <div class="text-[10px] tracking-widest uppercase mt-1" style="opacity:.7;">{{ $label }}</div>
                         </div>
                         @if(! $loop->last)<span class="text-xl" style="color:#8C5C34;">:</span>@endif
@@ -87,26 +87,4 @@
             </div>
         @endif
     </div>
-
-    @push('scripts')
-    <script>
-        function kkSaleCountdown(seconds) {
-            return {
-                remaining: seconds,
-                hours: 0, minutes: 0, seconds: 0,
-                start() {
-                    this.tick();
-                    setInterval(() => {
-                        if (this.remaining > 0) { this.remaining--; this.tick(); }
-                    }, 1000);
-                },
-                tick() {
-                    this.hours = Math.floor(this.remaining / 3600);
-                    this.minutes = Math.floor((this.remaining % 3600) / 60);
-                    this.seconds = this.remaining % 60;
-                },
-            };
-        }
-    </script>
-    @endpush
 </x-layouts.app>

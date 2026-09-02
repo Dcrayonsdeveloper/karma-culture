@@ -120,7 +120,7 @@
                         </div>
                         <h3 class="text-sm font-semibold text-neutral-900 mb-1">Phone Support</h3>
                         <p class="text-xs text-neutral-600 mb-3">Mon-Fri, 9am-5pm EST</p>
-                        <a href="tel:+15551234567" class="inline-flex items-center px-4 py-2 text-[13px] font-medium text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50 transition-colors">+1 (555) 123-4567</a>
+                        <a href="tel:+917797444000" class="inline-flex items-center px-4 py-2 text-[13px] font-medium text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50 transition-colors">+91 77974 44000</a>
                     </div>
                 </div>
             </div>

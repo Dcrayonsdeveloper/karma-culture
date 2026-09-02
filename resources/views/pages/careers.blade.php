@@ -19,7 +19,7 @@
 
                 <!-- Header -->
                 <div class="mb-10">
-                    <h1 class="text-2xl sm:text-3xl font-bold text-neutral-900 mb-3">Careers at ForeverKids</h1>
+                    <h1 class="text-2xl sm:text-3xl font-bold text-neutral-900 mb-3">Careers at {{ config('app.name') }}</h1>
                     <p class="text-sm text-neutral-600 max-w-lg mx-auto">Join our team and help us bring the best kids' fashion to families across India.</p>
                 </div>
 
@@ -37,7 +37,7 @@
                         <svg class="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                         </svg>
-                        <a href="mailto:careers@foreverkids.in" class="text-sm font-medium text-[#6F9CA2] hover:underline">careers@foreverkids.in</a>
+                        <a href="mailto:careers@karmaakulture.com" class="text-sm font-medium text-[#6F9CA2] hover:underline">careers@karmaakulture.com</a>
                     </div>
                 </div>
 

@@ -67,7 +67,7 @@
                             <span style="font-weight: 500; color: #303030;">{{ $return->approved_at->format('M d, Y h:i A') }}</span>
                         </div>
                     @endif
-                    @if($return->refund_amount)
+                    @if((float) $return->refund_amount > 0)
                         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
                             <span style="color: #616161;">Refund Amount</span>
                             <span style="font-weight: 600; color: #1a7a2e;">@price($return->refund_amount)</span>
@@ -140,7 +140,11 @@
                                     <option value="picked_up">Picked Up</option>
                                     <option value="received">Received</option>
                                 </select>
-                                <p style="font-size: 12px; color: #616161; margin: 0.25rem 0 0 0;">To complete the return, use the "Process Refund" form below</p>
+                                @if($return->status === 'requested')
+                                    <p style="font-size: 12px; color: #616161; margin: 0.25rem 0 0 0;">Approve the return first &mdash; the &quot;Process Refund&quot; form appears once it leaves Requested.</p>
+                                @else
+                                    <p style="font-size: 12px; color: #616161; margin: 0.25rem 0 0 0;">To complete the return, use the &quot;Process Refund&quot; form below</p>
+                                @endif
                             </div>
                             <button type="submit" class="btn btn-primary" style="width: 100%;">
                                 Update Status
@@ -150,7 +154,11 @@
                 </div>
 
                 <!-- Process Refund -->
-                @if(!in_array($return->status, ['requested', 'rejected']) && !$return->refund_amount)
+                {{-- refund_amount is cast decimal:2, so an un-refunded return hands back the
+                     STRING "0.00" — which PHP counts as truthy. `!$return->refund_amount` was
+                     therefore false on every return and this whole card never rendered, at any
+                     status. Compare numerically. --}}
+                @if(! in_array($return->status, ['requested', 'rejected'], true) && (float) $return->refund_amount <= 0)
                     <div class="card">
                         <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3; display: flex; align-items: center; gap: 0.5rem;">
                             <div style="width: 2rem; height: 2rem; border-radius: 0.5rem; background: #cdfee1; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">

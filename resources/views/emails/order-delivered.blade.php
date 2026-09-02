@@ -24,7 +24,7 @@ We are happy to let you know that your order **#{{ $order->order_number }}** has
 
 ## We Would Love Your Feedback!
 
-Your opinion matters to us. Please take a moment to review the items you received. Your reviews help other parents make great choices for their little ones.
+Your opinion matters to us. Please take a moment to review the items you received. Your reviews help other shoppers choose with confidence.
 
 @component('mail::button', ['url' => url('/orders/' . $order->id)])
 Review Your Purchase
@@ -34,8 +34,8 @@ Review Your Purchase
 
 If anything is not quite right with your order, please do not hesitate to reach out to our support team. We are always here to help!
 
-Thank you for choosing ForeverKids for your little one's wardrobe.
+Thank you for choosing {{ config('app.name') }} for your wardrobe.
 
 Warm regards,
-**ForeverKids**
+**{{ config('app.name') }}**
 @endcomponent

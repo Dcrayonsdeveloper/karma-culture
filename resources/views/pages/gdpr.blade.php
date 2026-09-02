@@ -30,7 +30,7 @@
             <div class="bg-white border border-neutral-100 rounded-xl p-5 sm:p-6 mb-4">
                 <h2 class="text-[15px] font-bold text-neutral-900 mb-2">What is GDPR?</h2>
                 <p class="text-[13px] text-neutral-600 leading-relaxed">
-                    The General Data Protection Regulation (GDPR) is a regulation in EU law on data protection and privacy. It gives individuals control over their personal data and simplifies the regulatory environment for international business. {{ \App\Models\Setting::get('site_name', 'ForeverKids') }} is committed to full compliance with all GDPR obligations.
+                    The General Data Protection Regulation (GDPR) is a regulation in EU law on data protection and privacy. It gives individuals control over their personal data and simplifies the regulatory environment for international business. {{ \App\Models\Setting::get('site_name', 'Karmaa Kulture') }} is committed to full compliance with all GDPR obligations.
                 </p>
             </div>
 

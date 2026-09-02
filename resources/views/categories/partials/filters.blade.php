@@ -73,9 +73,14 @@
                         <label class="cursor-pointer select-none">
                             <input type="checkbox" name="size[]" value="{{ $kkSize }}" @checked($kkOn)
                                    onchange="this.form.submit()" class="sr-only peer">
+                            {{-- The selected chip is black, so the plain hover:text-* below would repaint
+                                 its label near-black and swallow it. Tailwind v4 wraps peer-* in :where(),
+                                 which zeroes its specificity, so peer-checked:text-white ties with the hover
+                                 rule and loses on source order. The peer-checked:hover:* pair outranks it. --}}
                             <span class="inline-block px-2.5 py-1 text-xs rounded-md border transition-colors
                                          border-neutral-200 text-neutral-700 hover:border-neutral-500 hover:text-neutral-900
-                                         peer-checked:border-neutral-900 peer-checked:bg-neutral-900 peer-checked:text-white">
+                                         peer-checked:border-neutral-900 peer-checked:bg-neutral-900 peer-checked:text-white
+                                         peer-checked:hover:text-white peer-checked:hover:border-neutral-900">
                                 {{ $kkSize }}
                             </span>
                         </label>
@@ -125,7 +130,8 @@
                             <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded-md border transition-all
                                          border-neutral-200 text-neutral-700 bg-white hover:border-neutral-500
                                          peer-checked:border-neutral-900 peer-checked:text-neutral-900 peer-checked:font-semibold
-                                         peer-checked:ring-2 peer-checked:ring-neutral-900/15 peer-checked:shadow-sm">
+                                         peer-checked:ring-2 peer-checked:ring-neutral-900/15 peer-checked:shadow-sm
+                                         peer-checked:hover:border-neutral-900">
                                 <span style="width:12px;height:12px;border-radius:50%;background-color: {{ $kkC['hex'] ?: '#ddd' }}; border:1px solid rgba(0,0,0,.2);"></span>
                                 <span>{{ $kkC['name'] }}</span>
                             </span>

@@ -39,7 +39,7 @@ class HomepageController extends Controller
     {
         $settings = [
             'site_logo' => Setting::get('site_logo', ''),
-            'site_name' => Setting::get('site_name', 'ForeverKids'),
+            'site_name' => Setting::get('site_name', 'Karmaa Kulture'),
             'site_tagline' => Setting::get('site_tagline', 'Unlock Your Natural Beauty'),
             'site_description' => Setting::get('site_description', ''),
             'footer_about' => Setting::get('footer_about', ''),
