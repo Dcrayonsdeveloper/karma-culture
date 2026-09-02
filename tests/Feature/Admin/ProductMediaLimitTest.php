@@ -183,11 +183,22 @@ class ProductMediaLimitTest extends TestCase
         // inside the loop and abandon the files not yet examined.
         $html = $this->formHtml($form);
 
+        // Match the per-file rejections specifically. A bare "{ toastr.error("
+        // search also hits the A+ partial's own guarded call, which the edit
+        // page includes.
         $this->assertStringNotContainsString(
-            '{ toastr.error(',
+            '{ toastr.error(file.name',
             $html,
-            "The {$form} form calls toastr without the window.toastr guard the rest of the admin uses."
+            "The {$form} form rejects a file through toastr without the window.toastr guard the rest of the admin uses."
         );
+
+        $this->assertStringContainsString(
+            'if (window.toastr) toastr.error(file.name',
+            $html,
+            "The {$form} form no longer reports rejected files at all."
+        );
+
+        $this->assertStringContainsString('if (overCap > 0 && window.toastr)', $html);
     }
 
     public function test_dropping_a_file_on_an_upload_zone_does_not_navigate_away(): void
@@ -295,6 +306,11 @@ class ProductMediaLimitTest extends TestCase
             'price' => 1500,
             'stock_quantity' => 3,
             'category_id' => $this->category->id,
+            // Both forms render these as <select>, so a real submission always
+            // carries the keys. store() reads them with `?:` rather than `??`,
+            // so omitting them raises "Undefined array key" and returns a 500.
+            'seller_id' => '',
+            'brand_id' => '',
         ], $overrides);
     }
 }
