@@ -80,7 +80,7 @@ class Coupon extends Model
      * usage cap, or had not started yet, was listed under "Active" while its
      * own badge read "Inactive". Both sides now come from here.
      *
-     * Precedence is deliberate, and scopeStatus() mirrors it exactly: the two
+     * Precedence is deliberate, and scopeStatusIs() mirrors it exactly: the two
      * states a coupon cannot be talked out of come first, so one that is past
      * its expiry date reports "Expired" even when it was also switched off.
      * That is the answer the admin is looking for, and it is what keeps the
@@ -299,7 +299,7 @@ class Coupon extends Model
      */
     public static function findBestAutoApply(Cart $cart): ?self
     {
-        // Was a fourth hand-written copy of the validity predicate.
+        // Was another hand-written copy of the validity predicate.
         $coupons = static::where('auto_apply', true)->statusIs(self::STATUS_ACTIVE)->get();
 
         if ($coupons->isEmpty()) {

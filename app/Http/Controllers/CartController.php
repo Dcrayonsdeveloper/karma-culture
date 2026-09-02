@@ -424,7 +424,7 @@ class CartController extends Controller
             return back()->with('error', $message);
         }
 
-        // A third hand-written copy of the validity predicate, and this one
+        // Another hand-written copy of the validity predicate, and this one
         // forgot the usage cap: a coupon that had been redeemed its maximum
         // number of times still applied here with a success message, then
         // silently contributed no discount because Cart::discount and the
