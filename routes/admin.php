@@ -288,8 +288,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::resource('roles', RoleController::class)->except(['show']);
             });
 
-            // Stores (POS)
-            Route::resource('stores', StoreController::class);
+            // Stores (POS). except('show') because StoreController has no
+            // show() - the row click and the action link both go to edit, so
+            // the only way to reach GET /admin/stores/{id} was by typing it,
+            // and it answered with a 500 rather than a 404.
+            Route::resource('stores', StoreController::class)->except(['show']);
         });
 
         // Storefront / Homepage Manager

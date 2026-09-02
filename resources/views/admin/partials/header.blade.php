@@ -137,9 +137,18 @@
                     <a href="{{ route('admin.profile') }}" class="block px-4 py-2 text-sm hover:bg-neutral-50 transition-colors" style="color: #303030;">
                         Profile Settings
                     </a>
-                    <a href="{{ route('admin.stores.index') }}" class="block px-4 py-2 text-sm hover:bg-neutral-50 transition-colors" style="color: #303030;">
-                        View Store
-                    </a>
+                    {{-- This is the Stores module's only entry point anywhere in
+                         the admin, and its route sits inside the
+                         admin.section:settings group - which no staff role is
+                         granted by default (User::getDefaultStaffPermissions).
+                         Unguarded, it offered every staff admin a menu item that
+                         answered with a hard 403. Every sidebar section is
+                         guarded the same way. --}}
+                    @if($adminUser->canAccessSection('settings'))
+                        <a href="{{ route('admin.stores.index') }}" class="block px-4 py-2 text-sm hover:bg-neutral-50 transition-colors" style="color: #303030;">
+                            View Store
+                        </a>
+                    @endif
                 </div>
                 <div style="border-top: 1px solid #f0f0f0;">
                     <form action="{{ route('admin.logout') }}" method="POST">
