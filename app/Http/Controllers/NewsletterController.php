@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Cart;
 use App\Models\NewsletterSubscriber;
 use App\Rules\ValidationRules as V;
+use App\Support\OfferClaims;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -41,6 +43,21 @@ class NewsletterController extends Controller
      */
     private const SOURCES_REQUIRING_NAME = [
         'offer_popup',
+    ];
+
+    /**
+     * The signup forms that also hand out the exit-popup discount.
+     *
+     * The exit popup's "Claim Offer" button has always posted here, because
+     * capturing the subscriber is the primary value and stays worth doing even
+     * when there is no coupon behind the code. What it never did was record the
+     * claim, so the code it displayed was decorative text the customer had to
+     * retype at checkout - see App\Support\OfferClaims. Bound to the source
+     * rather than applied to every signup for the same reason the name rule is:
+     * only the form that shows the offer may claim it.
+     */
+    private const SOURCES_CLAIMING_OFFER = [
+        'exit_intent',
     ];
 
     public function subscribe(Request $request): JsonResponse
@@ -93,6 +110,7 @@ class NewsletterController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'This email is already subscribed!',
+                    'offer' => $this->claimOffer($request, $validated['email'], $source),
                 ]);
             }
 
@@ -108,6 +126,7 @@ class NewsletterController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Welcome back! You have been re-subscribed.',
+                'offer' => $this->claimOffer($request, $validated['email'], $source),
             ]);
         }
 
@@ -124,6 +143,51 @@ class NewsletterController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'You\'re subscribed! Thanks for joining us.',
+            'offer' => $this->claimOffer($request, $validated['email'], $source),
         ]);
+    }
+
+    /**
+     * Record the exit-popup claim and, when we can prove the address belongs to
+     * whoever is signed in, put the coupon on their cart there and then.
+     *
+     * The signed-in shortcut is a CONVENIENCE, not the authorisation. It only
+     * saves a page load: OfferClaims::applyTo() re-resolves the claim from the
+     * account email on every cart and checkout view anyway, which is what makes
+     * the guest journey - claim now, sign in later, maybe on another device -
+     * work at all.
+     *
+     * The envelope has three states and the popup renders all three. 'saved'
+     * deliberately covers a guest, a signed-in customer who typed somebody
+     * else's address, an empty cart AND a cart that does not qualify: they are
+     * indistinguishable so the response cannot be used to test whether an
+     * address has an account here.
+     */
+    private function claimOffer(Request $request, string $email, string $source): array
+    {
+        if (! in_array($source, self::SOURCES_CLAIMING_OFFER, true)) {
+            return ['state' => 'none', 'discount' => 0.0];
+        }
+
+        $user = $request->user();
+
+        // Null when the popup is switched off or its code has been blanked -
+        // there is no offer to claim, so say so rather than promising one.
+        if (! OfferClaims::record($email, $source, $request->ip(), $user)) {
+            return ['state' => 'none', 'discount' => 0.0];
+        }
+
+        $saved = ['state' => 'saved', 'discount' => 0.0];
+
+        if (! $user || V::normalizeEmail($email) !== V::normalizeEmail($user->email)) {
+            return $saved;
+        }
+
+        $cart = Cart::where('user_id', $user->id)->first();
+        $result = OfferClaims::applyTo($cart, $user);
+
+        return $result['coupon']
+            ? ['state' => 'applied', 'discount' => $result['discount']]
+            : $saved;
     }
 }

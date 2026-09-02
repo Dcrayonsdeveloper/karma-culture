@@ -45,6 +45,11 @@ class PopupSettings
             'exit_popup_subtitle' => 'Complete your order now and save. Apply the code below at checkout before it expires.',
             'exit_popup_code'     => 'KARMAA10',
             'exit_popup_minutes'  => '10',
+            // How long a CLAIMED offer stays good for, which is a different
+            // question from the countdown above. The countdown bounds the
+            // popup; ten minutes is unwinnable as a claim horizon, because a
+            // guest has to register, sign in separately and then check out.
+            'exit_popup_claim_days' => '7',
             'exit_popup_image'    => '',
         ],
     ];
@@ -93,6 +98,12 @@ class PopupSettings
             // A zero or negative countdown would render "0:00" and expire the
             // offer the instant the popup opened.
             $values['minutes'] = max(1, (int) $values['minutes']);
+        }
+
+        if (isset($values['claim_days'])) {
+            // Same clamp, same reason: a zero-day horizon writes an expires_at
+            // in the past, so every claim would be dead before it was read.
+            $values['claim_days'] = max(1, (int) $values['claim_days']);
         }
 
         return $values;

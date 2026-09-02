@@ -970,13 +970,38 @@ Alpine.data('purchaseNotif', (items = [], productName = '', thumb = '') => ({
     dismiss() { this.visible = false; this.idx = this.items.length; if (this._t) window.clearTimeout(this._t); },
 }));
 
-Alpine.data('exitPopup', (code = 'KARMAA10', minutes = 10) => ({
+// accountEmail is the signed-in customer's address, server-rendered. It seeds
+// the email field so the common case - a logged-in shopper claiming for
+// themselves - matches without them retyping anything, and it is what the
+// success copy switches on. Still editable: claiming for somebody else stays
+// possible, it just cannot apply to your own cart.
+Alpine.data('exitPopup', (code = 'KARMAA10', minutes = 10, accountEmail = '') => ({
     open: false, submitting: false, done: false, error: '',
     form: { email: '', phone: '' },
     code, timeLeft: `${minutes}:00`, _tick: null, _dwell: null, _armed: false, _lastY: 0,
+    accountEmail, state: '', expired: false, discount: 0, claimedEmail: '', _reloadHost: false,
     key: 'kk_exit_popup_seen',
+    // Whether the address claimed with is the account being browsed as. Derived
+    // here rather than sent by the server on purpose: every input is already
+    // known to the browser, so the response never has to carry a signal for
+    // whether an address has an account behind it.
+    get matchesAccount() {
+        const a = (this.accountEmail || '').trim().toLowerCase();
+        return a !== '' && a === (this.claimedEmail || '').trim().toLowerCase();
+    },
+    // The same test against the LIVE field rather than the submitted address, so
+    // the "Applied automatically" chip tracks what is actually typed.
+    get willApplyAutomatically() {
+        const a = (this.accountEmail || '').trim().toLowerCase();
+        return a !== '' && a === (this.form.email || '').trim().toLowerCase();
+    },
+    get discountLabel() {
+        const n = Number(this.discount) || 0;
+        return '₹' + n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    },
     init() {
         if (_seen(this.key)) return;
+        this.form.email = this.accountEmail || '';
         this._onMouseOut = (e) => { if (e.clientY <= 0 && !e.relatedTarget) this.trigger(); };
         document.addEventListener('mouseout', this._onMouseOut);
         // Mobile-friendly fallbacks: a fast upward scroll near the top, or long dwell.
@@ -1002,7 +1027,10 @@ Alpine.data('exitPopup', (code = 'KARMAA10', minutes = 10) => ({
             const ms = Math.max(0, end - Date.now());
             const m = Math.floor(ms / 60000), s = Math.floor((ms % 60000) / 1000);
             this.timeLeft = `${m}:${s < 10 ? '0' : ''}${s}`;
-            if (ms <= 0) window.clearInterval(this._tick);
+            // Closing the form is what the timer has always implied and never
+            // did. A claim already made is unaffected - its real horizon lives
+            // server-side in offer_claims.expires_at.
+            if (ms <= 0) { window.clearInterval(this._tick); this.expired = true; }
         }, 1000);
     },
     cleanup() {
@@ -1010,9 +1038,14 @@ Alpine.data('exitPopup', (code = 'KARMAA10', minutes = 10) => ({
         if (this._onScroll) window.removeEventListener('scroll', this._onScroll);
         if (this._dwell) window.clearTimeout(this._dwell);
     },
-    close() { this.open = false; if (this._tick) window.clearInterval(this._tick); },
+    close() {
+        this.open = false;
+        if (this._tick) window.clearInterval(this._tick);
+        if (this._reloadHost) window.location.reload();
+    },
     async claim() {
         this.error = '';
+        if (this.expired) return;
         if (!this.form.email) { this.error = 'Please enter your email address.'; return; }
         if (this.form.phone && !_validPhone(this.form.phone)) { this.error = 'Enter a valid 10-digit mobile number.'; return; }
         this.submitting = true;
@@ -1023,7 +1056,23 @@ Alpine.data('exitPopup', (code = 'KARMAA10', minutes = 10) => ({
                 body: JSON.stringify({ ...this.form, source: 'exit_intent' }),
             });
             const data = await res.json().catch(() => ({}));
-            if (res.ok && data.success) { this.done = true; } else { this.error = data.message || 'Something went wrong.'; }
+            if (res.ok && data.success) {
+                // Falls back to 'saved' rather than 'applied': an old cached
+                // bundle talking to a new server, or the reverse, must never
+                // tell the customer a discount is on when it may not be.
+                this.claimedEmail = this.form.email;
+                const state = data.offer?.state;
+                this.state = ['applied', 'saved', 'none'].includes(state) ? state : 'saved';
+                this.discount = Number(data.offer?.discount) || 0;
+                if (this.state === 'applied' && this.discount <= 0) this.state = 'saved';
+                // The popup renders over /cart and /checkout too, and on those
+                // pages the totals behind it have just gone stale: the server
+                // attached the coupon, but the summary on screen was painted
+                // before that. Saying "already off your bag" over a total that
+                // still shows full price reads as a bug, so reconcile the page.
+                if (this.state === 'applied') this._reloadHost = /^\/(cart|checkout)\/?$/.test(window.location.pathname);
+                this.done = true;
+            } else { this.error = data.message || 'Something went wrong.'; }
         } catch (e) { this.error = 'Network error. Please try again.'; }
         finally { this.submitting = false; }
     },
