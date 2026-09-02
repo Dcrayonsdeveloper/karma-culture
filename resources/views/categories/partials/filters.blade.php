@@ -17,7 +17,9 @@
                 <div class="space-y-1.5 max-h-52 overflow-y-auto pt-1 pb-2">
                     @php $activeSubs = $activeSubcategorySlugs ?? (array) request('subcategory'); @endphp
                     @foreach($filterSubcategories as $sub)
-                        @php $kkEmpty = ($sub->products_total ?? 0) === 0; @endphp
+                        {{-- A ticked box stays clickable even when the other filters have
+                             emptied it out, or there would be no way to untick it. --}}
+                        @php $kkEmpty = ($sub->products_total ?? 0) === 0 && ! in_array($sub->slug, $activeSubs); @endphp
                         <label class="flex items-center gap-2.5 py-0.5 group {{ $kkEmpty ? 'cursor-not-allowed opacity-45' : 'cursor-pointer' }}"
                                @if($kkEmpty) title="Nothing in this collection yet" @endif>
                             <input type="checkbox" name="subcategory[]" value="{{ $sub->slug }}" onchange="this.form.submit()" @disabled($kkEmpty)
@@ -37,26 +39,11 @@
 
     {{-- Size --}}
     @php
-        // Only the sizes stocked inside this category. Listing every size in the
-        // shop meant a category holding one polo still offered UK 7 to UK 11,
-        // and picking one returned nothing.
-        $kkScopeProductIds = \App\Models\Product::where('is_active', true)
-            ->whereIn('category_id', $category->getAllDescendantIds())
-            ->pluck('id');
-
-        $kkVer = \App\Models\ProductVariant::filterCacheVersion();
-
-        $kkAllSizes = \Illuminate\Support\Facades\Cache::remember("kk_filter_sizes_c{$category->id}_v{$kkVer}", 600, function () use ($kkScopeProductIds) {
-            return \App\Models\ProductVariant::whereIn('product_id', $kkScopeProductIds)
-                ->where('is_active', true)
-                ->where('stock_quantity', '>', 0)
-                ->pluck('name')
-                ->map(fn ($n) => \App\Models\ProductVariant::sizeLabel($n))
-                ->filter()
-                ->unique()
-                ->sortBy(fn ($s) => \App\Models\ProductVariant::sizeRank($s))
-                ->values();
-        });
+        // Built by the controller from the products currently matching, minus the size
+        // filter itself, so ticking a sub-category or a colour reshapes this list on the
+        // next submit. Working it out here instead meant the sidebar was pinned to the
+        // whole category and kept offering sizes nothing on screen had.
+        $kkAllSizes = $filterSizes ?? collect();
     @endphp
     @if($kkAllSizes->isNotEmpty())
         <div x-data="{ open: true }">
@@ -93,18 +80,9 @@
 
     {{-- Colour --}}
     @php
-        $kkAllColours = \Illuminate\Support\Facades\Cache::remember("kk_filter_colours_c{$category->id}_v{$kkVer}", 600, function () use ($kkScopeProductIds) {
-            return \App\Models\Product::whereIn('id', $kkScopeProductIds)
-                ->pluck('attributes')
-                ->flatMap(fn ($a) => collect(data_get($a, 'Colours', []))
-                    ->map(fn ($c) => is_array($c)
-                        ? ['name' => trim((string) ($c['name'] ?? '')), 'hex' => $c['hex'] ?? null]
-                        : ['name' => trim((string) $c), 'hex' => null]))
-                ->filter(fn ($c) => $c['name'] !== '')
-                ->unique('name')
-                ->sortBy('name')
-                ->values();
-        });
+        // Same story as Size: the controller narrows this to the colours the matching
+        // products actually come in.
+        $kkAllColours = $filterColours ?? collect();
     @endphp
     @if($kkAllColours->isNotEmpty())
         <div x-data="{ open: true }">
