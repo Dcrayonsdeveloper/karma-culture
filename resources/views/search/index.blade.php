@@ -2,79 +2,11 @@
     <x-slot name="title">{{ $query ? 'Search: ' . $query : 'Search' }}</x-slot>
 
     <div class="container mx-auto px-4 py-8">
-        {{-- Search input with autocomplete dropdown --}}
-        <div class="relative max-w-xl mb-6 mx-auto"
-             x-data="searchBar()"
-             x-init="query = '{{ addslashes($query ?? '') }}'; if(query) stopTypewriter()"
-             @click.outside="showResults = false">
-            <form action="{{ route('search') }}" method="GET" class="relative flex items-center">
-                <svg class="absolute left-3 w-5 h-5 text-neutral-600 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                </svg>
-                <input type="text"
-                       name="q"
-                       x-ref="searchInput"
-                       x-model="query"
-                       @input.debounce.300ms="fetchSuggestions()"
-                       @focus="showResults = true; stopTypewriter()"
-                       @blur="if(!query) startTypewriter()"
-                       @keydown.escape="showResults = false; $refs.searchInput.blur()"
-                       :placeholder="currentPlaceholder"
-                       class="w-full pl-10 pr-20 py-3 text-sm bg-white border border-neutral-200 rounded-lg focus:outline-none focus:border-[#6F9CA2] focus:ring-1 focus:ring-[#6F9CA2]"
-                       autocomplete="off"
-                       autofocus>
-
-                {{-- Mic button (only shown when browser supports Speech Recognition) --}}
-                <button x-show="recognition" x-cloak
-                        type="button"
-                        @click.prevent="toggleMic()"
-                        class="absolute right-12 p-1.5 transition-colors z-10"
-                        :class="listening ? 'text-red-500 animate-pulse' : 'text-neutral-600 hover:text-[#6F9CA2]'"
-                        :title="listening ? 'Stop listening' : 'Voice search'"
-                        aria-label="Voice search">
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-                        <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
-                    </svg>
-                </button>
-
-                {{-- Submit button --}}
-                <button type="submit" class="absolute right-3 p-1.5 text-neutral-600 hover:text-[#6F9CA2] transition-colors" aria-label="Search">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
-                    </svg>
-                </button>
-            </form>
-
-            {{-- Autocomplete dropdown --}}
-            <div x-show="showResults && (results.length > 0 || (query.length >= 2 && !loading))" x-cloak
-                 x-transition:enter="transition ease-out duration-150"
-                 x-transition:enter-start="opacity-0 -translate-y-1"
-                 x-transition:enter-end="opacity-100 translate-y-0"
-                 x-transition:leave="transition ease-in duration-100"
-                 x-transition:leave-start="opacity-100"
-                 x-transition:leave-end="opacity-0"
-                 class="absolute left-0 right-0 top-full mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg z-50 overflow-hidden">
-                <div x-show="results.length > 0" class="max-h-72 overflow-y-auto">
-                    <ul class="py-1">
-                        <template x-for="result in results" :key="result.id">
-                            <li>
-                                <a :href="result.url" class="flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 transition-colors">
-                                    <img :src="result.image" :alt="result.name" class="w-10 h-10 object-cover rounded">
-                                    <div class="min-w-0 flex-1">
-                                        <div class="text-sm text-neutral-900 truncate" x-text="result.name"></div>
-                                        <div class="text-xs text-neutral-600" x-text="result.category"></div>
-                                    </div>
-                                </a>
-                            </li>
-                        </template>
-                    </ul>
-                </div>
-                <div x-show="query.length >= 2 && results.length === 0 && !loading" class="px-4 py-4 text-center">
-                    <p class="text-sm text-neutral-600">No results found</p>
-                </div>
-            </div>
-        </div>
+        {{-- The search field lives in the header, which already carries the
+             suggestions dropdown. A second one here duplicated it and, because
+             the box is autofocused with the query prefilled, its dropdown opened
+             on load while `results` was still empty - printing "No results
+             found" directly above the results the page had just found. --}}
 
         @if($query)
             <p class="text-sm text-neutral-600 mb-6">
@@ -87,11 +19,25 @@
         @endif
 
         @if($query)
-            <div class="flex flex-col lg:flex-row gap-8">
+            <div class="flex flex-col lg:flex-row gap-5 lg:gap-8">
                 <!-- Filters Sidebar -->
-                <div class="lg:w-64 flex-shrink-0">
-                    <div class="card p-4 sticky top-4">
-                        <h3 class="font-semibold text-neutral-900 mb-4">Filters</h3>
+                {{-- On a phone this sits above the results, so left expanded it pushes
+                     every product below the fold. It collapses behind a toggle under
+                     lg and is always open from lg up, where it has its own column.
+                     `sticky` is also lg-only: pinning a full-width block to the top of
+                     a phone screen just steals the viewport. --}}
+                <div class="lg:w-64 flex-shrink-0" x-data="{ filtersOpen: false }">
+                    <button type="button" @click="filtersOpen = !filtersOpen"
+                            :aria-expanded="filtersOpen ? 'true' : 'false'"
+                            class="lg:hidden w-full flex items-center justify-between gap-2 px-4 py-2.5 mb-3 bg-white border border-neutral-200 rounded-lg text-sm font-medium text-neutral-700">
+                        <span>Filters</span>
+                        <svg class="w-4 h-4 text-neutral-600 transition-transform" :class="filtersOpen && 'rotate-180'"
+                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                    <div class="card p-4 lg:sticky lg:top-4" :class="filtersOpen ? 'block' : 'hidden lg:block'">
+                        <h3 class="hidden lg:block font-semibold text-neutral-900 mb-4">Filters</h3>
 
                         <form action="{{ route('search') }}" method="GET" x-data x-ref="filterForm">
                             <input type="hidden" name="q" value="{{ $query }}">
@@ -144,9 +90,9 @@
                                 </div>
                             </div>
 
-                            <div class="flex gap-2">
-                                <button type="submit" class="btn-primary flex-1 text-sm">Apply Price</button>
-                                <a href="{{ route('search', ['q' => $query]) }}" class="btn-outline text-sm">Clear</a>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button type="submit" class="btn-primary flex-1 min-w-[7rem] text-sm">Apply Price</button>
+                                <a href="{{ route('search', ['q' => $query]) }}" class="btn-outline text-sm whitespace-nowrap">Clear</a>
                             </div>
                         </form>
                     </div>
@@ -156,11 +102,11 @@
                 <div class="flex-1">
                     @if($products->count())
                         <!-- Sort Bar -->
-                        <div class="flex items-center justify-between mb-4">
+                        <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mb-4">
                             <p class="text-sm text-neutral-600">
                                 Showing {{ $products->firstItem() }}-{{ $products->lastItem() }} of {{ $products->total() }}
                             </p>
-                            <form class="flex items-center gap-2">
+                            <form class="flex items-center gap-2 ml-auto min-w-0">
                                 <input type="hidden" name="q" value="{{ $query }}">
                                 @if(request('category'))
                                     <input type="hidden" name="category" value="{{ request('category') }}">
@@ -168,8 +114,8 @@
                                 @if(request('brand'))
                                     <input type="hidden" name="brand" value="{{ request('brand') }}">
                                 @endif
-                                <label class="text-sm text-neutral-600">Sort by:</label>
-                                <select name="sort" class="form-input w-auto text-sm" onchange="this.form.submit()">
+                                <label for="search-sort" class="text-sm text-neutral-600 whitespace-nowrap">Sort by:</label>
+                                <select id="search-sort" name="sort" class="form-input w-auto max-w-[11rem] text-sm" onchange="this.form.submit()">
                                     <option value="relevance" {{ request('sort') === 'relevance' ? 'selected' : '' }}>Relevance</option>
                                     <option value="price_asc" {{ request('sort') === 'price_asc' ? 'selected' : '' }}>Price: Low to High</option>
                                     <option value="price_desc" {{ request('sort') === 'price_desc' ? 'selected' : '' }}>Price: High to Low</option>
