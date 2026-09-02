@@ -103,7 +103,7 @@
         #toast-container .toast-progress { height: 3px !important; opacity: .35 !important; }
         @media (max-width: 640px) {
             #toast-container { top: 62px !important; right: 8px !important; left: 8px !important; }
-            #toast-container > div { min-width: 0; max-width: none; }
+            #toast-container > div { width: auto !important; min-width: 0; max-width: none; }
         }
     </style>
     <script>

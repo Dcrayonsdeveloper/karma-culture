@@ -22,7 +22,7 @@
                          so it falls back to the same initials the brand grid
                          shows; x-init catches a logo that already failed before
                          Alpine booted. --}}
-                    <div class="w-24 h-24 bg-neutral-100 rounded-lg p-4 flex items-center justify-center"
+                    <div class="w-24 h-24 shrink-0 bg-neutral-100 rounded-lg p-4 flex items-center justify-center"
                          x-data="{ logoBroken: false }">
                         <img src="{{ $brand->logo_src }}" alt="{{ $brand->name }}"
                              class="max-w-full max-h-full object-contain"
@@ -33,7 +33,7 @@
                               x-show="logoBroken" x-cloak>{{ substr($brand->name, 0, 2) }}</span>
                     </div>
                 @endif
-                <div>
+                <div class="min-w-0">
                     <h1 class="text-2xl md:text-3xl font-bold text-neutral-900">{{ $brand->name }}</h1>
                     @if($brand->description)
                         <p class="text-neutral-600 mt-2">{{ $brand->description }}</p>

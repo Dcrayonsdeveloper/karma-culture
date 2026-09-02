@@ -23,7 +23,7 @@
 
         <!-- Search modal overlay -->
         <div x-cloak x-show="isOpen" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-             class="fixed inset-0 z-50" style="background: rgba(0,0,0,0.4);" @click.self="isOpen = false">
+             class="fixed inset-0 z-50 overflow-y-auto px-3 sm:px-0" style="background: rgba(0,0,0,0.4);" @click.self="isOpen = false">
             <div class="w-full max-w-lg mx-auto mt-[15vh]" @click.stop>
                 <div class="bg-white rounded-xl overflow-hidden" style="box-shadow: 0 16px 70px rgba(0,0,0,0.2);">
                     <div class="flex items-center gap-3 px-4 py-3" style="border-bottom: 1px solid #e3e3e3;">
@@ -33,7 +33,7 @@
                         <input type="text" x-ref="searchField" x-model="query" @keydown.escape="isOpen = false"
                                @keydown.enter="goToSearch()"
                                placeholder="Search products, orders, customers..."
-                               class="flex-1 text-sm bg-transparent border-none outline-none" style="color: #303030;">
+                               class="flex-1 min-w-0 text-sm bg-transparent border-none outline-none" style="color: #303030;">
                         <button @click="isOpen = false" class="text-xs px-2 py-1 rounded" style="background: #f1f1f1; color: #666;">ESC</button>
                     </div>
                     <div class="px-4 py-3">
@@ -71,7 +71,7 @@
             </button>
 
             <div x-cloak x-show="open" x-transition @click.away="open = false"
-                 class="absolute right-0 mt-2 w-80 bg-white rounded-xl z-50" style="border: 1px solid #e3e3e3; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+                 class="fixed left-3 right-3 top-14 mt-2 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:w-80 bg-white rounded-xl z-50" style="border: 1px solid #e3e3e3; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
                 <div class="px-4 py-3 flex items-center justify-between" style="border-bottom: 1px solid #e3e3e3;">
                     <h3 class="text-sm font-semibold" style="color: #303030;">Notifications</h3>
                     @if($unreadCount > 0)
@@ -130,8 +130,8 @@
             <div x-cloak x-show="open" x-transition @click.away="open = false"
                  class="absolute right-0 mt-2 w-52 bg-white rounded-xl z-50" style="border: 1px solid #e3e3e3; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
                 <div class="px-4 py-3" style="border-bottom: 1px solid #f0f0f0;">
-                    <div class="text-sm font-medium" style="color: #303030;">{{ auth('admin')->user()->full_name }}</div>
-                    <div class="text-xs" style="color: #999;">{{ auth('admin')->user()->email }}</div>
+                    <div class="text-sm font-medium" style="color: #303030; overflow-wrap: anywhere;">{{ auth('admin')->user()->full_name }}</div>
+                    <div class="text-xs" style="color: #999; overflow-wrap: anywhere;">{{ auth('admin')->user()->email }}</div>
                 </div>
                 <div class="py-1">
                     <a href="{{ route('admin.profile') }}" class="block px-4 py-2 text-sm hover:bg-neutral-50 transition-colors" style="color: #303030;">

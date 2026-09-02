@@ -27,7 +27,10 @@
         $publishedPages = \App\Models\Page::where('is_published', true)->count();
         $draftPages     = $totalPages - $publishedPages;
     @endphp
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #e3e3e3; border-radius: 0.75rem; overflow: hidden; margin-bottom: 1rem;">
+    {{-- auto-fit and a rem gap keep all three tiles on one row on phones: at 767px and
+         below the shared stylesheet turns every "repeat(" + "gap: 1px" strip into two
+         columns, which would leave the Drafts tile beside an empty grey cell. --}}
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); gap: 0.0625rem; background: #e3e3e3; border-radius: 0.75rem; overflow: hidden; margin-bottom: 1rem;">
         <div style="background: white; padding: 0.875rem 1rem;">
             <div style="font-size: 12px; color: #616161;">Total Pages</div>
             <div style="font-size: 1.25rem; font-weight: 600; color: #303030;">{{ $totalPages }}</div>

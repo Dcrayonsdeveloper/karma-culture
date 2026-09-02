@@ -107,8 +107,11 @@
     .aplus-size { width:64px; padding:3px 6px; font-size:11px; border:1px solid #e3e3e3; border-radius:5px; color:#303030; background:#fff; }
     .aplus-size:focus { outline:none; border-color:#005bd3; box-shadow:0 0 0 2px rgba(0,91,211,.12); }
     .aplus-size.aplus-size--bad { border-color:#d72c0d; background:#fff5f4; }
-    /* Below the Shopify-ish admin breakpoint the row runs out of width, so let it wrap */
-    @media (max-width:900px) { .aplus-tile { flex-wrap:wrap; } }
+    /* flex-wrap only acts once the row no longer fits, so the desktop row is unchanged
+       while a narrow column (a tablet, or the 2/3 column on a small laptop) wraps. */
+    .aplus-tile { flex-wrap:wrap; row-gap:.5rem; }
+    /* The arrows are sized by class, so the shared coarse-pointer bump does not reach them. */
+    @media (pointer: coarse) { .aplus-btn { width:2.25rem; height:2.25rem; } }
 </style>
 
 <script>

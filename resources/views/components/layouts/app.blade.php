@@ -131,7 +131,7 @@
                      'bg-info-50 border-info-200 text-info-800': toast.type === 'info'
                  }">
                 <span x-text="toast.message"></span>
-                <button @click="$store.toast.remove(toast.id)" class="text-current opacity-60 hover:opacity-100" aria-label="Dismiss notification">
+                <button @click="$store.toast.remove(toast.id)" class="p-2 -m-2 text-current opacity-60 hover:opacity-100" aria-label="Dismiss notification">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
@@ -476,7 +476,7 @@
                     Shopping Cart
                     <span class="text-sm font-normal" style="color:#666;" x-text="'(' + $store.cart.itemCount + ')'"></span>
                 </h2>
-                <button @click="$store.cart.close()" class="w-8 h-8 flex items-center justify-center rounded-full transition-colors" style="color:#666;" onmouseenter="this.style.background='#f5f5f5'" onmouseleave="this.style.background='transparent'" aria-label="Close cart">
+                <button @click="$store.cart.close()" class="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded-full transition-colors" style="color:#666;" onmouseenter="this.style.background='#f5f5f5'" onmouseleave="this.style.background='transparent'" aria-label="Close cart">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
@@ -515,16 +515,16 @@
                                 <div class="flex items-center gap-2 mt-1.5">
                                     <div class="flex items-center rounded overflow-hidden" style="border:1px solid #ddd;">
                                         <button @click="item.quantity > 1 ? $store.cart.update(item.id, item.quantity - 1) : $store.cart.remove(item.id)"
-                                                class="w-7 h-7 flex items-center justify-center text-sm transition-colors" style="color:#555;" onmouseenter="this.style.background='#f5f5f5'" onmouseleave="this.style.background='transparent'">
+                                                class="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center text-sm transition-colors" style="color:#555;" onmouseenter="this.style.background='#f5f5f5'" onmouseleave="this.style.background='transparent'">
                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
                                         </button>
-                                        <span class="w-8 h-7 flex items-center justify-center text-xs font-semibold" style="border-left:1px solid #ddd;border-right:1px solid #ddd;background:#fafafa;" x-text="item.quantity"></span>
+                                        <span class="w-8 h-9 sm:h-7 flex items-center justify-center text-xs font-semibold" style="border-left:1px solid #ddd;border-right:1px solid #ddd;background:#fafafa;" x-text="item.quantity"></span>
                                         <button @click="$store.cart.update(item.id, item.quantity + 1)"
-                                                class="w-7 h-7 flex items-center justify-center text-sm transition-colors" style="color:#555;" onmouseenter="this.style.background='#f5f5f5'" onmouseleave="this.style.background='transparent'">
+                                                class="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center text-sm transition-colors" style="color:#555;" onmouseenter="this.style.background='#f5f5f5'" onmouseleave="this.style.background='transparent'">
                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                                         </button>
                                     </div>
-                                    <button @click="$store.cart.remove(item.id)" class="text-xs transition-colors" style="color:#999;" onmouseenter="this.style.color='#ef4444'" onmouseleave="this.style.color='#999'">Remove</button>
+                                    <button @click="$store.cart.remove(item.id)" class="py-2 sm:py-0 text-xs transition-colors" style="color:#999;" onmouseenter="this.style.color='#ef4444'" onmouseleave="this.style.color='#999'">Remove</button>
                                 </div>
                             </div>
                         </div>

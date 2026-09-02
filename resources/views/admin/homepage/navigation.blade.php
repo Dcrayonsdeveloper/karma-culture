@@ -28,7 +28,7 @@
         ];
     @endphp
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem;">
         <!-- Add Menu Item -->
         <div class="card">
             <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;">

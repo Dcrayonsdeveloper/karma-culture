@@ -8,7 +8,7 @@
     </x-slot>
 
     {{-- Stats --}}
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #e3e3e3; border-radius: 0.75rem; overflow: hidden; margin-bottom: 1rem;">
+    <div class="kk-stats-3" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #e3e3e3; border-radius: 0.75rem; overflow: hidden; margin-bottom: 1rem;">
         <div style="background: white; padding: 0.875rem 1rem;">
             <p style="font-size: 13px; color: #616161; margin-bottom: 2px;">Total customers</p>
             <p style="font-size: 1.5rem; font-weight: 600; color: #303030;">{{ number_format($stats['total']) }}</p>
@@ -82,7 +82,7 @@
                     @empty
                         <tr>
                             <td colspan="5" style="padding: 3rem 1rem; text-align: center;">
-                                <div style="display: flex; flex-direction: column; align-items: center;">
+                                <div style="display: flex; flex-direction: column; align-items: center; position: sticky; left: 0; max-width: calc(100vw - 4rem);">
                                     <div style="width: 3rem; height: 3rem; border-radius: 50%; background: #f1f1f1; display: flex; align-items: center; justify-content: center; margin-bottom: 0.75rem;">
                                         <svg style="width: 1.25rem; height: 1.25rem; color: #999;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -104,4 +104,18 @@
             </div>
         @endif
     </div>
+    @push('styles')
+    <style>
+        /* Phones: the shared CSS turns the 3-tile strip into 2 columns; the odd
+           last tile spans the row so no empty grey cell is left behind. */
+        @media (max-width: 767.98px) {
+            .kk-stats-3 > :last-child { grid-column: 1 / -1; }
+        }
+        /* Touch: the compact Search button reaches a 36px target (.btn-sm is
+           excluded from the shared phone min-height rule). */
+        @media (pointer: coarse) {
+            .layout-admin main .btn-sm { min-height: 2.25rem; }
+        }
+    </style>
+    @endpush
 </x-layouts.admin>

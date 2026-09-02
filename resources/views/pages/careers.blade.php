@@ -33,11 +33,11 @@
                     <h2 class="text-lg font-semibold text-neutral-900 mb-2">No Open Positions Right Now</h2>
                     <p class="text-sm text-neutral-600 mb-6 max-w-md mx-auto">We don't have any active openings at the moment, but we're always looking for talented people. Send us your resume and we'll keep it on file.</p>
 
-                    <div class="inline-flex items-center gap-2 bg-neutral-50 rounded-lg px-5 py-3 border border-neutral-100">
-                        <svg class="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="inline-flex items-center gap-2 max-w-full min-w-0 bg-neutral-50 rounded-lg px-5 py-3 border border-neutral-100">
+                        <svg class="w-4 h-4 text-neutral-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                         </svg>
-                        <a href="mailto:careers@karmaakulture.com" class="text-sm font-medium text-[#6F9CA2] hover:underline">careers@karmaakulture.com</a>
+                        <a href="mailto:careers@karmaakulture.com" class="min-w-0 [overflow-wrap:anywhere] text-sm font-medium text-[#6F9CA2] hover:underline">careers@karmaakulture.com</a>
                     </div>
                 </div>
 

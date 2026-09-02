@@ -133,11 +133,11 @@
                                 </button>
                                 <div x-show="expanded" x-collapse>
                                     <div class="bg-neutral-50/50 py-1">
-                                        <a href="{{ route('category.show', $cat) }}" class="block pl-8 pr-4 py-2 text-xs font-medium text-[#2D1810] hover:bg-neutral-100/50">
+                                        <a href="{{ route('category.show', $cat) }}" class="block pl-8 pr-4 py-2.5 text-xs font-medium text-[#2D1810] hover:bg-neutral-100/50">
                                             View All {{ $cat->name }}
                                         </a>
                                         @foreach($cat->children as $child)
-                                            <a href="{{ route('category.show', $child) }}" class="block pl-8 pr-4 py-2 text-sm text-neutral-600 hover:text-[#2D1810] hover:bg-neutral-100/50">
+                                            <a href="{{ route('category.show', $child) }}" class="block pl-8 pr-4 py-2.5 text-sm text-neutral-600 hover:text-[#2D1810] hover:bg-neutral-100/50">
                                                 {{ $child->name }}
                                             </a>
                                         @endforeach

@@ -68,7 +68,7 @@
                             </td>
                             <td style="padding: 0.625rem 1rem; font-weight: 500; text-align: right; color: #303030;">@price($order->total)</td>
                             <td style="padding: 0.625rem 1rem; text-align: right;">
-                                <a href="{{ route('admin.orders.show', $order) }}" style="color: #616161; text-decoration: none;" title="View Order">
+                                <a href="{{ route('admin.orders.show', $order) }}" class="btn-icon" style="color: #616161; text-decoration: none;" title="View Order">
                                     <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -79,11 +79,13 @@
                     @empty
                         <tr>
                             <td colspan="7" style="padding: 3rem 1rem; text-align: center;">
-                                <svg width="48" height="48" fill="none" stroke="#c9cccf" viewBox="0 0 24 24" style="margin: 0 auto 1rem auto; display: block;">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                                </svg>
-                                <h3 style="font-size: 14px; font-weight: 600; color: #303030; margin: 0 0 0.25rem 0;">No orders yet</h3>
-                                <p style="font-size: 13px; color: #616161; margin: 0;">This customer hasn't placed any orders.</p>
+                                <div style="position: sticky; left: 0; max-width: calc(100vw - 4rem);">
+                                    <svg width="48" height="48" fill="none" stroke="#c9cccf" viewBox="0 0 24 24" style="margin: 0 auto 1rem auto; display: block;">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                                    </svg>
+                                    <h3 style="font-size: 14px; font-weight: 600; color: #303030; margin: 0 0 0.25rem 0;">No orders yet</h3>
+                                    <p style="font-size: 13px; color: #616161; margin: 0;">This customer hasn't placed any orders.</p>
+                                </div>
                             </td>
                         </tr>
                     @endforelse

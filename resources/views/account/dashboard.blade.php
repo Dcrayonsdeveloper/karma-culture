@@ -42,7 +42,7 @@
                                      onerror="this.remove()">
                             @endif
                         </div>
-                        <div>
+                        <div class="min-w-0">
                             <h1 class="text-lg sm:text-xl font-bold">Welcome back, {{ $user->first_name }}!</h1>
                             <p class="text-sm text-white/80">Member since {{ $user->created_at->format('F Y') }}</p>
                         </div>
@@ -105,14 +105,14 @@
                 <div class="bg-white border border-neutral-100 rounded-xl overflow-hidden">
                     <div class="px-5 py-4 border-b border-neutral-100 flex items-center justify-between">
                         <h2 class="text-[15px] font-semibold text-neutral-900">Recent Orders</h2>
-                        <a href="{{ route('account.orders.index') }}" class="text-[13px] text-primary-600 hover:text-primary-700 font-medium">View All</a>
+                        <a href="{{ route('account.orders.index') }}" class="inline-flex items-center min-h-10 sm:min-h-0 text-[13px] text-primary-600 hover:text-primary-700 font-medium">View All</a>
                     </div>
 
                     @if($recentOrders->count())
                         <div class="divide-y divide-neutral-100">
                             @foreach($recentOrders as $order)
                                 <div class="px-5 py-4 flex items-center justify-between gap-4">
-                                    <div class="flex items-center gap-3.5">
+                                    <div class="flex items-center gap-3.5 min-w-0">
                                         {{-- Contained in the fixed 44px well so the row keeps its height
                                              and the order is still recognisable from its first item. --}}
                                         <div class="kk-media kk-media--thumb w-11 h-11 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
@@ -133,7 +133,7 @@
                                                 </svg>
                                             @endif
                                         </div>
-                                        <div>
+                                        <div class="min-w-0">
                                             <a href="{{ route('account.orders.show', $order) }}" class="text-[13px] font-semibold text-neutral-900 hover:text-primary-600">
                                                 Order #{{ $order->order_number }}
                                             </a>

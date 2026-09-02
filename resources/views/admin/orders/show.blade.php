@@ -2,14 +2,14 @@
     <x-slot name="title">Order {{ $order->order_number }}</x-slot>
 
     <x-slot name="header">
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
             <a href="{{ route('admin.orders.index') }}" style="display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: 0.5rem; color: #616161; text-decoration: none;" class="btn-icon">
                 <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
                 </svg>
             </a>
-            <div style="flex: 1;">
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <div style="flex: 1 1 14rem; min-width: 0;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; row-gap: 0.25rem;">
                     <h1 style="font-size: 1.25rem; font-weight: 600; color: #303030;">{{ $order->order_number }}</h1>
                     @php
                         $statusBadge = match($order->status) {
@@ -32,7 +32,7 @@
                 </div>
                 <p style="font-size: 13px; color: #616161; margin-top: 2px;">{{ $order->created_at->format('M d, Y \a\t g:i A') }}</p>
             </div>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-left: auto;">
                 <a href="{{ route('admin.orders.invoice', $order) }}" class="btn btn-secondary" target="_blank" style="font-size: 13px;">Print invoice</a>
                 <a href="{{ route('admin.orders.packing-slip', $order) }}" class="btn btn-secondary" target="_blank" style="font-size: 13px;">Packing slip</a>
             </div>
@@ -45,19 +45,19 @@
             <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3; display: flex; align-items: center; justify-content: space-between;">
                 <h2 style="font-size: 13px; font-weight: 600; color: #303030;">Order tracking</h2>
                 @if($latestShipment && $latestShipment->tracking_number)
-                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 13px;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 13px; flex-wrap: wrap;">
                         <span style="color: #616161;">Tracking:</span>
-                        <span style="font-family: monospace; font-weight: 600; color: #005bd3;">{{ $latestShipment->tracking_number }}</span>
+                        <span style="font-family: monospace; font-weight: 600; color: #005bd3; overflow-wrap: anywhere;">{{ $latestShipment->tracking_number }}</span>
                         @if($latestShipment->carrier)
                             <span class="badge badge-neutral">{{ $latestShipment->carrier }}</span>
                         @endif
                     </div>
                 @endif
             </div>
-            <div style="padding: 1.25rem 1rem;">
-                <div style="position: relative; display: flex; align-items: flex-start; justify-content: space-between;">
+            <div style="padding: 1.25rem 1rem; overflow-x: auto;">
+                <div style="position: relative; display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: nowrap;">
                     @foreach($trackingSteps as $index => $step)
-                        <div style="flex: 1; {{ $index < count($trackingSteps) - 1 ? 'position: relative;' : '' }}">
+                        <div style="flex: 1; min-width: 5rem; {{ $index < count($trackingSteps) - 1 ? 'position: relative;' : '' }}">
                             <div style="display: flex; flex-direction: column; align-items: center;">
                                 <div style="width: 2rem; height: 2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 1; position: relative;
                                     {{ $step['completed'] ? 'background: #1a7a2e; color: white;' : ($step['current'] ? 'background: #005bd3; color: white; box-shadow: 0 0 0 3px #d4edfc;' : 'background: #e3e3e3; color: #999;') }}">
@@ -345,19 +345,19 @@
                                 </div>
                                 @endif
                             </div>
-                            <div style="display: flex; gap: 0.5rem;">
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                                 @if(!empty($order->metadata['shiprocket_label_url']))
-                                    <a href="{{ $order->metadata['shiprocket_label_url'] }}" target="_blank" class="btn btn-secondary" style="flex: 1; font-size: 12px; text-align: center;">
+                                    <a href="{{ $order->metadata['shiprocket_label_url'] }}" target="_blank" class="btn btn-secondary" style="flex: 1 1 7rem; font-size: 12px; text-align: center;">
                                         <svg style="width: 0.875rem; height: 0.875rem; display: inline; vertical-align: -2px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
                                         Label
                                     </a>
                                 @endif
-                                <form action="{{ route('admin.orders.shiprocket.sync', $order) }}" method="POST" style="flex: 1;">
+                                <form action="{{ route('admin.orders.shiprocket.sync', $order) }}" method="POST" style="flex: 1 1 7rem;">
                                     @csrf
                                     <button type="submit" class="btn btn-secondary" style="width: 100%; font-size: 12px;">Sync tracking</button>
                                 </form>
                                 @if(!in_array($order->status, ['delivered', 'cancelled', 'returned']))
-                                    <form action="{{ route('admin.orders.shiprocket.cancel', $order) }}" method="POST" style="flex: 1;" onsubmit="return confirm('Cancel this shipment on Shiprocket?')">
+                                    <form action="{{ route('admin.orders.shiprocket.cancel', $order) }}" method="POST" style="flex: 1 1 7rem;" onsubmit="return confirm('Cancel this shipment on Shiprocket?')">
                                         @csrf
                                         <button type="submit" class="btn btn-secondary" style="width: 100%; font-size: 12px; color: #d72c0d;">Cancel</button>
                                     </form>
@@ -392,10 +392,10 @@
                     <div style="padding: 1rem;">
                         @if($order->deliveryPartner)
                             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; padding: 0.5rem; background: #f7f7f7; border-radius: 0.5rem;">
-                                <div style="width: 2rem; height: 2rem; border-radius: 50%; background: #e3e3e3; display: flex; align-items: center; justify-content: center;">
+                                <div style="width: 2rem; height: 2rem; border-radius: 50%; background: #e3e3e3; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                     <span style="font-size: 11px; font-weight: 600; color: #616161;">{{ strtoupper(substr($order->deliveryPartner->user->first_name, 0, 1)) }}</span>
                                 </div>
-                                <div>
+                                <div style="min-width: 0; overflow-wrap: anywhere;">
                                     <p style="font-size: 13px; font-weight: 500; color: #303030;">{{ $order->deliveryPartner->user->full_name }}</p>
                                     <p style="font-size: 12px; color: #616161;">{{ $order->deliveryPartner->partner_id }}</p>
                                 </div>
@@ -423,10 +423,10 @@
                         <h2 style="font-size: 13px; font-weight: 600; color: #303030;">Delivery partner</h2>
                     </div>
                     <div style="padding: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                        <div style="width: 2rem; height: 2rem; border-radius: 50%; background: #e3e3e3; display: flex; align-items: center; justify-content: center;">
+                        <div style="width: 2rem; height: 2rem; border-radius: 50%; background: #e3e3e3; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                             <span style="font-size: 11px; font-weight: 600; color: #616161;">{{ strtoupper(substr($order->deliveryPartner->user->first_name, 0, 1)) }}</span>
                         </div>
-                        <div>
+                        <div style="min-width: 0; overflow-wrap: anywhere;">
                             <p style="font-size: 13px; font-weight: 500; color: #303030;">{{ $order->deliveryPartner->user->full_name }}</p>
                             <p style="font-size: 12px; color: #616161;">{{ $order->deliveryPartner->partner_id }}</p>
                         </div>
@@ -442,10 +442,10 @@
                 <div style="padding: 1rem;">
                     @if($order->user)
                         <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
-                            <div style="width: 2rem; height: 2rem; border-radius: 50%; background: #e3e3e3; display: flex; align-items: center; justify-content: center;">
+                            <div style="width: 2rem; height: 2rem; border-radius: 50%; background: #e3e3e3; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                 <span style="font-size: 11px; font-weight: 600; color: #616161;">{{ strtoupper(substr($order->user->first_name, 0, 1)) }}</span>
                             </div>
-                            <div>
+                            <div style="min-width: 0; overflow-wrap: anywhere;">
                                 <p style="font-size: 13px; font-weight: 500; color: #005bd3;">{{ $order->user->full_name }}</p>
                                 <p style="font-size: 12px; color: #616161;">{{ $order->user->email }}</p>
                             </div>
@@ -512,7 +512,7 @@
                             @endif
                         </div>
                         @if(!in_array($order->status, ['delivered', 'cancelled', 'returned']))
-                            <button @click="editing = true" style="font-size: 13px; color: #005bd3; font-weight: 500; background: none; border: none; cursor: pointer;">
+                            <button @click="editing = true" style="font-size: 13px; color: #005bd3; font-weight: 500; background: none; border: none; cursor: pointer; padding: 0.5rem; margin: -0.5rem; min-height: 2.5rem;">
                                 {{ $order->expected_delivery_date ? 'Change' : 'Set' }}
                             </button>
                         @endif

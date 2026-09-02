@@ -11,19 +11,19 @@
         {{-- Tab filters --}}
         <div style="display: flex; align-items: center; gap: 0; border-bottom: 1px solid #e3e3e3; padding: 0 1rem;">
             <a href="{{ route('admin.reviews.index', request()->except('status')) }}"
-               style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ !request('status') ? '#303030' : 'transparent' }}; color: {{ !request('status') ? '#303030' : '#616161' }};">
+               style="padding: 0.625rem 0.75rem; margin-bottom: -1px; white-space: nowrap; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ !request('status') ? '#303030' : 'transparent' }}; color: {{ !request('status') ? '#303030' : '#616161' }};">
                 All <span style="color: #616161; font-size: 12px;">({{ array_sum($counts) }})</span>
             </a>
             <a href="{{ route('admin.reviews.index', array_merge(request()->except('status'), ['status' => 'pending'])) }}"
-               style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('status') === 'pending' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'pending' ? '#303030' : '#616161' }};">
+               style="padding: 0.625rem 0.75rem; margin-bottom: -1px; white-space: nowrap; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('status') === 'pending' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'pending' ? '#303030' : '#616161' }};">
                 Pending <span style="color: #616161; font-size: 12px;">({{ $counts['pending'] ?? 0 }})</span>
             </a>
             <a href="{{ route('admin.reviews.index', array_merge(request()->except('status'), ['status' => 'approved'])) }}"
-               style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('status') === 'approved' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'approved' ? '#303030' : '#616161' }};">
+               style="padding: 0.625rem 0.75rem; margin-bottom: -1px; white-space: nowrap; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('status') === 'approved' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'approved' ? '#303030' : '#616161' }};">
                 Approved <span style="color: #616161; font-size: 12px;">({{ $counts['approved'] ?? 0 }})</span>
             </a>
             <a href="{{ route('admin.reviews.index', array_merge(request()->except('status'), ['status' => 'rejected'])) }}"
-               style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('status') === 'rejected' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'rejected' ? '#303030' : '#616161' }};">
+               style="padding: 0.625rem 0.75rem; margin-bottom: -1px; white-space: nowrap; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('status') === 'rejected' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'rejected' ? '#303030' : '#616161' }};">
                 Rejected <span style="color: #616161; font-size: 12px;">({{ $counts['rejected'] ?? 0 }})</span>
             </a>
         </div>
@@ -108,12 +108,13 @@
                                     {{ $review->created_at->format('M d, Y') }}
                                 </td>
                                 <td style="padding: 0.5rem 1rem;" onclick="event.stopPropagation()">
+                                    {{-- Vertical padding cancelled by a negative margin: a ~36px touch target without changing the row height. --}}
                                     <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem;">
-                                        <a href="{{ route('admin.reviews.show', $review) }}" style="font-size: 13px; color: #005bd3; font-weight: 500; text-decoration: none;">View</a>
+                                        <a href="{{ route('admin.reviews.show', $review) }}" style="font-size: 13px; color: #005bd3; font-weight: 500; text-decoration: none; padding: 0.5rem 0; margin: -0.5rem 0;">View</a>
                                         <form action="{{ route('admin.reviews.destroy', $review) }}" method="POST" onsubmit="return confirm('Delete this review?')">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" style="font-size: 13px; color: #b71c1c; font-weight: 500; background: none; border: none; cursor: pointer; padding: 0;">Delete</button>
+                                            <button type="submit" style="font-size: 13px; color: #b71c1c; font-weight: 500; background: none; border: none; cursor: pointer; padding: 0.5rem 0; margin: -0.5rem 0;">Delete</button>
                                         </form>
                                     </div>
                                 </td>

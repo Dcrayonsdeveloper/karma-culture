@@ -30,6 +30,15 @@
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
+/* In the off-canvas drawer, and on any touch screen, each nav row reaches a
+   40px target; the compact 30px rows stay for a mouse on a wide screen. */
+@media (max-width: 1023.98px), (pointer: coarse) {
+    .admin-nav-item {
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+        min-height: 2.5rem;
+    }
+}
 </style>
 
 <!-- Mobile sidebar backdrop -->

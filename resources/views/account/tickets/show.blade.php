@@ -14,14 +14,14 @@
             <div class="flex-1 min-w-0">
                 <!-- Header -->
                 <div class="flex items-start justify-between mb-5">
-                    <div class="flex items-center gap-3">
-                        <a href="{{ route('account.tickets.index') }}" class="text-neutral-600 hover:text-neutral-600">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <a href="{{ route('account.tickets.index') }}" class="inline-flex p-2.5 -m-2.5 shrink-0 text-neutral-600 hover:text-neutral-600">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                             </svg>
                         </a>
-                        <div>
-                            <div class="flex items-center gap-2">
+                        <div class="min-w-0">
+                            <div class="flex flex-wrap items-center gap-2">
                                 <h1 class="text-xl font-bold text-neutral-900">Ticket #{{ $ticket->id }}</h1>
                                 @switch($ticket->status)
                                     @case('open')

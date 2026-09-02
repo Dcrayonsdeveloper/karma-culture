@@ -125,7 +125,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" style="padding: 2rem 1rem; text-align: center; font-size: 13px; color: #616161;">No fraud indicators recorded</td>
+                                    <td colspan="4" style="padding: 2rem 1rem; text-align: center; font-size: 13px; color: #616161;"><div style="position: sticky; left: 1rem; max-width: calc(100vw - 4rem);">No fraud indicators recorded</div></td>
                                 </tr>
                             @endforelse
                         </tbody>

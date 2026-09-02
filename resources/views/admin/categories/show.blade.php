@@ -103,7 +103,7 @@
                                                    style="font-size: 13px; font-weight: 600; color: #303030; text-decoration: none; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                                                     {{ $product->name }}
                                                 </a>
-                                                <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.25rem;">
+                                                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.125rem 0.75rem; margin-top: 0.25rem;">
                                                     @if($product->seller)
                                                         <span style="font-size: 12px; color: #616161;">{{ $product->seller->store_name }}</span>
                                                     @endif

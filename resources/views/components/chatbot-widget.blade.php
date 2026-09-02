@@ -122,7 +122,7 @@
             <div class="flex items-center gap-1.5">
             <a
                 href="{{ route('chat') }}"
-                class="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
+                class="w-9 h-9 sm:w-7 sm:h-7 rounded-full flex items-center justify-center transition-colors"
                 style="background: rgba(255,255,255,0.2); color: white;"
                 onmouseover="this.style.background='rgba(255,255,255,0.35)'"
                 onmouseout="this.style.background='rgba(255,255,255,0.2)'"
@@ -136,7 +136,7 @@
             </a>
             <button
                 @click="close()"
-                class="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
+                class="w-9 h-9 sm:w-7 sm:h-7 rounded-full flex items-center justify-center transition-colors"
                 style="background: rgba(255,255,255,0.2); color: white;"
                 onmouseover="this.style.background='rgba(255,255,255,0.35)'"
                 onmouseout="this.style.background='rgba(255,255,255,0.2)'"
@@ -175,7 +175,7 @@
                             <template x-for="chip in quickChips" :key="chip.label">
                                 <button
                                     @click="sendQuickChip(chip.message)"
-                                    class="text-[11px] px-3 py-1.5 rounded-full border border-[#6F9CA2]/40 text-[#6F9CA2] bg-white hover:bg-[#6F9CA2]/8 transition-colors font-medium whitespace-nowrap"
+                                    class="text-[11px] px-3 py-2.5 sm:py-1.5 rounded-full border border-[#6F9CA2]/40 text-[#6F9CA2] bg-white hover:bg-[#6F9CA2]/8 transition-colors font-medium whitespace-nowrap"
                                     x-text="chip.label"
                                 ></button>
                             </template>
@@ -190,7 +190,7 @@
                             find sizes and colours, and share current offers.
                         </p>
                         <a href="{{ route('login') }}?redirect={{ urlencode(request()->fullUrl()) }}"
-                           class="inline-flex items-center gap-2 px-5 py-2 rounded-full text-white text-xs font-semibold transition-colors"
+                           class="inline-flex items-center gap-2 px-5 py-3 sm:py-2 rounded-full text-white text-xs font-semibold transition-colors"
                            style="background:#8C5C34;" onmouseover="this.style.background='#2D1810'" onmouseout="this.style.background='#8C5C34'">
                             Sign in to chat
                         </a>
@@ -303,7 +303,7 @@
                 <template x-for="chip in quickChips" :key="chip.label">
                     <button
                         @click="sendQuickChip(chip.message)"
-                        class="shrink-0 text-[10px] px-2.5 py-1 rounded-full border border-neutral-200 text-neutral-600 bg-neutral-50 hover:bg-[#6F9CA2]/10 hover:border-[#6F9CA2]/40 hover:text-[#6F9CA2] transition-colors whitespace-nowrap"
+                        class="shrink-0 text-[10px] px-2.5 py-2 sm:py-1 rounded-full border border-neutral-200 text-neutral-600 bg-neutral-50 hover:bg-[#6F9CA2]/10 hover:border-[#6F9CA2]/40 hover:text-[#6F9CA2] transition-colors whitespace-nowrap"
                         x-text="chip.label"
                     ></button>
                 </template>
@@ -316,7 +316,7 @@
                 {{-- No input for a guest: the endpoint would refuse them anyway,
                      and a dead text box reads as a broken chat. --}}
                 <a href="{{ route('login') }}?redirect={{ urlencode(request()->fullUrl()) }}"
-                   class="flex items-center justify-center w-full px-4 py-2 rounded-full text-white text-xs font-semibold transition-colors"
+                   class="flex items-center justify-center w-full px-4 py-3 sm:py-2 rounded-full text-white text-xs font-semibold transition-colors"
                    style="background:#8C5C34;" onmouseover="this.style.background='#2D1810'" onmouseout="this.style.background='#8C5C34'">
                     Sign in to start chatting
                 </a>
@@ -341,7 +341,7 @@
                 <button
                     @click="sendMessage()"
                     :disabled="!inputText.trim() || isTyping"
-                    class="w-9 h-9 rounded-full bg-[#8C5C34] hover:bg-[#2D1810] flex items-center justify-center text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                    class="w-10 h-10 sm:w-9 sm:h-9 rounded-full bg-[#8C5C34] hover:bg-[#2D1810] flex items-center justify-center text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                     aria-label="Send message"
                 >
                     <svg class="w-4 h-4 -mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

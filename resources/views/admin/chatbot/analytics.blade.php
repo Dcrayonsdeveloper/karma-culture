@@ -40,7 +40,7 @@
         </div>
     @else
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 1rem;">
 
         {{-- What people ask about --}}
         <div class="card">

@@ -57,11 +57,11 @@
                             </td>
                             <td style="padding: 0.625rem 1rem; text-align: right;">
                                 <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem;">
-                                    <a href="{{ route('admin.settings.tax-rates.edit', $taxRate) }}" style="color: #005bd3; font-size: 13px; font-weight: 500; text-decoration: none;">Edit</a>
+                                    <a href="{{ route('admin.settings.tax-rates.edit', $taxRate) }}" class="pointer-coarse:inline-flex pointer-coarse:items-center pointer-coarse:min-h-9 pointer-coarse:-my-2 pointer-coarse:px-2" style="color: #005bd3; font-size: 13px; font-weight: 500; text-decoration: none;">Edit</a>
                                     <form action="{{ route('admin.settings.tax-rates.destroy', $taxRate) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this tax rate?')">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" style="color: #d72c0d; font-size: 13px; font-weight: 500; background: none; border: none; cursor: pointer;">Delete</button>
+                                        <button type="submit" class="pointer-coarse:inline-flex pointer-coarse:items-center pointer-coarse:min-h-9 pointer-coarse:-my-2 pointer-coarse:px-2" style="color: #d72c0d; font-size: 13px; font-weight: 500; background: none; border: none; cursor: pointer;">Delete</button>
                                     </form>
                                 </div>
                             </td>

@@ -26,7 +26,7 @@
                 <!-- Size Chart -->
                 <div class="bg-white rounded-xl border border-neutral-100 overflow-hidden mb-10">
                     <div class="overflow-x-auto">
-                        <table class="w-full text-sm">
+                        <table class="w-full text-sm whitespace-nowrap">
                             <thead>
                                 <tr class="bg-neutral-50">
                                     <th class="px-4 py-3 text-left font-semibold text-neutral-700">Size</th>

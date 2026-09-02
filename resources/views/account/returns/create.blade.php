@@ -80,7 +80,7 @@
                                         @foreach($orders as $order)
                                             <label @click="selectedOrder = '{{ $order->id }}'; selectedItems = []"
                                                    :class="selectedOrder == '{{ $order->id }}' ? 'border-[#6F9CA2]/50 bg-[#6F9CA2]/5 ring-1 ring-[#6F9CA2]/30' : 'border-neutral-200 hover:border-neutral-300 bg-white'"
-                                                   class="flex items-center justify-between p-3.5 rounded-lg border cursor-pointer transition-all">
+                                                   class="flex flex-wrap items-center justify-between gap-2 p-3.5 rounded-lg border cursor-pointer transition-all">
                                                 {{-- No `required` on purpose: the constraint applies to every
                                                      radio in the group, so the helper would print the same
                                                      message under all of them. The step is unreachable anyway
@@ -116,7 +116,7 @@
                                     <h2 class="text-sm font-bold text-neutral-900">Return Type</h2>
                                 </div>
                                 <div class="p-5">
-                                    <div class="grid grid-cols-2 gap-3">
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <label @click="type = 'return'"
                                                :class="type === 'return' ? 'border-[#6F9CA2]/50 bg-[#6F9CA2]/5 ring-1 ring-[#6F9CA2]/30' : 'border-neutral-200 hover:border-neutral-300'"
                                                class="flex items-center gap-3 p-3.5 rounded-lg border cursor-pointer transition-all">
@@ -276,7 +276,7 @@
                             </div>
 
                             {{-- Submit --}}
-                            <div class="flex items-center gap-3 pt-2">
+                            <div class="flex flex-wrap items-center gap-3 pt-2">
                                 <button type="submit"
                                         :disabled="selectedItems.length === 0"
                                         :class="selectedItems.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#E07E0A]'"

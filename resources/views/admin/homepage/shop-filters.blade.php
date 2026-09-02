@@ -125,15 +125,15 @@
                                         <span class="badge {{ $item->is_active ? 'badge-success' : 'badge-neutral' }}">{{ $item->is_active ? 'Active' : 'Hidden' }}</span>
                                     </td>
                                     <td style="padding: 0.5rem 1rem; text-align: right; white-space: nowrap; min-width: 170px;">
-                                        <button type="submit" class="btn btn-sm btn-primary" style="font-size: 11px;">Save</button>
+                                        <button type="submit" class="btn btn-sm btn-primary pointer-coarse:min-h-9" style="font-size: 11px;">Save</button>
                                 </form>
                                 <form action="{{ route('admin.homepage.shop-filters.toggle', $item) }}" method="POST" style="display: inline;">
                                     @csrf @method('PUT')
-                                    <button type="submit" class="btn btn-sm btn-secondary" style="font-size: 11px;">{{ $item->is_active ? 'Hide' : 'Show' }}</button>
+                                    <button type="submit" class="btn btn-sm btn-secondary pointer-coarse:min-h-9" style="font-size: 11px;">{{ $item->is_active ? 'Hide' : 'Show' }}</button>
                                 </form>
                                 <form action="{{ route('admin.homepage.shop-filters.destroy', $item) }}" method="POST" style="display: inline;" onsubmit="return confirm('Delete this item?');">
                                     @csrf @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger" style="font-size: 11px;">Delete</button>
+                                    <button type="submit" class="btn btn-sm btn-danger pointer-coarse:min-h-9" style="font-size: 11px;">Delete</button>
                                 </form>
                                 {{-- position was stamped once at creation and nothing could
                                      change it afterwards, so the order on the home page was
@@ -142,14 +142,14 @@
                                     <form action="{{ route('admin.homepage.shop-filters.move', $item) }}" method="POST" style="display: inline;">
                                         @csrf @method('PUT')
                                         <input type="hidden" name="direction" value="up">
-                                        <button type="submit" class="btn btn-sm btn-secondary" style="font-size: 11px;" aria-label="Move up" title="Move up">&uarr;</button>
+                                        <button type="submit" class="btn btn-sm btn-secondary pointer-coarse:min-h-9 pointer-coarse:min-w-9" style="font-size: 11px;" aria-label="Move up" title="Move up">&uarr;</button>
                                     </form>
                                 @endif
                                 @if(! $loop->last)
                                     <form action="{{ route('admin.homepage.shop-filters.move', $item) }}" method="POST" style="display: inline;">
                                         @csrf @method('PUT')
                                         <input type="hidden" name="direction" value="down">
-                                        <button type="submit" class="btn btn-sm btn-secondary" style="font-size: 11px;" aria-label="Move down" title="Move down">&darr;</button>
+                                        <button type="submit" class="btn btn-sm btn-secondary pointer-coarse:min-h-9 pointer-coarse:min-w-9" style="font-size: 11px;" aria-label="Move down" title="Move down">&darr;</button>
                                     </form>
                                 @endif
 

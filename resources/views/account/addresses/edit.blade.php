@@ -20,7 +20,7 @@
 
                     <!-- Header -->
                     <div class="flex items-center gap-3 mb-6">
-                        <div class="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center">
+                        <div class="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center shrink-0">
                             <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                             </svg>
@@ -43,7 +43,7 @@
                             <div class="flex flex-wrap gap-2">
                                 <button type="button" @click="label = 'home'"
                                         :class="label === 'home' ? 'bg-primary-50 border-primary-500 text-primary-700' : 'border-neutral-200 text-neutral-600 hover:border-neutral-300'"
-                                        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium transition-all">
+                                        class="inline-flex items-center gap-1.5 px-4 py-2 min-h-10 sm:min-h-0 rounded-lg border text-sm font-medium transition-all">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                                     </svg>
@@ -51,7 +51,7 @@
                                 </button>
                                 <button type="button" @click="label = 'office'"
                                         :class="label === 'office' ? 'bg-primary-50 border-primary-500 text-primary-700' : 'border-neutral-200 text-neutral-600 hover:border-neutral-300'"
-                                        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium transition-all">
+                                        class="inline-flex items-center gap-1.5 px-4 py-2 min-h-10 sm:min-h-0 rounded-lg border text-sm font-medium transition-all">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                                     </svg>
@@ -59,7 +59,7 @@
                                 </button>
                                 <button type="button" @click="label = 'other'"
                                         :class="label === 'other' ? 'bg-primary-50 border-primary-500 text-primary-700' : 'border-neutral-200 text-neutral-600 hover:border-neutral-300'"
-                                        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium transition-all">
+                                        class="inline-flex items-center gap-1.5 px-4 py-2 min-h-10 sm:min-h-0 rounded-lg border text-sm font-medium transition-all">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -236,7 +236,7 @@
                         </div>
 
                         <!-- Actions -->
-                        <div class="flex items-center gap-3">
+                        <div class="flex flex-wrap items-center gap-3">
                             <button type="submit"
                                     class="inline-flex items-center gap-2 px-6 py-2.5 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

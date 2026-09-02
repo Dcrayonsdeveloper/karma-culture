@@ -3,7 +3,7 @@
 
     <!-- Top bar -->
     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.25rem;">
-        <a href="{{ route('admin.flash-sales.index') }}" style="padding: 0.25rem; border-radius: 0.25rem; color: #616161; text-decoration: none;">
+        <a href="{{ route('admin.flash-sales.index') }}" class="btn-icon" style="flex-shrink: 0; color: #616161; text-decoration: none;">
             <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
         </a>
         <h1 style="font-size: 1.125rem; font-weight: 600; color: #303030;">{{ $flashSale->name }}</h1>
@@ -90,7 +90,7 @@
                                     <span x-text="r.sold_count"></span> sold
                                 </span>
                                 <button type="button" @click="rows.splice(i, 1)" title="Remove"
-                                        style="color:#d72c0d;background:none;border:0;cursor:pointer;font-size:16px;line-height:1;">&times;</button>
+                                        class="btn-icon" style="color:#d72c0d;cursor:pointer;font-size:16px;line-height:1;">&times;</button>
                             </div>
                         </template>
                     </div>
@@ -196,7 +196,7 @@
                      inner <form> tag, so Save belonged to the delete form and
                      saving destroyed the sale. --}}
                 <button type="submit" form="kk-delete-flash-sale"
-                        style="font-size: 13px; font-weight: 500; color: #d72c0d; background: none; border: none; cursor: pointer;">Delete flash sale</button>
+                        style="font-size: 13px; font-weight: 500; color: #d72c0d; background: none; border: none; cursor: pointer; padding: 0.5rem 0; min-height: 2.25rem;">Delete flash sale</button>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <a href="{{ route('admin.flash-sales.index') }}" class="btn btn-secondary" style="font-size: 13px;">Discard</a>
                     <button type="submit" class="btn btn-primary" style="font-size: 13px;">Save</button>

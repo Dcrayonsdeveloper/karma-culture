@@ -14,7 +14,7 @@
     </x-slot>
 
     {{-- Card with search + table --}}
-    <div style="background: white; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); overflow: hidden;">
+    <div class="card" style="background: white; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); overflow: hidden;">
 
         {{-- Search --}}
         <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;">
@@ -78,13 +78,13 @@
                                 @endif
                             </td>
                             <td style="padding: 0.625rem 1rem; text-align: right;" onclick="event.stopPropagation()">
-                                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem;">
+                                <div class="kk-row-actions" style="display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem;">
                                     <a href="{{ route('admin.stores.edit', $store) }}" style="color: #005bd3; font-size: 12px; font-weight: 500; text-decoration: none;"
                                        onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Edit</a>
                                     <form action="{{ route('admin.stores.destroy', $store) }}" method="POST" onsubmit="return confirm('Delete this store?')">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" style="color: #d72c0d; font-size: 12px; font-weight: 500; background: none; border: none; cursor: pointer; padding: 0;"
+                                        <button type="submit" style="color: #d72c0d; font-size: 12px; font-weight: 500; background: none; border: none; cursor: pointer;"
                                                 onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Delete</button>
                                     </form>
                                 </div>
@@ -93,7 +93,7 @@
                     @empty
                         <tr>
                             <td colspan="5" style="padding: 3rem 1rem; text-align: center;">
-                                <div style="display: flex; flex-direction: column; align-items: center;">
+                                <div style="display: flex; flex-direction: column; align-items: center; position: sticky; left: 0; max-width: calc(100vw - 4rem);">
                                     <svg style="width: 3rem; height: 3rem; color: #c9cccf; margin-bottom: 0.75rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                                     </svg>
@@ -116,4 +116,20 @@
             </div>
         @endif
     </div>
+    @push('styles')
+    <style>
+        /* Touch: the Edit / Delete row actions reach a 36px target without
+           changing the row height. */
+        @media (pointer: coarse) {
+            .kk-row-actions > a,
+            .kk-row-actions > form > button {
+                display: inline-flex;
+                align-items: center;
+                min-height: 2.25rem;
+                padding: 0 0.375rem;
+                margin: -0.5rem 0;
+            }
+        }
+    </style>
+    @endpush
 </x-layouts.admin>

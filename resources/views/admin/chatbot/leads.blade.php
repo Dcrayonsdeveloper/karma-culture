@@ -51,9 +51,9 @@
                         </div>
                         <div style="display: flex; gap: 0.5rem; flex-shrink: 0;">
                             @if($c->user)
-                                <a href="{{ route('admin.customers.show', $c->user) }}" style="font-size: 12px; color: #005bd3; text-decoration: none;">Customer</a>
+                                <a href="{{ route('admin.customers.show', $c->user) }}" style="font-size: 12px; color: #005bd3; text-decoration: none; padding: 0.5rem 0; margin: -0.5rem 0;">Customer</a>
                             @endif
-                            <a href="{{ route('admin.chatbot.conversation', $c) }}" style="font-size: 12px; color: #005bd3; text-decoration: none;">Read chat</a>
+                            <a href="{{ route('admin.chatbot.conversation', $c) }}" style="font-size: 12px; color: #005bd3; text-decoration: none; padding: 0.5rem 0; margin: -0.5rem 0;">Read chat</a>
                         </div>
                     </div>
 

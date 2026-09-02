@@ -3,7 +3,7 @@
 
     <!-- Top bar -->
     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.25rem;">
-        <a href="{{ route('admin.attributes.index') }}" style="padding: 0.25rem; border-radius: 0.25rem; color: #616161; text-decoration: none;">
+        <a href="{{ route('admin.attributes.index') }}" style="padding: 0.5rem; margin: -0.25rem; border-radius: 0.25rem; color: #616161; text-decoration: none;">
             <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
         </a>
         <h1 style="font-size: 1.125rem; font-weight: 600; color: #303030;">Add attribute</h1>
@@ -37,7 +37,7 @@
                     @enderror
                 </div>
 
-                <div style="display: flex; align-items: center; gap: 1.5rem;">
+                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem;">
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <input type="hidden" name="is_filterable" value="0">
                         <input type="checkbox" name="is_filterable" value="1" id="is_filterable"

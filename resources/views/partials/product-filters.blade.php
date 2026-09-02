@@ -37,7 +37,7 @@
             <div x-show="open" x-collapse>
                 <div class="space-y-1.5 max-h-52 overflow-y-auto pt-1 pb-2">
                     @foreach($filterPanel['categories'] as $kkCat)
-                        <label class="flex items-center gap-2.5 cursor-pointer group py-0.5">
+                        <label class="flex items-center gap-2.5 cursor-pointer group py-0.5 min-h-10 lg:min-h-0">
                             <input type="radio" name="category" value="{{ $kkCat->slug }}"
                                    {{ $kkValues['category'] === $kkCat->slug ? 'checked' : '' }}
                                    onchange="this.form.submit()"
@@ -71,7 +71,7 @@
                         {{-- A ticked box stays clickable even when the other filters have
                              emptied it out, or there would be no way to untick it. --}}
                         @php $kkEmpty = ($kkSub->products_total ?? null) === 0 && ! in_array($kkSub->slug, $kkActiveSubs, true); @endphp
-                        <label class="flex items-center gap-2.5 py-0.5 group {{ $kkEmpty ? 'cursor-not-allowed opacity-45' : 'cursor-pointer' }}"
+                        <label class="flex items-center gap-2.5 py-0.5 min-h-10 lg:min-h-0 group {{ $kkEmpty ? 'cursor-not-allowed opacity-45' : 'cursor-pointer' }}"
                                @if($kkEmpty) title="Nothing in this collection yet" @endif>
                             <input type="checkbox" name="subcategory[]" value="{{ $kkSub->slug }}" onchange="this.form.submit()" @disabled($kkEmpty)
                                    {{ in_array($kkSub->slug, $kkActiveSubs, true) ? 'checked' : '' }}
@@ -108,7 +108,7 @@
                                  its label near-black and swallow it. Tailwind v4 wraps peer-* in :where(),
                                  which zeroes its specificity, so peer-checked:text-white ties with the hover
                                  rule and loses on source order. The peer-checked:hover:* pair outranks it. --}}
-                            <span class="inline-block px-2.5 py-1 text-xs rounded-md border transition-colors
+                            <span class="inline-flex items-center min-h-10 lg:min-h-0 px-2.5 py-1 text-xs rounded-md border transition-colors
                                          border-neutral-200 text-neutral-700 hover:border-neutral-500 hover:text-neutral-900
                                          peer-checked:border-neutral-900 peer-checked:bg-neutral-900 peer-checked:text-white
                                          peer-checked:hover:text-white peer-checked:hover:border-neutral-900">
@@ -144,7 +144,7 @@
                             {{-- Selected state is a ring, not a fill: filling the chip
                                  with black fights the swatch, which is the one thing
                                  the customer is actually reading. --}}
-                            <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded-md border transition-all
+                            <span class="inline-flex items-center min-h-10 lg:min-h-0 gap-1.5 px-2 py-1 text-xs rounded-md border transition-all
                                          border-neutral-200 text-neutral-700 bg-white hover:border-neutral-500
                                          peer-checked:border-neutral-900 peer-checked:text-neutral-900 peer-checked:font-semibold
                                          peer-checked:ring-2 peer-checked:ring-neutral-900/15 peer-checked:shadow-sm
@@ -172,7 +172,7 @@
             <div x-show="open" x-collapse>
                 <div class="space-y-1.5 max-h-52 overflow-y-auto pt-1 pb-2">
                     @foreach($filterPanel['brands'] as $kkBrand)
-                        <label class="flex items-center gap-2.5 cursor-pointer group py-0.5">
+                        <label class="flex items-center gap-2.5 cursor-pointer group py-0.5 min-h-10 lg:min-h-0">
                             <input type="checkbox" name="brand[]" value="{{ $kkBrand->slug }}" onchange="this.form.submit()"
                                    {{ in_array($kkBrand->slug, $kkValues['brand'], true) ? 'checked' : '' }}
                                    class="w-3.5 h-3.5 rounded border-neutral-300 text-[#6F9CA2] focus:ring-[#6F9CA2] focus:ring-offset-0">
@@ -225,7 +225,7 @@
             <div x-show="open" x-collapse>
                 <div class="space-y-1.5 pt-1 pb-2">
                     @for($kkStars = 1; $kkStars <= 5; $kkStars++)
-                        <label class="flex items-center gap-2.5 cursor-pointer group py-0.5">
+                        <label class="flex items-center gap-2.5 cursor-pointer group py-0.5 min-h-10 lg:min-h-0">
                             <input type="radio" name="rating" value="{{ $kkStars }}"
                                    {{ $kkValues['rating'] === $kkStars ? 'checked' : '' }}
                                    onchange="this.form.submit()"
@@ -254,14 +254,14 @@
         </button>
         <div x-show="open" x-collapse>
             <div class="space-y-2 pt-1 pb-2">
-                <label class="flex items-center gap-2.5 cursor-pointer group py-0.5">
+                <label class="flex items-center gap-2.5 cursor-pointer group py-0.5 min-h-10 lg:min-h-0">
                     <input type="checkbox" name="in_stock" value="1" onchange="this.form.submit()"
                            @checked($kkValues['in_stock'])
                            class="w-3.5 h-3.5 rounded border-neutral-300 text-[#6F9CA2] focus:ring-[#6F9CA2] focus:ring-offset-0">
                     <span class="text-sm text-neutral-600 group-hover:text-neutral-900 transition-colors">In Stock Only</span>
                 </label>
                 @if($filterPanel['show_on_sale'] ?? true)
-                    <label class="flex items-center gap-2.5 cursor-pointer group py-0.5">
+                    <label class="flex items-center gap-2.5 cursor-pointer group py-0.5 min-h-10 lg:min-h-0">
                         <input type="checkbox" name="on_sale" value="1" onchange="this.form.submit()"
                                @checked($kkValues['on_sale'])
                                class="w-3.5 h-3.5 rounded border-neutral-300 text-[#6F9CA2] focus:ring-[#6F9CA2] focus:ring-offset-0">

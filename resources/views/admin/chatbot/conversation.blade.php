@@ -3,9 +3,9 @@
 
 <div style="max-width: 820px;">
 
-    <a href="{{ route('admin.chatbot.analytics') }}" style="font-size: 13px; color: #005bd3; text-decoration: none;">&larr; Chat Analytics</a>
+    <a href="{{ route('admin.chatbot.analytics') }}" style="display: inline-block; font-size: 13px; color: #005bd3; text-decoration: none; padding: 0.5rem 0; margin: -0.5rem 0;">&larr; Chat Analytics</a>
 
-    <div style="display: flex; align-items: baseline; gap: 0.75rem; margin: 0.5rem 0 1rem;">
+    <div style="display: flex; align-items: baseline; gap: 0.75rem; flex-wrap: wrap; margin: 0.5rem 0 1rem;">
         <h1 style="font-size: 20px; font-weight: 600; color: #303030; margin: 0;">Conversation #{{ $conversation->id }}</h1>
         @if($conversation->last_intent === 'handoff')
             <span class="badge" style="background: #fde8e6; color: #d72c0d;">Needs a human</span>
@@ -42,7 +42,7 @@
             @foreach($conversation->messages as $m)
                 @php $isCustomer = $m->role === 'user'; @endphp
                 <div style="display: flex; {{ $isCustomer ? 'justify-content: flex-end' : 'justify-content: flex-start' }};">
-                    <div style="max-width: 78%; padding: 0.6rem 0.85rem; border-radius: 0.75rem; font-size: 13px; line-height: 1.5;
+                    <div style="max-width: 78%; padding: 0.6rem 0.85rem; border-radius: 0.75rem; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere;
                                 {{ $isCustomer
                                     ? 'background: #8C5C34; color: #fff; border-bottom-right-radius: 0.25rem;'
                                     : 'background: #f4f4f4; color: #303030; border-bottom-left-radius: 0.25rem;' }}">

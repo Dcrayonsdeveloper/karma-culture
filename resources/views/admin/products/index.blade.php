@@ -181,9 +181,12 @@
                 <thead>
                     <tr>
                         <th style="padding-left: 1rem; width: 2.5rem;">
-                            <input type="checkbox" style="border-radius: 0.25rem; border: 1px solid #c9cccf; width: 1rem; height: 1rem;"
-                                   @change="toggleAll($event.target.checked)"
-                                   :checked="allChecked">
+                            {{-- The label gives the 1rem box a finger-sized hit area without growing the cell. --}}
+                            <label style="display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; margin: -0.5rem; vertical-align: middle; cursor: pointer;">
+                                <input type="checkbox" style="border-radius: 0.25rem; border: 1px solid #c9cccf; width: 1rem; height: 1rem;"
+                                       @change="toggleAll($event.target.checked)"
+                                       :checked="allChecked">
+                            </label>
                         </th>
                         <th style="text-align: left;">Product</th>
                         <th style="text-align: left;">Status</th>
@@ -196,9 +199,11 @@
                     @forelse($products as $product)
                         <tr style="cursor: pointer;" onclick="if(!event.target.closest('input,button,a,form')) window.location='{{ route('admin.products.edit', $product) }}'">
                             <td style="padding-left: 1rem; width: 2.5rem;" onclick="event.stopPropagation()">
-                                <input type="checkbox" style="border-radius: 0.25rem; border: 1px solid #c9cccf; width: 1rem; height: 1rem;"
-                                       :checked="selected.includes({{ $product->id }})"
-                                       @change="toggle({{ $product->id }})">
+                                <label style="display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; margin: -0.5rem; vertical-align: middle; cursor: pointer;">
+                                    <input type="checkbox" style="border-radius: 0.25rem; border: 1px solid #c9cccf; width: 1rem; height: 1rem;"
+                                           :checked="selected.includes({{ $product->id }})"
+                                           @change="toggle({{ $product->id }})">
+                                </label>
                             </td>
                             <td>
                                 <div style="display: flex; align-items: center; gap: 0.75rem;">
@@ -258,38 +263,6 @@
                     @endforelse
                 </tbody>
             </table>
-        </div>
-
-        {{-- Mobile Card View --}}
-        <div style="border-top: none; display: none;">
-            @forelse($products as $product)
-                <a href="{{ route('admin.products.edit', $product) }}" style="display: flex; gap: 0.75rem; padding: 0.75rem 1rem; border-bottom: 1px solid #f1f1f1; text-decoration: none; color: inherit;">
-                    @if($product->primary_image_url)
-                        <img src="{{ $product->primary_image_url }}" alt=""
-                             style="width: 2.5rem; height: 2.5rem; border-radius: 0.5rem; object-fit: cover; border: 1px solid #e3e3e3; flex-shrink: 0;">
-                    @else
-                        <div style="width: 2.5rem; height: 2.5rem; border-radius: 0.5rem; background: #f7f7f7; border: 1px solid #e3e3e3; flex-shrink: 0;"></div>
-                    @endif
-                    <div style="flex: 1; min-width: 0;">
-                        <p style="font-size: 13px; font-weight: 500; color: #303030;">{{ $product->name }}</p>
-                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
-                            @if($product->is_active)
-                                <span class="badge badge-success">Active</span>
-                            @else
-                                <span class="badge badge-neutral">Draft</span>
-                            @endif
-                            <span style="font-size: 12px; color: #616161;">{{ $product->stock_quantity }} in stock</span>
-                        </div>
-                    </div>
-                    <div style="flex-shrink: 0; text-align: right;">
-                        <span style="font-size: 13px; font-weight: 500; color: #303030;">@price($product->price)</span>
-                    </div>
-                </a>
-            @empty
-                <div style="padding: 3rem 1rem; text-align: center;">
-                    <p style="font-size: 13px; color: #616161;">No products found</p>
-                </div>
-            @endforelse
         </div>
 
         {{-- Pagination --}}

@@ -13,7 +13,7 @@
 
             <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-3 mb-5">
-                    <a href="{{ route('account.tickets.index') }}" class="text-neutral-600 hover:text-neutral-600">
+                    <a href="{{ route('account.tickets.index') }}" class="inline-flex p-2.5 -m-2.5 shrink-0 text-neutral-600 hover:text-neutral-600">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                         </svg>
@@ -82,7 +82,7 @@
                             @enderror
                         </div>
 
-                        <div class="flex items-center gap-3 pt-1">
+                        <div class="flex flex-wrap items-center gap-3 pt-1">
                             <button type="submit"
                                     class="px-6 py-2.5 bg-gradient-to-r from-[#F8931D] to-[#E07E0A] hover:from-[#E07E0A] hover:to-[#D47200] text-white text-sm font-semibold rounded-xl shadow-lg shadow-[#F8931D]/25 transition-all">
                                 Submit Ticket

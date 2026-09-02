@@ -27,8 +27,8 @@
 
                     <!-- Header -->
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center shrink-0">
                                 <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                                 </svg>
@@ -58,7 +58,7 @@
                                 'cancelled' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>',
                             ];
                         @endphp
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[13px] font-semibold {{ $statusColors[$order->status] ?? 'bg-neutral-100 text-neutral-700 border-neutral-200' }}">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[13px] font-semibold self-start sm:self-auto {{ $statusColors[$order->status] ?? 'bg-neutral-100 text-neutral-700 border-neutral-200' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">{!! $statusIcons[$order->status] ?? $statusIcons['confirmed'] !!}</svg>
                             {{ str_replace('_', ' ', ucfirst($order->status)) }}
                         </span>
@@ -333,12 +333,12 @@
                                     </div>
                                     <div class="space-y-2">
                                         <div class="flex items-center gap-2.5">
-                                            <div class="w-8 h-8 rounded-full bg-[#6F9CA2]/10 flex items-center justify-center">
+                                            <div class="w-8 h-8 rounded-full bg-[#6F9CA2]/10 flex items-center justify-center shrink-0">
                                                 <svg class="w-4 h-4 text-[#6F9CA2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                                                 </svg>
                                             </div>
-                                            <div>
+                                            <div class="min-w-0">
                                                 <p class="text-[13px] font-medium text-neutral-800 wrap-anywhere">{{ $order->deliveryPartner->user->full_name }}</p>
                                                 @if($order->deliveryPartner->vehicle_type)
                                                     <p class="text-[11px] text-neutral-600">{{ ucfirst($order->deliveryPartner->vehicle_type) }}</p>
@@ -346,7 +346,7 @@
                                             </div>
                                         </div>
                                         @if($order->deliveryPartner->phone)
-                                            <a href="tel:{{ $order->deliveryPartner->phone }}" class="flex items-center gap-1.5 text-[12px] text-primary-600 hover:text-primary-700 font-medium">
+                                            <a href="tel:{{ $order->deliveryPartner->phone }}" class="flex items-center gap-1.5 min-h-10 sm:min-h-0 text-[12px] text-primary-600 hover:text-primary-700 font-medium">
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
                                                 </svg>

@@ -27,11 +27,11 @@
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
                     <button @click="acceptEssential()"
-                            class="text-sm text-neutral-600 hover:text-neutral-900 px-4 py-2 border border-neutral-300 rounded-lg transition-colors whitespace-nowrap">
+                            class="text-sm text-neutral-600 hover:text-neutral-900 px-4 py-2.5 sm:py-2 border border-neutral-300 rounded-lg transition-colors whitespace-nowrap">
                         Essential only
                     </button>
                     <button @click="acceptAll()"
-                            class="text-sm font-semibold text-white bg-[#F8931D] hover:bg-[#E07E0A] px-5 py-2 rounded-lg transition-colors whitespace-nowrap">
+                            class="text-sm font-semibold text-white bg-[#F8931D] hover:bg-[#E07E0A] px-5 py-2.5 sm:py-2 rounded-lg transition-colors whitespace-nowrap">
                         Accept all
                     </button>
                 </div>

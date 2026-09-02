@@ -22,7 +22,7 @@
         </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;" class="lg:grid-cols-3-2">
+    <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
         <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; align-items: start;">
 
             <!-- Left: Details -->

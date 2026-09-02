@@ -655,7 +655,10 @@
             .kk-newsletter h2 { font-family: var(--kk-display); font-size: 32px; color: var(--kk-text); margin: 8px 0 8px; }
             .kk-newsletter p { color: var(--kk-text-muted); font-size: 13px; margin-bottom: 28px; }
             .kk-newsletter-form { display: flex; max-width: 480px; margin: 0 auto; background: #fff; border: 1px solid var(--kk-cream-dark); border-radius: 999px; padding: 4px; }
-            .kk-newsletter-form input { flex: 1; background: transparent; border: none; padding: 12px 20px; font-size: 14px; color: var(--kk-text); outline: none; }
+            /* min-width: 0 lets the input give way to the button: a text input's
+               automatic minimum is ~150px, which on a 360px phone pushed the
+               Subscribe button out through the clipped right edge. */
+            .kk-newsletter-form input { flex: 1; min-width: 0; background: transparent; border: none; padding: 12px 20px; font-size: 14px; color: var(--kk-text); outline: none; }
             .kk-newsletter-form input::placeholder { color: var(--kk-text-muted); }
             .kk-newsletter-form button { background: var(--kk-brown-dark); color: var(--kk-cream); padding: 10px 24px; border-radius: 999px; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 700; border: none; cursor: pointer; }
             .kk-newsletter-form button:hover { background: var(--kk-brown); }
@@ -669,6 +672,13 @@
                 .kk-section-title--lg { font-size: 28px; }
                 .kk-about, .kk-qualities { padding: 24px 0; }
                 .kk-qualities h2, .kk-newsletter h2 { font-size: 26px; }
+                .kk-newsletter-form input { padding: 12px 14px; }
+                .kk-newsletter-form button { padding: 10px 16px; letter-spacing: 0.14em; white-space: nowrap; }
+                /* Touch: the pill buttons and the View All links sit under 40px on
+                   phones. The link grows its hit area with padding the negative
+                   margin cancels out, so nothing moves. */
+                .kk-btn-brown, .kk-btn-cream { min-height: 40px; }
+                .kk-view-all { padding: 10px 0; margin: -10px 0; }
             }
         </style>
     </x-slot>
@@ -680,8 +690,8 @@
              @keydown.escape.window="dismiss()"
              class="fixed inset-0 z-60 flex items-center justify-center p-4">
             <div x-show="open" @click="dismiss()" class="absolute inset-0 bg-kk-brown-darker/70 backdrop-blur-sm"></div>
-            <div x-show="open" class="relative w-full max-w-md overflow-hidden rounded-2xl shadow-2xl" @click.stop>
-                <button @click="dismiss()" class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-kk-cream/80 hover:text-kk-cream rounded-full hover:bg-kk-cream/10 z-10">
+            <div x-show="open" class="relative w-full max-w-md max-h-[calc(100dvh_-_2rem)] overflow-x-hidden overflow-y-auto rounded-2xl shadow-2xl" @click.stop>
+                <button @click="dismiss()" class="absolute top-3 right-3 w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center text-kk-cream/80 hover:text-kk-cream rounded-full hover:bg-kk-cream/10 z-10">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
                 <div class="relative bg-kk-brown-dark px-6 pt-8 pb-6 text-center text-kk-cream">
@@ -1091,6 +1101,14 @@
                 .kk-hero-nav { width: 30px; height: 30px; }
                 .kk-hero-nav--prev { left: 8px; }
                 .kk-hero-nav--next { right: 8px; }
+            }
+            /* Touch: the arrows are 30px on phones and the dots 8px, so each gets
+               an invisible finger-sized hit area around it. The dots' boxes stop
+               at the 8px gap between them, so neighbours never overlap. */
+            @media (pointer: coarse) {
+                .kk-hero-nav::before { content: ''; position: absolute; inset: -6px; }
+                .kk-hero-dot { position: relative; }
+                .kk-hero-dot::before { content: ''; position: absolute; inset: -12px -4px; }
             }
             @media (prefers-reduced-motion: reduce) {
                 .kk-fade-enter { transition: none; }

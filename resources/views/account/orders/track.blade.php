@@ -41,7 +41,7 @@
                     @if($latestShipment && $latestShipment->tracking_number)
                         <div class="sm:text-right">
                             <p class="text-xs text-neutral-600">Tracking ID</p>
-                            <p class="font-mono font-bold text-primary-600 text-sm">{{ $latestShipment->tracking_number }}</p>
+                            <p class="font-mono font-bold text-primary-600 text-sm wrap-anywhere">{{ $latestShipment->tracking_number }}</p>
                             @if($latestShipment->carrier)
                                 <p class="text-xs text-neutral-600 mt-0.5">via {{ $latestShipment->carrier }}</p>
                             @endif
@@ -227,13 +227,13 @@
                             <h2 class="text-[15px] font-semibold text-neutral-900">Your Delivery Partner</h2>
                         </div>
                         <div class="p-5">
-                            <div class="flex items-center gap-4">
+                            <div class="flex flex-wrap items-center gap-4">
                                 <div class="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center shrink-0">
                                     <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
                                     </svg>
                                 </div>
-                                <div class="flex-1">
+                                <div class="flex-1 min-w-0">
                                     <p class="text-sm font-semibold text-neutral-900 wrap-anywhere">{{ $order->deliveryPartner->user->full_name }}</p>
                                     @if($order->deliveryPartner->vehicle_type)
                                         <p class="text-xs text-neutral-600 mt-0.5">{{ ucfirst($order->deliveryPartner->vehicle_type) }}{{ $order->deliveryPartner->vehicle_number ? ' - ' . $order->deliveryPartner->vehicle_number : '' }}</p>
@@ -290,7 +290,7 @@
 
                 {{-- Back to Order --}}
                 <div class="mt-4">
-                    <a href="{{ route('account.orders.show', $order) }}" class="text-[13px] text-primary-600 hover:text-primary-700 font-medium inline-flex items-center gap-1.5">
+                    <a href="{{ route('account.orders.show', $order) }}" class="text-[13px] text-primary-600 hover:text-primary-700 font-medium inline-flex items-center gap-1.5 min-h-10 sm:min-h-0">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                         </svg>

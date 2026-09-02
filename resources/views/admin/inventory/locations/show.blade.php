@@ -74,7 +74,7 @@
         <div class="card" x-show="open" x-cloak style="padding: 1.25rem; margin-bottom: 1rem;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
                 <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Add a product to {{ $location->name }}</h2>
-                <button type="button" x-on:click="open = false" style="background: none; border: none; cursor: pointer; color: #616161; padding: 0.25rem;">
+                <button type="button" x-on:click="open = false" class="btn-icon" style="background: none; border: none; cursor: pointer; color: #616161; padding: 0.25rem;">
                     <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
@@ -159,7 +159,7 @@
     <div class="card">
         <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
             <form action="{{ route('admin.inventory.locations.show', $location) }}" method="GET" style="display: flex; align-items: center; gap: 0.5rem; flex: 1;">
-                <div style="position: relative; flex: 1; max-width: 320px;">
+                <div style="position: relative; flex: 1; max-width: 24rem;">
                     <svg style="position: absolute; left: 0.5rem; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: #616161;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
@@ -223,7 +223,7 @@
                                 <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem;">
                                     <button type="button"
                                             onclick="kkAdjustLine({{ $stock->id }}, @js($label), @js($sizeLabel ?? 'All sizes'), {{ $onHand }})"
-                                            style="display: inline-flex; align-items: center; padding: 0.25rem 0.625rem; font-size: 12px; font-weight: 500; color: #303030; background: #fff; border: 1px solid #c9cccf; border-radius: 0.375rem; cursor: pointer; gap: 0.25rem;">
+                                            class="btn btn-secondary" style="display: inline-flex; align-items: center; padding: 0.25rem 0.625rem; font-size: 12px; font-weight: 500; color: #303030; background: #fff; border: 1px solid #c9cccf; border-radius: 0.375rem; cursor: pointer; gap: 0.25rem;">
                                         <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                         Adjust
                                     </button>
@@ -231,7 +231,7 @@
                                           onsubmit="return confirm('Remove {{ addslashes($label) }} from {{ addslashes($location->name) }}? Its {{ $onHand }} unit(s) come out of sellable stock too.')">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" style="color: #d72c0d; font-size: 13px; font-weight: 500; background: none; border: none; cursor: pointer;">Remove</button>
+                                        <button type="submit" class="btn" style="padding: 0; color: #d72c0d; font-size: 13px; font-weight: 500; background: none; border: none; cursor: pointer;">Remove</button>
                                     </form>
                                 </div>
                             </td>
@@ -245,7 +245,7 @@
                                 @else
                                     Nothing is stocked at this location yet.
                                     <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-add-stock'))"
-                                            style="color: #005bd3; font-weight: 500; background: none; border: none; cursor: pointer; font-size: 13px;">Add a product</button>
+                                            class="btn" style="padding: 0; color: #005bd3; font-weight: 500; background: none; border: none; cursor: pointer; font-size: 13px;">Add a product</button>
                                 @endif
                             </td>
                         </tr>
@@ -277,7 +277,7 @@
                     <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #303030;">Adjust stock at {{ $location->name }}</h3>
                     <p style="font-size: 12px; color: #616161; margin: 0.25rem 0 0 0;"><span x-text="name"></span> &middot; <span x-text="size"></span></p>
                 </div>
-                <button type="button" x-on:click="open = false" style="background: none; border: none; cursor: pointer; padding: 0.25rem; color: #616161;">
+                <button type="button" x-on:click="open = false" class="btn-icon" style="background: none; border: none; cursor: pointer; padding: 0.25rem; color: #616161;">
                     <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>

@@ -50,7 +50,7 @@
         </div>
         <div x-show="open" x-cloak x-transition style="padding: 0 1rem 1rem 1rem; border-top: 1px solid #e3e3e3;">
             <form action="{{ route('admin.reports.inventory') }}" method="GET" style="padding-top: 1rem;">
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
                     <div>
                         <label class="form-label">Stock Status</label>
                         <select name="stock_status" class="form-input" style="width: 100%;">
@@ -78,13 +78,13 @@
                     <div>
                         <label class="form-label">&nbsp;</label>
                         <div style="display: flex; gap: 0.5rem;">
-                            <button type="submit" class="btn btn-primary" style="flex-shrink: 0;" title="Apply filters">
+                            <button type="submit" class="btn btn-primary h-10 min-w-10 sm:h-auto sm:min-w-0" style="flex-shrink: 0;" title="Apply filters">
                                 <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                                 </svg>
                             </button>
                             @if(request()->hasAny(['search', 'stock_status', 'category']))
-                                <a href="{{ route('admin.reports.inventory') }}" class="btn btn-secondary" style="flex-shrink: 0;" title="Reset filters">
+                                <a href="{{ route('admin.reports.inventory') }}" class="btn btn-secondary h-10 min-w-10 sm:h-auto sm:min-w-0" style="flex-shrink: 0;" title="Reset filters">
                                     <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                     </svg>
@@ -117,7 +117,7 @@
                             <a href="{{ route('admin.reports.inventory', array_merge(request()->query(), [
                                 'sort' => 'stock_quantity',
                                 'direction' => request('sort') === 'stock_quantity' && request('direction') === 'asc' ? 'desc' : 'asc'
-                            ])) }}" style="display: inline-flex; align-items: center; gap: 0.25rem; color: #616161; text-decoration: none;">
+                            ])) }}" class="min-h-10 sm:min-h-0" style="display: flex; align-items: center; justify-content: center; gap: 0.25rem; margin: -0.5rem -1rem; padding: 0.5rem 1rem; color: #616161; text-decoration: none;">
                                 Stock Qty
                                 @if(request('sort') === 'stock_quantity')
                                     <svg style="width: 0.75rem; height: 0.75rem; {{ request('direction') === 'desc' ? 'transform: rotate(180deg);' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">

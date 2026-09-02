@@ -37,12 +37,12 @@
                             <td style="padding: 0.625rem 1rem; color: #616161; text-align: right;">{{ $role->permissions_count }}</td>
                             <td style="padding: 0.625rem 1rem; text-align: right;">
                                 <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem;">
-                                    <a href="{{ route('admin.settings.roles.edit', $role) }}" style="font-size: 13px; font-weight: 500; color: #005bd3; text-decoration: none;">Edit</a>
+                                    <a href="{{ route('admin.settings.roles.edit', $role) }}" class="pointer-coarse:inline-flex pointer-coarse:items-center pointer-coarse:min-h-9 pointer-coarse:-my-2 pointer-coarse:px-2" style="font-size: 13px; font-weight: 500; color: #005bd3; text-decoration: none;">Edit</a>
                                     @if($role->name !== 'super-admin')
                                         <form action="{{ route('admin.settings.roles.destroy', $role) }}" method="POST" onsubmit="return confirm('Delete this role?')">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" style="font-size: 13px; font-weight: 500; color: #d72c0d; cursor: pointer; background: none; border: none;">Delete</button>
+                                            <button type="submit" class="pointer-coarse:inline-flex pointer-coarse:items-center pointer-coarse:min-h-9 pointer-coarse:-my-2 pointer-coarse:px-2" style="font-size: 13px; font-weight: 500; color: #d72c0d; cursor: pointer; background: none; border: none;">Delete</button>
                                         </form>
                                     @endif
                                 </div>

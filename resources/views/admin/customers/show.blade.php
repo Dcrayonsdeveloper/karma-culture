@@ -51,16 +51,16 @@
                         </div>
 
                         {{-- Stats row --}}
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; background: #f6f6f7; border-radius: 0.5rem; overflow: hidden;">
-                            <div style="text-align: center; padding: 0.875rem 0.5rem; border-right: 1px solid #e3e3e3;">
+                        <div class="kk-stats-3" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #e3e3e3; border-radius: 0.5rem; overflow: hidden;">
+                            <div style="text-align: center; padding: 0.875rem 0.5rem; background: #f6f6f7;">
                                 <p style="font-size: 20px; font-weight: 600; color: #303030; margin: 0; line-height: 1.3;">{{ $stats['total_orders'] }}</p>
                                 <p style="font-size: 12px; color: #616161; margin: 0.125rem 0 0 0;">Total Orders</p>
                             </div>
-                            <div style="text-align: center; padding: 0.875rem 0.5rem; border-right: 1px solid #e3e3e3;">
+                            <div style="text-align: center; padding: 0.875rem 0.5rem; background: #f6f6f7;">
                                 <p style="font-size: 20px; font-weight: 600; color: #303030; margin: 0; line-height: 1.3;">@price($stats['total_spent'])</p>
                                 <p style="font-size: 12px; color: #616161; margin: 0.125rem 0 0 0;">Total Spent</p>
                             </div>
-                            <div style="text-align: center; padding: 0.875rem 0.5rem;">
+                            <div style="text-align: center; padding: 0.875rem 0.5rem; background: #f6f6f7;">
                                 <p style="font-size: 20px; font-weight: 600; color: #303030; margin: 0; line-height: 1.3;">@price($stats['avg_order_value'])</p>
                                 <p style="font-size: 12px; color: #616161; margin: 0.125rem 0 0 0;">Avg. Order Value</p>
                             </div>
@@ -112,11 +112,13 @@
                                 @empty
                                     <tr>
                                         <td colspan="4" style="padding: 2rem 1rem; text-align: center; color: #616161; font-size: 13px;">
-                                            <svg width="24" height="24" viewBox="0 0 20 20" fill="none" style="margin: 0 auto 0.5rem auto; display: block;">
-                                                <path d="M4 4h12l1 9H3L4 4z" stroke="#c9cccf" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                                <path d="M3 13h14v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2z" stroke="#c9cccf" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                            </svg>
-                                            No orders yet
+                                            <div style="position: sticky; left: 0; max-width: calc(100vw - 4rem);">
+                                                <svg width="24" height="24" viewBox="0 0 20 20" fill="none" style="margin: 0 auto 0.5rem auto; display: block;">
+                                                    <path d="M4 4h12l1 9H3L4 4z" stroke="#c9cccf" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                                    <path d="M3 13h14v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2z" stroke="#c9cccf" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                                </svg>
+                                                No orders yet
+                                            </div>
                                         </td>
                                     </tr>
                                 @endforelse
@@ -226,4 +228,13 @@
 
             </div>
         </div>
+    @push('styles')
+    <style>
+        /* Phones: the shared CSS turns the 3-tile stats row into 2 columns; the
+           odd last tile spans the row so no empty grey cell is left behind. */
+        @media (max-width: 767.98px) {
+            .kk-stats-3 > :last-child { grid-column: 1 / -1; }
+        }
+    </style>
+    @endpush
 </x-layouts.admin>

@@ -211,20 +211,20 @@
                         <h2 class="text-[15px] font-semibold text-neutral-900">Your Delivery Partner</h2>
                     </div>
                     <div class="p-5">
-                        <div class="flex items-center gap-4">
+                        <div class="flex flex-wrap items-center gap-4">
                             <div class="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center shrink-0">
                                 <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
                                 </svg>
                             </div>
-                            <div class="flex-1">
+                            <div class="flex-1 basis-40 min-w-0">
                                 <p class="text-sm font-semibold text-neutral-900">{{ $order->deliveryPartner->user->full_name }}</p>
                                 @if($order->deliveryPartner->vehicle_type)
                                     <p class="text-xs text-neutral-600 mt-0.5">{{ ucfirst($order->deliveryPartner->vehicle_type) }}{{ $order->deliveryPartner->vehicle_number ? ' - ' . $order->deliveryPartner->vehicle_number : '' }}</p>
                                 @endif
                             </div>
                             @if($order->deliveryPartner->phone)
-                                <a href="tel:{{ $order->deliveryPartner->phone }}" class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors shrink-0">
+                                <a href="tel:{{ $order->deliveryPartner->phone }}" class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors shrink-0 min-h-10 sm:min-h-0">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
                                     {{ $order->deliveryPartner->phone }}
                                 </a>

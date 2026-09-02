@@ -52,6 +52,7 @@
                      _method=PUT, and PHP keeps the last value for a repeated key
                      — so clicking Save destroyed the record. --}}
                 <button type="submit" form="kk-delete-shipping-zone"
+                        class="pointer-coarse:inline-flex pointer-coarse:items-center pointer-coarse:min-h-9 pointer-coarse:px-2 pointer-coarse:-ml-2"
                         style="font-size: 13px; font-weight: 500; color: #d72c0d; background: none; border: none; cursor: pointer;">Delete shipping zone</button>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <a href="{{ route('admin.settings.shipping-zones.index') }}" class="btn btn-secondary" style="font-size: 13px;">Discard</a>
@@ -101,10 +102,10 @@
                                 </td>
                                 <td style="text-align: right;">
                                     <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem;">
-                                        <a href="{{ route('admin.settings.rates.edit', $rate) }}" style="font-size: 13px; font-weight: 500;">Edit</a>
+                                        <a href="{{ route('admin.settings.rates.edit', $rate) }}" class="pointer-coarse:inline-flex pointer-coarse:items-center pointer-coarse:min-h-9 pointer-coarse:-my-2 pointer-coarse:px-2" style="font-size: 13px; font-weight: 500;">Edit</a>
                                         <form action="{{ route('admin.settings.rates.destroy', $rate) }}" method="POST" onsubmit="return confirm('Delete this rate?')">
                                             @csrf @method('DELETE')
-                                            <button type="submit" style="font-size: 13px; font-weight: 500; color: #d72c0d; background: none; border: none; cursor: pointer;">Delete</button>
+                                            <button type="submit" class="pointer-coarse:inline-flex pointer-coarse:items-center pointer-coarse:min-h-9 pointer-coarse:-my-2 pointer-coarse:px-2" style="font-size: 13px; font-weight: 500; color: #d72c0d; background: none; border: none; cursor: pointer;">Delete</button>
                                         </form>
                                     </div>
                                 </td>

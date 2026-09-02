@@ -50,6 +50,7 @@
                      _method=PUT, and PHP keeps the last value for a repeated key
                      — so clicking Save destroyed the record. --}}
                 <button type="submit" form="kk-delete-role"
+                        class="pointer-coarse:inline-flex pointer-coarse:items-center pointer-coarse:min-h-9 pointer-coarse:px-2 pointer-coarse:-ml-2"
                         style="font-size: 13px; font-weight: 500; color: #d72c0d; background: none; border: none; cursor: pointer;">Delete role</button>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <a href="{{ route('admin.settings.roles.index') }}" class="btn btn-secondary" style="font-size: 13px;">Discard</a>

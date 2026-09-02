@@ -21,14 +21,14 @@
         x-transition:enter-start="opacity-0 translate-y-4 sm:scale-95"
         x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
         x-trap.noscroll="open"
-        class="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden grid grid-cols-1 md:grid-cols-2 max-h-[88vh]"
+        class="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:grid md:grid-cols-2 max-h-[88vh]"
     >
-        <button type="button" @click="close()" aria-label="Close" class="absolute top-3 right-3 z-20 w-9 h-9 rounded-full bg-white/85 hover:bg-white text-kk-brown flex items-center justify-center shadow transition">
+        <button type="button" @click="close()" aria-label="Close" class="absolute top-3 right-3 z-20 w-10 h-10 sm:w-9 sm:h-9 rounded-full bg-white/85 hover:bg-white text-kk-brown flex items-center justify-center shadow transition">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
 
         {{-- Image / brand side (top band on mobile, left column on desktop) --}}
-        <div class="relative min-h-[110px] md:min-h-[330px] overflow-hidden" style="background: linear-gradient(150deg, #4a2d1a 0%, #2d1810 55%, #1f1109 100%);">
+        <div class="relative shrink-0 min-h-[110px] md:min-h-[330px] overflow-hidden" style="background: linear-gradient(150deg, #4a2d1a 0%, #2d1810 55%, #1f1109 100%);">
             @if($offer['image'])
                 {{-- The poster is an admin upload of any shape, so it is contained over a
                      blurred copy of itself rather than cropped to the panel. Position and
@@ -49,8 +49,11 @@
         </div>
 
         {{-- Form side --}}
-        <div class="p-5 sm:p-6 flex flex-col justify-center overflow-y-auto">
-            <div x-show="done" x-cloak class="text-center py-6">
+        {{-- my-auto on the visible child, not justify-center here: a centred flex
+             child that overflows is clipped at the top with no way to scroll to it,
+             auto margins collapse to zero and let it scroll from the title. --}}
+        <div class="p-5 sm:p-6 flex flex-col overflow-y-auto">
+            <div x-show="done" x-cloak class="my-auto text-center py-6">
                 <div class="w-12 h-12 mx-auto rounded-full bg-green-100 text-green-700 flex items-center justify-center mb-3">
                     <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                 </div>
@@ -58,7 +61,7 @@
                 <p class="text-sm text-kk-text-muted mt-1">Check your inbox &amp; WhatsApp for exciting offers.</p>
             </div>
 
-            <div x-show="!done">
+            <div x-show="!done" class="my-auto">
                 <h2 id="offer-popup-title" class="text-xl sm:text-[22px] leading-tight text-kk-brown font-semibold" style="font-family:'Playfair Display',Georgia,serif;">{{ $offer['title'] }}</h2>
                 <p class="text-sm text-kk-text-muted mt-2 mb-5 leading-relaxed">{{ $offer['subtitle'] }}</p>
 

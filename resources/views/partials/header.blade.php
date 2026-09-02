@@ -70,7 +70,7 @@
                  floors the nav links slide under the search bar at lg-xl widths. --}}
             <div class="flex items-center gap-3 lg:gap-0 flex-1 lg:min-w-fit">
                 <!-- Mobile menu button -->
-                <button @click="$dispatch('toggle-mobile-nav')" class="lg:hidden p-1.5 -ml-1.5 text-kk-brown hover:text-kk-tan-dark" aria-label="Open menu">
+                <button @click="$dispatch('toggle-mobile-nav')" class="lg:hidden p-2.5 -ml-2.5 text-kk-brown hover:text-kk-tan-dark" aria-label="Open menu">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"/>
                     </svg>
@@ -84,9 +84,9 @@
                     @if($siteLogo)
                         {{-- A custom logo whose file has gone missing used to leave a hole
                              where the brand mark should be; fall back to the bundled one. --}}
-                        <img id="site-logo" src="{{ asset_v('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-16 lg:h-20 object-contain pointer-events-auto" data-fallback="{{ asset_v('images/karmaa-kulture-logo.png') }}">
+                        <img id="site-logo" src="{{ asset_v('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-16 lg:h-20 max-w-[40vw] sm:max-w-none object-contain pointer-events-auto" data-fallback="{{ asset_v('images/karmaa-kulture-logo.png') }}">
                     @else
-                        <img id="site-logo" src="{{ asset_v('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-16 lg:h-20 object-contain pointer-events-auto">
+                        <img id="site-logo" src="{{ asset_v('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-16 lg:h-20 max-w-[40vw] sm:max-w-none object-contain pointer-events-auto">
                     @endif
                 </a>
 
@@ -219,7 +219,7 @@
                      shopper on an empty screen asking for a keyword. --}}
                 <button type="button"
                         @click="$dispatch('open-mobile-search')"
-                        class="sm:hidden p-2 text-kk-brown hover:text-kk-tan-dark transition-colors"
+                        class="sm:hidden p-2.5 text-kk-brown hover:text-kk-tan-dark transition-colors"
                         aria-label="Search">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -403,7 +403,7 @@
                 </div>
 
                 <!-- Wishlist -->
-                <a href="{{ route('wishlist') }}" class="relative p-2 text-kk-brown hover:text-kk-tan-dark transition-colors hidden sm:flex" aria-label="Wishlist">
+                <a href="{{ route('wishlist') }}" class="relative p-2.5 lg:p-2 text-kk-brown hover:text-kk-tan-dark transition-colors hidden sm:flex" aria-label="Wishlist">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                     </svg>
@@ -858,6 +858,8 @@
     }
     .kk-loginmodal__close:hover { background: #1f1109; transform: rotate(90deg); }
     .kk-loginmodal__close svg { width: 18px; height: 18px; display: block; }
+    /* Invisible halo: brings the 28-32px disc up to a 40px+ touch target. */
+    .kk-loginmodal__close::before { content: ''; position: absolute; inset: -6px; }
     .kk-loginmodal__left {
         background: #2d1810; color: #efe2cb;
         padding: 48px 32px;

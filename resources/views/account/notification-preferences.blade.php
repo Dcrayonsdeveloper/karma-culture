@@ -31,24 +31,24 @@
                             <div class="divide-y divide-neutral-100">
                                 <!-- Table Header -->
                                 <div class="px-5 py-2.5 flex items-center bg-neutral-50">
-                                    <div class="flex-1">
+                                    <div class="flex-1 min-w-0">
                                         <span class="text-xs font-medium text-neutral-600 uppercase tracking-wide">Notification</span>
                                     </div>
-                                    <div class="w-20 text-center">
+                                    <div class="w-14 sm:w-20 text-center">
                                         <span class="text-xs font-medium text-neutral-600 uppercase tracking-wide">Email</span>
                                     </div>
-                                    <div class="w-20 text-center">
+                                    <div class="w-14 sm:w-20 text-center">
                                         <span class="text-xs font-medium text-neutral-600 uppercase tracking-wide">In-app</span>
                                     </div>
                                 </div>
 
                                 <!-- Order Placed -->
                                 <div class="px-5 py-3.5 flex items-center">
-                                    <div class="flex-1">
+                                    <div class="flex-1 min-w-0">
                                         <p class="text-sm font-medium text-neutral-900">Order Placed</p>
                                         <p class="text-xs text-neutral-600">Receive a confirmation when your order is placed</p>
                                     </div>
-                                    <div class="w-20 flex justify-center">
+                                    <div class="w-14 sm:w-20 flex justify-center">
                                         <label class="relative inline-flex items-center cursor-pointer">
                                             <input type="hidden" name="order_placed_email" value="0">
                                             <input type="checkbox" name="order_placed_email" value="1" class="sr-only peer"
@@ -56,7 +56,7 @@
                                             <div class="w-9 h-5 bg-neutral-200 peer-focus:ring-2 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-500"></div>
                                         </label>
                                     </div>
-                                    <div class="w-20 flex justify-center">
+                                    <div class="w-14 sm:w-20 flex justify-center">
                                         <label class="relative inline-flex items-center cursor-pointer">
                                             <input type="hidden" name="order_placed_inapp" value="0">
                                             <input type="checkbox" name="order_placed_inapp" value="1" class="sr-only peer"
@@ -68,11 +68,11 @@
 
                                 <!-- Order Shipped -->
                                 <div class="px-5 py-3.5 flex items-center">
-                                    <div class="flex-1">
+                                    <div class="flex-1 min-w-0">
                                         <p class="text-sm font-medium text-neutral-900">Order Shipped</p>
                                         <p class="text-xs text-neutral-600">Get notified when your order is shipped</p>
                                     </div>
-                                    <div class="w-20 flex justify-center">
+                                    <div class="w-14 sm:w-20 flex justify-center">
                                         <label class="relative inline-flex items-center cursor-pointer">
                                             <input type="hidden" name="order_shipped_email" value="0">
                                             <input type="checkbox" name="order_shipped_email" value="1" class="sr-only peer"
@@ -80,7 +80,7 @@
                                             <div class="w-9 h-5 bg-neutral-200 peer-focus:ring-2 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-500"></div>
                                         </label>
                                     </div>
-                                    <div class="w-20 flex justify-center">
+                                    <div class="w-14 sm:w-20 flex justify-center">
                                         <label class="relative inline-flex items-center cursor-pointer">
                                             <input type="hidden" name="order_shipped_inapp" value="0">
                                             <input type="checkbox" name="order_shipped_inapp" value="1" class="sr-only peer"
@@ -92,11 +92,11 @@
 
                                 <!-- Order Delivered -->
                                 <div class="px-5 py-3.5 flex items-center">
-                                    <div class="flex-1">
+                                    <div class="flex-1 min-w-0">
                                         <p class="text-sm font-medium text-neutral-900">Order Delivered</p>
                                         <p class="text-xs text-neutral-600">Get notified when your order is delivered</p>
                                     </div>
-                                    <div class="w-20 flex justify-center">
+                                    <div class="w-14 sm:w-20 flex justify-center">
                                         <label class="relative inline-flex items-center cursor-pointer">
                                             <input type="hidden" name="order_delivered_email" value="0">
                                             <input type="checkbox" name="order_delivered_email" value="1" class="sr-only peer"
@@ -104,7 +104,7 @@
                                             <div class="w-9 h-5 bg-neutral-200 peer-focus:ring-2 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-500"></div>
                                         </label>
                                     </div>
-                                    <div class="w-20 flex justify-center">
+                                    <div class="w-14 sm:w-20 flex justify-center">
                                         <label class="relative inline-flex items-center cursor-pointer">
                                             <input type="hidden" name="order_delivered_inapp" value="0">
                                             <input type="checkbox" name="order_delivered_inapp" value="1" class="sr-only peer"
@@ -116,11 +116,11 @@
 
                                 <!-- Order Cancelled -->
                                 <div class="px-5 py-3.5 flex items-center">
-                                    <div class="flex-1">
+                                    <div class="flex-1 min-w-0">
                                         <p class="text-sm font-medium text-neutral-900">Order Cancelled</p>
                                         <p class="text-xs text-neutral-600">Get notified if your order is cancelled</p>
                                     </div>
-                                    <div class="w-20 flex justify-center">
+                                    <div class="w-14 sm:w-20 flex justify-center">
                                         <label class="relative inline-flex items-center cursor-pointer">
                                             <input type="hidden" name="order_cancelled_email" value="0">
                                             <input type="checkbox" name="order_cancelled_email" value="1" class="sr-only peer"
@@ -128,7 +128,7 @@
                                             <div class="w-9 h-5 bg-neutral-200 peer-focus:ring-2 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-500"></div>
                                         </label>
                                     </div>
-                                    <div class="w-20 flex justify-center">
+                                    <div class="w-14 sm:w-20 flex justify-center">
                                         <label class="relative inline-flex items-center cursor-pointer">
                                             <input type="hidden" name="order_cancelled_inapp" value="0">
                                             <input type="checkbox" name="order_cancelled_inapp" value="1" class="sr-only peer"
@@ -151,24 +151,24 @@
                             <div class="divide-y divide-neutral-100">
                                 <!-- Table Header -->
                                 <div class="px-5 py-2.5 flex items-center bg-neutral-50">
-                                    <div class="flex-1">
+                                    <div class="flex-1 min-w-0">
                                         <span class="text-xs font-medium text-neutral-600 uppercase tracking-wide">Notification</span>
                                     </div>
-                                    <div class="w-20 text-center">
+                                    <div class="w-14 sm:w-20 text-center">
                                         <span class="text-xs font-medium text-neutral-600 uppercase tracking-wide">Email</span>
                                     </div>
-                                    <div class="w-20 text-center">
+                                    <div class="w-14 sm:w-20 text-center">
                                         <span class="text-xs font-medium text-neutral-600 uppercase tracking-wide">In-app</span>
                                     </div>
                                 </div>
 
                                 <!-- Return Approved -->
                                 <div class="px-5 py-3.5 flex items-center">
-                                    <div class="flex-1">
+                                    <div class="flex-1 min-w-0">
                                         <p class="text-sm font-medium text-neutral-900">Return Approved</p>
                                         <p class="text-xs text-neutral-600">Get notified when your return request is approved</p>
                                     </div>
-                                    <div class="w-20 flex justify-center">
+                                    <div class="w-14 sm:w-20 flex justify-center">
                                         <label class="relative inline-flex items-center cursor-pointer">
                                             <input type="hidden" name="return_approved_email" value="0">
                                             <input type="checkbox" name="return_approved_email" value="1" class="sr-only peer"
@@ -176,7 +176,7 @@
                                             <div class="w-9 h-5 bg-neutral-200 peer-focus:ring-2 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-500"></div>
                                         </label>
                                     </div>
-                                    <div class="w-20 flex justify-center">
+                                    <div class="w-14 sm:w-20 flex justify-center">
                                         <label class="relative inline-flex items-center cursor-pointer">
                                             <input type="hidden" name="return_approved_inapp" value="0">
                                             <input type="checkbox" name="return_approved_inapp" value="1" class="sr-only peer"
@@ -188,11 +188,11 @@
 
                                 <!-- Refund Processed -->
                                 <div class="px-5 py-3.5 flex items-center">
-                                    <div class="flex-1">
+                                    <div class="flex-1 min-w-0">
                                         <p class="text-sm font-medium text-neutral-900">Refund Processed</p>
                                         <p class="text-xs text-neutral-600">Get notified when your refund has been processed</p>
                                     </div>
-                                    <div class="w-20 flex justify-center">
+                                    <div class="w-14 sm:w-20 flex justify-center">
                                         <label class="relative inline-flex items-center cursor-pointer">
                                             <input type="hidden" name="refund_processed_email" value="0">
                                             <input type="checkbox" name="refund_processed_email" value="1" class="sr-only peer"
@@ -200,7 +200,7 @@
                                             <div class="w-9 h-5 bg-neutral-200 peer-focus:ring-2 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-500"></div>
                                         </label>
                                     </div>
-                                    <div class="w-20 flex justify-center">
+                                    <div class="w-14 sm:w-20 flex justify-center">
                                         <label class="relative inline-flex items-center cursor-pointer">
                                             <input type="hidden" name="refund_processed_inapp" value="0">
                                             <input type="checkbox" name="refund_processed_inapp" value="1" class="sr-only peer"
@@ -223,24 +223,24 @@
                             <div class="divide-y divide-neutral-100">
                                 <!-- Table Header -->
                                 <div class="px-5 py-2.5 flex items-center bg-neutral-50">
-                                    <div class="flex-1">
+                                    <div class="flex-1 min-w-0">
                                         <span class="text-xs font-medium text-neutral-600 uppercase tracking-wide">Notification</span>
                                     </div>
-                                    <div class="w-20 text-center">
+                                    <div class="w-14 sm:w-20 text-center">
                                         <span class="text-xs font-medium text-neutral-600 uppercase tracking-wide">Email</span>
                                     </div>
-                                    <div class="w-20 text-center">
+                                    <div class="w-14 sm:w-20 text-center">
                                         <span class="text-xs font-medium text-neutral-600 uppercase tracking-wide">In-app</span>
                                     </div>
                                 </div>
 
                                 <!-- Price Drop -->
                                 <div class="px-5 py-3.5 flex items-center">
-                                    <div class="flex-1">
+                                    <div class="flex-1 min-w-0">
                                         <p class="text-sm font-medium text-neutral-900">Price Drop</p>
                                         <p class="text-xs text-neutral-600">Get notified when a wishlisted item drops in price</p>
                                     </div>
-                                    <div class="w-20 flex justify-center">
+                                    <div class="w-14 sm:w-20 flex justify-center">
                                         <label class="relative inline-flex items-center cursor-pointer">
                                             <input type="hidden" name="price_drop_email" value="0">
                                             <input type="checkbox" name="price_drop_email" value="1" class="sr-only peer"
@@ -248,7 +248,7 @@
                                             <div class="w-9 h-5 bg-neutral-200 peer-focus:ring-2 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-500"></div>
                                         </label>
                                     </div>
-                                    <div class="w-20 flex justify-center">
+                                    <div class="w-14 sm:w-20 flex justify-center">
                                         <label class="relative inline-flex items-center cursor-pointer">
                                             <input type="hidden" name="price_drop_inapp" value="0">
                                             <input type="checkbox" name="price_drop_inapp" value="1" class="sr-only peer"
@@ -260,11 +260,11 @@
 
                                 <!-- Back in Stock -->
                                 <div class="px-5 py-3.5 flex items-center">
-                                    <div class="flex-1">
+                                    <div class="flex-1 min-w-0">
                                         <p class="text-sm font-medium text-neutral-900">Back in Stock</p>
                                         <p class="text-xs text-neutral-600">Get notified when an out-of-stock item becomes available</p>
                                     </div>
-                                    <div class="w-20 flex justify-center">
+                                    <div class="w-14 sm:w-20 flex justify-center">
                                         <label class="relative inline-flex items-center cursor-pointer">
                                             <input type="hidden" name="back_in_stock_email" value="0">
                                             <input type="checkbox" name="back_in_stock_email" value="1" class="sr-only peer"
@@ -272,7 +272,7 @@
                                             <div class="w-9 h-5 bg-neutral-200 peer-focus:ring-2 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-500"></div>
                                         </label>
                                     </div>
-                                    <div class="w-20 flex justify-center">
+                                    <div class="w-14 sm:w-20 flex justify-center">
                                         <label class="relative inline-flex items-center cursor-pointer">
                                             <input type="hidden" name="back_in_stock_inapp" value="0">
                                             <input type="checkbox" name="back_in_stock_inapp" value="1" class="sr-only peer"

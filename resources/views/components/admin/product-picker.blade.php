@@ -89,6 +89,7 @@
         .mselect__tag-label { max-width: 60vw; }
         .mselect__menu { max-height: min(13rem, 40vh); }
         .mselect__option { padding: 0.625rem; }     /* comfortable tap target */
+        .mselect__tag-remove { padding: 0.375rem; margin: -0.25rem -0.125rem -0.25rem 0; }   /* 24px hit area, chip height unchanged */
     }
 </style>
 @endpush

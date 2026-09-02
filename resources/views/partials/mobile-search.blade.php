@@ -41,7 +41,7 @@
         <form action="{{ route('search') }}" method="GET" class="flex items-center gap-1.5">
             <button type="button"
                     @click="open = false; stopTypewriter()"
-                    class="p-2 -ml-0.5 text-kk-brown shrink-0"
+                    class="p-2.5 -ml-1 text-kk-brown shrink-0"
                     aria-label="Close search">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/>
@@ -70,7 +70,7 @@
             <button x-show="recognition" x-cloak
                     type="button"
                     @click.prevent="toggleMic()"
-                    class="p-2 shrink-0 transition-colors"
+                    class="p-2.5 shrink-0 transition-colors"
                     :class="listening ? 'text-red-500' : 'text-kk-brown'"
                     :aria-label="listening ? 'Stop listening' : 'Search by voice'">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
@@ -141,7 +141,7 @@
                 <div class="flex flex-wrap gap-2">
                     @foreach(['Shirts', 'Polo T-Shirts', 'Formal Shirts', 'Linen Shirts', 'Trousers', 'Chinos'] as $kkTerm)
                         <a href="{{ route('search', ['q' => $kkTerm]) }}"
-                           class="px-3.5 py-2 bg-kk-cream-lighter border border-kk-cream-dark rounded-full text-sm text-kk-text">
+                           class="px-3.5 py-2.5 bg-kk-cream-lighter border border-kk-cream-dark rounded-full text-sm text-kk-text">
                             {{ $kkTerm }}
                         </a>
                     @endforeach
