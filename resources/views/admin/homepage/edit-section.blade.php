@@ -94,7 +94,7 @@
                             <label for="section-image" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Background Image</label>
                             @if($section->image_url)
                                 <div style="margin-bottom: 0.5rem;">
-                                    <img src="{{ asset_v('storage/' . $section->image_url) }}" alt="{{ $section->title }}" style="height: 8rem; object-fit: cover; border-radius: 0.5rem;">
+                                    <img src="{{ asset_v('storage/' . $section->image_url) }}" alt="{{ $section->title }}" style="height: 8rem; max-width: 100%; object-fit: cover; border-radius: 0.5rem;">
                                 </div>
                             @endif
                             <input type="file" name="image" id="section-image" accept="image/jpeg,image/png,image/webp,image/gif" class="form-input">
@@ -170,7 +170,7 @@
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;" x-data="{ items: {{ json_encode(old('content', $section->content ?? [])) }} }">
                             <template x-for="(item, index) in items" :key="index">
                                 <div style="padding: 1rem; background: #f6f6f7; border-radius: 0.5rem; position: relative;">
-                                    <button type="button" @click="items.splice(index, 1)" style="position: absolute; top: 0.5rem; right: 0.5rem; color: #d72c0d; background: none; border: none; cursor: pointer; padding: 0.25rem;" title="Remove item">
+                                    <button type="button" @click="items.splice(index, 1)" style="position: absolute; top: 0.125rem; right: 0.125rem; width: 2.25rem; height: 2.25rem; display: inline-flex; align-items: center; justify-content: center; padding: 0; color: #d72c0d; background: none; border: none; cursor: pointer;" title="Remove item">
                                         <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                     </button>
                                     <div style="display: flex; flex-direction: column; gap: 0.5rem; padding-right: 1.5rem;">

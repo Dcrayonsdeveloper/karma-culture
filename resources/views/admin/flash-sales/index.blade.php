@@ -7,8 +7,8 @@
             <h1 style="font-size: 1.25rem; font-weight: 600; color: #303030; margin: 0;">Flash Sales</h1>
             <p style="font-size: 13px; color: #616161; margin: 0.25rem 0 0 0;">Manage limited-time sale events</p>
         </div>
-        <a href="{{ route('admin.flash-sales.create') }}" style="display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.375rem 0.75rem; background: #303030; color: #fff; border-radius: 0.5rem; font-size: 13px; font-weight: 500; text-decoration: none;">
-            <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+        <a href="{{ route('admin.flash-sales.create') }}" class="btn btn-primary" style="font-size: 13px; text-decoration: none;">
+            <svg style="width: 16px; height: 16px; margin-right: 0.375rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
             Create flash sale
         </a>
     </div>
@@ -46,19 +46,19 @@
         {{-- Tab Filters --}}
         <div style="display: flex; border-bottom: 1px solid #e3e3e3; padding: 0 1rem;">
             <a href="{{ route('admin.flash-sales.index', request()->only('search')) }}"
-               style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ !request('status') ? '#303030' : 'transparent' }}; color: {{ !request('status') ? '#303030' : '#616161' }};">
+               style="margin-bottom: -1px; padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ !request('status') ? '#303030' : 'transparent' }}; color: {{ !request('status') ? '#303030' : '#616161' }};">
                 All
             </a>
             <a href="{{ route('admin.flash-sales.index', array_merge(request()->only('search'), ['status' => 'live'])) }}"
-               style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('status') === 'live' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'live' ? '#303030' : '#616161' }};">
+               style="margin-bottom: -1px; padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('status') === 'live' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'live' ? '#303030' : '#616161' }};">
                 Live
             </a>
             <a href="{{ route('admin.flash-sales.index', array_merge(request()->only('search'), ['status' => 'upcoming'])) }}"
-               style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('status') === 'upcoming' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'upcoming' ? '#303030' : '#616161' }};">
+               style="margin-bottom: -1px; padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('status') === 'upcoming' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'upcoming' ? '#303030' : '#616161' }};">
                 Upcoming
             </a>
             <a href="{{ route('admin.flash-sales.index', array_merge(request()->only('search'), ['status' => 'ended'])) }}"
-               style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('status') === 'ended' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'ended' ? '#303030' : '#616161' }};">
+               style="margin-bottom: -1px; padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('status') === 'ended' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'ended' ? '#303030' : '#616161' }};">
                 Ended
             </a>
         </div>
@@ -122,16 +122,13 @@
                             </td>
                             <td style="padding: 0.5rem 1rem; text-align: right;" onclick="event.stopPropagation();">
                                 <div style="display: inline-flex; align-items: center; gap: 0.25rem;">
-                                    <a href="{{ route('admin.flash-sales.edit', $sale) }}" title="Edit"
-                                       style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 0.375rem; color: #616161; text-decoration: none;"
-                                       onmouseover="this.style.backgroundColor='#e3e3e3'" onmouseout="this.style.backgroundColor='transparent'">
+                                    <a href="{{ route('admin.flash-sales.edit', $sale) }}" title="Edit" class="btn-icon" style="color: #616161; text-decoration: none;">
                                         <svg style="width: 15px; height: 15px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                     </a>
                                     <form action="{{ route('admin.flash-sales.destroy', $sale) }}" method="POST" onsubmit="return confirm('Delete this flash sale?')" style="display: inline;">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" title="Delete"
-                                                style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 0.375rem; color: #d72c0d; background: transparent; border: none; cursor: pointer;"
+                                        <button type="submit" title="Delete" class="btn-icon" style="color: #d72c0d; cursor: pointer;"
                                                 onmouseover="this.style.backgroundColor='#ffe0db'" onmouseout="this.style.backgroundColor='transparent'">
                                             <svg style="width: 15px; height: 15px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                         </button>
@@ -155,9 +152,9 @@
                                         @endif
                                     </p>
                                     @if(request()->hasAny(['search', 'status']))
-                                        <a href="{{ route('admin.flash-sales.index') }}" style="padding: 0.25rem 0.75rem; background: #fff; border: 1px solid #c9cccf; border-radius: 0.5rem; font-size: 13px; color: #303030; text-decoration: none;">Clear Filters</a>
+                                        <a href="{{ route('admin.flash-sales.index') }}" class="btn btn-secondary" style="font-size: 13px;">Clear Filters</a>
                                     @else
-                                        <a href="{{ route('admin.flash-sales.create') }}" style="padding: 0.25rem 0.75rem; background: #303030; border-radius: 0.5rem; font-size: 13px; color: #fff; text-decoration: none;">Create First Sale</a>
+                                        <a href="{{ route('admin.flash-sales.create') }}" class="btn btn-primary" style="font-size: 13px;">Create First Sale</a>
                                     @endif
                                 </div>
                             </td>

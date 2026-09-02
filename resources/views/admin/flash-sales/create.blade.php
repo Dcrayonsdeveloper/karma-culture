@@ -3,7 +3,7 @@
 
     <!-- Top bar -->
     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.25rem;">
-        <a href="{{ route('admin.flash-sales.index') }}" style="padding: 0.25rem; border-radius: 0.25rem; color: #616161; text-decoration: none;">
+        <a href="{{ route('admin.flash-sales.index') }}" class="btn-icon" style="flex-shrink: 0; color: #616161; text-decoration: none;">
             <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
         </a>
         <h1 style="font-size: 1.125rem; font-weight: 600; color: #303030;">Add flash sale</h1>
@@ -13,7 +13,7 @@
         @csrf
 
         <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
-            <div>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
                 <div class="card" style="padding: 1.25rem;">
                     <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Flash Sale Details</h2>
                     <div style="display: flex; flex-direction: column; gap: 1rem;">
@@ -39,7 +39,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
                 <!-- Products in this Flash Sale -->
                 @php
@@ -80,7 +79,7 @@
                                     <span x-text="r.sold_count"></span> sold
                                 </span>
                                 <button type="button" @click="rows.splice(i, 1)" title="Remove"
-                                        style="color:#d72c0d;background:none;border:0;cursor:pointer;font-size:16px;line-height:1;">&times;</button>
+                                        class="btn-icon" style="color:#d72c0d;cursor:pointer;font-size:16px;line-height:1;">&times;</button>
                             </div>
                         </template>
                     </div>
@@ -99,6 +98,7 @@
                         };
                     }
                 </script>
+            </div>
 
             <div style="display: flex; flex-direction: column; gap: 1rem;">
                 <div class="card" style="padding: 1.25rem;">

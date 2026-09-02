@@ -32,7 +32,7 @@
         <div class="mx-auto max-w-3xl">
 
             {{-- Header --}}
-            <div class="flex items-center gap-3 mb-5">
+            <div class="flex flex-wrap items-center gap-3 mb-5">
                 <div class="w-11 h-11 rounded-full bg-[#2D1810] flex items-center justify-center shrink-0">
                     <img src="{{ $kkBotLogo }}" alt="" class="w-6 h-6 object-contain" data-fallback="{{ $kkBotLogoFallback }}">
                 </div>
@@ -44,7 +44,7 @@
                     </p>
                 </div>
                 <a href="{{ route('shop') }}"
-                   class="ml-auto shrink-0 text-sm font-medium text-[#3A6166] hover:text-[#2A494D] transition-colors">
+                   class="ml-auto shrink-0 py-2 text-sm font-medium text-[#3A6166] hover:text-[#2A494D] transition-colors">
                     Back to shopping
                 </a>
             </div>
@@ -171,7 +171,7 @@
                         @foreach($quickChips as $chip)
                             <button type="button"
                                     @click="send(@js($chip['message']))"
-                                    class="shrink-0 px-3 py-1.5 text-xs font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-full transition-colors">
+                                    class="shrink-0 min-h-10 sm:min-h-0 px-3 py-1.5 text-xs font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-full transition-colors">
                                 {{ $chip['label'] }}
                             </button>
                         @endforeach

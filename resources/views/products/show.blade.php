@@ -402,7 +402,7 @@
         .kk-zoom__nav { display: none; }
     }
     </style>
-    <div class="pdp-wrapper">
+    <div class="pdp-wrapper{{ $product->isInStock() ? ' pdp-wrapper--bar' : '' }}">
     <div class="container mx-auto px-4" x-data="productPage()">
 
         <!-- ===== TWO-COLUMN LAYOUT ===== -->
@@ -698,7 +698,7 @@
                     .kk-pdp__trust { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 16px 0 4px; padding: 14px 0; border-top: 1px solid #ece0c8; border-bottom: 1px solid #ece0c8; }
                     .kk-pdp__trust-item { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; font-size: 10.5px; color: #7a6555; font-weight: 600; letter-spacing: .02em; }
                     .kk-pdp__trust-item svg { width: 22px; height: 22px; color: #8c5c34; stroke-width: 1.6; }
-                    @media (max-width: 420px) { .kk-pdp__trust { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+                    @media (max-width: 520px) { .kk-pdp__trust { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
                 </style>
                 <div class="kk-pdp__trust" role="list">
                     <div class="kk-pdp__trust-item" role="listitem">
@@ -740,6 +740,13 @@
                     .kk-offers__apply { font-size: 13px; font-weight: 700; color: #8c5c34; text-decoration: none; background: none; border: none; cursor: pointer; padding: 0; font-family: inherit; }
                     .kk-offers__apply:hover { text-decoration: underline; }
                     .kk-offers__type { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: #9b8a72; margin-top: 8px; padding-top: 7px; border-top: 1px solid #f0e6d2; }
+                    /* Touch: padding grows each hit box to ~40px and the matching
+                       negative margin hands the space back, so the card keeps its
+                       shape and the desktop look is untouched. */
+                    @media (pointer: coarse) {
+                        .kk-offers__apply { padding: 12px 10px; margin: -12px -10px; }
+                        .kk-offers__cart { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; margin: -12px -12px -12px 0; }
+                    }
                 </style>
                 {{-- These were four hardcoded "bank offers" (Paytm/Axis/SBI) shown on
                      every product, whose Apply button only fired a toast reading
@@ -808,7 +815,7 @@
                                                 No minimum spend
                                             @endif
                                         </span>
-                                        <a href="{{ route('cart.index') }}" aria-label="Go to cart">&rsaquo;</a>
+                                        <a href="{{ route('cart.index') }}" class="kk-offers__cart" aria-label="Go to cart">&rsaquo;</a>
                                     </div>
                                 </div>
                             @endforeach
@@ -920,7 +927,14 @@
             .kk-pi__btn[aria-expanded="true"] .kk-pi__btn-icon { transform: rotate(-135deg); margin-bottom: -2px; }
 
             .kk-pi__panel { padding: 0 22px 22px 79px; font-size: 14.5px; line-height: 1.75; color: #4a3627; }
-            @media (max-width: 560px) { .kk-pi__panel { padding-left: 22px; } }
+            /* Phones: .container px-4 is the only gutter. The 16px this wrapper
+               added on top, plus the card's own 22px, left ~236px of text on a
+               360px screen. */
+            @media (max-width: 640px) {
+                .kk-pi { padding-left: 0; padding-right: 0; }
+                .kk-pi__btn { padding: 16px; }
+                .kk-pi__panel { padding: 0 16px 16px; }
+            }
             .kk-pi__panel p { margin: 0 0 10px; }
             .kk-pi__panel p:last-child { margin: 0; }
             .kk-pi__panel ul { margin: 0 0 10px; padding-left: 20px; }
@@ -929,6 +943,14 @@
             .kk-pi__panel dt { font-weight: 600; color: #7a6555; padding: 9px 0; border-top: 1px solid #f0e6d2; }
             .kk-pi__panel dd { margin: 0; color: #2d1810; padding: 9px 0; border-top: 1px solid #f0e6d2; }
             .kk-pi__panel dl > dt:first-of-type, .kk-pi__panel dl > dd:nth-of-type(1) { border-top: none; }
+            .kk-pi__panel dt, .kk-pi__panel dd { min-width: 0; overflow-wrap: anywhere; }
+            /* Phones: label over value. Side by side the value column was ~110px
+               and a long SKU clipped at the card edge. */
+            @media (max-width: 480px) {
+                .kk-pi__panel dl { grid-template-columns: 1fr; }
+                .kk-pi__panel dt { padding-bottom: 0; }
+                .kk-pi__panel dd { border-top: 0; padding-top: 2px; }
+            }
         </style>
 
         <div class="kk-pi">
@@ -1114,6 +1136,13 @@
             .kk-aplus__btn:focus-visible { outline: 2px solid #8c5c34; outline-offset: 2px; }
             .kk-aplus__btn svg { width: 15px; height: 15px; }
             .kk-aplus__nav { display: flex; gap: 8px; }
+            /* Touch: 40px buttons, and an invisible ::after widens each 9px dot's
+               hit box without changing what is painted. */
+            @media (pointer: coarse) {
+                .kk-aplus__btn { width: 40px; height: 40px; }
+                .kk-aplus__dot { position: relative; }
+                .kk-aplus__dot::after { content: ''; position: absolute; inset: -14px -3px; }
+            }
             @media (max-width: 640px) {
                 .kk-aplus { margin-top: 32px; }
                 /* Only the height cap tightens: max-width already scales the banner down,
@@ -1220,7 +1249,8 @@
         <!-- ===== CUSTOMER REVIEWS (Judge.me-style) ===== -->
         <style>
             .kk-rev { max-width: 880px; margin: 28px auto 0; padding: 16px 16px 0; }
-            @media (max-width: 640px) { .kk-rev { margin-top: 16px; padding-top: 4px; } }
+            /* Phones: .container px-4 is the only gutter (see .kk-pi above). */
+            @media (max-width: 640px) { .kk-rev { margin-top: 16px; padding: 4px 0 0; } }
             .kk-rev__title { text-align: center; font-family: 'Playfair Display', Georgia, serif; font-size: 28px; font-weight: 700; color: #2d1810; margin: 0 0 26px; }
 
             /* Summary card */
@@ -1232,6 +1262,7 @@
             @media (max-width: 768px) {
                 .kk-rev__summary { grid-template-columns: 1fr; text-align: center; gap: 22px; }
             }
+            @media (max-width: 640px) { .kk-rev__summary { padding: 20px 16px; } }
             .kk-rev__overall { text-align: center; }
             .kk-rev__big { font-family: 'Playfair Display', Georgia, serif; font-size: 42px; font-weight: 700; color: #2d1810; line-height: 1; margin-bottom: 8px; }
             .kk-rev__stars { display: inline-flex; gap: 2px; }
@@ -1493,11 +1524,14 @@
             @endphp
             <style>
             .kk-revform { background: #fbf5e8; border: 1px solid #e3d2b3; border-radius: 14px; padding: 26px 28px; margin-top: 22px; }
+            @media (max-width: 640px) { .kk-revform { padding: 20px 16px; } }
             .kk-revform__title { font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 700; color: #2d1810; margin: 0 0 18px; }
             .kk-revform__label { display: block; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #2d1810; margin: 0 0 8px; }
             .kk-revform__stars { display: inline-flex; gap: 5px; margin-bottom: 18px; }
-            .kk-revform__stars button { background: none; border: none; cursor: pointer; padding: 0; line-height: 0; }
+            .kk-revform__stars button { position: relative; background: none; border: none; cursor: pointer; padding: 0; line-height: 0; }
             .kk-revform__stars svg { width: 28px; height: 28px; transition: fill .12s ease; }
+            /* Touch: an invisible ::after takes each 28px star to a 40px hit box. */
+            @media (pointer: coarse) { .kk-revform__stars button::after { content: ''; position: absolute; inset: -6px; } }
             .kk-revform__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
             @media (max-width: 600px) { .kk-revform__grid { grid-template-columns: 1fr; } }
             .kk-revform__input, .kk-revform__textarea { width: 100%; background: #fff; border: 1px solid #e3d2b3; border-radius: 8px; padding: 11px 14px; font-size: 14px; color: #2d1810; font-family: inherit; }
@@ -1892,6 +1926,13 @@
             .kk-pnotif__close:focus-visible { outline: 2px solid #f26a21; outline-offset: 2px; }
             @media (max-width: 480px) { .kk-pnotif { left: 10px; right: 10px; bottom: 10px; max-width: none; }
                 .kk-pnotif__thumb { width: 60px; height: 60px; } }
+            @media (pointer: coarse) { .kk-pnotif__close { width: 36px; height: 36px; top: 4px; right: 4px; } }
+            @if($product->isInStock())
+            /* Below lg the sticky Add to Cart / Buy Now bar (~76px) owns the
+               bottom edge. The toast used to land on top of it and, full-width
+               on phones, hid both buttons for as long as it showed. */
+            @media (max-width: 1023.98px) { .kk-pnotif { bottom: calc(86px + env(safe-area-inset-bottom)); } }
+            @endif
         </style>
         <div x-data="purchaseNotif(@js($notifItems->all()), @js(\Illuminate\Support\Str::limit($product->name, 34)), @js($notifThumb))" x-cloak x-show="visible"
              x-transition:enter="transition ease-out duration-300"
@@ -1971,8 +2012,36 @@
 
     <!-- ===== MOBILE STICKY BOTTOM BAR ===== -->
     @if($product->isInStock())
-    <div class="lg:hidden"
-         style="position:fixed;bottom:0;left:0;right:0;z-index:40;padding:0.75rem 1rem;display:flex;align-items:center;gap:0.75rem;background:#fff;border-top:1px solid #e5e5e5;box-shadow:0 -2px 10px rgba(0,0,0,0.08);"
+    <style>
+        /* Layout in a class, not the inline style: x-show strips the inline
+           `display` when it reveals the bar, so an inline display:flex was lost
+           after the first hide and the bar fell back to block - price on one
+           row, the buttons on the next (the same trap .kk-zoom notes). */
+        .kk-mbar {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+            background: #fff; border-top: 1px solid #e5e5e5; box-shadow: 0 -2px 10px rgba(0,0,0,0.08);
+        }
+        @media (min-width: 1024px) { .kk-mbar { display: none; } }
+        .kk-mbar__price { font-size: 1rem; font-weight: 700; color: #0F1111; }
+        .kk-mbar__was { font-size: 12px; }
+        .kk-mbar__btn {
+            padding: 0.75rem 1.1rem; border-radius: 0.375rem; font-size: 12px; font-weight: 700;
+            letter-spacing: 0.08em; text-transform: uppercase; color: #efe2cb; border: none;
+            cursor: pointer; white-space: nowrap;
+        }
+        .kk-mbar__btn--cart { background: #4a2d1a; }
+        .kk-mbar__btn--buy { background: #2d1810; }
+        /* Narrow phones: the two nowrap buttons took ~300px of a 360px screen
+           and squeezed the price into what was left. */
+        @media (max-width: 400px) {
+            .kk-mbar { gap: 0.5rem; }
+            .kk-mbar__btn { padding: 0.75rem 0.7rem; font-size: 11px; letter-spacing: 0.03em; }
+            .kk-mbar__price { font-size: 15px; }
+        }
+    </style>
+    <div class="kk-mbar"
          x-data="{ show: false }"
          x-init="
             const observer = new IntersectionObserver(([entry]) => { show = !entry.isIntersecting }, { threshold: 0 });
@@ -1988,17 +2057,15 @@
          x-transition:leave-end="translate-y-full"
          x-cloak>
         <div style="flex:1;min-width:0;">
-            <p style="font-size:1rem;font-weight:700;color:#0F1111;">₹{{ number_format($product->price) }}</p>
+            <p class="kk-mbar__price">₹{{ number_format($product->price) }}</p>
             @if($discountPct > 0)
-            <p style="font-size:12px;"><span style="color:#999;text-decoration:line-through;">₹{{ number_format($product->mrp) }}</span> <span style="color:#CC0C39;">{{ $discountPct }}% off</span></p>
+            <p class="kk-mbar__was"><span style="color:#999;text-decoration:line-through;">₹{{ number_format($product->mrp) }}</span> <span style="color:#CC0C39;">{{ $discountPct }}% off</span></p>
             @endif
         </div>
-        <button @click="$dispatch('mobile-add-to-cart')"
-                style="padding:0.75rem 1.1rem;border-radius:0.375rem;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;background:#4a2d1a;color:#efe2cb;border:none;cursor:pointer;white-space:nowrap;">
+        <button @click="$dispatch('mobile-add-to-cart')" class="kk-mbar__btn kk-mbar__btn--cart">
             Add to Cart
         </button>
-        <button @click="$dispatch('mobile-buy-now')"
-                style="padding:0.75rem 1.1rem;border-radius:0.375rem;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;background:#2d1810;color:#efe2cb;border:none;cursor:pointer;white-space:nowrap;">
+        <button @click="$dispatch('mobile-buy-now')" class="kk-mbar__btn kk-mbar__btn--buy">
             Buy Now
         </button>
     </div>

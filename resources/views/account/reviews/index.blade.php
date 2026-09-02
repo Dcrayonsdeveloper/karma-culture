@@ -79,7 +79,7 @@
                                         </div>
 
                                         {{-- Stars + date --}}
-                                        <div class="flex items-center gap-2 mb-2">
+                                        <div class="flex flex-wrap items-center gap-2 mb-2">
                                             <div class="flex items-center gap-0.5">
                                                 @for($i = 1; $i <= 5; $i++)
                                                     <svg class="w-3.5 h-3.5 {{ $i <= $review->rating ? 'text-amber-400' : 'text-neutral-200' }}" fill="currentColor" viewBox="0 0 20 20">

@@ -20,7 +20,7 @@
                                     <span class="block w-2.5 h-2.5 rounded-full bg-neutral-300"></span>
                                 @endif
                             </div>
-                            <div class="flex-1">
+                            <div class="flex-1 min-w-0">
                                 <p class="text-neutral-900">{{ $notification->data['message'] ?? $notification->data['title'] ?? 'Notification' }}</p>
                                 @if(!empty($notification->data['description']))
                                     <p class="text-sm text-neutral-600 mt-1">{{ $notification->data['description'] }}</p>

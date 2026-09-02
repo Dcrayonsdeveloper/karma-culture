@@ -255,10 +255,10 @@
                     <div style="padding: 1rem;">
                         @if($return->pickupPartner)
                             <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                                <div style="width: 2.5rem; height: 2.5rem; background: #ebebeb; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <div style="width: 2.5rem; height: 2.5rem; background: #ebebeb; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                     <span style="font-weight: 500; color: #616161;">{{ substr($return->pickupPartner->user->first_name ?? 'P', 0, 1) }}</span>
                                 </div>
-                                <div>
+                                <div style="min-width: 0; overflow-wrap: anywhere;">
                                     <p style="font-size: 13px; font-weight: 500; color: #303030; margin: 0;">{{ $return->pickupPartner->user->full_name }}</p>
                                     <p style="font-size: 12px; color: #616161; margin: 0;">{{ $return->pickupPartner->partner_id }} &middot; {{ $return->pickupPartner->phone }}</p>
                                 </div>
@@ -287,10 +287,10 @@
                     </div>
                     <div style="padding: 1rem;">
                         <div style="display: flex; align-items: center; gap: 0.75rem;">
-                            <div style="width: 2.5rem; height: 2.5rem; background: #ebebeb; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <div style="width: 2.5rem; height: 2.5rem; background: #ebebeb; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                 <span style="font-weight: 500; color: #616161;">{{ substr($return->pickupPartner->user->first_name ?? 'P', 0, 1) }}</span>
                             </div>
-                            <div>
+                            <div style="min-width: 0; overflow-wrap: anywhere;">
                                 <p style="font-size: 13px; font-weight: 500; color: #303030; margin: 0;">{{ $return->pickupPartner->user->full_name }}</p>
                                 <p style="font-size: 12px; color: #616161; margin: 0;">{{ $return->pickupPartner->partner_id }} &middot; {{ $return->pickupPartner->phone }}</p>
                             </div>
@@ -311,7 +311,7 @@
                     <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;">
                         <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Photos</h2>
                     </div>
-                    <div style="padding: 0.75rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <div style="padding: 0.75rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr)); gap: 0.5rem;">
                         @foreach($return->images as $image)
                             <a href="{{ $image }}" target="_blank" style="display: block; border-radius: 0.5rem; overflow: hidden; border: 1px solid #e3e3e3;">
                                 <img src="{{ $image }}" alt="Return photo" style="width: 100%; height: 6rem; object-fit: cover;">

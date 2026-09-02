@@ -73,7 +73,7 @@
                     @if($notification->content)
                         <p style="margin: 0.25rem 0 0 0; font-size: 12px; color: #616161; line-height: 1.4;">{{ $notification->content }}</p>
                     @endif
-                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.375rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.375rem; flex-wrap: wrap;">
                         <span style="font-size: 11px; color: #616161;">{{ $notification->created_at->diffForHumans() }}</span>
                         <span style="display: inline-block; padding: 0.0625rem 0.375rem; font-size: 10px; font-weight: 600; border-radius: 1rem; background: #e0f0ff; color: #005bd3;">{{ $notification->channel }}</span>
                         <span style="display: inline-block; padding: 0.0625rem 0.375rem; font-size: 10px; font-weight: 600; border-radius: 1rem; background: #fff3cd; color: #8a6d00;">{{ $notification->type }}</span>

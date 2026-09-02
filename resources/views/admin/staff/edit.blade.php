@@ -3,7 +3,7 @@
 
     <!-- Top bar -->
     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.25rem;">
-        <a href="{{ route('admin.staff.index') }}" style="padding: 0.25rem; border-radius: 0.25rem; color: #616161; text-decoration: none;">
+        <a href="{{ route('admin.staff.index') }}" class="btn-icon" style="padding: 0.25rem; border-radius: 0.25rem; color: #616161; text-decoration: none;">
             <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
         </a>
         <h1 style="font-size: 1.125rem; font-weight: 600; color: #303030;">{{ $staff->user->full_name ?? 'Staff' }}</h1>
@@ -109,7 +109,7 @@
 
                 <div class="card" style="padding: 1.25rem;">
                     <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Permissions</h2>
-                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <div class="kk-check-list" style="display: flex; flex-direction: column; gap: 0.5rem;">
                         <p style="font-size: 12px; color: #616161; margin-bottom: 0.5rem;">Override default role permissions. Leave all unchecked to use role defaults.</p>
                         @php
                             $sections = [
@@ -157,7 +157,7 @@
 
             <!-- Save bar -->
             <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #e3e3e3;">
-                <button type="submit" form="kk-staff-delete" style="font-size: 13px; font-weight: 500; color: #d72c0d; background: none; border: none; cursor: pointer;">Delete staff</button>
+                <button type="submit" form="kk-staff-delete" class="btn" style="font-size: 13px; font-weight: 500; color: #d72c0d; background: none; border: none; cursor: pointer; margin-left: -0.75rem;">Delete staff</button>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <a href="{{ route('admin.staff.index') }}" class="btn btn-secondary" style="font-size: 13px;">Discard</a>
                     <button type="submit" class="btn btn-primary" style="font-size: 13px;">Save</button>
@@ -174,4 +174,12 @@
           onsubmit="return confirm('Delete this staff member?')">
         @csrf @method('DELETE')
     </form>
+    @push('styles')
+    <style>
+        /* Touch: each permission row reaches a 36px target. */
+        @media (pointer: coarse) {
+            .kk-check-list > label { min-height: 2.25rem; }
+        }
+    </style>
+    @endpush
 </x-layouts.admin>

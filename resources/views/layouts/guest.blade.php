@@ -34,7 +34,7 @@
 
         <!-- Content Card -->
         <div class="w-full max-w-md">
-            <div class="card p-8">
+            <div class="card p-6 sm:p-8">
                 {{ $slot }}
             </div>
         </div>

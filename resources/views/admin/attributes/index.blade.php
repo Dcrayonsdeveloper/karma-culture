@@ -71,7 +71,7 @@
 
     {{-- Attributes Grid --}}
     @if($attributes->count())
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             @foreach($attributes as $attribute)
                 <div class="card" style="overflow: hidden;">
                     {{-- Card Header --}}

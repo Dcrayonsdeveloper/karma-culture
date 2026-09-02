@@ -31,16 +31,9 @@
 
                     {{-- Status Filter Tabs --}}
                     @php
-                        $statuses = [
-                            '' => 'All',
-                            'confirmed' => 'Confirmed',
-                            'processing' => 'Processing',
-                            'packed' => 'Packed',
-                            'shipped' => 'Shipped',
-                            'out_for_delivery' => 'Out for Delivery',
-                            'delivered' => 'Delivered',
-                            'cancelled' => 'Cancelled',
-                        ];
+                        // Built in the controller from the status enum, so a tab can
+                        // never again go missing for a status orders actually reach.
+                        $statuses = $statusTabs;
                         $currentStatus = request('status', '');
                     @endphp
                     <div class="flex items-center gap-1.5 mb-5 overflow-x-auto pb-1 -mx-1 px-1">
@@ -58,6 +51,7 @@
                         @php
                             $statusColors = [
                                 'pending' => 'bg-amber-50 text-amber-700 border-amber-200',
+                                'on_hold' => 'bg-amber-50 text-amber-700 border-amber-200',
                                 'confirmed' => 'bg-[#6F9CA2]/5 text-[#5B878D] border-[#6F9CA2]/30',
                                 'processing' => 'bg-[#6F9CA2]/5 text-[#5B878D] border-[#6F9CA2]/30',
                                 'packed' => 'bg-[#6F9CA2]/10 text-[#5B878D] border-[#6F9CA2]/30',
@@ -73,7 +67,7 @@
                         <div class="bg-white rounded-xl border border-neutral-200 mb-3 overflow-hidden hover:shadow-sm transition-shadow">
                             {{-- Header --}}
                             <div class="px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-neutral-100">
-                                <div class="flex items-center gap-3">
+                                <div class="flex flex-wrap items-center gap-3">
                                     <a href="{{ route('account.orders.show', $order) }}" class="text-sm font-bold text-neutral-900 hover:text-[#6F9CA2] transition-colors">
                                         {{ $order->order_number }}
                                     </a>
@@ -135,12 +129,12 @@
                             {{-- Footer --}}
                             <div class="px-4 py-2.5 bg-neutral-50 border-t border-neutral-100 flex flex-wrap items-center justify-between gap-2">
                                 <div class="flex items-center gap-3">
-                                    <a href="{{ route('account.orders.show', $order) }}" class="text-xs font-semibold text-[#6F9CA2] hover:text-[#5B878D] inline-flex items-center gap-1">
+                                    <a href="{{ route('account.orders.show', $order) }}" class="text-xs font-semibold text-[#6F9CA2] hover:text-[#5B878D] inline-flex items-center gap-1 min-h-10 sm:min-h-0">
                                         View Details
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                                     </a>
                                     @if(!in_array($order->status, ['cancelled', 'returned']))
-                                        <a href="{{ route('account.orders.track', $order) }}" class="text-xs font-medium text-neutral-600 hover:text-neutral-700 inline-flex items-center gap-1">
+                                        <a href="{{ route('account.orders.track', $order) }}" class="text-xs font-medium text-neutral-600 hover:text-neutral-700 inline-flex items-center gap-1 min-h-10 sm:min-h-0">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
                                             Track
                                         </a>
@@ -149,7 +143,7 @@
                                 @if(in_array($order->status, ['delivered', 'completed']))
                                     <form action="{{ route('account.orders.reorder', $order) }}" method="POST">
                                         @csrf
-                                        <button type="submit" class="text-xs font-semibold text-[#F8931D] hover:text-[#E07E0A] inline-flex items-center gap-1 transition-colors">
+                                        <button type="submit" class="text-xs font-semibold text-[#F8931D] hover:text-[#E07E0A] inline-flex items-center gap-1 min-h-10 sm:min-h-0 transition-colors">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                                             Buy Again
                                         </button>
@@ -159,7 +153,7 @@
                                     <form action="{{ route('account.orders.cancel', $order) }}" method="POST"
                                           onsubmit="return confirm('Are you sure you want to cancel this order?')">
                                         @csrf
-                                        <button type="submit" class="text-xs font-medium text-red-500 hover:text-red-600 transition-colors">
+                                        <button type="submit" class="inline-flex items-center min-h-10 sm:min-h-0 text-xs font-medium text-red-500 hover:text-red-600 transition-colors">
                                             Cancel
                                         </button>
                                     </form>

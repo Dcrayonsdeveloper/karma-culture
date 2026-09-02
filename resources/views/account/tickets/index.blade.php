@@ -12,7 +12,7 @@
             @include('account.partials.sidebar')
 
             <div class="flex-1 min-w-0">
-                <div class="flex items-center justify-between mb-5">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
                     <h1 class="text-xl font-bold text-neutral-900">Support Tickets</h1>
                     <a href="{{ route('account.tickets.create') }}" class="inline-flex items-center gap-1.5 px-4 py-2 bg-[#F8931D] text-white text-sm font-semibold rounded-lg hover:bg-[#E07E0A] transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -29,21 +29,21 @@
                 @endif
 
                 <!-- Filter -->
-                <div class="flex gap-2 mb-4">
+                <div class="flex flex-wrap gap-2 mb-4">
                     <a href="{{ route('account.tickets.index') }}"
-                       class="px-3 py-1.5 rounded-full text-xs font-medium {{ !request('status') ? 'bg-[#6F9CA2]/10 text-[#5B878D]' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200' }} transition-colors">
+                       class="inline-flex items-center px-3 py-1.5 min-h-10 sm:min-h-0 rounded-full text-xs font-medium {{ !request('status') ? 'bg-[#6F9CA2]/10 text-[#5B878D]' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200' }} transition-colors">
                         All
                     </a>
                     <a href="{{ route('account.tickets.index', ['status' => 'open']) }}"
-                       class="px-3 py-1.5 rounded-full text-xs font-medium {{ request('status') === 'open' ? 'bg-[#6F9CA2]/10 text-[#5B878D]' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200' }} transition-colors">
+                       class="inline-flex items-center px-3 py-1.5 min-h-10 sm:min-h-0 rounded-full text-xs font-medium {{ request('status') === 'open' ? 'bg-[#6F9CA2]/10 text-[#5B878D]' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200' }} transition-colors">
                         Open
                     </a>
                     <a href="{{ route('account.tickets.index', ['status' => 'answered']) }}"
-                       class="px-3 py-1.5 rounded-full text-xs font-medium {{ request('status') === 'answered' ? 'bg-[#6F9CA2]/10 text-[#5B878D]' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200' }} transition-colors">
+                       class="inline-flex items-center px-3 py-1.5 min-h-10 sm:min-h-0 rounded-full text-xs font-medium {{ request('status') === 'answered' ? 'bg-[#6F9CA2]/10 text-[#5B878D]' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200' }} transition-colors">
                         Answered
                     </a>
                     <a href="{{ route('account.tickets.index', ['status' => 'closed']) }}"
-                       class="px-3 py-1.5 rounded-full text-xs font-medium {{ request('status') === 'closed' ? 'bg-[#6F9CA2]/10 text-[#5B878D]' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200' }} transition-colors">
+                       class="inline-flex items-center px-3 py-1.5 min-h-10 sm:min-h-0 rounded-full text-xs font-medium {{ request('status') === 'closed' ? 'bg-[#6F9CA2]/10 text-[#5B878D]' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200' }} transition-colors">
                         Closed
                     </a>
                 </div>

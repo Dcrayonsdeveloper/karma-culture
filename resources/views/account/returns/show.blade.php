@@ -199,10 +199,10 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
                                         </svg>
                                     </div>
-                                    <div class="flex-1">
+                                    <div class="flex-1 min-w-0">
                                         <p class="text-sm font-semibold text-neutral-900 wrap-anywhere">{{ $return->pickupPartner->user->full_name }}</p>
                                         @if($return->pickupPartner->phone)
-                                            <a href="tel:{{ $return->pickupPartner->phone }}" class="text-xs text-[#6F9CA2] hover:text-[#5B878D]">{{ $return->pickupPartner->phone }}</a>
+                                            <a href="tel:{{ $return->pickupPartner->phone }}" class="inline-flex items-center min-h-10 sm:min-h-0 text-xs text-[#6F9CA2] hover:text-[#5B878D]">{{ $return->pickupPartner->phone }}</a>
                                         @endif
                                     </div>
                                 </div>
@@ -229,7 +229,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                     </svg>
                                 </div>
-                                <div>
+                                <div class="min-w-0">
                                     <p class="text-sm font-semibold text-emerald-800">Refund Processed</p>
                                     <p class="text-sm text-emerald-700 mt-0.5">
                                         <span class="font-bold">{{ format_price($return->refund_amount) }}</span>

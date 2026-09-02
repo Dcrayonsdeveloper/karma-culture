@@ -97,7 +97,10 @@
 
     {{-- Analytics are loaded after cookie consent (see cookie-consent component) --}}
 </head>
-<body class="font-sans antialiased bg-white text-[#222222] overflow-x-clip" style="font-family: 'Poppins', sans-serif;" x-data data-authenticated="{{ auth()->check() ? 'true' : 'false' }}">
+{{-- data-kk-page is how the popup queue in app.js knows it is on home: the
+     cycling and the "stop once the shopper engages" rule are home-only, and the
+     site-wide exit popup must behave exactly as before everywhere else. --}}
+<body class="font-sans antialiased bg-white text-[#222222] overflow-x-clip" style="font-family: 'Poppins', sans-serif;" x-data data-authenticated="{{ auth()->check() ? 'true' : 'false' }}" data-kk-page="{{ Route::currentRouteName() }}">
 {{-- Full-bleed sections (the hero and A+ banners) need the viewport width
      *excluding* the scrollbar. 100vw includes it, so a 100%-wide banner
      overhangs by the scrollbar width and this body's overflow-x-clip silently
@@ -131,7 +134,9 @@
                      'bg-info-50 border-info-200 text-info-800': toast.type === 'info'
                  }">
                 <span x-text="toast.message"></span>
-                <button @click="$store.toast.remove(toast.id)" class="text-current opacity-60 hover:opacity-100" aria-label="Dismiss notification">
+                {{-- Dismissing a status toast is housekeeping, not shopping, so
+                     it does not end the popup cycle either. --}}
+                <button @click="$store.toast.remove(toast.id)" class="p-2 -m-2 text-current opacity-60 hover:opacity-100" data-kk-popup-ignore aria-label="Dismiss notification">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
@@ -440,6 +445,10 @@
                 {{-- Position and size come from .kk-fab-item/.kk-fab-top, so
                      this always sits above whichever floats are switched on. --}}
                 class="kk-fab-item kk-fab-top z-40 bg-kk-brown-dark hover:bg-kk-brown-darker text-white rounded-full shadow-lg flex items-center justify-center transition-colors"
+                {{-- Scrolling back up is a reading gesture, not a browsing one,
+                     so it must not count as the engagement that ends the popup
+                     cycle. --}}
+                data-kk-popup-ignore
                 aria-label="Back to top">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
         </button>
@@ -480,7 +489,7 @@
                     Shopping Cart
                     <span class="text-sm font-normal" style="color:#666;" x-text="'(' + $store.cart.itemCount + ')'"></span>
                 </h2>
-                <button @click="$store.cart.close()" class="w-8 h-8 flex items-center justify-center rounded-full transition-colors" style="color:#666;" onmouseenter="this.style.background='#f5f5f5'" onmouseleave="this.style.background='transparent'" aria-label="Close cart">
+                <button @click="$store.cart.close()" class="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded-full transition-colors" style="color:#666;" onmouseenter="this.style.background='#f5f5f5'" onmouseleave="this.style.background='transparent'" aria-label="Close cart">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
@@ -519,16 +528,16 @@
                                 <div class="flex items-center gap-2 mt-1.5">
                                     <div class="flex items-center rounded overflow-hidden" style="border:1px solid #ddd;">
                                         <button @click="item.quantity > 1 ? $store.cart.update(item.id, item.quantity - 1) : $store.cart.remove(item.id)"
-                                                class="w-7 h-7 flex items-center justify-center text-sm transition-colors" style="color:#555;" onmouseenter="this.style.background='#f5f5f5'" onmouseleave="this.style.background='transparent'">
+                                                class="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center text-sm transition-colors" style="color:#555;" onmouseenter="this.style.background='#f5f5f5'" onmouseleave="this.style.background='transparent'">
                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
                                         </button>
-                                        <span class="w-8 h-7 flex items-center justify-center text-xs font-semibold" style="border-left:1px solid #ddd;border-right:1px solid #ddd;background:#fafafa;" x-text="item.quantity"></span>
+                                        <span class="w-8 h-9 sm:h-7 flex items-center justify-center text-xs font-semibold" style="border-left:1px solid #ddd;border-right:1px solid #ddd;background:#fafafa;" x-text="item.quantity"></span>
                                         <button @click="$store.cart.update(item.id, item.quantity + 1)"
-                                                class="w-7 h-7 flex items-center justify-center text-sm transition-colors" style="color:#555;" onmouseenter="this.style.background='#f5f5f5'" onmouseleave="this.style.background='transparent'">
+                                                class="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center text-sm transition-colors" style="color:#555;" onmouseenter="this.style.background='#f5f5f5'" onmouseleave="this.style.background='transparent'">
                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                                         </button>
                                     </div>
-                                    <button @click="$store.cart.remove(item.id)" class="text-xs transition-colors" style="color:#999;" onmouseenter="this.style.color='#ef4444'" onmouseleave="this.style.color='#999'">Remove</button>
+                                    <button @click="$store.cart.remove(item.id)" class="py-2 sm:py-0 text-xs transition-colors" style="color:#999;" onmouseenter="this.style.color='#ef4444'" onmouseleave="this.style.color='#999'">Remove</button>
                                 </div>
                             </div>
                         </div>
@@ -606,7 +615,8 @@
                 loading: false,
                 showResults: false,
                 listening: false,
-                micPanel: null,   // waiting | listening | blocked | denied | nodevice | unsupported | error
+                micPanel: null,   // waiting | listening | blocked | denied | nodevice | network | nospeech | unsupported | error
+                micErrorCode: '', // the raw code behind a 'error' panel, so it can be reported
                 recognition: null,
                 currentPlaceholder: '',
                 placeholders: [
@@ -634,27 +644,75 @@
                         this.recognition.lang = 'en-IN';
                         this.recognition.continuous = false;
                         this.recognition.interimResults = false;
+                        // start() returns long before the microphone is live: on a
+                        // first visit the browser is still showing its permission
+                        // prompt. Say "Listening" only when the engine says it is.
+                        this.recognition.onstart = () => {
+                            this.listening = true;
+                            this.micPanel = 'listening';
+                        };
                         this.recognition.onresult = (event) => {
                             const transcript = event.results[0][0].transcript;
                             this.query = transcript;
                             this.listening = false;
                             this.micPanel = null;
                             this.fetchSuggestions();
-                            // Auto-submit after voice input
+                            // Auto-submit after voice input. The mobile panel runs
+                            // this same component under a different ref, so ask the
+                            // field which form it is in rather than assuming.
                             this.$nextTick(() => {
-                                this.$refs.searchInput.closest('form').submit();
+                                const field = this.$refs.searchInput || this.$refs.mobileSearchInput;
+                                const form = field && field.closest('form');
+                                if (form) form.submit();
                             });
                         };
                         this.recognition.onerror = (event) => {
                             this.listening = false;
-                            if (event.error === 'not-allowed') { this.micPanel = 'blocked'; return; }
-                            if (event.error === 'no-speech') { this.micPanel = 'nospeech'; return; }
-                            if (event.error === 'aborted') { this.micPanel = null; return; }
-                            this.micPanel = 'error';
+                            this.micErrorCode = event.error || '';
+                            switch (event.error) {
+                                case 'aborted':
+                                    // We stopped it, or the page went away. Say nothing.
+                                    this.micPanel = null;
+                                    break;
+                                case 'no-speech':
+                                    this.micPanel = 'nospeech';
+                                    break;
+                                case 'not-allowed':
+                                    // A refusal just now and a permission that was
+                                    // already off arrive identically. Only the
+                                    // permission store tells them apart, and only one
+                                    // of the two is worth a "Try again" button.
+                                    this.micPanel = 'denied';
+                                    this.micBlocked().then((blocked) => {
+                                        if (blocked && this.micPanel === 'denied') {
+                                            this.micPanel = 'blocked';
+                                        }
+                                    });
+                                    break;
+                                case 'service-not-allowed':
+                                    // The browser has speech recognition but no
+                                    // transcription service behind it.
+                                    this.micPanel = 'unsupported';
+                                    break;
+                                case 'audio-capture':
+                                    // Permission granted, device still unreadable.
+                                    this.micPanel = 'nodevice';
+                                    break;
+                                case 'network':
+                                    this.micPanel = 'network';
+                                    break;
+                                default:
+                                    this.micPanel = 'error';
+                            }
                         };
                         this.recognition.onend = () => {
                             this.listening = false;
-                            if (this.micPanel === 'listening') { this.micPanel = null; }
+                            // Clear only the two states that mean "still going".
+                            // onerror has already run by now and its panel is the
+                            // one thing the customer needs to keep seeing.
+                            if (this.micPanel === 'listening' || this.micPanel === 'waiting') {
+                                this.micPanel = null;
+                            }
                         };
                     }
                 },
@@ -737,8 +795,12 @@
 
                 closeMicPanel() {
                     this.micPanel = null;
+                    this.micErrorCode = '';
                     if (this.listening) {
-                        this.recognition && this.recognition.stop();
+                        // abort(), not stop(): stop() asks for a result out of the
+                        // audio so far, and the customer has just closed the panel
+                        // that would have shown it.
+                        try { this.recognition && this.recognition.abort(); } catch (e) {}
                         this.listening = false;
                     }
                 },
@@ -756,44 +818,47 @@
                         return;
                     }
 
-                    // Show the waiting panel first, then ask. The browser prompt
-                    // appears over it, so the customer can see what is being asked
-                    // for and why - rather than a bare dialog with no context.
-                    this.micPanel = 'waiting';
+                    this.micErrorCode = '';
 
-                    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                        if (await this.micBlocked()) {
-                            // Chrome will not prompt again once a site is blocked,
-                            // so explain where to undo it instead of waiting.
-                            this.micPanel = 'blocked';
-                            return;
-                        }
-
-                        try {
-                            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                            stream.getTracks().forEach((track) => track.stop());
-                        } catch (e) {
-                            this.listening = false;
-                            this.micPanel = (e && e.name === 'NotAllowedError') ? 'denied' : 'nodevice';
-                            return;
-                        }
+                    // Chrome will not prompt again once a site is blocked, so
+                    // explain where to undo it instead of opening a session that
+                    // can only fail.
+                    if (await this.micBlocked()) {
+                        this.micPanel = 'blocked';
+                        return;
                     }
+
+                    // Shown under the browser's own permission prompt, so the
+                    // customer can see what is being asked for and why - rather
+                    // than a bare dialog with no context. onstart replaces it.
+                    this.micPanel = 'waiting';
 
                     this.stopTypewriter();
                     this.query = '';
 
+                    // No getUserMedia pre-flight here, deliberately.
+                    //
+                    // This used to open a real capture stream, stop its tracks and
+                    // then call start() a moment later - so the microphone was
+                    // taken, released and retaken within the same tick. Windows
+                    // hands a capture device back on its own schedule, and asking
+                    // for it again mid-release is how a shopper with the permission
+                    // granted and a working microphone still got "Something went
+                    // wrong": recognition came back audio-capture or network.
+                    //
+                    // start() raises its own permission prompt, so the pre-flight
+                    // bought nothing. The one thing it did tell us apart - blocked
+                    // from merely denied - micBlocked() answers above and in
+                    // onerror, without touching the device at all.
                     try {
                         this.recognition.start();
-                        this.listening = true;
-                        this.micPanel = 'listening';
                     } catch (e) {
+                        // InvalidStateError: a previous session has not finished
+                        // winding down. Drop it so the next press starts clean.
+                        try { this.recognition.abort(); } catch (err) {}
                         this.listening = false;
-                        if (e.message && e.message.includes('already started')) {
-                            this.recognition.stop();
-                            this.micPanel = null;
-                        } else {
-                            this.micPanel = 'error';
-                        }
+                        this.micErrorCode = (e && e.name) ? e.name : '';
+                        this.micPanel = 'error';
                     }
                 },
 

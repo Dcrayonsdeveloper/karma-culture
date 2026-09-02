@@ -35,7 +35,7 @@
                         <label for="site-logo" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Site Logo</label>
                         @if($settings['site_logo'])
                             <div style="margin-bottom: 0.5rem;">
-                                <img src="{{ asset_v('storage/' . $settings['site_logo']) }}" alt="Current Logo" style="height: 4rem; object-fit: contain;">
+                                <img src="{{ asset_v('storage/' . $settings['site_logo']) }}" alt="Current Logo" style="height: 4rem; max-width: 100%; object-fit: contain;">
                             </div>
                         @endif
                         {{-- accept lists exactly what the server rule takes. image/* offered SVG,

@@ -45,7 +45,9 @@
             </div>
             <div style="padding: 1rem;">
                 @if($categoryBreakdown->count() > 0)
-                    <canvas id="categoryChart" height="280"></canvas>
+                    <div style="position: relative; height: 280px; min-width: 0;">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
                 @else
                     <div style="display: flex; align-items: center; justify-content: center; padding: 3rem 1rem; color: #616161; font-size: 13px;">
                         No category data available
@@ -104,7 +106,7 @@
                                 <div style="background: #b98900; width: {{ $lowPct }}%;"></div>
                                 <div style="background: #d72c0d; width: {{ $outPct }}%;"></div>
                             </div>
-                            <div style="display: flex; align-items: center; gap: 1rem; margin-top: 0.5rem;">
+                            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; margin-top: 0.5rem;">
                                 <div style="display: flex; align-items: center; gap: 0.375rem;">
                                     <div style="width: 0.625rem; height: 0.625rem; background: #1a7a2e; border-radius: 50%;"></div>
                                     <span style="font-size: 12px; color: #616161;">In Stock ({{ $inStock }})</span>

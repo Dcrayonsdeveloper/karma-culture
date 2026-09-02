@@ -49,7 +49,7 @@
         return $collection->firstWhere('slug', $slug)->name ?? $slug;
     };
 
-    $kkChip = 'inline-flex items-center gap-1 px-2.5 py-1 bg-[#6F9CA2]/5 text-[#5B878D] text-xs font-medium rounded-full border border-[#6F9CA2]/30';
+    $kkChip = 'inline-flex items-center gap-1 min-h-10 sm:min-h-0 px-2.5 py-1 bg-[#6F9CA2]/5 text-[#5B878D] text-xs font-medium rounded-full border border-[#6F9CA2]/30';
     // A panel that does not own the category facet (the category page, which
     // passes owns_category => false) leaves `categories` empty and never applies
     // ?category= at all. The chip used to draw anyway, promising to remove a
@@ -134,6 +134,6 @@
             </a>
         @endif
 
-        <a href="{{ $filterPanel['reset'] }}" class="text-xs text-neutral-600 hover:text-[#6F9CA2] underline ml-1">Clear all</a>
+        <a href="{{ $filterPanel['reset'] }}" class="inline-flex items-center min-h-10 sm:min-h-0 text-xs text-neutral-600 hover:text-[#6F9CA2] underline ml-1">Clear all</a>
     </div>
 @endif

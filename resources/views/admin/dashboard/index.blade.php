@@ -31,7 +31,7 @@
             <p style="font-size: 1.875rem; font-weight: 600; color: #303030;">@price($topRevenue)</p>
         </div>
         <div style="padding: 0 1rem 1rem 1rem;">
-            <canvas id="revenueChart" height="200"></canvas>
+            <div style="position: relative; height: 200px; min-width: 0;"><canvas id="revenueChart"></canvas></div>
         </div>
     </div>
 
@@ -65,7 +65,7 @@
     <!-- Two-column: Orders table + Order Status chart -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
         <!-- Recent Orders -->
-        <div class="card lg:col-span-2">
+        <div class="card lg:col-span-2 min-w-0">
             <div style="padding: 0.875rem 1.25rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e3e3e3;">
                 <h2 style="font-size: 13px; font-weight: 600; color: #303030;">Recent orders</h2>
                 <a href="{{ route('admin.orders.index') }}" style="font-size: 12px; font-weight: 500; color: #005bd3; text-decoration: none;">View all orders</a>
@@ -114,12 +114,12 @@
         </div>
 
         <!-- Order Status -->
-        <div class="card">
+        <div class="card min-w-0">
             <div style="padding: 0.875rem 1.25rem; border-bottom: 1px solid #e3e3e3;">
                 <h2 style="font-size: 13px; font-weight: 600; color: #303030;">Order status</h2>
             </div>
-            <div style="padding: 1rem; display: flex; align-items: center; justify-content: center;">
-                <canvas id="orderStatusChart" height="200"></canvas>
+            <div style="padding: 1rem;">
+                <div style="position: relative; height: 260px; min-width: 0;"><canvas id="orderStatusChart"></canvas></div>
             </div>
         </div>
     </div>
@@ -127,18 +127,18 @@
     <!-- Monthly Revenue + Top Products -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <!-- Monthly Revenue -->
-        <div class="card lg:col-span-2">
+        <div class="card lg:col-span-2 min-w-0">
             <div style="padding: 0.875rem 1.25rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e3e3e3;">
                 <h2 style="font-size: 13px; font-weight: 600; color: #303030;">Monthly revenue</h2>
                 <span style="font-size: 11px; color: #616161;">{{ $hasDateFilter ? $startDate->format('M d') . ' - ' . $endDate->format('M d, Y') : 'Last 6 months' }}</span>
             </div>
             <div style="padding: 1rem;">
-                <canvas id="monthlyRevenueChart" height="200"></canvas>
+                <div style="position: relative; height: 200px; min-width: 0;"><canvas id="monthlyRevenueChart"></canvas></div>
             </div>
         </div>
 
         <!-- Top Products -->
-        <div class="card">
+        <div class="card min-w-0">
             <div style="padding: 0.875rem 1.25rem; border-bottom: 1px solid #e3e3e3;">
                 <h2 style="font-size: 13px; font-weight: 600; color: #303030;">Top products</h2>
             </div>

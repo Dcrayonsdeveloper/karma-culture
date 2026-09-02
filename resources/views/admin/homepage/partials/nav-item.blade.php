@@ -28,7 +28,7 @@
             <form action="{{ route('admin.homepage.navigation.destroy', $item) }}" method="POST" onsubmit="return confirm('Remove this menu item?')" style="display: inline;">
                 @csrf
                 @method('DELETE')
-                <button style="font-size: 12px; color: #d72c0d; background: none; border: none; cursor: pointer; padding: 0.25rem 0.5rem;">Remove</button>
+                <button class="btn" style="font-size: 12px; color: #d72c0d; background: none; border: none; cursor: pointer; padding: 0.25rem 0.5rem;">Remove</button>
             </form>
         </div>
     </div>

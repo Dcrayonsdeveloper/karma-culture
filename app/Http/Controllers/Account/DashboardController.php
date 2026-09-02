@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Account;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
-use App\Models\Wishlist;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -21,17 +20,30 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
-        // Order statistics
-        $orderStats = [
-            'total' => Order::where('user_id', $user->id)->count(),
-            'confirmed' => Order::where('user_id', $user->id)->where('status', 'confirmed')->count(),
-            'processing' => Order::where('user_id', $user->id)->where('status', 'processing')->count(),
-            'completed' => Order::where('user_id', $user->id)->where('status', 'delivered')->count(),
-        ];
+        // Order statistics. Counted once per status and then bucketed, rather
+        // than one query per tile matching a literal status: the old version
+        // asked only about "confirmed", "processing" and "delivered", so an
+        // order in any of the other seven statuses reached the total and none
+        // of the tiles. Order::STATUS_BUCKETS covers the enum exhaustively, so
+        // the four tiles always add back up to the total.
+        $perStatus = Order::query()
+            ->where('user_id', $user->id)
+            ->selectRaw('status, count(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
 
-        // Wishlist count
-        $wishlistCount = Wishlist::where('user_id', $user->id)->count();
+        $orderStats = ['total' => (int) $perStatus->sum()];
 
-        return view('account.dashboard', compact('user', 'recentOrders', 'orderStats', 'wishlistCount'));
+        foreach (Order::STATUS_BUCKETS as $bucket => $statuses) {
+            $orderStats[$bucket] = (int) $perStatus->only($statuses)->sum();
+        }
+
+        // No wishlist count here on purpose. The wishlist lives in the
+        // kk_wishlist browser cookie (so that guests get one too) and nothing
+        // writes the wishlists table, so counting rows there rendered
+        // "Wishlist (0)" next to a header badge reading the real number. The
+        // tile now reads the same Alpine store the header badge does.
+
+        return view('account.dashboard', compact('user', 'recentOrders', 'orderStats'));
     }
 }

@@ -189,7 +189,7 @@
             </h3>
 
             {{-- Price Row (directly after the name so prices align) --}}
-            <div class="flex items-baseline gap-1.5 mb-2.5">
+            <div class="flex flex-wrap items-baseline gap-1.5 mb-2.5">
                 <span class="text-sm font-bold text-[#222]">@price($product->price)</span>
                 @if($hasDiscount)
                     <span class="text-[11px] text-neutral-600 line-through">@price($product->mrp)</span>

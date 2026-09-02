@@ -45,7 +45,7 @@
         @endforeach
         <label for="kk-sort" class="text-xs text-neutral-600 hidden sm:inline">Sort by:</label>
         <select id="kk-sort" name="sort" onchange="this.form.submit()"
-                class="text-sm py-1.5 pl-3 pr-8 border border-neutral-200 rounded-lg bg-white text-neutral-700 focus:outline-none focus:border-[#6F9CA2] cursor-pointer">
+                class="min-h-10 sm:min-h-0 text-sm py-1.5 pl-3 pr-8 border border-neutral-200 rounded-lg bg-white text-neutral-700 focus:outline-none focus:border-[#6F9CA2] cursor-pointer">
             @foreach($kkSortOptions as $kkValueKey => $kkLabel)
                 <option value="{{ $kkValueKey }}" @selected($kkSortValues['sort'] === $kkValueKey)>{{ $kkLabel }}</option>
             @endforeach

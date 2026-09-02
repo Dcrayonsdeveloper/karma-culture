@@ -54,7 +54,9 @@
             </div>
             <div style="padding: 1rem;">
                 @if($stats['total_orders'] > 0)
-                    <canvas id="salesChart" height="260"></canvas>
+                    <div style="position: relative; height: 260px; min-width: 0;">
+                        <canvas id="salesChart"></canvas>
+                    </div>
                 @else
                     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem 1rem; color: #616161;">
                         <svg style="width: 3rem; height: 3rem; margin-bottom: 0.75rem; color: #babfc3;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -73,7 +75,9 @@
             </div>
             <div style="padding: 1rem;">
                 @if($salesByCategory->count() > 0)
-                    <canvas id="categoryChart" height="260"></canvas>
+                    <div style="position: relative; height: 260px; min-width: 0;">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
                 @else
                     <div style="display: flex; align-items: center; justify-content: center; padding: 3rem 1rem; color: #616161; font-size: 13px;">
                         No category data available

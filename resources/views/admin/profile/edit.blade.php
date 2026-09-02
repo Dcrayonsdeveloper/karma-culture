@@ -108,9 +108,9 @@
                                     {{ strtoupper(substr($user->first_name, 0, 1)) }}{{ strtoupper(substr($user->last_name, 0, 1)) }}
                                 </span>
                             </div>
-                            <div>
+                            <div style="min-width: 0;">
                                 <p style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">{{ $user->first_name }} {{ $user->last_name }}</p>
-                                <p style="font-size: 12px; color: #616161; margin: 0.125rem 0 0 0;">{{ $user->email }}</p>
+                                <p style="font-size: 12px; color: #616161; margin: 0.125rem 0 0 0; overflow-wrap: anywhere;">{{ $user->email }}</p>
                             </div>
                         </div>
                     </div>
