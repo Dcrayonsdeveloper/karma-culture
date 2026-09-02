@@ -704,6 +704,118 @@ class ValidationRulesTest extends TestCase
         $this->assertRejects(V::accepted(), '0');
     }
 
+    // ------------------------------------------------------------------
+    // scheduleStart() / scheduleEnd()
+    // ------------------------------------------------------------------
+
+    /** The shape the datetime-local inputs on the admin forms actually post. */
+    private function moment(string $modifier): string
+    {
+        return now()->modify($modifier)->format('Y-m-d\TH:i');
+    }
+
+    /** Run a start/end pair through the rules the admin forms use. */
+    private function schedule(array $data, mixed $currentStart = null, mixed $currentEnd = null): \Illuminate\Contracts\Validation\Validator
+    {
+        return Validator::make($data, [
+            'starts_at' => V::scheduleStart(required: false, current: $currentStart),
+            'ends_at' => V::scheduleEnd('starts_at', required: false, current: $currentEnd),
+        ]);
+    }
+
+    #[Test]
+    public function schedule_accepts_a_window_that_opens_and_closes_in_the_future(): void
+    {
+        $validator = $this->schedule([
+            'starts_at' => $this->moment('+1 day'),
+            'ends_at' => $this->moment('+1 week'),
+        ]);
+
+        $this->assertFalse($validator->fails(), (string) $validator->errors());
+    }
+
+    #[Test]
+    public function schedule_rejects_an_end_at_or_before_the_start(): void
+    {
+        $moment = $this->moment('+3 days');
+
+        $this->assertTrue($this->schedule([
+            'starts_at' => $moment,
+            'ends_at' => $this->moment('+1 day'),
+        ])->fails(), 'an end before the start must be rejected');
+
+        $this->assertTrue($this->schedule([
+            'starts_at' => $moment,
+            'ends_at' => $moment,
+        ])->fails(), 'a window that opens and closes on the same minute must be rejected');
+    }
+
+    #[Test]
+    public function schedule_rejects_dates_in_the_past(): void
+    {
+        $this->assertTrue($this->schedule(['starts_at' => $this->moment('-1 day')])->fails());
+
+        // With no start to sit after, an expiry still has to be in the future.
+        $this->assertTrue($this->schedule(['ends_at' => $this->moment('-1 hour')])->fails());
+    }
+
+    #[Test]
+    public function schedule_accepts_the_current_minute(): void
+    {
+        // datetime-local has minute granularity: picking the current minute and
+        // submitting thirty seconds later is not choosing a past time.
+        $validator = $this->schedule([
+            'starts_at' => now()->format('Y-m-d\TH:i'),
+            'ends_at' => $this->moment('+1 day'),
+        ]);
+
+        $this->assertFalse($validator->fails(), (string) $validator->errors());
+    }
+
+    #[Test]
+    public function schedule_leaves_a_stored_past_date_alone_but_will_not_take_a_new_one(): void
+    {
+        // The edit-form case: a coupon that started last week must stay saveable
+        // without its schedule being dragged forward.
+        $storedStart = now()->subWeek()->startOfMinute();
+        $storedEnd = now()->addWeek()->startOfMinute();
+
+        $unchanged = $this->schedule([
+            'starts_at' => $storedStart->format('Y-m-d\TH:i'),
+            'ends_at' => $storedEnd->format('Y-m-d\TH:i'),
+        ], $storedStart, $storedEnd);
+
+        $this->assertFalse($unchanged->fails(), (string) $unchanged->errors());
+
+        $movedBack = $this->schedule([
+            'starts_at' => $this->moment('-1 month'),
+            'ends_at' => $storedEnd->format('Y-m-d\TH:i'),
+        ], $storedStart, $storedEnd);
+
+        $this->assertTrue($movedBack->fails(), 'a changed start still has to be in the future');
+
+        // And the stored Carbon must survive being compared against.
+        $this->assertSame(
+            now()->subWeek()->startOfMinute()->format('Y-m-d H:i:s'),
+            $storedStart->format('Y-m-d H:i:s')
+        );
+    }
+
+    #[Test]
+    public function schedule_leaves_emptiness_and_format_to_the_rules_that_own_them(): void
+    {
+        $this->assertFalse($this->schedule([])->fails(), 'both ends are optional here');
+
+        $this->assertSame('required', V::scheduleStart()[0]);
+        $this->assertSame('nullable', V::scheduleStart(required: false)[0]);
+        $this->assertContains('after:starts_at', V::scheduleEnd('starts_at'));
+
+        // A value that is not a date is the `date` rule's business, and it must
+        // not also collect a "cannot be set in the past" message.
+        $errors = $this->schedule(['starts_at' => 'lastweek'])->errors()->get('starts_at');
+        $this->assertCount(1, $errors);
+    }
+
     #[Test]
     public function foreign_id_builds_an_exists_rule_without_trusting_the_client(): void
     {

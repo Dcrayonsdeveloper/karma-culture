@@ -104,6 +104,35 @@
                 </div>
 
                 <div class="card" style="padding: 1.25rem;">
+                    <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Schedule</h2>
+                    @php
+                        // The earliest moment a new schedule may be set to. The
+                        // picker greys out everything before it; the rule behind
+                        // V::scheduleStart() is what enforces it once posted.
+                        $scheduleFloor = now()->format('Y-m-d\TH:i');
+                    @endphp
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <div>
+                            <label for="banner-starts-at" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Starts At</label>
+                            <input type="datetime-local" name="starts_at" id="banner-starts-at" value="{{ old('starts_at') }}"
+                                   min="{{ $scheduleFloor }}" data-schedule-start class="form-input" style="width: 100%;">
+                            @error('starts_at')
+                                <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div>
+                            <label for="banner-ends-at" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Ends At</label>
+                            <input type="datetime-local" name="ends_at" id="banner-ends-at" value="{{ old('ends_at') }}"
+                                   min="{{ $scheduleFloor }}" data-schedule-end="banner-starts-at" class="form-input" style="width: 100%;">
+                            @error('ends_at')
+                                <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+                    <p style="font-size: 12px; color: #616161; margin-top: 0.75rem;">Leave both empty to show the banner whenever it is active.</p>
+                </div>
+
+                <div class="card" style="padding: 1.25rem;">
                     <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Status</h2>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <input type="hidden" name="is_active" value="0">
