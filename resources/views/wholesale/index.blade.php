@@ -68,7 +68,8 @@
                     </div>
                     <div>
                         <label for="wholesale_name" style="display: block; font-size: 13px; font-weight: 500; color: #0F1111; margin-bottom: 0.375rem;">Contact Name *</label>
-                        <input type="text" name="name" id="wholesale_name" value="{{ old('name') }}" required minlength="2" maxlength="100"
+                        <input type="text" name="name" id="wholesale_name" value="{{ old('name') }}" required minlength="2" maxlength="30" data-kk-chars="letters"
+                               pattern=" *[\p{L}\p{M}][\p{L}\p{M} \xA0]*" title="Letters and spaces only, up to 30 characters."
                                placeholder="Your name"
                                style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d5d9d9; border-radius: 0.5rem; font-size: 13px; box-sizing: border-box;">
                         @error('name')

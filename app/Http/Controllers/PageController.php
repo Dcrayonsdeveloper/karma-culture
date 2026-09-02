@@ -50,7 +50,7 @@ class PageController extends Controller
         // rule: a wholesale enquiry can legitimately come from abroad, and this
         // is a "we will call you back" field, not a number we transact on.
         $validated = $request->validate([
-            'name' => V::name(),
+            'name' => V::name(max: 30, lettersOnly: true),
             'email' => V::email(),
             'phone' => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\-\s()]+$/', function ($attribute, $value, $fail) {
                 $digits = preg_replace('/\D/', '', (string) $value);
@@ -64,6 +64,7 @@ class PageController extends Controller
         ], [
             'name.required' => 'Please enter your name.',
             'name.min' => 'Please enter your full name.',
+            'name.max' => 'Please keep your name to 30 characters or fewer.',
             'email.required' => 'Please enter your email address.',
             'email.email' => 'Enter a valid email address, like you@example.com.',
             'phone.regex' => 'Please enter a valid phone number (10-15 digits).',

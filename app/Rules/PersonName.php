@@ -22,6 +22,11 @@ use Illuminate\Contracts\Validation\ValidationRule;
  * Two heuristics sit on top of the charset, because a charset alone cannot see
  * them: names that are really URLs ("evil.com" is all letters and a dot), and
  * keyboard mashing ("Aaaaaa"), which is the usual shape of junk signups.
+ *
+ * `lettersOnly` narrows the charset to letters and spaces, dropping the hyphen,
+ * apostrophe and period. It is for forms that asked for exactly that; leave it
+ * off for account and address fields, where a name is the customer's own and
+ * "O'Connor" has to be enterable.
  */
 class PersonName implements ValidationRule
 {
@@ -31,11 +36,18 @@ class PersonName implements ValidationRule
      */
     private const CHARSET = '/^[\p{L}\p{M}][\p{L}\p{M}\x{0020}\x{00A0}\'\x{2019}.\-]*$/u';
 
+    /** The same charset, with the four separators reduced to a space. */
+    private const CHARSET_LETTERS_ONLY = '/^[\p{L}\p{M}][\p{L}\p{M}\x{0020}\x{00A0}]*$/u';
+
     /** Five or more of the same letter in a row is not a name. */
     private const MASHED = '/(\p{L})\1{4,}/u';
 
     /** A scheme, a www. prefix, or a bare domain in a common TLD. */
     private const URLISH = '/(?:https?|ftp|file|javascript|data|vbscript):|(?:^|\s)www\.|\.(?:com|net|org|edu|gov|io|co|in|uk|ru|de|fr|xyz|info|biz|shop|online|site|top|club|live|app|dev)(?:\b|$)/iu';
+
+    public function __construct(private bool $lettersOnly = false)
+    {
+    }
 
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
@@ -55,7 +67,13 @@ class PersonName implements ValidationRule
             return;
         }
 
-        if (! preg_match(self::CHARSET, $value)) {
+        if ($this->lettersOnly) {
+            if (! preg_match(self::CHARSET_LETTERS_ONLY, $value)) {
+                $fail('The :attribute may only contain letters and spaces.');
+
+                return;
+            }
+        } elseif (! preg_match(self::CHARSET, $value)) {
             $fail('The :attribute may only contain letters, spaces, hyphens, apostrophes and periods.');
 
             return;

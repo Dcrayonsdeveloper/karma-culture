@@ -43,17 +43,25 @@ final class ValidationRules
     /**
      * A person's name - Unicode, 2-100 characters.
      *
+     * `lettersOnly` drops the hyphen, apostrophe and period from the charset,
+     * leaving letters and spaces. Pass it only where a form has been specified
+     * that way; the default keeps "O'Connor" and "Mary-Anne" enterable.
+     *
      * Client-side counterpart:
      *   required minlength="2" maxlength="100"
+     *   and, for lettersOnly, pattern=" *[\p{L}\p{M}][\p{L}\p{M} \xA0]*"
+     *   (the leading ` *` is deliberate: TrimStrings drops leading spaces
+     *   server-side, so a pasted " Asha" is accepted there and the browser
+     *   must not block the submit over an invisible character)
      */
-    public static function name(bool $required = true, int $min = 2, int $max = 100): array
+    public static function name(bool $required = true, int $min = 2, int $max = 100, bool $lettersOnly = false): array
     {
         return [
             $required ? 'required' : 'nullable',
             'string',
             "min:{$min}",
             "max:{$max}",
-            new PersonName,
+            new PersonName($lettersOnly),
         ];
     }
 

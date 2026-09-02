@@ -1120,10 +1120,20 @@ Alpine.start();
     //
     // Phone keeps +, spaces, hyphens and brackets because real numbers are
     // written with them and the server rule strips them before checking.
+    //
+    // \u00A0 rides along with the space because the server charset keeps it -
+    // a name pasted from Word carries them, and dropping it here would join
+    // the words rather than warn.
+    // `letters` is opt-in via data-kk-chars rather than inferred: most text
+    // inputs are not names, and a street or a business name legitimately
+    // carries digits. \p{M} travels with \p{L} because Devanagari matras and
+    // Vietnamese tone marks are separate code points - dropping them would eat
+    // the vowel signs out of a name as it was typed.
     const CHAR_POLICIES = {
         phone: { allow: /[0-9+\-\s()]/, message: 'Phone numbers can only contain digits.' },
         digits: { allow: /[0-9]/, message: 'This field takes digits only.' },
         decimal: { allow: /[0-9.]/, message: 'This field takes numbers only.' },
+        letters: { allow: /[\p{L}\p{M} \u00A0]/u, message: 'Names can only contain letters.' },
     };
 
     function charPolicy(field) {

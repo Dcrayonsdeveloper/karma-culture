@@ -40,7 +40,7 @@ class ContactFormTest extends TestCase
         $response = $this->get(route('contact'));
 
         $response->assertStatus(200);
-        $response->assertSee('minlength="2" maxlength="100"', false);   // name
+        $response->assertSee('minlength="2" maxlength="30"', false);    // name
         $response->assertSee('required maxlength="255"', false);        // email
         $response->assertSee('minlength="3" maxlength="200"', false);   // subject
         $response->assertSee('minlength="10" maxlength="5000"', false); // message
@@ -52,7 +52,7 @@ class ContactFormTest extends TestCase
         $response = $this->get(route('wholesale'));
 
         $response->assertStatus(200);
-        $response->assertSee('minlength="2" maxlength="100"', false);   // contact name
+        $response->assertSee('minlength="2" maxlength="30"', false);    // contact name
         $response->assertSee('required maxlength="120"', false);        // business name
         $response->assertSee('minlength="10" maxlength="5000"', false); // message
         $response->assertSee('inputmode="tel"', false);
@@ -90,6 +90,74 @@ class ContactFormTest extends TestCase
 
         $response->assertSessionHasErrors(['name', 'subject', 'message']);
         $this->assertSame(0, Enquiry::count());
+    }
+
+    /**
+     * The name field was specified as letters only, up to 30 characters — no
+     * digits, no punctuation. That is narrower than PersonName's default
+     * charset, which admits the hyphen, apostrophe and period a legal name can
+     * carry, so this endpoint asks for the narrow variant explicitly.
+     */
+    public function test_a_name_carrying_digits_or_punctuation_is_rejected(): void
+    {
+        $this->withoutMiddleware(ThrottleRequests::class);
+
+        foreach ([
+            'dfgdfgfgdfgfdg45464565',   // the shape that prompted the rule
+            'Asha 2',
+            'Asha@Menon',
+            'Asha_Menon',
+            'Asha!',
+            "O'Connor",                 // allowed elsewhere, not on this form
+            'Mary-Anne',
+            'A. Menon',
+        ] as $name) {
+            $this->post(route('contact.send'), $this->validPayload(['name' => $name]))
+                ->assertSessionHasErrors('name');
+        }
+
+        $this->assertSame(0, Enquiry::count());
+    }
+
+    public function test_letters_and_spaces_are_accepted_in_any_script(): void
+    {
+        $this->withoutMiddleware(ThrottleRequests::class);
+
+        foreach (['Asha Menon', 'José Ramirez', 'रवि कुमार'] as $name) {
+            $this->post(route('contact.send'), $this->validPayload(['name' => $name]))
+                ->assertSessionHasNoErrors();
+        }
+
+        $this->assertSame(3, Enquiry::count());
+    }
+
+    public function test_the_name_stops_at_thirty_characters(): void
+    {
+        $this->withoutMiddleware(ThrottleRequests::class);
+
+        $this->post(route('contact.send'), $this->validPayload(['name' => str_repeat('ab', 15)]))
+            ->assertSessionHasNoErrors();
+
+        $this->post(route('contact.send'), $this->validPayload(['name' => str_repeat('ab', 15) . 'c']))
+            ->assertSessionHasErrors('name');
+
+        $this->assertSame(1, Enquiry::count());
+    }
+
+    /**
+     * Both forms POST here, so the narrow rule reaches the wholesale enquiry
+     * too — its markup has to say so or a buyer meets the limit on the reload.
+     */
+    public function test_both_forms_advertise_the_letters_only_pattern(): void
+    {
+        foreach ([route('contact'), route('wholesale')] as $url) {
+            $this->get($url)
+                ->assertStatus(200)
+                ->assertSee('pattern=" *[\p{L}\p{M}][\p{L}\p{M} \xA0]*"', false)
+                // app.js drops a refused character on the keystroke, so a digit
+                // never reaches the field in the first place.
+                ->assertSee('data-kk-chars="letters"', false);
+        }
     }
 
     /** 'email:strict' is what rejects a missing TLD; plain 'email' accepts it. */
