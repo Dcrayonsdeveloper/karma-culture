@@ -95,9 +95,9 @@ class ProfileController extends Controller
     {
         $validated = $this->validateSection($request, 'change-password', [
             'current_password' => 'required|current_password',
-            // Unchanged policy - V::password() is the same Password::defaults()
-            // + confirmed this already used. max:255 is an input bound, and
-            // matches RegisterController and ResetPasswordController.
+            // V::password() is Password::defaults() + confirmed - the site-wide
+            // policy, defined once in AppServiceProvider. max:255 is an input
+            // bound, and matches RegisterController and ResetPasswordController.
             //
             // different:current_password is the one addition. Re-submitting the
             // password they already have used to report "Password updated
@@ -109,6 +109,14 @@ class ProfileController extends Controller
             'current_password.current_password' => 'That is not your current password.',
             'password.confirmed' => 'The two passwords do not match.',
             'password.different' => 'Your new password must be different from your current one.',
+            // The same sentences the box says while the password is being
+            // typed (_passwordError in app.js). The doubled 'password.password.*'
+            // keys are how the Password rule reports itself - RegisterController
+            // has the long explanation.
+            'password.min' => 'Your password must be at least 10 characters long.',
+            'password.password.mixed' => 'Your password must include both an uppercase and a lowercase letter.',
+            'password.password.numbers' => 'Your password must include at least one number.',
+            'password.password.symbols' => 'Your password must include at least one special character, such as @ # ! or ?.',
         ]);
 
         $request->user()->update([

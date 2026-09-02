@@ -157,12 +157,14 @@
                                 <div>
                                     <label for="password" class="block text-xs font-medium text-neutral-600 mb-1">New Password</label>
                                     <div class="relative">
-                                        {{-- minlength 8 is Password::defaults(), the policy the server
+                                        {{-- minlength 10 is Password::defaults(), the policy the server
                                              applies; without it the only sign the password was too
-                                             short came back as a page reload. --}}
+                                             short came back as a page reload. The rest of the policy
+                                             is reported live by the password module in app.js, which
+                                             this box opts into with autocomplete="new-password". --}}
                                         <input :type="showNew ? 'text' : 'password'" name="password" id="password" required
-                                               minlength="8" maxlength="255" autocomplete="new-password"
-                                               title="Use at least 8 characters, and not your current password."
+                                               minlength="10" maxlength="255" autocomplete="new-password"
+                                               title="Use at least 10 characters with an uppercase and a lowercase letter, a number and a special character - and not your current password."
                                                class="w-full rounded-lg border {{ $errors->has('password') ? 'border-red-300' : 'border-neutral-200' }} text-sm px-3 py-2.5 pr-10 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50">
                                         <button type="button" @click="showNew = !showNew" class="absolute inset-y-0 right-0 pl-3 pr-3 flex items-center text-neutral-600 hover:text-neutral-600">
                                             <svg x-show="!showNew" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
@@ -172,13 +174,17 @@
                                     @error('password')
                                         <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                                     @enderror
+                                    <p class="mt-1 text-xs text-neutral-600">
+                                        At least 10 characters, including an uppercase and a lowercase
+                                        letter, a number and a special character.
+                                    </p>
                                 </div>
 
                                 <div>
                                     <label for="password_confirmation" class="block text-xs font-medium text-neutral-600 mb-1">Confirm New Password</label>
                                     <div class="relative">
                                         <input :type="showConfirm ? 'text' : 'password'" name="password_confirmation" id="password_confirmation" required
-                                               minlength="8" maxlength="255" autocomplete="new-password"
+                                               minlength="10" maxlength="255" autocomplete="new-password"
                                                class="w-full rounded-lg border border-neutral-200 text-sm px-3 py-2.5 pr-10 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50">
                                         <button type="button" @click="showConfirm = !showConfirm" class="absolute inset-y-0 right-0 pl-3 pr-3 flex items-center text-neutral-600 hover:text-neutral-600">
                                             <svg x-show="!showConfirm" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>

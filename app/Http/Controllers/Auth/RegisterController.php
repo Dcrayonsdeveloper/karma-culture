@@ -90,8 +90,9 @@ class RegisterController extends Controller
                 },
             ],
 
-            // Password::defaults() — the app's existing policy, unchanged
-            // (8 characters). max:255 is an input bound, not a policy change.
+            // Password::defaults() — the site-wide policy, defined once in
+            // AppServiceProvider (ten characters, mixed case, a number and a
+            // symbol). max:255 is an input bound, not a policy change.
             'password' => [...V::password(), 'max:255'],
 
             // The form has always marked this required, but nothing enforced it
@@ -119,7 +120,7 @@ class RegisterController extends Controller
             // rule reports its own failures via addFailure($attribute, 'password.mixed'),
             // so the lookup key is "{attribute}.{rule}" = password.password.mixed.
             // Only 'min' comes from an ordinary rule and takes the short key.
-            'password.min' => 'Your password must be at least 8 characters long.',
+            'password.min' => 'Your password must be at least 10 characters long.',
             'password.password.mixed' => 'Your password must include both an uppercase and a lowercase letter.',
             'password.password.numbers' => 'Your password must include at least one number.',
             'password.password.symbols' => 'Your password must include at least one special character, such as @ # ! or ?.',

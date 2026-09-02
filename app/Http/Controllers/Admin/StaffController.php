@@ -37,7 +37,12 @@ class StaffController extends Controller
             'first_name' => V::name(max: 50),
             'last_name' => V::name(max: 50),
             'email' => 'required|email|unique:users,email',
-            'password' => 'required|min:8|confirmed',
+            // Was 'required|min:8|confirmed' - eight characters of anything -
+            // while every other form on the site that mints a password goes
+            // through V::password(). A staff row is a real login to the admin
+            // panel, so it is held to the same policy as a customer's: ten
+            // characters with mixed case, a number and a symbol.
+            'password' => [...V::password(), 'max:255'],
             'role' => 'required|in:manager,cashier,support,warehouse',
             'is_active' => 'boolean',
             'permissions' => 'nullable|array',
@@ -83,7 +88,9 @@ class StaffController extends Controller
             'first_name' => V::name(max: 50),
             'last_name' => V::name(max: 50),
             'email' => 'required|email|unique:users,email,' . $staff->user_id,
-            'password' => 'nullable|min:8|confirmed',
+            // Optional here - the box says "Leave blank to keep current" - but
+            // a password that IS typed meets the same policy as a new one.
+            'password' => [...V::password(required: false), 'max:255'],
             'role' => 'required|in:manager,cashier,support,warehouse',
             'is_active' => 'boolean',
             'permissions' => 'nullable|array',

@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Facades\Validator;
 
 /**
@@ -41,7 +42,7 @@ class SetAdminCredentials extends Command
         }
 
         $email = $this->option('email') ?: $user?->email;
-        $password = $this->option('password') ?: Str::password(20, symbols: false);
+        $password = $this->option('password') ?: $this->generatePassword();
         $generated = ! $this->option('password');
 
         $check = Validator::make(
@@ -51,7 +52,11 @@ class SetAdminCredentials extends Command
                     'required', 'email:rfc', 'max:255',
                     Rule::unique('users', 'email')->ignore($user?->id)->whereNull('deleted_at'),
                 ],
-                'password' => ['required', 'string', 'min:8', 'max:255'],
+                // Was a bare 'min:8'. This command sets a real admin login, so
+                // it answers to the same site-wide policy as the forms do -
+                // otherwise the documented way to rotate the production
+                // password is also the one way to get under it.
+                'password' => ['required', 'string', 'max:255', Password::defaults()],
             ]
         );
 
@@ -115,6 +120,35 @@ class SetAdminCredentials extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * A generated password that satisfies the site-wide policy.
+     *
+     * Str::password() was called with symbols: false, which cannot satisfy
+     * ->symbols() at all - the command would have generated a password and
+     * then rejected it. Symbols are no hardship here because the result is
+     * printed for copying, not typed.
+     *
+     * The draw is repeated rather than trusted once: Str::password() guarantees
+     * one character from each POOL it is handed, and upper and lower case share
+     * a single "letters" pool, so roughly one generated password in a thousand
+     * carries no capital and fails ->mixedCase(). Checking against the same rule
+     * the command validates with means the two can never disagree.
+     */
+    private function generatePassword(): string
+    {
+        foreach (range(1, 20) as $ignored) {
+            $candidate = Str::password(20);
+
+            if (Validator::make(['password' => $candidate], ['password' => Password::defaults()])->passes()) {
+                return $candidate;
+            }
+        }
+
+        // Twenty consecutive misses is not chance; fall back to a password
+        // assembled to satisfy each requirement outright.
+        return Str::password(16) . 'Aa1!';
     }
 
     /**

@@ -84,7 +84,11 @@
                 <div>
                     <label for="password" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.375rem;">Password</label>
                     <div style="position: relative;">
+                        {{-- current-password: this is a sign-in box, so it is never held to the
+                             new-password policy. An admin account set up before the ten-character
+                             minimum still has to be able to get in. --}}
                         <input type="password" name="password" id="password" required
+                               autocomplete="current-password"
                                class="form-input" style="width: 100%; padding: 0.75rem 1rem; padding-right: 2.75rem; font-size: 13px;"
                                placeholder="Enter your password">
                         <button type="button" onclick="togglePassword()" style="position: absolute; inset: 0 0 0 auto; padding: 0 0.875rem; display: flex; align-items: center; color: #616161; background: none; border: none; cursor: pointer;">

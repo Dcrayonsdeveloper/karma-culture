@@ -326,19 +326,26 @@ final class ValidationRules
     /**
      * A new password.
      *
-     * This is the app's EXISTING policy, unchanged: Password::defaults(), which
-     * has no custom callback registered anywhere, so it resolves to Laravel's
-     * built-in minimum of 8 characters. Auth\RegisterController,
-     * Auth\ResetPasswordController, Account\ProfileController and the API
-     * controllers all already use exactly this; Admin\StaffController and
-     * Admin\ProfileController use the equivalent 'min:8|confirmed'.
+     * The site-wide policy: Password::defaults(), whose callback is registered
+     * in AppServiceProvider::boot() and reads
+     *   Password::min(10)->mixedCase()->numbers()->symbols()
+     * so a new password is at least ten characters and carries an uppercase
+     * letter, a lowercase letter, a number and a special character.
      *
-     * To tighten the policy site-wide, register a callback with
-     * Password::defaults() in AppServiceProvider::boot() - every caller of this
-     * method then follows automatically. Do not tighten it here.
+     * Every form that sets a password goes through here - Auth\RegisterController,
+     * Auth\ResetPasswordController, Account\ProfileController, Admin\StaffController,
+     * Admin\ProfileController and the API controllers - so the policy has exactly
+     * one definition and there is nothing to keep in sync per form.
      *
-     * Client-side counterpart:
-     *   type="password" required minlength="8" autocomplete="new-password"
+     * To change the policy site-wide, edit that callback. Do not tighten it here:
+     * a rule added in this method would apply to the forms and silently not to
+     * the API, which is how the two drifted apart before.
+     *
+     * Client-side counterpart, which mirrors it message for message:
+     *   type="password" required minlength="10" maxlength="255"
+     *   autocomplete="new-password"
+     * plus the live keystroke check in resources/js/app.js (_passwordError and
+     * the "new password" module beside the inline validator).
      */
     public static function password(bool $required = true, bool $confirmed = true): array
     {

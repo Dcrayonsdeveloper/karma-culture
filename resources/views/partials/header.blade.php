@@ -502,10 +502,16 @@
                 <div class="kk-loginmodal__group">
                     <label class="kk-loginmodal__label" for="kk-auth-password">Password</label>
                     <div class="kk-loginmodal__inputwrap">
+                        {{-- @input, not @blur: on signup the four-part rule is reported as the
+                             password is typed, so the message counts down and disappears the
+                             moment it is met. checkPassword() is a no-op in login mode, where
+                             an existing password is being recalled rather than invented. --}}
                         <input :type="showPassword ? 'text' : 'password'" id="kk-auth-password"
                                class="kk-loginmodal__field kk-loginmodal__field--haseye"
                                :class="fieldErrors.password && 'has-error'"
-                               x-model="form.password" placeholder="Enter your password"
+                               x-model="form.password"
+                               @input="checkPassword()"
+                               :placeholder="mode === 'login' ? 'Enter your password' : 'Min 10 characters'"
                                :autocomplete="mode === 'login' ? 'current-password' : 'new-password'">
                         <button type="button" class="kk-loginmodal__eye" @click="showPassword = !showPassword"
                                 :aria-label="showPassword ? 'Hide password' : 'Show password'" tabindex="-1">
@@ -529,6 +535,7 @@
                                class="kk-loginmodal__field kk-loginmodal__field--haseye"
                                :class="fieldErrors.password_confirmation && 'has-error'"
                                x-model="form.password_confirmation" placeholder="Repeat your password"
+                               @input="checkPassword()"
                                autocomplete="new-password">
                         <button type="button" class="kk-loginmodal__eye" @click="showConfirm = !showConfirm"
                                 :aria-label="showConfirm ? 'Hide password' : 'Show password'" tabindex="-1">
@@ -595,6 +602,52 @@
                 this.showConfirm = false;
             },
             /**
+             * The site-wide password policy - Password::min(10)->mixedCase()
+             * ->numbers()->symbols() from AppServiceProvider - in the same
+             * sentences the server would have used, so a password this modal
+             * accepts is never handed back by the endpoint.
+             *
+             * Deliberately no character-set restriction: any non-alphanumeric
+             * counts as the symbol, so '#', '_' and '-' are all fine.
+             *
+             * Returns '' when the password is acceptable.
+             */
+            passwordError(pw) {
+                if (!pw) return 'Please enter your password.';
+                if ([...pw].length < 10) return 'Your password must be at least 10 characters long.';
+                if ([...pw].length > 255) return 'Your password must be 255 characters or fewer.';
+                if (!/[a-z]/.test(pw) || !/[A-Z]/.test(pw)) return 'Your password must include both an uppercase and a lowercase letter.';
+                if (!/\d/.test(pw)) return 'Your password must include at least one number.';
+                if (!/[^A-Za-z0-9]/.test(pw)) return 'Your password must include at least one special character, such as @ # ! or ?.';
+                return '';
+            },
+            /**
+             * The signup password, judged on the keystroke rather than on the
+             * submit. Four requirements reported one at a time only work if
+             * they are reported while the password is being invented; told
+             * afterwards, the shopper has to invent another one.
+             *
+             * Only the two password keys are rewritten. Re-running validate()
+             * here would light up the name, email and phone boxes as well,
+             * while the shopper is still on the password.
+             */
+            checkPassword() {
+                if (this.mode !== 'signup') return;
+
+                const pw = this.form.password;
+                const confirm = this.form.password_confirmation;
+
+                this.fieldErrors = {
+                    ...this.fieldErrors,
+                    // An empty box is unfinished, not wrong: nothing has been
+                    // typed into it to be judged yet.
+                    password: pw ? this.passwordError(pw) : '',
+                    password_confirmation: (confirm && pw && confirm !== pw)
+                        ? 'The two passwords do not match.'
+                        : '',
+                };
+            },
+            /**
              * Errors are keyed by field so each one renders under the input it
              * belongs to, rather than as a single message at the top that makes
              * the reader work out which box it means.
@@ -647,19 +700,14 @@
                 if (!this.form.password) {
                     e.password = 'Please enter your password.';
                 } else if (signup) {
-                    // Mirrors the Password::defaults() policy in AppServiceProvider.
-                    // Deliberately no character-set restriction: any non-alphanumeric
-                    // counts as the symbol, so '#', '_' and '-' are all fine.
-                    const pw = this.form.password;
-                    if (pw.length < 8) {
-                        e.password = 'Your password must be at least 8 characters long.';
-                    } else if (!/[a-z]/.test(pw) || !/[A-Z]/.test(pw)) {
-                        e.password = 'Your password must include both an uppercase and a lowercase letter.';
-                    } else if (!/\d/.test(pw)) {
-                        e.password = 'Your password must include at least one number.';
-                    } else if (!/[^A-Za-z0-9]/.test(pw)) {
-                        e.password = 'Your password must include at least one special character, such as @ # ! or ?.';
-                    }
+                    // The same passwordError() the keystroke check calls, so the
+                    // message on submit and the one while typing are one rule
+                    // with one wording. Sign-in is deliberately left out: an
+                    // account made under the old eight-character policy has a
+                    // password that fails this one, and refusing it here would
+                    // lock that customer out of the screen they'd fix it from.
+                    const problem = this.passwordError(this.form.password);
+                    if (problem) e.password = problem;
                 }
 
                 if (signup) {

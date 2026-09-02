@@ -127,7 +127,7 @@ Authorization: Bearer 1|abcdef123456...
         "message": "The given data was invalid.",
         "details": {
             "email": ["The email field is required."],
-            "password": ["The password must be at least 8 characters."]
+            "password": ["The password must be at least 10 characters."]
         }
     },
     "meta": {

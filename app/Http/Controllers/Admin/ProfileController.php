@@ -32,7 +32,11 @@ class ProfileController extends Controller
             'last_name' => V::name(max: 50),
             'email' => 'required|email|unique:users,email,' . $user->id,
             'current_password' => 'nullable|required_with:password',
-            'password' => 'nullable|min:8|confirmed',
+            // Was 'nullable|min:8|confirmed'. An admin's own password is the
+            // most valuable one on the site and was the least constrained of
+            // any; V::password() is the site-wide policy every other form
+            // already applies.
+            'password' => [...V::password(required: false), 'max:255'],
         ]);
 
         $user->first_name = $validated['first_name'];

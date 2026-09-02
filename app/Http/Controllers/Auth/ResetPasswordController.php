@@ -43,8 +43,8 @@ class ResetPasswordController extends Controller
             'token' => ['required', 'string', 'max:255'],
             // Permissive `email`: it has to match an address already stored.
             'email' => ['required', 'string', 'email', 'max:255'],
-            // V::password() is Password::defaults() + confirmed - the app's
-            // existing policy, not a new one.
+            // V::password() is Password::defaults() + confirmed - the site-wide
+            // policy, defined once in AppServiceProvider.
             'password' => [...V::password(), 'max:255'],
         ], [
             'token.required' => 'This password reset link is incomplete. Please request a new one.',
@@ -53,6 +53,15 @@ class ResetPasswordController extends Controller
             'password.required' => 'Please choose a new password.',
             'password.confirmed' => 'The two passwords do not match.',
             'password.max' => 'Your password must be 255 characters or fewer.',
+            // Word for word what the box already said while the password was
+            // being typed (_passwordError in app.js), so the same complaint
+            // arriving from the server does not read as a different one. The
+            // doubled 'password.password.*' keys are how the Password rule
+            // reports itself - RegisterController has the long explanation.
+            'password.min' => 'Your password must be at least 10 characters long.',
+            'password.password.mixed' => 'Your password must include both an uppercase and a lowercase letter.',
+            'password.password.numbers' => 'Your password must include at least one number.',
+            'password.password.symbols' => 'Your password must include at least one special character, such as @ # ! or ?.',
         ]);
 
         $status = Password::reset(

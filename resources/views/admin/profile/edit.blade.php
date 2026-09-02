@@ -64,8 +64,9 @@
 
                         <div>
                             <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Current Password</label>
-                            <div style="position: relative;">
-                                <input type="password" name="current_password" class="form-input" style="width: 100%; padding-right: 2.75rem;">
+                            <div class="relative" style="position: relative;">
+                                <input type="password" name="current_password" autocomplete="current-password"
+                                       class="form-input" style="width: 100%; padding-right: 2.75rem;">
                                 <x-admin.password-toggle label="current password" />
                             </div>
                             @error('current_password')
@@ -76,18 +77,29 @@
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                             <div>
                                 <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">New Password</label>
-                                <div style="position: relative;">
-                                    <input type="password" name="password" class="form-input" style="width: 100%; padding-right: 2.75rem;">
+                                <div class="relative" style="position: relative;">
+                                    {{-- Optional, so no `required`; minlength applies only once
+                                         something has been typed. autocomplete="new-password" is
+                                         what enrols the box in the live policy check in app.js. --}}
+                                    <input type="password" name="password"
+                                           autocomplete="new-password" minlength="10" maxlength="255"
+                                           class="form-input" style="width: 100%; padding-right: 2.75rem;">
                                     <x-admin.password-toggle label="new password" />
                                 </div>
                                 @error('password')
                                     <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
                                 @enderror
+                                <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
+                                    At least 10 characters, including an uppercase and a lowercase
+                                    letter, a number and a special character.
+                                </p>
                             </div>
                             <div>
                                 <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Confirm New Password</label>
-                                <div style="position: relative;">
-                                    <input type="password" name="password_confirmation" class="form-input" style="width: 100%; padding-right: 2.75rem;">
+                                <div class="relative" style="position: relative;">
+                                    <input type="password" name="password_confirmation"
+                                           autocomplete="new-password" maxlength="255"
+                                           class="form-input" style="width: 100%; padding-right: 2.75rem;">
                                     <x-admin.password-toggle label="password confirmation" />
                                 </div>
                             </div>

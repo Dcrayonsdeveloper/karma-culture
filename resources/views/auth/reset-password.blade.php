@@ -104,9 +104,16 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                                 </svg>
                             </div>
+                            {{-- autocomplete="new-password" is what enrols this box in the live
+                                 policy check - app.js reads it together with the field name - as
+                                 well as telling the browser's password manager to offer a fresh
+                                 password rather than the one being replaced. The box had neither
+                                 it nor a minlength, so the only sign the new password was too
+                                 short came back as a reloaded page. --}}
                             <input :type="show ? 'text' : 'password'" name="password" id="password" required
+                                   autocomplete="new-password" minlength="10" maxlength="255"
                                    class="w-full pl-12 pr-12 py-3 bg-neutral-50 border border-neutral-200 rounded-xl text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all"
-                                   placeholder="Min 8 characters">
+                                   placeholder="Min 10 characters">
                             <button type="button" @click="show = !show" class="absolute inset-y-0 right-0 pl-3 pr-4 flex items-center text-neutral-600 hover:text-neutral-600 transition-colors">
                                 <svg x-show="!show" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -117,6 +124,10 @@
                                 </svg>
                             </button>
                         </div>
+                        <p class="mt-1.5 text-xs text-neutral-600">
+                            At least 10 characters, including an uppercase and a lowercase letter,
+                            a number and a special character.
+                        </p>
                     </div>
 
                     <!-- Confirm Password -->
@@ -129,6 +140,7 @@
                                 </svg>
                             </div>
                             <input type="password" name="password_confirmation" id="password_confirmation" required
+                                   autocomplete="new-password" maxlength="255"
                                    class="w-full pl-12 pr-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all"
                                    placeholder="Repeat new password">
                         </div>
