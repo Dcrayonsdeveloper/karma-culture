@@ -213,12 +213,18 @@
                     @endforeach
                 </nav>
 
-                <!-- Mobile search icon (shown below sm, links to search page) -->
-                <a href="{{ route('search') }}" class="sm:hidden p-2 text-kk-brown hover:text-kk-tan-dark transition-colors" aria-label="Search">
+                {{-- Mobile search (below sm, where the inline bar is hidden). Opens the
+                     full-screen panel rather than linking to /search: that page has no
+                     field to type in until it already has a query, so the link left the
+                     shopper on an empty screen asking for a keyword. --}}
+                <button type="button"
+                        @click="$dispatch('open-mobile-search')"
+                        class="sm:hidden p-2 text-kk-brown hover:text-kk-tan-dark transition-colors"
+                        aria-label="Search">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
-                </a>
+                </button>
 
                 <!-- Inline Search Bar with Typewriter + Mic (hidden on mobile) -->
                 <div class="relative hidden sm:block flex-1 min-w-0 max-w-xs lg:max-w-sm mx-1 lg:mx-3"

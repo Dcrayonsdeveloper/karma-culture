@@ -329,6 +329,9 @@
     <!-- Mobile Navigation -->
     @include('partials.mobile-nav')
 
+    <!-- Mobile Search (full-screen panel behind the header's magnifier) -->
+    @include('partials.mobile-search')
+
     <!-- Notify Stock Listener -->
     <div x-data @notify-stock.window="$store.toast.success('We\'ll notify you when this item is back in stock!')"></div>
 
