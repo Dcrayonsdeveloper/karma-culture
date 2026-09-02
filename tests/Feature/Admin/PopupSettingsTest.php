@@ -184,13 +184,28 @@ class PopupSettingsTest extends TestCase
         Storage::disk('public')->assertExists($exit);
     }
 
+    /**
+     * The warning's own tag, so a test can tell "shown" from "in the markup".
+     *
+     * It is rendered either way now and hidden with x-show, which is what lets
+     * picking a real code out of the list clear it without a round trip.
+     */
+    private function codeWarningTag(string $html): string
+    {
+        preg_match('/<div role="status" x-show="! known"[^>]*>/', $html, $found);
+
+        return $found[0] ?? '';
+    }
+
     public function test_a_code_with_no_coupon_behind_it_is_flagged(): void
     {
         $admin = $this->admin();
 
-        $this->actingAs($admin, 'admin')
-            ->get(route('admin.settings.popups'))
-            ->assertSee('No coupon matches this code', false);
+        $unknown = $this->actingAs($admin, 'admin')->get(route('admin.settings.popups'));
+        $unknown->assertSee('No coupon matches this code', false);
+        $tag = $this->codeWarningTag($unknown->getContent());
+        $this->assertNotSame('', $tag);
+        $this->assertStringNotContainsString('display: none', $tag);
 
         Coupon::create([
             'code'  => 'KARMAA10',
@@ -199,9 +214,50 @@ class PopupSettingsTest extends TestCase
             'value' => 10,
         ]);
 
-        $this->actingAs($admin, 'admin')
+        $known = $this->actingAs($admin, 'admin')->get(route('admin.settings.popups'));
+        $this->assertStringContainsString('display: none', $this->codeWarningTag($known->getContent()));
+    }
+
+    /**
+     * The code box used to be an <input list> over a <datalist>, which the
+     * browser decorates with a dropdown arrow that opens its own suggestion
+     * list - and that list filters itself down to nothing as soon as anything
+     * is typed, so the field advertised a picker and behaved like a text box.
+     */
+    public function test_the_code_box_offers_every_coupon_that_exists(): void
+    {
+        foreach (['KARMAA10', 'WELCOME15'] as $code) {
+            Coupon::create(['code' => $code, 'name' => $code, 'type' => 'percentage', 'value' => 10]);
+        }
+
+        $html = $this->actingAs($this->admin(), 'admin')
             ->get(route('admin.settings.popups'))
-            ->assertDontSee('No coupon matches this code', false);
+            ->getContent();
+
+        $this->assertStringNotContainsString('<datalist', $html);
+        $this->assertStringContainsString('id="exit-popup-code-list"', $html);
+        $this->assertStringContainsString('Show the discount codes that exist', $html);
+
+        // Both codes reach the component, whatever is in the box.
+        preg_match('/x-data="kkCodePicker\((.+?)\)"/', $html, $found);
+        $this->assertStringContainsString('KARMAA10', $found[1] ?? '');
+        $this->assertStringContainsString('WELCOME15', $found[1] ?? '');
+    }
+
+    /**
+     * No coupons, no arrow: a control that opens an empty list is the bug this
+     * replaced, so the box has to look like the plain text field it then is.
+     */
+    public function test_the_code_box_has_no_arrow_when_there_are_no_coupons(): void
+    {
+        $html = $this->actingAs($this->admin(), 'admin')
+            ->get(route('admin.settings.popups'))
+            ->getContent();
+
+        $this->assertStringNotContainsString('id="exit-popup-code-list"', $html);
+        $this->assertStringNotContainsString('Show the discount codes that exist', $html);
+        // Still a required text box that takes a code no coupon exists for yet.
+        $this->assertStringContainsString('name="exit_popup_code"', $html);
     }
 
     public function test_a_staff_member_without_settings_access_cannot_edit_the_popups(): void
