@@ -615,7 +615,8 @@
                 loading: false,
                 showResults: false,
                 listening: false,
-                micPanel: null,   // waiting | listening | blocked | denied | nodevice | unsupported | error
+                micPanel: null,   // waiting | listening | blocked | denied | nodevice | network | nospeech | unsupported | error
+                micErrorCode: '', // the raw code behind a 'error' panel, so it can be reported
                 recognition: null,
                 currentPlaceholder: '',
                 placeholders: [
@@ -643,27 +644,75 @@
                         this.recognition.lang = 'en-IN';
                         this.recognition.continuous = false;
                         this.recognition.interimResults = false;
+                        // start() returns long before the microphone is live: on a
+                        // first visit the browser is still showing its permission
+                        // prompt. Say "Listening" only when the engine says it is.
+                        this.recognition.onstart = () => {
+                            this.listening = true;
+                            this.micPanel = 'listening';
+                        };
                         this.recognition.onresult = (event) => {
                             const transcript = event.results[0][0].transcript;
                             this.query = transcript;
                             this.listening = false;
                             this.micPanel = null;
                             this.fetchSuggestions();
-                            // Auto-submit after voice input
+                            // Auto-submit after voice input. The mobile panel runs
+                            // this same component under a different ref, so ask the
+                            // field which form it is in rather than assuming.
                             this.$nextTick(() => {
-                                this.$refs.searchInput.closest('form').submit();
+                                const field = this.$refs.searchInput || this.$refs.mobileSearchInput;
+                                const form = field && field.closest('form');
+                                if (form) form.submit();
                             });
                         };
                         this.recognition.onerror = (event) => {
                             this.listening = false;
-                            if (event.error === 'not-allowed') { this.micPanel = 'blocked'; return; }
-                            if (event.error === 'no-speech') { this.micPanel = 'nospeech'; return; }
-                            if (event.error === 'aborted') { this.micPanel = null; return; }
-                            this.micPanel = 'error';
+                            this.micErrorCode = event.error || '';
+                            switch (event.error) {
+                                case 'aborted':
+                                    // We stopped it, or the page went away. Say nothing.
+                                    this.micPanel = null;
+                                    break;
+                                case 'no-speech':
+                                    this.micPanel = 'nospeech';
+                                    break;
+                                case 'not-allowed':
+                                    // A refusal just now and a permission that was
+                                    // already off arrive identically. Only the
+                                    // permission store tells them apart, and only one
+                                    // of the two is worth a "Try again" button.
+                                    this.micPanel = 'denied';
+                                    this.micBlocked().then((blocked) => {
+                                        if (blocked && this.micPanel === 'denied') {
+                                            this.micPanel = 'blocked';
+                                        }
+                                    });
+                                    break;
+                                case 'service-not-allowed':
+                                    // The browser has speech recognition but no
+                                    // transcription service behind it.
+                                    this.micPanel = 'unsupported';
+                                    break;
+                                case 'audio-capture':
+                                    // Permission granted, device still unreadable.
+                                    this.micPanel = 'nodevice';
+                                    break;
+                                case 'network':
+                                    this.micPanel = 'network';
+                                    break;
+                                default:
+                                    this.micPanel = 'error';
+                            }
                         };
                         this.recognition.onend = () => {
                             this.listening = false;
-                            if (this.micPanel === 'listening') { this.micPanel = null; }
+                            // Clear only the two states that mean "still going".
+                            // onerror has already run by now and its panel is the
+                            // one thing the customer needs to keep seeing.
+                            if (this.micPanel === 'listening' || this.micPanel === 'waiting') {
+                                this.micPanel = null;
+                            }
                         };
                     }
                 },
@@ -746,8 +795,12 @@
 
                 closeMicPanel() {
                     this.micPanel = null;
+                    this.micErrorCode = '';
                     if (this.listening) {
-                        this.recognition && this.recognition.stop();
+                        // abort(), not stop(): stop() asks for a result out of the
+                        // audio so far, and the customer has just closed the panel
+                        // that would have shown it.
+                        try { this.recognition && this.recognition.abort(); } catch (e) {}
                         this.listening = false;
                     }
                 },
@@ -765,44 +818,47 @@
                         return;
                     }
 
-                    // Show the waiting panel first, then ask. The browser prompt
-                    // appears over it, so the customer can see what is being asked
-                    // for and why - rather than a bare dialog with no context.
-                    this.micPanel = 'waiting';
+                    this.micErrorCode = '';
 
-                    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                        if (await this.micBlocked()) {
-                            // Chrome will not prompt again once a site is blocked,
-                            // so explain where to undo it instead of waiting.
-                            this.micPanel = 'blocked';
-                            return;
-                        }
-
-                        try {
-                            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                            stream.getTracks().forEach((track) => track.stop());
-                        } catch (e) {
-                            this.listening = false;
-                            this.micPanel = (e && e.name === 'NotAllowedError') ? 'denied' : 'nodevice';
-                            return;
-                        }
+                    // Chrome will not prompt again once a site is blocked, so
+                    // explain where to undo it instead of opening a session that
+                    // can only fail.
+                    if (await this.micBlocked()) {
+                        this.micPanel = 'blocked';
+                        return;
                     }
+
+                    // Shown under the browser's own permission prompt, so the
+                    // customer can see what is being asked for and why - rather
+                    // than a bare dialog with no context. onstart replaces it.
+                    this.micPanel = 'waiting';
 
                     this.stopTypewriter();
                     this.query = '';
 
+                    // No getUserMedia pre-flight here, deliberately.
+                    //
+                    // This used to open a real capture stream, stop its tracks and
+                    // then call start() a moment later - so the microphone was
+                    // taken, released and retaken within the same tick. Windows
+                    // hands a capture device back on its own schedule, and asking
+                    // for it again mid-release is how a shopper with the permission
+                    // granted and a working microphone still got "Something went
+                    // wrong": recognition came back audio-capture or network.
+                    //
+                    // start() raises its own permission prompt, so the pre-flight
+                    // bought nothing. The one thing it did tell us apart - blocked
+                    // from merely denied - micBlocked() answers above and in
+                    // onerror, without touching the device at all.
                     try {
                         this.recognition.start();
-                        this.listening = true;
-                        this.micPanel = 'listening';
                     } catch (e) {
+                        // InvalidStateError: a previous session has not finished
+                        // winding down. Drop it so the next press starts clean.
+                        try { this.recognition.abort(); } catch (err) {}
                         this.listening = false;
-                        if (e.message && e.message.includes('already started')) {
-                            this.recognition.stop();
-                            this.micPanel = null;
-                        } else {
-                            this.micPanel = 'error';
-                        }
+                        this.micErrorCode = (e && e.name) ? e.name : '';
+                        this.micPanel = 'error';
                     }
                 },
 
