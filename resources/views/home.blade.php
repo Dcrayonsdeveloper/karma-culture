@@ -241,9 +241,15 @@
             .kk-syw-tab.is-active--shade small { color: var(--kk-cream); opacity: 0.85; }
             .kk-syw-tab:hover:not(.is-active) { color: var(--kk-brown); }
 
-            /* Stage + panel */
-            .kk-syw-stage { position: relative; margin-top: 64px; min-height: 420px; }
-            .kk-syw-panel { position: absolute; inset: 0; display: flex; align-items: flex-start; justify-content: center; }
+            /* Stage + panel.
+               The panels are stacked in a single grid cell rather than absolutely
+               positioned in a min-height box. Stacking still crossfades one tab
+               into the next, but the stage now takes its height from whichever
+               panel is showing - the old fixed 420px could not contain a rail
+               that wrapped to a second row, so the overflow painted straight
+               over the section below. */
+            .kk-syw-stage { display: grid; margin-top: 64px; }
+            .kk-syw-panel { grid-area: 1 / 1; display: flex; align-items: flex-start; justify-content: center; }
             .kk-syw-panel[data-on="true"] .kk-rail-cell {
                 animation: kk-rise .55s var(--d, 0ms) cubic-bezier(.22,1,.36,1) both;
             }
@@ -286,8 +292,12 @@
             /* Cells along the rail */
             .kk-rail-cells {
                 display: grid;
-                grid-template-columns: repeat(6, 1fr);
+                /* Driven by the item count, not hardcoded: the tabs are filled
+                   from admin-managed rows, so a seventh size dropped onto a
+                   second row the moment someone added one. */
+                grid-template-columns: repeat(var(--kk-rail-cols, 6), minmax(0, 1fr));
                 gap: 8px;
+                row-gap: 26px;
                 position: relative;
                 z-index: 1;
             }
@@ -346,7 +356,6 @@
                 .kk-rail-bar { display: none; }
                 .kk-rail-cells { grid-template-columns: repeat(3, 1fr); row-gap: 28px; }
                 .kk-shirt-hanger { max-width: 110px; }
-                .kk-syw-stage { min-height: 560px; }
                 .kk-rail-label { font-size: 18px; }
             }
 
@@ -497,7 +506,10 @@
                 position: absolute; top: 12px; right: 20px; z-index: 1;
                 font-family: var(--kk-display);
                 font-size: 62px; line-height: 1; font-weight: 700;
-                color: rgba(239, 226, 203, 0.09);
+                /* 0.09 alpha put this at roughly 1.1:1 against the card, and the
+                   tan glow behind the top-right corner is exactly where it sits,
+                   so the digits read as a smudge rather than a number. */
+                color: rgba(239, 226, 203, 0.42);
                 letter-spacing: -0.02em;
                 pointer-events: none;
                 user-select: none;
@@ -1021,7 +1033,12 @@
 
                 <div class="kk-syw-stage">
                     @foreach($kkTabs as $tabKey => $tabCfg)
+                        {{-- Every panel but the default one is cloaked. The stage takes its
+                             height from its content now, so without this all three render
+                             stacked for the instant before Alpine boots and the section
+                             visibly collapses once two of them are hidden. --}}
                         <div class="kk-syw-panel"
+                             @if($tabKey !== 'size') x-cloak @endif
                              :data-on="tab==='{{ $tabKey }}'"
                              x-show="tab==='{{ $tabKey }}'"
                              x-transition:enter="transition ease-out duration-500"
@@ -1032,7 +1049,9 @@
                              x-transition:leave-end="opacity-0">
                             <div class="kk-rail-wrap">
                                 <div class="kk-rail-bar" aria-hidden="true"></div>
-                                <div class="kk-rail-cells">
+                                {{-- Capped so a long list wraps to a second row instead of
+                                     shrinking every hanger into a sliver. --}}
+                                <div class="kk-rail-cells" style="--kk-rail-cols: {{ max(1, min(count($tabCfg['items']), 8)) }};">
                                     @foreach($tabCfg['items'] as $i => $item)
                                         {{-- Display only. These linked through to the shop with a
                                              size/price/shade filter, which returned nothing, so every
@@ -1057,7 +1076,12 @@
                                                 </svg>
                                             </div>
                                             <div class="kk-rail-label">{{ $item['label'] }}</div>
-                                            <div class="kk-rail-count">{{ $item['count'] }} Styles</div>
+                                            {{-- Printed as authored. The admin sub-label field already
+                                                 carries the noun (its placeholder is "120 Styles"), so
+                                                 appending one here read "120 Styles Styles". --}}
+                                            @if($item['count'] !== '')
+                                                <div class="kk-rail-count">{{ $item['count'] }}</div>
+                                            @endif
                                         </div>
                                     @endforeach
                                 </div>
