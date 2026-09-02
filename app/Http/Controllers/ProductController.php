@@ -11,12 +11,28 @@ use App\Models\ProductQuestion;
 use App\Models\ProductView;
 use App\Services\RecommendationService;
 use App\Services\ReviewSchemaService;
+use App\Rules\ValidationRules as V;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ProductController extends Controller
 {
+    /** The only orderings the listing understands. */
+    private const SORTS = ['newest', 'price_asc', 'price_desc', 'rating', 'bestselling', 'name'];
+
+    /**
+     * How many values one multi-select filter may carry.
+     *
+     * A shopper ticks a handful of sizes. A URL carrying five thousand of them
+     * is someone making the page build a five-thousand-clause WHERE, so the
+     * list is cut rather than the request refused.
+     */
+    private const MAX_FILTER_VALUES = 50;
+
     public function index(Request $request): View
     {
         // The Shop It Your Way tiles store price_min/price_max/shade, so accept
@@ -29,6 +45,8 @@ class ProductController extends Controller
             'size'      => $request->filled('size') ? (array) $request->input('size') : null,
         ], fn ($v) => $v !== null && $v !== ''));
 
+        $filters = $this->filters($request);
+
         $query = Product::query()
             ->where('is_active', true)
             ->with(['category', 'brand', 'primaryImage']);
@@ -36,8 +54,8 @@ class ProductController extends Controller
         // Category filter. Products are filed on the deepest category, so a
         // parent has to match its descendants too - otherwise picking MEN or
         // WOMEN returns nothing while their sub-categories return everything.
-        if ($request->filled('category')) {
-            $scope = Category::where('slug', $request->category)->first();
+        if ($filters['category'] !== null) {
+            $scope = Category::where('slug', $filters['category'])->first();
 
             if ($scope) {
                 $query->whereIn('category_id', $scope->getAllDescendantIds());
@@ -47,9 +65,8 @@ class ProductController extends Controller
         }
 
         // Subcategory filter
-        if ($request->filled('subcategory')) {
-            $subSlugs = (array) $request->subcategory;
-            $subIds = Category::whereIn('slug', $subSlugs)->pluck('id');
+        if ($filters['subcategory'] !== []) {
+            $subIds = Category::whereIn('slug', $filters['subcategory'])->pluck('id');
             if ($subIds->isNotEmpty()) {
                 $query->whereIn('category_id', $subIds);
             }
@@ -58,8 +75,8 @@ class ProductController extends Controller
         // Price filter
         // Sizes live on the variants, colours on the product's Colours list, so
         // each needs its own lookup rather than a column on products.
-        if ($request->filled('size')) {
-            $sizes = array_filter((array) $request->input('size'));
+        if ($filters['size'] !== []) {
+            $sizes = $filters['size'];
             $query->whereHas('variants', function ($q) use ($sizes) {
                 $q->where('is_active', true)
                   ->where('stock_quantity', '>', 0)
@@ -67,42 +84,47 @@ class ProductController extends Controller
             });
         }
 
-        if ($request->filled('colour')) {
-            $colours = array_filter((array) $request->input('colour'));
+        if ($filters['colour'] !== []) {
+            $colours = $filters['colour'];
             $query->where(function ($q) use ($colours) {
                 foreach ($colours as $colour) {
                     // Matches the name inside the Colours JSON, and the legacy
                     // colour stored on a variant for older products.
-                    $q->orWhere('attributes', 'like', '%"' . $colour . '"%')
-                      ->orWhereHas('variants', fn ($vq) => $vq->where('attributes', 'like', '%"' . $colour . '"%'));
+                    //
+                    // The value is a bound parameter, so this was never an
+                    // injection - but % and _ are LIKE wildcards, and a colour
+                    // of "%" quietly matched every product on the site.
+                    $needle = '%"'.$this->escapeLike($colour).'"%';
+                    $q->orWhere('attributes', 'like', $needle)
+                      ->orWhereHas('variants', fn ($vq) => $vq->where('attributes', 'like', $needle));
                 }
             });
         }
 
-        if ($request->filled('min_price')) {
-            $query->where('price', '>=', $request->min_price);
+        if ($filters['min_price'] !== null) {
+            $query->where('price', '>=', $filters['min_price']);
         }
-        if ($request->filled('max_price')) {
-            $query->where('price', '<=', $request->max_price);
+        if ($filters['max_price'] !== null) {
+            $query->where('price', '<=', $filters['max_price']);
         }
 
         // Rating filter
-        if ($request->filled('rating')) {
-            $query->where('rating', '>=', $request->rating);
+        if ($filters['rating'] !== null) {
+            $query->where('rating', '>=', $filters['rating']);
         }
 
         // In stock filter
-        if ($request->boolean('in_stock')) {
+        if ($filters['in_stock']) {
             $query->where('stock_quantity', '>', 0);
         }
 
         // On sale filter (price less than mrp)
-        if ($request->boolean('on_sale')) {
+        if ($filters['on_sale']) {
             $query->whereNotNull('mrp')->whereColumn('price', '<', 'mrp');
         }
 
         // Sorting
-        $sortBy = $request->get('sort', 'newest');
+        $sortBy = $filters['sort'];
         match ($sortBy) {
             'price_asc' => $query->orderBy('price', 'asc'),
             'price_desc' => $query->orderBy('price', 'desc'),
@@ -119,6 +141,102 @@ class ProductController extends Controller
         $subcategories = Category::whereNotNull('parent_id')->where('is_active', true)->orderBy('name')->get();
 
         return view('products.index', compact('products', 'categories', 'subcategories'));
+    }
+
+    /**
+     * The shop filters, validated and normalised.
+     *
+     * A listing URL is public, shareable and crawled, so a malformed parameter
+     * degrades to "no filter" rather than to a 422 the crawler indexes. The
+     * check is still a real boundary: before this, `?min_price[]=1` reached
+     * `where('price', '>=', [...])` and 500'd the page, and `?rating=abc`
+     * reached the comparison unchecked.
+     *
+     * Scalars go through the validator. The multi-value chips (size, colour,
+     * subcategory) are normalised by hand instead, because Validator::valid()
+     * keeps an array whole when only one of its elements fails `size.*` - it
+     * would have handed the bad element straight back.
+     *
+     * @return array{category: ?string, subcategory: array<int, string>, size: array<int, string>, colour: array<int, string>, min_price: ?float, max_price: ?float, rating: ?int, in_stock: bool, on_sale: bool, sort: string}
+     */
+    private function filters(Request $request): array
+    {
+        $scalarKeys = ['category', 'min_price', 'max_price', 'rating', 'in_stock', 'on_sale', 'sort'];
+
+        $validator = Validator::make(Arr::only($request->all(), $scalarKeys), [
+            'category' => ['nullable', 'string', 'max:120'],
+            'min_price' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+            'max_price' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+            'rating' => ['nullable', 'integer', 'min:1', 'max:5'],
+            'in_stock' => ['nullable', 'boolean'],
+            'on_sale' => ['nullable', 'boolean'],
+            'sort' => ['nullable', 'string', Rule::in(self::SORTS)],
+        ]);
+
+        $safe = Arr::only($validator->valid(), $scalarKeys);
+
+        $number = function (string $key) use ($safe): ?float {
+            $value = $safe[$key] ?? null;
+
+            return ($value === null || $value === '') ? null : (float) $value;
+        };
+
+        $category = $safe['category'] ?? null;
+        $category = is_string($category) ? trim($category) : null;
+        $rating = $safe['rating'] ?? null;
+        $sort = $safe['sort'] ?? null;
+
+        return [
+            'category' => ($category === null || $category === '') ? null : $category,
+            'subcategory' => $this->filterList($request->input('subcategory'), 120),
+            'size' => $this->filterList($request->input('size'), 40),
+            'colour' => $this->filterList($request->input('colour'), 60),
+            'min_price' => $number('min_price'),
+            'max_price' => $number('max_price'),
+            'rating' => ($rating === null || $rating === '') ? null : (int) $rating,
+            'in_stock' => filter_var($safe['in_stock'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            'on_sale' => filter_var($safe['on_sale'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            'sort' => (is_string($sort) && $sort !== '') ? $sort : 'newest',
+        ];
+    }
+
+    /**
+     * One multi-select filter, reduced to a bounded list of plain strings.
+     *
+     * Nested arrays (?size[][]=x) and objects are dropped rather than passed to
+     * the query builder, which would fatal on them.
+     *
+     * @return array<int, string>
+     */
+    private function filterList(mixed $value, int $maxLength): array
+    {
+        $items = [];
+
+        foreach (Arr::wrap($value) as $item) {
+            if (! is_scalar($item)) {
+                continue;
+            }
+
+            $item = trim((string) $item);
+
+            if ($item === '' || mb_strlen($item) > $maxLength) {
+                continue;
+            }
+
+            $items[$item] = $item;
+
+            if (count($items) >= self::MAX_FILTER_VALUES) {
+                break;
+            }
+        }
+
+        return array_values($items);
+    }
+
+    /** % and _ are LIKE wildcards; a shopper picking a colour means it literally. */
+    private function escapeLike(string $value): string
+    {
+        return addcslashes($value, '%_\\');
     }
 
     public function show(Product $product): View
@@ -318,16 +436,28 @@ class ProductController extends Controller
 
     public function askQuestion(Request $request, Product $product): JsonResponse
     {
-        $request->validate([
-            'question' => 'required|string|min:10|max:1000',
-            'guest_name' => 'nullable|string|max:100',
-            'guest_email' => 'nullable|email|max:255',
+        // Questions are shown verbatim on the product page once an admin
+        // answers them, so the markup guard matters here as much as the length.
+        // guest_name / guest_email are validated but deliberately not stored:
+        // product_questions has no column for either (see the model's
+        // $fillable). They are checked anyway so an unbounded string cannot be
+        // posted at the endpoint.
+        $validated = $request->validate([
+            'question' => V::textarea(max: 1000, min: 10),
+            'guest_name' => V::name(required: false),
+            'guest_email' => V::email(required: false),
+        ], [
+            'question.required' => 'Please type your question.',
+            'question.min' => 'Please give us a little more detail - at least 10 characters.',
+            'question.max' => 'Please keep your question under 1000 characters.',
+            'guest_name.min' => 'Please enter your full name.',
+            'guest_email.email' => 'Enter a valid email address, like you@example.com.',
         ]);
 
         ProductQuestion::create([
             'product_id' => $product->id,
             'user_id' => auth()->id(),
-            'question' => $request->question,
+            'question' => $validated['question'],
         ]);
 
         return response()->json(['message' => 'Question submitted successfully!']);
@@ -335,14 +465,20 @@ class ProductController extends Controller
 
     public function notifyBackInStock(Request $request, Product $product): JsonResponse
     {
-        $request->validate([
-            'email' => 'required|email|max:255',
+        // 'email:strict' rather than plain 'email': Laravel's permissive mode
+        // accepts "shopper@gmail" (no TLD), and a back-in-stock row keyed to an
+        // undeliverable address is a mail bounce nobody ever sees.
+        $validated = $request->validate([
+            'email' => V::email(),
+        ], [
+            'email.required' => 'Please enter your email address.',
+            'email.email' => 'Enter a valid email address, like you@example.com.',
         ]);
 
         BackInStockSubscription::updateOrCreate(
             [
                 'product_id' => $product->id,
-                'email' => $request->email,
+                'email' => $validated['email'],
             ],
             [
                 'user_id' => auth()->id(),

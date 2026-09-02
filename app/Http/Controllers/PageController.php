@@ -8,12 +8,18 @@ use App\Models\Enquiry;
 use App\Models\Notification;
 use App\Models\Page;
 use App\Models\User;
+use App\Rules\ValidationRules as V;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 
 class PageController extends Controller
 {
+    /** The longest blog search phrase we accept. */
+    private const MAX_BLOG_SEARCH = 100;
+
     public function about(): View
     {
         $brands = Brand::active()->featured()
@@ -32,15 +38,56 @@ class PageController extends Controller
 
     public function sendContact(Request $request): RedirectResponse
     {
+        // This one endpoint backs two forms: /contact and the wholesale enquiry
+        // on /wholesale, which posts an extra business_name and a fixed hidden
+        // subject. business_name had no rule here, so `Enquiry::create()`
+        // dropped it on the floor (there is no such column, and it is not
+        // fillable) - every wholesale enquiry reached the admin inbox with the
+        // one field that identifies the business missing. It is validated and
+        // folded into the message body below instead.
+        //
+        // Phone is checked on digit count rather than with the Indian mobile
+        // rule: a wholesale enquiry can legitimately come from abroad, and this
+        // is a "we will call you back" field, not a number we transact on.
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'subject' => ['required', 'string', 'max:200'],
-            'message' => ['required', 'string', 'max:5000'],
+            'name' => V::name(),
+            'email' => V::email(),
+            'phone' => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\-\s()]+$/', function ($attribute, $value, $fail) {
+                $digits = preg_replace('/\D/', '', (string) $value);
+                if (strlen($digits) < 10 || strlen($digits) > 15) {
+                    $fail('Please enter a valid phone number (10-15 digits).');
+                }
+            }],
+            'subject' => V::text(max: 200, min: 3),
+            'message' => V::textarea(max: 5000, min: 10),
+            'business_name' => V::text(required: false, max: 120),
+        ], [
+            'name.required' => 'Please enter your name.',
+            'name.min' => 'Please enter your full name.',
+            'email.required' => 'Please enter your email address.',
+            'email.email' => 'Enter a valid email address, like you@example.com.',
+            'phone.regex' => 'Please enter a valid phone number (10-15 digits).',
+            'subject.required' => 'Please tell us what this is about.',
+            'subject.min' => 'Please give the subject at least 3 characters.',
+            'message.required' => 'Please write your message.',
+            'message.min' => 'Please give us a little more detail - at least 10 characters.',
+            'message.max' => 'Please keep your message under 5000 characters.',
+            'business_name.max' => 'Please keep the business name under 120 characters.',
         ]);
 
-        $enquiry = Enquiry::create($validated);
+        $body = $validated['message'];
+
+        if (! empty($validated['business_name'])) {
+            $body = 'Business: '.$validated['business_name']."\n\n".$body;
+        }
+
+        $enquiry = Enquiry::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
+            'subject' => $validated['subject'],
+            'message' => $body,
+        ]);
 
         // Notify all admin users
         $admins = User::where('role', 'admin')->get();
@@ -68,16 +115,25 @@ class PageController extends Controller
         return view('pages.faq');
     }
 
-    public function blog(): View
+    public function blog(Request $request): View
     {
+        // A blog index URL is public and crawled, so a malformed parameter has
+        // to degrade to "no filter" rather than to a 422. The check is still a
+        // boundary: `?search[]=x` used to reach the LIKE and fatal the page,
+        // and an unbounded phrase was interpolated into a LIKE pattern with its
+        // wildcards intact.
+        $filters = $this->blogFilters($request);
+        $search = $filters['search'];
+        $category = $filters['category'];
+
         $posts = BlogPost::published()
-            ->when(request('category'), fn($q, $c) => $q->where('category', $c))
+            ->when($category, fn ($q, $c) => $q->where('category', $c))
             // The orWhere must be grouped, or it breaks out of published():
             // "WHERE published AND title LIKE x OR excerpt LIKE y" matched
             // drafts whose excerpt happened to contain the search term.
-            ->when(request('search'), fn($q, $s) => $q->where(fn($w) => $w
-                ->where('title', 'like', "%{$s}%")
-                ->orWhere('excerpt', 'like', "%{$s}%")))
+            ->when($search, fn ($q, $s) => $q->where(fn ($w) => $w
+                ->where('title', 'like', '%'.$this->escapeLike($s).'%')
+                ->orWhere('excerpt', 'like', '%'.$this->escapeLike($s).'%')))
             ->latest('published_at')
             ->paginate(9)
             ->withQueryString();
@@ -90,6 +146,44 @@ class PageController extends Controller
             ->values();
 
         return view('pages.blog', compact('posts', 'categories'));
+    }
+
+    /**
+     * The blog index query string, validated and normalised.
+     *
+     * @return array{search: ?string, category: ?string}
+     */
+    private function blogFilters(Request $request): array
+    {
+        $keys = ['search', 'category'];
+
+        $validator = Validator::make(Arr::only($request->query(), $keys), [
+            'search' => ['nullable', 'string', 'max:'.self::MAX_BLOG_SEARCH],
+            'category' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $safe = Arr::only($validator->valid(), $keys);
+
+        $string = function (string $key) use ($safe): ?string {
+            $value = $safe[$key] ?? null;
+            if (! is_string($value)) {
+                return null;
+            }
+            $value = trim($value);
+
+            return $value === '' ? null : $value;
+        };
+
+        return [
+            'search' => $string('search'),
+            'category' => $string('category'),
+        ];
+    }
+
+    /** % and _ are LIKE wildcards; a reader typing them means them literally. */
+    private function escapeLike(string $value): string
+    {
+        return addcslashes($value, '%_\\');
     }
 
     public function blogShow(string $slug): View

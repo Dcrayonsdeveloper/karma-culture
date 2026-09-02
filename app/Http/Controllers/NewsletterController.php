@@ -3,28 +3,62 @@
 namespace App\Http\Controllers;
 
 use App\Models\NewsletterSubscriber;
+use App\Rules\ValidationRules as V;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class NewsletterController extends Controller
 {
+    /**
+     * Where a signup may claim to have come from.
+     *
+     * `source` is written straight into a varchar(255) that admins read in the
+     * subscriber list, and nothing on the page constrains it - it is a JSON
+     * body field the client chooses. An unknown value is not an error worth
+     * rejecting a real subscriber over, so it is bounded here and anything
+     * outside the list falls back to 'homepage'.
+     */
+    private const SOURCES = [
+        'homepage',
+        'footer',
+        'offer_popup',
+        'exit_intent',
+        'blog',
+        'checkout',
+        'product',
+    ];
+
     public function subscribe(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'email' => 'required|email|max:255',
-            'name' => 'nullable|string|max:100',
+            'email' => V::email(),
+            'name' => V::name(required: false),
             // Mobile: optional for plain newsletter signups, required by the offer popup
-            // client-side. Validate on the actual DIGIT count (mirrors the client rule) so
-            // symbol/whitespace-only input can't create junk leads via direct POST.
-            'phone' => ['nullable', 'string', 'max:20', function ($attribute, $value, $fail) {
+            // client-side. Validated on the DIGIT count rather than with the Indian
+            // mobile rule on purpose - a newsletter list is the one place a genuine
+            // overseas subscriber turns up, and IndianMobile would reject them. The
+            // charset guard is what stops symbol-only junk creating leads via direct POST.
+            'phone' => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\-\s()]+$/', function ($attribute, $value, $fail) {
                 $digits = preg_replace('/\D/', '', (string) $value);
                 if (strlen($digits) < 10 || strlen($digits) > 15) {
                     $fail('Please enter a valid mobile number (10-15 digits).');
                 }
             }],
+            'source' => ['nullable', 'string', 'max:50'],
+        ], [
+            'email.required' => 'Please enter your email address.',
+            'email.email' => 'Enter a valid email address, like you@example.com.',
+            'name.min' => 'Please enter your full name.',
+            'name.max' => 'Please keep your name under 100 characters.',
+            'phone.regex' => 'Please enter a valid mobile number (10-15 digits).',
         ]);
 
         $phone = isset($validated['phone']) ? preg_replace('/[^0-9+]/', '', $validated['phone']) : null;
+
+        // Never the raw request value: this lands in a column an admin reads.
+        $source = in_array($validated['source'] ?? null, self::SOURCES, true)
+            ? $validated['source']
+            : 'homepage';
 
         $existing = NewsletterSubscriber::where('email', $validated['email'])->first();
 
@@ -49,7 +83,7 @@ class NewsletterController extends Controller
                 'is_active' => true,
                 'subscribed_at' => now(),
                 'unsubscribed_at' => null,
-                'source' => $request->input('source', 'homepage'),
+                'source' => $source,
                 'ip_address' => $request->ip(),
             ])->save();
 
@@ -63,7 +97,7 @@ class NewsletterController extends Controller
             'email' => $validated['email'],
             'name' => $validated['name'] ?? null,
             'phone' => $phone,
-            'source' => $request->input('source', 'homepage'),
+            'source' => $source,
             'is_active' => true,
             'subscribed_at' => now(),
             'ip_address' => $request->ip(),

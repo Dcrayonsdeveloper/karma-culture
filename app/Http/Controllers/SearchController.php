@@ -8,15 +8,32 @@ use App\Models\Brand;
 use App\Models\SearchLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class SearchController extends Controller
 {
+    /**
+     * The longest search phrase we accept.
+     *
+     * search_logs.query is a varchar(255), so an unbounded phrase was not just
+     * untidy - it reached the INSERT below and blew up the page with a
+     * "Data too long for column 'query'" on a strict MySQL. 100 characters is
+     * far longer than any real product search.
+     */
+    private const MAX_QUERY = 100;
+
+    /** The only orderings the listing understands. */
+    private const SORTS = ['relevance', 'price_asc', 'price_desc', 'rating', 'newest'];
+
     public function index(Request $request): View
     {
-        $query = $request->get('q', '');
+        $filters = $this->filters($request);
+        $query = $filters['q'];
 
-        if (empty($query)) {
+        if ($query === '') {
             return view('search.index', [
                 'products' => collect(),
                 'query' => '',
@@ -53,25 +70,27 @@ class SearchController extends Controller
             });
         }
 
-        // Apply filters
-        if ($request->filled('category')) {
-            $productsQuery->whereHas('category', fn ($q) => $q->where('slug', $request->category));
+        // Apply filters. Every value here has been through filters() above, so
+        // none of them can arrive as an array (which the query builder would
+        // choke on) or as an oversized string.
+        if ($filters['category'] !== null) {
+            $productsQuery->whereHas('category', fn ($q) => $q->where('slug', $filters['category']));
         }
 
-        if ($request->filled('brand')) {
-            $productsQuery->whereHas('brand', fn ($q) => $q->where('slug', $request->brand));
+        if ($filters['brand'] !== null) {
+            $productsQuery->whereHas('brand', fn ($q) => $q->where('slug', $filters['brand']));
         }
 
-        if ($request->filled('min_price')) {
-            $productsQuery->where('price', '>=', $request->min_price);
+        if ($filters['min_price'] !== null) {
+            $productsQuery->where('price', '>=', $filters['min_price']);
         }
 
-        if ($request->filled('max_price')) {
-            $productsQuery->where('price', '<=', $request->max_price);
+        if ($filters['max_price'] !== null) {
+            $productsQuery->where('price', '<=', $filters['max_price']);
         }
 
         // Sorting
-        $sortBy = $request->get('sort', 'relevance');
+        $sortBy = $filters['sort'];
         match ($sortBy) {
             'price_asc' => $productsQuery->orderBy('price', 'asc'),
             'price_desc' => $productsQuery->orderBy('price', 'desc'),
@@ -103,6 +122,56 @@ class SearchController extends Controller
             ->get();
 
         return view('search.index', compact('products', 'query', 'categories', 'brands'));
+    }
+
+    /**
+     * The query string, validated and normalised.
+     *
+     * A search URL is public, shareable and crawled: a malformed parameter has
+     * to degrade to "no filter", not to a 422 or a redirect a crawler will
+     * follow. The validator is still the boundary - anything it rejects is
+     * dropped here and never reaches the query builder or the search_logs
+     * insert. Everything this returns is a scalar of a known shape.
+     *
+     * @return array{q: string, category: ?string, brand: ?string, min_price: ?float, max_price: ?float, sort: string}
+     */
+    private function filters(Request $request): array
+    {
+        $keys = ['q', 'category', 'brand', 'min_price', 'max_price', 'sort'];
+
+        $validator = Validator::make(Arr::only($request->query(), $keys), [
+            'q' => ['nullable', 'string', 'max:'.self::MAX_QUERY],
+            'category' => ['nullable', 'string', 'max:120'],
+            'brand' => ['nullable', 'string', 'max:120'],
+            'min_price' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+            'max_price' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+            'sort' => ['nullable', 'string', Rule::in(self::SORTS)],
+        ]);
+
+        $safe = Arr::only($validator->valid(), $keys);
+
+        $string = function (?string $key) use ($safe): ?string {
+            $value = $safe[$key] ?? null;
+            if (! is_string($value)) {
+                return null;
+            }
+            $value = trim($value);
+
+            return $value === '' ? null : $value;
+        };
+
+        return [
+            'q' => $string('q') ?? '',
+            'category' => $string('category'),
+            'brand' => $string('brand'),
+            'min_price' => isset($safe['min_price']) && $safe['min_price'] !== '' && $safe['min_price'] !== null
+                ? (float) $safe['min_price']
+                : null,
+            'max_price' => isset($safe['max_price']) && $safe['max_price'] !== '' && $safe['max_price'] !== null
+                ? (float) $safe['max_price']
+                : null,
+            'sort' => $string('sort') ?? 'relevance',
+        ];
     }
 
     /**
@@ -149,9 +218,13 @@ class SearchController extends Controller
 
     public function suggestions(Request $request): JsonResponse
     {
-        $query = $request->get('q', '');
+        // Same boundary as the full search page: `q` arrives from an XHR the
+        // customer's browser makes on every keystroke, so it is exactly as
+        // untrusted as the address bar. A non-string (?q[]=x) used to reach
+        // strlen() and 500 the endpoint.
+        $query = $this->filters($request)['q'];
 
-        if (strlen($query) < 2) {
+        if (mb_strlen($query) < 2) {
             return response()->json(['suggestions' => []]);
         }
 
