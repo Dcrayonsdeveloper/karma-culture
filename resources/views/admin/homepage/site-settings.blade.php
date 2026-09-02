@@ -77,12 +77,15 @@
                                        style="max-width: 100%; max-height: 200px; border-radius: 10px;"></video>
                             </div>
                         @endif
+                        {{-- The path is written by the upload below, never typed: a hand-edited
+                             one only ever pointed at a file that was not there. Still submitted
+                             (readonly inputs are), so an unchanged slot round-trips as-is. --}}
                         <input type="text" name="{{ $kkAboutVideo['url'] }}" id="{{ $kkAboutVideo['url'] }}"
                                value="{{ old($kkAboutVideo['url'], $settings[$kkAboutVideo['url']] ?? '') }}" maxlength="255"
-                               pattern="https?://\S+|[A-Za-z0-9._\-/]+\.(mp4|webm|mov|ogg)"
-                               title="Enter a full https:// address, or a path to an .mp4, .webm or .mov file."
-                               class="form-input" placeholder="https://… or storage/storefront/about/video.mp4">
-                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Paste a video URL above OR upload a file below. MP4, WebM or MOV, max 64MB. Shown in the About Us section on the home page.</p>
+                               readonly
+                               class="form-input" placeholder="No video yet - upload one below"
+                               style="background-color: #f7f7f7; color: #616161;">
+                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Set by the upload below. MP4, WebM or MOV, max 64MB. Shown in the About Us section on the home page.</p>
                         <input type="file" name="{{ $kkAboutVideo['file'] }}" id="{{ $kkAboutVideo['file'] }}"
                                aria-label="{{ $kkAboutVideo['label'] }} upload"
                                accept="video/mp4,video/webm,video/quicktime" class="form-input" style="margin-top: 0.5rem;">
