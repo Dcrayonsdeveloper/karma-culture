@@ -352,13 +352,15 @@
         $kkWaNumber = \App\Models\Setting::get('whatsapp_number', '');
     @endphp
 
-    {{-- The floating rail, bottom-right. The assistant launcher, the WhatsApp
-         button and back-to-top were each positioned on their own and landed on
-         top of one another in the corner. They now share one column: the floor
-         is --kk-fab-bottom, each float takes a slot above the one below it,
-         and all of them are centred on the same vertical axis. The floor and
-         the right inset mirror .chatbot-widget-root, which anchors the stack
-         and sizes its own panel from those numbers - keep the two in step. --}}
+    {{-- The floating rail, bottom-right: the assistant launcher with back-to-top
+         above it. They share one column - the floor is --kk-fab-bottom, each
+         float takes a slot above the one below it, and both are centred on the
+         same vertical axis. The floor and the right inset mirror
+         .chatbot-widget-root, which anchors the stack and sizes its own panel
+         from those numbers - keep the two in step.
+
+         WhatsApp is deliberately not in this rail; it sits in the opposite
+         corner, positioned further down. --}}
     <style>
         :root {
             --kk-fab-right: 1rem;
@@ -367,12 +369,13 @@
                rings reach 18px past its edge, and at a tighter gap the outer
                ring is drawn across the bottom of the button above it. */
             --kk-fab-gap: 1.25rem;
-            /* Widest float in the rail; the narrower ones centre against it. */
-            --kk-fab-w: {{ $kkChatbot ? '3.5rem' : '3rem' }};
+            /* Widest float in the rail; the narrower ones centre against it.
+               WhatsApp is not in the rail, so with no assistant configured
+               back-to-top is the only float left and wants no extra inset. */
+            --kk-fab-w: {{ $kkChatbot ? '3.5rem' : '2.5rem' }};
             /* What each float takes off the space above it, its gap included.
                One that does not render takes nothing, so the rest drop down. */
             --kk-fab-slot-chat: {{ $kkChatbot ? 'calc(3.5rem + var(--kk-fab-gap))' : '0px' }};
-            --kk-fab-slot-wa: {{ $kkWaNumber ? 'calc(3rem + var(--kk-fab-gap))' : '0px' }};
         }
         @media (min-width: 640px) {
             :root {
@@ -386,13 +389,22 @@
             height: var(--kk-fab-size);
             right: calc(var(--kk-fab-right) + (var(--kk-fab-w) - var(--kk-fab-size)) / 2);
         }
+        /* Bottom-left, on its own. Stacked in the rail it was hemmed in by the
+           launcher below it - the "Ask AI" label sits hard against the disc's
+           edge and the orbiting rings reach 18px past it - so the far corner is
+           the one place neither can crowd it. right:auto because .kk-fab-item
+           anchors the rail on the right, and left mirrors that same inset. */
         .kk-fab-wa {
             --kk-fab-size: 3rem;
-            bottom: calc(var(--kk-fab-bottom) + var(--kk-fab-slot-chat));
+            right: auto;
+            left: var(--kk-fab-right);
+            bottom: var(--kk-fab-bottom);
         }
+        /* Straight above the launcher now: the slot WhatsApp used to take in
+           this column went with it. */
         .kk-fab-top {
             --kk-fab-size: 2.5rem;
-            bottom: calc(var(--kk-fab-bottom) + var(--kk-fab-slot-chat) + var(--kk-fab-slot-wa));
+            bottom: calc(var(--kk-fab-bottom) + var(--kk-fab-slot-chat));
         }
     </style>
 
