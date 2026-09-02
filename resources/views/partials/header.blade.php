@@ -79,7 +79,7 @@
                 {{-- Logo: centered (absolute) only below sm, where the search bar is
                      collapsed to an icon. From sm up it must sit in normal flow on the
                      left, otherwise the inline search bar overlaps it on tablets. --}}
-                <a href="{{ url('/') }}" class="absolute inset-0 flex items-center justify-center pointer-events-none sm:static sm:inset-auto sm:justify-start sm:pointer-events-auto shrink-0 sm:mr-3 lg:mr-8">
+                <a href="{{ url('/') }}" class="absolute inset-0 flex items-center justify-center pointer-events-none sm:static sm:inset-auto sm:justify-start sm:pointer-events-auto shrink-0 sm:mr-3 lg:mr-4 xl:mr-8">
                     @php $siteLogo = \App\Models\Setting::get('site_logo', ''); @endphp
                     @if($siteLogo)
                         {{-- A custom logo whose file has gone missing used to leave a hole
@@ -96,8 +96,8 @@
                          and until now nothing in the header, the mobile drawer or the
                          footer pointed at it: a shopper reached it by failing a search
                          or by clicking a home page hanger that may not exist. --}}
-                    <a href="{{ route('shop') }}" class="px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">Shop All</a>
-                    <a href="{{ route('new-arrivals') }}" class="px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">New In</a>
+                    <a href="{{ route('shop') }}" class="px-2 xl:px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">Shop All</a>
+                    <a href="{{ route('new-arrivals') }}" class="px-2 xl:px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">New In</a>
 
                     {{-- Categories: hover-triggered mega menu - clean text layout, data from admin --}}
                     @php
@@ -117,7 +117,7 @@
                          @mouseenter="clearTimeout(closeT); open = true"
                          @mouseleave="closeT = setTimeout(() => open = false, 120)">
                         <button type="button" @click="open = !open"
-                                class="px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap inline-flex items-center gap-1 cursor-pointer bg-transparent border-0">
+                                class="px-2 xl:px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap inline-flex items-center gap-1 cursor-pointer bg-transparent border-0">
                             Categories
                             <svg class="w-3 h-3 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
@@ -145,7 +145,7 @@
                         </div>
                     </div>
 
-                    <a href="{{ route('bestsellers') }}" class="px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">Bestsellers</a>
+                    <a href="{{ route('bestsellers') }}" class="px-2 xl:px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">Bestsellers</a>
                     <a href="{{ route('deals') }}" class="px-2.5 py-2 text-[12px] text-kk-tan-dark hover:text-kk-brown font-semibold transition-colors tracking-widest uppercase whitespace-nowrap">Introductory Offer</a>
                 </nav>
 
@@ -206,7 +206,7 @@
                 <!-- Desktop Navigation (Right side) -->
                 <nav class="hidden lg:flex items-center gap-1 mr-2">
                     @if(config('app.wholesale_enabled'))
-                        <a href="{{ route('wholesale') }}" class="px-3 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.18em] uppercase">Wholesale</a>
+                        <a href="{{ route('wholesale') }}" class="px-2 xl:px-3 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.18em] uppercase">Wholesale</a>
                     @endif
                     {{-- Online Store > Navigation has always saved header menu items and
                          no template read them back, so anything added there never
@@ -214,7 +214,7 @@
                     @foreach(\App\Models\NavigationMenu::getByLocation('header') as $kkNavItem)
                         <a href="{{ $kkNavItem->url }}"
                            @if($kkNavItem->open_in_new_tab) target="_blank" rel="noopener" @endif
-                           class="px-3 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.18em] uppercase">{{ $kkNavItem->label }}</a>
+                           class="px-2 xl:px-3 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.18em] uppercase">{{ $kkNavItem->label }}</a>
                     @endforeach
                 </nav>
 
