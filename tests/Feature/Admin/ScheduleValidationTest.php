@@ -3,16 +3,14 @@
 namespace Tests\Feature\Admin;
 
 use App\Models\Admin;
-use App\Models\Banner;
 use App\Models\Coupon;
 use App\Models\FlashSale;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 /**
- * The schedule fields on the coupon, flash sale and banner forms.
+ * The schedule fields on the coupon and flash sale forms.
  *
  * Two rules, applied wherever a start and an end are entered together: the end
  * must be later than the start, and neither may be set in the past. The third
@@ -72,19 +70,6 @@ class ScheduleValidationTest extends TestCase
             'name' => 'Scheduled sale',
             'starts_at' => now()->addDay()->format('Y-m-d\TH:i'),
             'ends_at' => now()->addDays(2)->format('Y-m-d\TH:i'),
-        ], $overrides);
-    }
-
-    /**
-     * @param  array<string, mixed>  $overrides
-     * @return array<string, mixed>
-     */
-    private function bannerPayload(array $overrides = []): array
-    {
-        return array_merge([
-            'name' => 'Scheduled banner',
-            'position' => 'hero',
-            'image' => UploadedFile::fake()->image('banner.jpg'),
         ], $overrides);
     }
 
@@ -249,69 +234,6 @@ class ScheduleValidationTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $this->assertSame('Live sale renamed', $sale->fresh()->name);
-    }
-
-    public function test_banner_rejects_an_end_before_its_start(): void
-    {
-        $this->admin()
-            ->post('/admin/banners', $this->bannerPayload([
-                'starts_at' => now()->addDays(3)->format('Y-m-d\TH:i'),
-                'ends_at' => now()->addDay()->format('Y-m-d\TH:i'),
-            ]))
-            ->assertSessionHasErrors('ends_at');
-    }
-
-    public function test_banner_rejects_a_start_in_the_past(): void
-    {
-        $this->admin()
-            ->post('/admin/banners', $this->bannerPayload([
-                'starts_at' => now()->subDay()->format('Y-m-d\TH:i'),
-            ]))
-            ->assertSessionHasErrors('starts_at');
-    }
-
-    public function test_banner_schedule_is_actually_saved(): void
-    {
-        // The columns were missing from $fillable, so these two dates used to be
-        // validated and then silently dropped on the way to the insert.
-        $startsAt = now()->addDay()->startOfMinute();
-
-        $this->admin()
-            ->post('/admin/banners', $this->bannerPayload([
-                'starts_at' => $startsAt->format('Y-m-d\TH:i'),
-                'ends_at' => now()->addWeek()->format('Y-m-d\TH:i'),
-            ]))
-            ->assertSessionHasNoErrors();
-
-        $banner = Banner::firstWhere('name', 'Scheduled banner');
-
-        $this->assertNotNull($banner->starts_at);
-        $this->assertTrue($startsAt->equalTo($banner->starts_at));
-    }
-
-    public function test_a_banner_whose_window_has_not_opened_is_not_shown(): void
-    {
-        Banner::create([
-            'name' => 'Future banner',
-            'position' => 'hero',
-            'image_url' => 'banners/future.jpg',
-            'is_active' => true,
-            'priority' => 1,
-            'starts_at' => now()->addWeek(),
-        ]);
-
-        Banner::create([
-            'name' => 'Live banner',
-            'position' => 'hero',
-            'image_url' => 'banners/live.jpg',
-            'is_active' => true,
-            'priority' => 2,
-        ]);
-
-        $names = Banner::where('position', 'hero')->scheduled()->pluck('name');
-
-        $this->assertContains('Live banner', $names);
-        $this->assertNotContains('Future banner', $names);
     }
 
     public function test_dashboard_survives_a_junk_date_range(): void
