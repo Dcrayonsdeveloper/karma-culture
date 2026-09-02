@@ -77,6 +77,8 @@
                                 <div>
                                     <label for="name" class="block text-[13px] font-medium text-neutral-600 mb-1.5">Full Name <span class="text-error-500">*</span></label>
                                     <input type="text" name="name" id="name" value="{{ old('name', $address->full_name) }}" required
+                                           minlength="2" maxlength="255" autocomplete="name"
+                                           title="Enter the full name for this address."
                                            class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors @error('name') border-error-300 ring-1 ring-error-300 @enderror"
                                            placeholder="Enter full name">
                                     @error('name')
@@ -89,7 +91,9 @@
                                     <div class="relative">
                                         <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-neutral-600">+91</span>
                                         <input type="tel" name="phone" id="phone" value="{{ old('phone', $address->phone) }}" required
-                                               maxlength="10" pattern="[6-9][0-9]{9}"
+                                               maxlength="10" minlength="10" pattern="[6-9][0-9]{9}"
+                                               inputmode="numeric" autocomplete="tel-national"
+                                               title="Enter a 10-digit Indian mobile number starting with 6, 7, 8 or 9."
                                                class="w-full rounded-lg border border-neutral-200 pl-12 pr-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors @error('phone') border-error-300 ring-1 ring-error-300 @enderror"
                                                placeholder="10-digit mobile number">
                                     </div>
@@ -108,6 +112,8 @@
                                 <div>
                                     <label for="address_line1" class="block text-[13px] font-medium text-neutral-600 mb-1.5">Address Line 1 <span class="text-error-500">*</span></label>
                                     <input type="text" name="address_line1" id="address_line1" value="{{ old('address_line1', $address->address_line_1) }}" required
+                                           minlength="5" maxlength="255" autocomplete="address-line1"
+                                           title="House or flat number, building and street."
                                            class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors @error('address_line1') border-error-300 ring-1 ring-error-300 @enderror"
                                            placeholder="House/Flat no., Building, Street">
                                     @error('address_line1')
@@ -129,6 +135,7 @@
                                     <div>
                                         <label for="city" class="block text-[13px] font-medium text-neutral-600 mb-1.5">City <span class="text-error-500">*</span></label>
                                         <input type="text" name="city" id="city" value="{{ old('city', $address->city) }}" required
+                                               minlength="2" maxlength="100" autocomplete="address-level2"
                                                class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors @error('city') border-error-300 ring-1 ring-error-300 @enderror"
                                                placeholder="Enter city">
                                         @error('city')
@@ -167,7 +174,9 @@
                                     <div>
                                         <label for="postal_code" class="block text-[13px] font-medium text-neutral-600 mb-1.5">PIN Code <span class="text-error-500">*</span></label>
                                         <input type="text" name="postal_code" id="postal_code" value="{{ old('postal_code', $address->postal_code) }}" required
-                                               maxlength="6" pattern="[0-9]{6}"
+                                               maxlength="6" minlength="6" pattern="[0-9]{6}"
+                                               inputmode="numeric" autocomplete="postal-code"
+                                               title="Enter a 6-digit PIN code."
                                                class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors @error('postal_code') border-error-300 ring-1 ring-error-300 @enderror"
                                                placeholder="6-digit PIN code">
                                         @error('postal_code')
