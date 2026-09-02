@@ -42,49 +42,8 @@
             @endif
         </div>
 
-        {{-- Products --}}
-        @if($flashSale->products->isEmpty())
-            <div class="text-center py-16">
-                <p class="text-sm font-medium text-neutral-800">No products in this sale yet</p>
-                <p class="text-xs text-neutral-600 mt-1">Check back shortly.</p>
-                <a href="{{ route('home') }}" class="inline-block mt-4 text-sm font-semibold" style="color:#8C5C34;">Continue shopping</a>
-            </div>
-        @else
-            <p class="text-sm text-neutral-600 mb-4">
-                {{ $flashSale->products->count() }} {{ Str::plural('product', $flashSale->products->count()) }} on sale
-            </p>
-
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                @foreach($flashSale->products as $product)
-                    @php
-                        $salePrice = $isLive ? $product->flashSalePrice() : null;
-                        $limit = $product->pivot->stock_limit;
-                        $sold = (int) ($product->pivot->sold_count ?? 0);
-                        $left = $limit !== null ? max(0, (int) $limit - $sold) : null;
-                    @endphp
-                    <div class="relative">
-                        @if($salePrice)
-                            <span class="absolute top-2 left-2 z-10 text-[10px] font-bold px-2 py-1 rounded-full text-white" style="background:#8C5C34;">
-                                {{ (int) round((1 - $salePrice / max(0.01, (float) $product->price)) * 100) }}% OFF
-                            </span>
-                        @endif
-
-                        <x-product-card :product="$product" />
-
-                        @if($salePrice)
-                            <p class="text-xs mt-1" style="color:#8C5C34;">
-                                <strong>@price($salePrice)</strong>
-                                <span class="text-neutral-500 line-through ml-1">@price($product->price)</span>
-                            </p>
-                            @if($left !== null)
-                                <p class="text-[11px] text-neutral-600 mt-0.5">
-                                    {{ $left > 0 ? $left . ' left at this price' : 'Sale price sold out' }}
-                                </p>
-                            @endif
-                        @endif
-                    </div>
-                @endforeach
-            </div>
-        @endif
     </div>
+
+    @include('partials.product-listing')
+
 </x-layouts.app>

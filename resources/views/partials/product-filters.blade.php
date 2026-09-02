@@ -1,11 +1,32 @@
-<form action="{{ route('shop') }}" method="GET" class="space-y-4">
-    {{-- Preserve sort --}}
-    @if(request('sort'))
-        <input type="hidden" name="sort" value="{{ request('sort') }}">
+{{--
+    The storefront filter sidebar - one copy, used by every listing page.
+
+    Shop and category each carried their own near-identical copy of this and had
+    drifted (only one offered Rating), search had a third cut-down version, and
+    the brand, deals, flash-sale, new-arrivals and bestsellers pages had none at
+    all. Everything now renders from the $filterPanel that App\Support\ProductFilters
+    builds, so a shopper sees the same controls wherever they land.
+
+    A section with nothing in it renders nothing: a brand page has no brand list
+    to offer, a shop with one size has no size row worth showing.
+--}}
+@php
+    $kkValues = $filterPanel['values'];
+    $kkActiveSubs = $filterPanel['active_subcategories'] ?? [];
+@endphp
+
+<form action="{{ $filterPanel['action'] }}" method="GET" class="space-y-4">
+    {{-- Anything the page needs carried through a filter submit: the search
+         term, a sale scope, and the chosen ordering. --}}
+    @foreach($filterPanel['hidden'] ?? [] as $kkName => $kkValue)
+        <input type="hidden" name="{{ $kkName }}" value="{{ $kkValue }}">
+    @endforeach
+    @if($kkValues['sort'] !== 'newest')
+        <input type="hidden" name="sort" value="{{ $kkValues['sort'] }}">
     @endif
 
     {{-- Categories --}}
-    @if($categories->count())
+    @if($filterPanel['categories']->isNotEmpty())
         <div x-data="{ open: true }">
             <button type="button" @click="open = !open" class="flex items-center justify-between w-full py-2 text-sm font-semibold text-neutral-900">
                 Categories
@@ -15,17 +36,17 @@
             </button>
             <div x-show="open" x-collapse>
                 <div class="space-y-1.5 max-h-52 overflow-y-auto pt-1 pb-2">
-                    @foreach($categories as $category)
+                    @foreach($filterPanel['categories'] as $kkCat)
                         <label class="flex items-center gap-2.5 cursor-pointer group py-0.5">
-                            <input type="radio" name="category" value="{{ $category->slug }}"
-                                   {{ request('category') === $category->slug ? 'checked' : '' }}
-                                   class="w-3.5 h-3.5 border-neutral-300 text-[#6F9CA2] focus:ring-[#6F9CA2] focus:ring-offset-0"
-                                   onchange="this.form.submit()">
-                            <span class="text-sm text-neutral-600 group-hover:text-neutral-900 transition-colors">{{ $category->name }}</span>
-                            @isset($category->products_total)
+                            <input type="radio" name="category" value="{{ $kkCat->slug }}"
+                                   {{ $kkValues['category'] === $kkCat->slug ? 'checked' : '' }}
+                                   onchange="this.form.submit()"
+                                   class="w-3.5 h-3.5 border-neutral-300 text-[#6F9CA2] focus:ring-[#6F9CA2] focus:ring-offset-0">
+                            <span class="text-sm text-neutral-600 group-hover:text-neutral-900 transition-colors">{{ $kkCat->name }}</span>
+                            @isset($kkCat->products_total)
                                 {{-- What this category would return under the shopper's
                                      other filters, so the list is not a guess. --}}
-                                <span class="ml-auto text-xs text-neutral-400 tabular-nums">{{ $category->products_total }}</span>
+                                <span class="ml-auto text-xs text-neutral-400 tabular-nums">{{ $kkCat->products_total }}</span>
                             @endisset
                         </label>
                     @endforeach
@@ -36,7 +57,7 @@
     @endif
 
     {{-- Sub-categories --}}
-    @if($subcategories->count())
+    @if($filterPanel['subcategories']->isNotEmpty())
         <div x-data="{ open: true }">
             <button type="button" @click="open = !open" class="flex items-center justify-between w-full py-2 text-sm font-semibold text-neutral-900">
                 Sub-categories
@@ -46,16 +67,18 @@
             </button>
             <div x-show="open" x-collapse>
                 <div class="space-y-1.5 max-h-52 overflow-y-auto pt-1 pb-2">
-                    @foreach($subcategories as $sub)
-                        <label class="flex items-center gap-2.5 cursor-pointer group py-0.5">
-                            {{-- Submits on tick like every other chip in this sidebar; it
-                                 used to sit there until the shopper found Apply. --}}
-                            <input type="checkbox" name="subcategory[]" value="{{ $sub->slug }}" onchange="this.form.submit()"
-                                   {{ in_array($sub->slug, (array) request('subcategory')) ? 'checked' : '' }}
+                    @foreach($filterPanel['subcategories'] as $kkSub)
+                        {{-- A ticked box stays clickable even when the other filters have
+                             emptied it out, or there would be no way to untick it. --}}
+                        @php $kkEmpty = ($kkSub->products_total ?? null) === 0 && ! in_array($kkSub->slug, $kkActiveSubs, true); @endphp
+                        <label class="flex items-center gap-2.5 py-0.5 group {{ $kkEmpty ? 'cursor-not-allowed opacity-45' : 'cursor-pointer' }}"
+                               @if($kkEmpty) title="Nothing in this collection yet" @endif>
+                            <input type="checkbox" name="subcategory[]" value="{{ $kkSub->slug }}" onchange="this.form.submit()" @disabled($kkEmpty)
+                                   {{ in_array($kkSub->slug, $kkActiveSubs, true) ? 'checked' : '' }}
                                    class="w-3.5 h-3.5 rounded border-neutral-300 text-[#6F9CA2] focus:ring-[#6F9CA2] focus:ring-offset-0">
-                            <span class="text-sm text-neutral-600 group-hover:text-neutral-900 transition-colors">{{ $sub->name }}</span>
-                            @isset($sub->products_total)
-                                <span class="ml-auto text-xs text-neutral-400 tabular-nums">{{ $sub->products_total }}</span>
+                            <span class="text-sm text-neutral-600 group-hover:text-neutral-900 transition-colors">{{ $kkSub->name }}</span>
+                            @isset($kkSub->products_total)
+                                <span class="ml-auto text-xs text-neutral-400 tabular-nums">{{ $kkSub->products_total }}</span>
                             @endisset
                         </label>
                     @endforeach
@@ -66,14 +89,7 @@
     @endif
 
     {{-- Size --}}
-    @php
-        // Built by the controller from the products currently matching, minus the size
-        // filter itself, so picking a category or a colour reshapes this list on the
-        // next submit. The old global list was every size in the shop, cached, and
-        // offered sizes nothing on screen came in.
-        $kkAllSizes = $filterSizes ?? collect();
-    @endphp
-    @if($kkAllSizes->isNotEmpty())
+    @if($filterPanel['sizes']->isNotEmpty())
         <div x-data="{ open: true }">
             <button type="button" @click="open = !open" class="flex items-center justify-between w-full py-2 text-sm font-semibold text-neutral-900">
                 Size
@@ -83,14 +99,15 @@
             </button>
             <div x-show="open" x-collapse>
                 <div class="flex flex-wrap gap-1.5 pt-1 pb-2">
-                    @foreach($kkAllSizes as $kkSize)
-                        @php $kkOn = in_array($kkSize, (array) request('size', []), true); @endphp
+                    @foreach($filterPanel['sizes'] as $kkSize)
                         <label class="cursor-pointer select-none">
-                            <input type="checkbox" name="size[]" value="{{ $kkSize }}" @checked($kkOn)
+                            <input type="checkbox" name="size[]" value="{{ $kkSize }}"
+                                   @checked(in_array($kkSize, $kkValues['size'], true))
                                    onchange="this.form.submit()" class="sr-only peer">
                             {{-- The selected chip is black, so the plain hover:text-* below would repaint
-                                 its label near-black and swallow it. The peer-checked:hover:* pair is a
-                                 more specific selector, so the white label survives the hover. --}}
+                                 its label near-black and swallow it. Tailwind v4 wraps peer-* in :where(),
+                                 which zeroes its specificity, so peer-checked:text-white ties with the hover
+                                 rule and loses on source order. The peer-checked:hover:* pair outranks it. --}}
                             <span class="inline-block px-2.5 py-1 text-xs rounded-md border transition-colors
                                          border-neutral-200 text-neutral-700 hover:border-neutral-500 hover:text-neutral-900
                                          peer-checked:border-neutral-900 peer-checked:bg-neutral-900 peer-checked:text-white
@@ -106,12 +123,7 @@
     @endif
 
     {{-- Colour --}}
-    @php
-        // Same story as Size: the controller narrows this to the colours the matching
-        // products actually come in.
-        $kkAllColours = $filterColours ?? collect();
-    @endphp
-    @if($kkAllColours->isNotEmpty())
+    @if($filterPanel['colours']->isNotEmpty())
         <div x-data="{ open: true }">
             <button type="button" @click="open = !open" class="flex items-center justify-between w-full py-2 text-sm font-semibold text-neutral-900">
                 Colour
@@ -121,10 +133,10 @@
             </button>
             <div x-show="open" x-collapse>
                 <div class="flex flex-wrap gap-1.5 pt-1 pb-2">
-                    @foreach($kkAllColours as $kkC)
-                        @php $kkOn = in_array($kkC['name'], (array) request('colour', []), true); @endphp
+                    @foreach($filterPanel['colours'] as $kkC)
                         <label class="cursor-pointer select-none" title="{{ $kkC['name'] }}">
-                            <input type="checkbox" name="colour[]" value="{{ $kkC['name'] }}" @checked($kkOn)
+                            <input type="checkbox" name="colour[]" value="{{ $kkC['name'] }}"
+                                   @checked(in_array($kkC['name'], $kkValues['colour'], true))
                                    onchange="this.form.submit()" class="sr-only peer">
                             {{-- The label inherits its colour so the selected state can
                                  invert it. Hardcoding it on the inner span left dark text
@@ -149,7 +161,7 @@
     @endif
 
     {{-- Brand --}}
-    @if(($brands ?? collect())->isNotEmpty())
+    @if($filterPanel['brands']->isNotEmpty())
         <div x-data="{ open: true }">
             <button type="button" @click="open = !open" class="flex items-center justify-between w-full py-2 text-sm font-semibold text-neutral-900">
                 Brand
@@ -159,11 +171,10 @@
             </button>
             <div x-show="open" x-collapse>
                 <div class="space-y-1.5 max-h-52 overflow-y-auto pt-1 pb-2">
-                    @php $kkActiveBrands = array_filter((array) request('brand')); @endphp
-                    @foreach($brands as $kkBrand)
+                    @foreach($filterPanel['brands'] as $kkBrand)
                         <label class="flex items-center gap-2.5 cursor-pointer group py-0.5">
                             <input type="checkbox" name="brand[]" value="{{ $kkBrand->slug }}" onchange="this.form.submit()"
-                                   {{ in_array($kkBrand->slug, $kkActiveBrands, true) ? 'checked' : '' }}
+                                   {{ in_array($kkBrand->slug, $kkValues['brand'], true) ? 'checked' : '' }}
                                    class="w-3.5 h-3.5 rounded border-neutral-300 text-[#6F9CA2] focus:ring-[#6F9CA2] focus:ring-offset-0">
                             <span class="text-sm text-neutral-600 group-hover:text-neutral-900 transition-colors">{{ $kkBrand->name }}</span>
                         </label>
@@ -185,15 +196,17 @@
         <div x-show="open" x-collapse>
             <div class="flex items-center gap-2 pt-1 pb-2">
                 <div class="relative flex-1">
-                    <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-neutral-600">₹</span>
-                    <input type="number" name="min_price" value="{{ request('min_price') }}"
-                           placeholder="Min" class="w-full pl-6 pr-2 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:border-[#6F9CA2] bg-neutral-50">
+                    <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-neutral-600">&#8377;</span>
+                    <input type="number" name="min_price" value="{{ $kkValues['min_price'] }}" min="0" step="1"
+                           placeholder="Min" aria-label="Minimum price"
+                           class="w-full pl-6 pr-2 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:border-[#6F9CA2] bg-neutral-50">
                 </div>
                 <span class="text-neutral-300 text-sm">-</span>
                 <div class="relative flex-1">
-                    <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-neutral-600">₹</span>
-                    <input type="number" name="max_price" value="{{ request('max_price') }}"
-                           placeholder="Max" class="w-full pl-6 pr-2 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:border-[#6F9CA2] bg-neutral-50">
+                    <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-neutral-600">&#8377;</span>
+                    <input type="number" name="max_price" value="{{ $kkValues['max_price'] }}" min="0" step="1"
+                           placeholder="Max" aria-label="Maximum price"
+                           class="w-full pl-6 pr-2 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:border-[#6F9CA2] bg-neutral-50">
                 </div>
             </div>
         </div>
@@ -201,34 +214,37 @@
     <div class="border-t border-neutral-100"></div>
 
     {{-- Rating --}}
-    <div x-data="{ open: true }">
-        <button type="button" @click="open = !open" class="flex items-center justify-between w-full py-2 text-sm font-semibold text-neutral-900">
-            Rating
-            <svg class="w-4 h-4 text-neutral-600 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-            </svg>
-        </button>
-        <div x-show="open" x-collapse>
-            <div class="space-y-1.5 pt-1 pb-2">
-                @for($i = 4; $i >= 1; $i--)
-                    <label class="flex items-center gap-2.5 cursor-pointer group py-0.5">
-                        <input type="radio" name="rating" value="{{ $i }}"
-                               {{ request('rating') == $i ? 'checked' : '' }}
-                               class="w-3.5 h-3.5 border-neutral-300 text-[#6F9CA2] focus:ring-[#6F9CA2] focus:ring-offset-0">
-                        <span class="flex items-center gap-0.5">
-                            @for($j = 1; $j <= 5; $j++)
-                                <svg class="w-3.5 h-3.5 {{ $j <= $i ? 'text-amber-400' : 'text-neutral-200' }}" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                                </svg>
-                            @endfor
-                            <span class="text-xs text-neutral-600 ml-0.5">& up</span>
-                        </span>
-                    </label>
-                @endfor
+    @if($filterPanel['show_rating'])
+        <div x-data="{ open: true }">
+            <button type="button" @click="open = !open" class="flex items-center justify-between w-full py-2 text-sm font-semibold text-neutral-900">
+                Rating
+                <svg class="w-4 h-4 text-neutral-600 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </button>
+            <div x-show="open" x-collapse>
+                <div class="space-y-1.5 pt-1 pb-2">
+                    @for($kkStars = 4; $kkStars >= 1; $kkStars--)
+                        <label class="flex items-center gap-2.5 cursor-pointer group py-0.5">
+                            <input type="radio" name="rating" value="{{ $kkStars }}"
+                                   {{ $kkValues['rating'] === $kkStars ? 'checked' : '' }}
+                                   onchange="this.form.submit()"
+                                   class="w-3.5 h-3.5 border-neutral-300 text-[#6F9CA2] focus:ring-[#6F9CA2] focus:ring-offset-0">
+                            <span class="flex items-center gap-0.5">
+                                @for($kkStar = 1; $kkStar <= 5; $kkStar++)
+                                    <svg class="w-3.5 h-3.5 {{ $kkStar <= $kkStars ? 'text-amber-400' : 'text-neutral-200' }}" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                    </svg>
+                                @endfor
+                                <span class="text-xs text-neutral-600 ml-0.5">&amp; up</span>
+                            </span>
+                        </label>
+                    @endfor
+                </div>
             </div>
         </div>
-    </div>
-    <div class="border-t border-neutral-100"></div>
+        <div class="border-t border-neutral-100"></div>
+    @endif
 
     {{-- Availability & Offers --}}
     <div x-data="{ open: true }">
@@ -241,17 +257,19 @@
         <div x-show="open" x-collapse>
             <div class="space-y-2 pt-1 pb-2">
                 <label class="flex items-center gap-2.5 cursor-pointer group py-0.5">
-                    <input type="checkbox" name="in_stock" value="1"
-                           {{ request('in_stock') ? 'checked' : '' }}
+                    <input type="checkbox" name="in_stock" value="1" onchange="this.form.submit()"
+                           @checked($kkValues['in_stock'])
                            class="w-3.5 h-3.5 rounded border-neutral-300 text-[#6F9CA2] focus:ring-[#6F9CA2] focus:ring-offset-0">
                     <span class="text-sm text-neutral-600 group-hover:text-neutral-900 transition-colors">In Stock Only</span>
                 </label>
-                <label class="flex items-center gap-2.5 cursor-pointer group py-0.5">
-                    <input type="checkbox" name="on_sale" value="1"
-                           {{ request('on_sale') ? 'checked' : '' }}
-                           class="w-3.5 h-3.5 rounded border-neutral-300 text-[#6F9CA2] focus:ring-[#6F9CA2] focus:ring-offset-0">
-                    <span class="text-sm text-neutral-600 group-hover:text-neutral-900 transition-colors">On Sale</span>
-                </label>
+                @if($filterPanel['show_on_sale'] ?? true)
+                    <label class="flex items-center gap-2.5 cursor-pointer group py-0.5">
+                        <input type="checkbox" name="on_sale" value="1" onchange="this.form.submit()"
+                               @checked($kkValues['on_sale'])
+                               class="w-3.5 h-3.5 rounded border-neutral-300 text-[#6F9CA2] focus:ring-[#6F9CA2] focus:ring-offset-0">
+                        <span class="text-sm text-neutral-600 group-hover:text-neutral-900 transition-colors">On Sale</span>
+                    </label>
+                @endif
             </div>
         </div>
     </div>
@@ -261,7 +279,10 @@
         <button type="submit" class="flex-1 py-2.5 bg-[#F8931D] hover:bg-[#E07E0A] text-white text-sm font-semibold rounded-lg transition-colors">
             Apply
         </button>
-        <a href="{{ route('home') }}" class="flex-1 py-2.5 text-center text-sm font-medium text-neutral-600 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
+        {{-- Reset returns to THIS listing with nothing ticked. It used to send the
+             shop back to the home page, which reads as "your filters were so bad we
+             threw you out of the shop". --}}
+        <a href="{{ $filterPanel['reset'] }}" class="flex-1 py-2.5 text-center text-sm font-medium text-neutral-600 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
             Reset
         </a>
     </div>

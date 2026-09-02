@@ -17,8 +17,20 @@
         <div class="container mx-auto px-4 py-6">
             <div class="flex items-center gap-6">
                 @if($brand->logo_url)
-                    <div class="w-24 h-24 bg-neutral-100 rounded-lg p-4 flex items-center justify-center">
-                        <img src="{{ $brand->logo_src }}" alt="{{ $brand->name }}" class="max-w-full max-h-full object-contain">
+                    {{-- The logo stays contained on the flat box - it is a mark,
+                         not a photo. A missing file used to leave the box empty,
+                         so it falls back to the same initials the brand grid
+                         shows; x-init catches a logo that already failed before
+                         Alpine booted. --}}
+                    <div class="w-24 h-24 bg-neutral-100 rounded-lg p-4 flex items-center justify-center"
+                         x-data="{ logoBroken: false }">
+                        <img src="{{ $brand->logo_src }}" alt="{{ $brand->name }}"
+                             class="max-w-full max-h-full object-contain"
+                             x-init="logoBroken = $el.complete && $el.naturalWidth === 0"
+                             x-on:error="logoBroken = true"
+                             x-show="!logoBroken">
+                        <span class="text-2xl font-bold text-neutral-300"
+                              x-show="logoBroken" x-cloak>{{ substr($brand->name, 0, 2) }}</span>
                     </div>
                 @endif
                 <div>
@@ -31,40 +43,6 @@
         </div>
     </div>
 
-    <div class="container mx-auto px-4 py-8">
-        <!-- Header -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-            <p class="text-neutral-600">{{ $products->total() }} products</p>
+    @include('partials.product-listing')
 
-            <select onchange="window.location.href = '{{ route('brands.show', $brand) }}?' + new URLSearchParams({...Object.fromEntries(new URLSearchParams(window.location.search)), sort: this.value})"
-                    class="form-input text-sm py-2 w-auto">
-                <option value="newest" {{ request('sort') === 'newest' ? 'selected' : '' }}>Newest</option>
-                <option value="price_asc" {{ request('sort') === 'price_asc' ? 'selected' : '' }}>Price: Low to High</option>
-                <option value="price_desc" {{ request('sort') === 'price_desc' ? 'selected' : '' }}>Price: High to Low</option>
-                <option value="rating" {{ request('sort') === 'rating' ? 'selected' : '' }}>Best Rating</option>
-                <option value="bestselling" {{ request('sort') === 'bestselling' ? 'selected' : '' }}>Bestselling</option>
-            </select>
-        </div>
-
-        @if($products->count())
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
-                @foreach($products as $product)
-                    <x-product-card :product="$product" />
-                @endforeach
-            </div>
-
-            <div class="mt-8">
-                {{ $products->links() }}
-            </div>
-        @else
-            <div class="text-center py-16">
-                <svg class="w-16 h-16 mx-auto text-neutral-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                </svg>
-                <h3 class="text-lg font-medium text-neutral-900 mb-2">No products found</h3>
-                <p class="text-neutral-600 mb-4">This brand doesn't have any products yet.</p>
-                <a href="{{ route('brands.index') }}" class="btn btn-primary">View All Brands</a>
-            </div>
-        @endif
-    </div>
 </x-layouts.app>

@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\Category;
 use App\Models\Brand;
 use App\Models\SearchLog;
+use App\Support\ProductFilters;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -30,98 +31,89 @@ class SearchController extends Controller
 
     public function index(Request $request): View
     {
-        $filters = $this->filters($request);
-        $query = $filters['q'];
+        $query = $this->filters($request)['q'];
 
         if ($query === '') {
             return view('search.index', [
-                'products' => collect(),
                 'query' => '',
-                'categories' => collect(),
-                'brands' => collect(),
+                'categories' => Category::query()
+                    ->whereNull('parent_id')
+                    ->where('is_active', true)
+                    ->whereHas('products', fn ($q) => $q->where('is_active', true))
+                    ->orderBy('name')
+                    ->get(),
             ]);
         }
 
         // Log search
-        if ($query) {
-            SearchLog::create([
-                'user_id'       => auth()->id(),
-                'session_id'    => $request->session()->getId(),
-                'query'         => $query,
-                'results_count' => 0, // Will be updated after search
-            ]);
-        }
+        SearchLog::create([
+            'user_id'       => auth()->id(),
+            'session_id'    => $request->session()->getId(),
+            'query'         => $query,
+            'results_count' => 0, // Will be updated after search
+        ]);
 
-        $productsQuery = Product::query()
-            ->where('is_active', true)
-            ->with(['category', 'brand', 'primaryImage']);
+        // The phrase match is this page's own bound; everything a shopper can then
+        // narrow by comes from the shared sidebar. Search used to carry a third,
+        // cut-down copy of the filter panel that knew only category, brand and
+        // price - so a result set of ninety shirts could not be narrowed to a size,
+        // and the panel it did show looked nothing like the one on the shop.
+        $matching = function () use ($query) {
+            $products = Product::query()->where('is_active', true);
 
-        // Full-text search using Scout if configured, otherwise basic search
-        if (config('scout.driver')) {
-            $productIds = Product::search($query)->keys();
-            $productsQuery->whereIn('id', $productIds);
-        } else {
-            $productsQuery->where(function ($q) use ($query) {
+            // Full-text search using Scout if configured, otherwise basic search
+            if (config('scout.driver')) {
+                return $products->whereIn('products.id', Product::search($query)->keys());
+            }
+
+            return $products->where(function ($q) use ($query) {
                 $q->where(fn ($w) => $this->matchTerms($w, 'name', $query))
                   ->orWhere(fn ($w) => $this->matchTerms($w, 'description', $query))
                   ->orWhere(fn ($w) => $this->matchTerms($w, 'sku', $query))
                   ->orWhereHas('category', fn ($cq) => $this->matchTerms($cq, 'name', $query))
                   ->orWhereHas('brand', fn ($bq) => $this->matchTerms($bq, 'name', $query));
             });
-        }
-
-        // Apply filters. Every value here has been through filters() above, so
-        // none of them can arrive as an array (which the query builder would
-        // choke on) or as an oversized string.
-        if ($filters['category'] !== null) {
-            $productsQuery->whereHas('category', fn ($q) => $q->where('slug', $filters['category']));
-        }
-
-        if ($filters['brand'] !== null) {
-            $productsQuery->whereHas('brand', fn ($q) => $q->where('slug', $filters['brand']));
-        }
-
-        if ($filters['min_price'] !== null) {
-            $productsQuery->where('price', '>=', $filters['min_price']);
-        }
-
-        if ($filters['max_price'] !== null) {
-            $productsQuery->where('price', '<=', $filters['max_price']);
-        }
-
-        // Sorting
-        $sortBy = $filters['sort'];
-        match ($sortBy) {
-            'price_asc' => $productsQuery->orderBy('price', 'asc'),
-            'price_desc' => $productsQuery->orderBy('price', 'desc'),
-            'rating' => $productsQuery->orderBy('rating', 'desc'),
-            'newest' => $productsQuery->orderBy('created_at', 'desc'),
-            default => $productsQuery->orderBy('sales_count', 'desc'),
         };
 
-        $products = $productsQuery->paginate(24)->withQueryString();
+        $filters = ProductFilters::for($request, $matching, [
+            'action' => route('search'),
+            'reset' => route('search', ['q' => $query]),
+            'hidden' => ['q' => $query],
+            'default_sort' => 'relevance',
+        ]);
+
+        // ProductFilters::sort() sinks sold-out results to the back for us.
+        $products = $filters
+            ->sort($filters->query()->with(['category', 'brand', 'primaryImage']))
+            ->paginate(24)
+            ->withQueryString();
 
         // Update search log with results count
-        if ($query) {
-            SearchLog::where('query', $query)
-                ->where('created_at', '>=', now()->subMinute())
-                ->latest()
-                ->first()
-                ?->update(['results_count' => $products->total()]);
-        }
+        SearchLog::where('query', $query)
+            ->where('created_at', '>=', now()->subMinute())
+            ->latest()
+            ->first()
+            ?->update(['results_count' => $products->total()]);
 
-        // Get available filters
-        $categories = Category::whereNull('parent_id')
-            ->where('is_active', true)
-            ->whereHas('products', fn ($q) => $q->where('is_active', true))
-            ->get();
-
-        $brands = Brand::where('is_active', true)
-            ->whereHas('products', fn ($q) => $q->where('is_active', true))
-            ->orderBy('name')
-            ->get();
-
-        return view('search.index', compact('products', 'query', 'categories', 'brands'));
+        return view('search.index', [
+            'query' => $query,
+            'products' => $products,
+            'filterPanel' => $filters->facets([
+                'sorts' => [
+                    'relevance' => 'Relevance',
+                    'price_asc' => 'Price: Low to High',
+                    'price_desc' => 'Price: High to Low',
+                    'rating' => 'Best Rating',
+                    'newest' => 'Newest',
+                ],
+                'empty' => [
+                    'title' => 'No products found',
+                    'text' => 'Try a more general keyword, or check the spelling.',
+                    'url' => route('shop'),
+                    'label' => 'Browse all products',
+                ],
+            ]),
+        ]);
     }
 
     /**
@@ -233,6 +225,7 @@ class SearchController extends Controller
             ->where('is_active', true)
             ->where(fn ($w) => $this->matchTerms($w, 'name', $query))
             ->with(['category', 'primaryImage'])
+            ->inStockFirst()
             ->orderBy('sales_count', 'desc')
             ->take(5)
             ->get()
