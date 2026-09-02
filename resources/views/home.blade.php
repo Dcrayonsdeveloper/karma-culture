@@ -762,9 +762,14 @@
 
                             {{-- The link used to be honoured for image banners only, so a
                                  video banner's Link URL was collected, stored and ignored.
-                                 Both shapes are wrapped the same way now. --}}
+                                 Both shapes are wrapped the same way now, and in a tab of
+                                 their own: a banner points at a campaign, a lookbook or a
+                                 clip off-site, and following it used to throw away whatever
+                                 the shopper had scrolled to. --}}
                             @if($banner->link)
-                                <a href="{{ $banner->link }}" class="kk-hero-link" aria-label="{{ $banner->title ?: $heroName }}">
+                                <a href="{{ $banner->link }}" class="kk-hero-link"
+                                   target="_blank" rel="noopener noreferrer"
+                                   aria-label="{{ $banner->title ?: $heroName }} (opens in a new tab)">
                             @endif
 
                             @if($banner->has_video)
