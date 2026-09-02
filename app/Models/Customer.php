@@ -88,7 +88,11 @@ class Customer extends Model
     // Helper methods
     public function updateOrderStats(): void
     {
-        $orders = $this->orders()->where('payment_status', 'paid');
+        // Counting only payment_status = "paid" left every cash-on-delivery
+        // customer sitting at zero spent and zero orders - so the customer list
+        // disagreed with the Customers report, and isVip() below could never
+        // fire for them. Same definition of a sale as the reports use.
+        $orders = $this->orders()->countsAsSale();
 
         $this->update([
             'total_orders' => $orders->count(),

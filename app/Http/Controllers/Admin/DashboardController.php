@@ -41,11 +41,11 @@ class DashboardController extends Controller
             return $query;
         };
 
-        // Excluded statuses for revenue
-        $excludedStatuses = ['cancelled', 'returned'];
-
-        // Revenue filter: paid + not cancelled/returned
-        $revenueFilter = fn ($query) => $query->where('payment_status', 'paid')->whereNotIn('status', $excludedStatuses);
+        // What counts as revenue lives on the model, so this tile and the
+        // Sales Report cannot drift apart - and so cash-on-delivery orders,
+        // which stay payment_status = "pending" until they are delivered, are
+        // not silently reported as zero rupees. See Order::applySaleFilter().
+        $revenueFilter = fn ($query) => $query->countsAsSale();
 
         // Top-row stats: filtered when date filter active, otherwise today
         if ($hasDateFilter) {
@@ -75,11 +75,11 @@ class DashboardController extends Controller
             ->get();
 
         // Top selling products (from actual paid order data)
-        $topProductsQuery = DB::table('order_items')
-            ->join('orders', 'order_items.order_id', '=', 'orders.id')
-            ->join('products', 'order_items.product_id', '=', 'products.id')
-            ->where('orders.payment_status', 'paid')
-            ->whereNotIn('orders.status', $excludedStatuses)
+        $topProductsQuery = Order::applySaleFilter(
+            DB::table('order_items')
+                ->join('orders', 'order_items.order_id', '=', 'orders.id')
+                ->join('products', 'order_items.product_id', '=', 'products.id')
+        )
             ->select('products.id', 'products.name', 'products.price', DB::raw('SUM(order_items.quantity) as total_sold'));
 
         if ($hasDateFilter) {
@@ -107,10 +107,9 @@ class DashboardController extends Controller
         // Sales chart data (paid orders, exclude cancelled/returned)
         if ($hasDateFilter) {
             $daysDiff = $startDate->diffInDays($endDate);
-            $salesData = Order::selectRaw('DATE(created_at) as date, SUM(total) as total, COUNT(*) as count')
-                ->whereBetween('created_at', [$startDate, $endDate])
-                ->where('payment_status', 'paid')
-                ->whereNotIn('status', $excludedStatuses)
+            $salesData = Order::countsAsSale()
+                ->selectRaw('DATE(created_at) as date, SUM(total) as total, COUNT(*) as count')
+                ->whereBetween('orders.created_at', [$startDate, $endDate])
                 ->groupBy('date')
                 ->orderBy('date')
                 ->get();
@@ -130,10 +129,9 @@ class DashboardController extends Controller
                 }
             } else {
                 // Show weekly for longer ranges
-                $weeklyData = Order::selectRaw('YEARWEEK(created_at, 1) as yw, MIN(DATE(created_at)) as week_start, SUM(total) as total, COUNT(*) as count')
-                    ->whereBetween('created_at', [$startDate, $endDate])
-                    ->where('payment_status', 'paid')
-                    ->whereNotIn('status', $excludedStatuses)
+                $weeklyData = Order::countsAsSale()
+                    ->selectRaw('YEARWEEK(created_at, 1) as yw, MIN(DATE(created_at)) as week_start, SUM(total) as total, COUNT(*) as count')
+                    ->whereBetween('orders.created_at', [$startDate, $endDate])
                     ->groupBy('yw')
                     ->orderBy('yw')
                     ->get();
@@ -145,10 +143,9 @@ class DashboardController extends Controller
             }
         } else {
             // Default: last 7 days
-            $salesData = Order::selectRaw('DATE(created_at) as date, SUM(total) as total, COUNT(*) as count')
-                ->whereDate('created_at', '>=', now()->subDays(6))
-                ->where('payment_status', 'paid')
-                ->whereNotIn('status', $excludedStatuses)
+            $salesData = Order::countsAsSale()
+                ->selectRaw('DATE(created_at) as date, SUM(total) as total, COUNT(*) as count')
+                ->whereDate('orders.created_at', '>=', now()->subDays(6))
                 ->groupBy('date')
                 ->orderBy('date')
                 ->get();
@@ -172,9 +169,8 @@ class DashboardController extends Controller
             ->toArray();
 
         // Monthly revenue (last 6 months or within filter range, paid only)
-        $monthQuery = Order::selectRaw('MONTH(created_at) as month, YEAR(created_at) as year, SUM(total) as total')
-            ->where('payment_status', 'paid')
-            ->whereNotIn('status', $excludedStatuses);
+        $monthQuery = Order::countsAsSale()
+            ->selectRaw('MONTH(created_at) as month, YEAR(created_at) as year, SUM(total) as total');
         if ($hasDateFilter) {
             $monthQuery->whereBetween('created_at', [$startDate, $endDate]);
         } else {

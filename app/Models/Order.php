@@ -33,6 +33,52 @@ class Order extends Model
      */
     public const STATUSES_REQUIRING_PAYMENT = ['shipped', 'out_for_delivery', 'delivered'];
 
+    /** An order in one of these never happened, or was undone. Neither is a sale. */
+    public const NON_SALE_STATUSES = ['cancelled', 'returned'];
+
+    /**
+     * Narrow $query to the orders that count as revenue.
+     *
+     * Every reporting screen used to filter on payment_status = "paid" alone,
+     * which quietly excluded the entire cash-on-delivery book: a COD order only
+     * turns "paid" once it reaches "delivered", so an order placed, confirmed,
+     * packed and shipped this week counted as zero rupees. On a COD-first store
+     * that emptied the Sales Report completely while orders kept arriving.
+     *
+     * A sale is therefore: not cancelled or returned, AND either the money is
+     * already in (payment_status = "paid" - prepaid confirmed, or COD collected)
+     * or it is a COD order, where the cash follows the parcel. Prepaid orders
+     * still sitting at "pending" are gateway hand-offs the customer walked away
+     * from; those are not sales and stay out.
+     *
+     * Takes a plain builder as well as an Eloquent one so the raw order_items
+     * joins in the reports can apply exactly the same rule - the definition of
+     * a sale has to live in one place or the tabs disagree with each other.
+     */
+    public static function applySaleFilter($query, string $table = 'orders')
+    {
+        return $query
+            ->whereNotIn("{$table}.status", self::NON_SALE_STATUSES)
+            ->where(function ($q) use ($table) {
+                // Mirrors getPaymentMethodAttribute(): no recorded method is COD.
+                $q->where("{$table}.payment_status", 'paid')
+                    ->orWhere("{$table}.metadata->payment_method", 'cod')
+                    ->orWhereNull("{$table}.metadata->payment_method");
+            });
+    }
+
+    /** Eloquent-side spelling of applySaleFilter(): Order::countsAsSale(). */
+    public function scopeCountsAsSale($query)
+    {
+        return self::applySaleFilter($query, $this->getTable());
+    }
+
+    /** Sold, but the cash is still with the courier: COD in flight. */
+    public function scopeAwaitingCollection($query)
+    {
+        return $query->countsAsSale()->where($this->getTable() . '.payment_status', '!=', 'paid');
+    }
+
     /** The statuses this order can legally move to right now. */
     public function allowedNextStatuses(): array
     {

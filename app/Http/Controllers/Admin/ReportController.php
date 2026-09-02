@@ -11,70 +11,95 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductView;
 use App\Models\User;
+use App\Support\ReportRange;
+use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends Controller
 {
-    /** The windows the report selectors offer, in days. */
-    private const PERIODS = [7, 30, 90, 365];
+    /**
+     * The reporting window.
+     *
+     * This was a day count off a fixed "Last 7 / 30 / 90 days" allowlist. The
+     * screens now take two dates the admin picks, so the window is whatever the
+     * query string carries - ReportRange does the parsing and clamping,
+     * including the length cap that keeps the day-by-day loops below from
+     * running once per day since 1970. That hang was reachable before as
+     * ?period=99999999 and an unbounded date range would bring it straight back.
+     */
+    private function range(Request $request): ReportRange
+    {
+        return ReportRange::fromRequest($request);
+    }
 
     /**
-     * The reporting window, in days.
-     *
-     * The selector offers a fixed set of lengths, but the value travels in the
-     * query string where anything can be typed. ?period=lastweek reached
-     * now()->subDays() as a string, and ?period=99999999 turned the day-by-day
-     * loop in analytics() into a hang; anything not on the list falls back to
-     * the default the selectors open on.
+     * The order_items that belong to a sale made inside the window - the
+     * constraint the product table and both product exports share, so a
+     * product's "sold" figure means the same thing wherever it is printed.
      */
-    private function period(Request $request): int
+    private function soldInPeriod(ReportRange $range): Closure
     {
-        $period = (int) $request->input('period', 30);
-
-        return in_array($period, self::PERIODS, true) ? $period : 30;
+        return fn ($query) => $query->whereHas(
+            'order',
+            fn ($q) => $q->countsAsSale()->whereBetween('orders.created_at', [$range->start, $range->end])
+        );
     }
 
     public function sales(Request $request): View
     {
-        $period = $this->period($request);
-        $startDate = now()->subDays($period);
-        $excludedStatuses = ['cancelled', 'returned'];
+        $range = $this->range($request);
+        [$startDate, $endDate] = [$range->start, $range->end];
 
-        // Sales overview (paid orders, exclude cancelled/returned)
-        $salesData = Order::where('created_at', '>=', $startDate)
-            ->where('payment_status', 'paid')
-            ->whereNotIn('status', $excludedStatuses)
+        // Day-by-day takings. Order::applySaleFilter() decides what counts as a
+        // sale - see the model; the short version is that a cash-on-delivery
+        // order is a sale the moment it is placed, not weeks later when the
+        // courier hands the money over.
+        $salesByDay = Order::countsAsSale()
+            ->whereBetween('orders.created_at', [$startDate, $endDate])
             ->selectRaw('DATE(created_at) as date, COUNT(*) as orders, SUM(total) as revenue')
             ->groupBy('date')
             ->orderBy('date')
-            ->get();
+            ->get()
+            ->keyBy('date');
+
+        // Days with no orders have no row, and plotting only the days that sold
+        // something drew a chart whose axis skipped straight from the 3rd to the
+        // 12th as if they were neighbours. Fill the window so the timeline is
+        // continuous and a quiet week reads as a quiet week.
+        $salesData = collect();
+        foreach ($range->eachDay() as $date) {
+            $day = $salesByDay->get($date->format('Y-m-d'));
+            $salesData->push([
+                'date' => $date->format('Y-m-d'),
+                'orders' => (int) ($day->orders ?? 0),
+                'revenue' => (float) ($day->revenue ?? 0),
+            ]);
+        }
 
         // Summary stats
-        $paidOrdersQuery = Order::where('created_at', '>=', $startDate)
-            ->where('payment_status', 'paid')
-            ->whereNotIn('status', $excludedStatuses);
+        $salesQuery = fn () => Order::countsAsSale()->whereBetween('orders.created_at', [$startDate, $endDate]);
 
         $stats = [
-            'total_revenue' => (clone $paidOrdersQuery)->sum('total'),
-            'total_orders' => (clone $paidOrdersQuery)->count(),
-            'average_order' => (clone $paidOrdersQuery)->avg('total') ?? 0,
-            'items_sold' => DB::table('order_items')
-                ->join('orders', 'order_items.order_id', '=', 'orders.id')
-                ->where('orders.created_at', '>=', $startDate)
-                ->where('orders.payment_status', 'paid')
-                ->whereNotIn('orders.status', $excludedStatuses)
-                ->sum('order_items.quantity'),
+            'total_revenue' => $salesQuery()->sum('total'),
+            'total_orders' => $salesQuery()->count(),
+            'average_order' => $salesQuery()->avg('total') ?? 0,
+            'items_sold' => Order::applySaleFilter(
+                DB::table('order_items')->join('orders', 'order_items.order_id', '=', 'orders.id')
+            )->whereBetween('orders.created_at', [$startDate, $endDate])->sum('order_items.quantity'),
+            // Counted in the revenue above, but not yet banked. Shown next to it
+            // so nobody reads the headline figure as cash in hand.
+            'awaiting_collection' => Order::awaitingCollection()
+                ->whereBetween('orders.created_at', [$startDate, $endDate])
+                ->sum('total'),
         ];
 
         // Previous period comparison
-        $prevStartDate = now()->subDays($period * 2);
-        $prevEndDate = now()->subDays($period);
-        $prevRevenue = Order::whereBetween('created_at', [$prevStartDate, $prevEndDate])
-            ->where('payment_status', 'paid')
-            ->whereNotIn('status', $excludedStatuses)
+        $prevRevenue = Order::countsAsSale()
+            ->whereBetween('orders.created_at', [$range->previous()->start, $range->previous()->end])
             ->sum('total');
 
         $stats['revenue_change'] = $prevRevenue > 0
@@ -82,10 +107,8 @@ class ReportController extends Controller
             : ($stats['total_revenue'] > 0 ? 100 : 0);
 
         // Top selling products (by quantity sold)
-        $topProducts = Product::withCount(['orderItems as sold' => function ($query) use ($startDate, $excludedStatuses) {
-            $query->whereHas('order', fn ($q) => $q->where('created_at', '>=', $startDate)
-                ->where('payment_status', 'paid')
-                ->whereNotIn('status', $excludedStatuses));
+        $topProducts = Product::withCount(['orderItems as sold' => function ($query) use ($startDate, $endDate) {
+            $query->whereHas('order', fn ($q) => $q->countsAsSale()->whereBetween('orders.created_at', [$startDate, $endDate]));
         }])
             ->having('sold', '>', 0)
             ->orderByDesc('sold')
@@ -93,27 +116,26 @@ class ReportController extends Controller
             ->get();
 
         // Sales by category
-        $salesByCategory = DB::table('order_items')
-            ->join('products', 'order_items.product_id', '=', 'products.id')
-            ->join('categories', 'products.category_id', '=', 'categories.id')
-            ->join('orders', 'order_items.order_id', '=', 'orders.id')
-            ->where('orders.created_at', '>=', $startDate)
-            ->where('orders.payment_status', 'paid')
-            ->whereNotIn('orders.status', $excludedStatuses)
+        $salesByCategory = Order::applySaleFilter(
+            DB::table('order_items')
+                ->join('products', 'order_items.product_id', '=', 'products.id')
+                ->join('categories', 'products.category_id', '=', 'categories.id')
+                ->join('orders', 'order_items.order_id', '=', 'orders.id')
+        )
+            ->whereBetween('orders.created_at', [$startDate, $endDate])
             ->select('categories.name', DB::raw('SUM(order_items.total) as revenue'))
             ->groupBy('categories.id', 'categories.name')
             ->orderByDesc('revenue')
             ->take(10)
             ->get();
 
-        return view('admin.reports.sales', compact('salesData', 'stats', 'topProducts', 'salesByCategory', 'period'));
+        return view('admin.reports.sales', compact('salesData', 'stats', 'topProducts', 'salesByCategory', 'range'));
     }
 
     public function analytics(Request $request): View
     {
-        $period = $this->period($request);
-        $startDate = now()->subDays($period);
-        $excludedStatuses = ['cancelled', 'returned'];
+        $range = $this->range($request);
+        [$startDate, $endDate] = [$range->start, $range->end];
 
         // Real traffic data from product_views table
         $viewsData = ProductView::where('created_at', '>=', $startDate)
@@ -149,9 +171,8 @@ class ReportController extends Controller
 
         $checkoutOrders = Order::where('created_at', '>=', $startDate)->count();
 
-        $completedOrders = Order::where('created_at', '>=', $startDate)
-            ->where('payment_status', 'paid')
-            ->whereNotIn('status', $excludedStatuses)
+        $completedOrders = Order::countsAsSale()
+            ->whereBetween('orders.created_at', [$startDate, $endDate])
             ->count();
 
         $funnel = [
@@ -223,26 +244,19 @@ class ReportController extends Controller
             $devices['desktop'] += $diff; // adjust rounding to desktop
         }
 
-        return view('admin.reports.analytics', compact('trafficData', 'funnel', 'sources', 'devices', 'period'));
+        return view('admin.reports.analytics', compact('trafficData', 'funnel', 'sources', 'devices', 'range'));
     }
 
     public function products(Request $request): View
     {
-        $period = $this->period($request);
-        $startDate = now()->subDays($period);
-        $excludedStatuses = ['cancelled', 'returned'];
+        $range = $this->range($request);
+        [$startDate, $endDate] = [$range->start, $range->end];
 
         // Product performance
-        $products = Product::withCount(['orderItems as sold' => function ($query) use ($startDate, $excludedStatuses) {
-            $query->whereHas('order', fn ($q) => $q->where('created_at', '>=', $startDate)
-                ->where('payment_status', 'paid')
-                ->whereNotIn('status', $excludedStatuses));
-        }])
-            ->withSum(['orderItems as revenue' => function ($query) use ($startDate, $excludedStatuses) {
-                $query->whereHas('order', fn ($q) => $q->where('created_at', '>=', $startDate)
-                    ->where('payment_status', 'paid')
-                    ->whereNotIn('status', $excludedStatuses));
-            }], 'total')
+        $soldInPeriod = $this->soldInPeriod($range);
+
+        $products = Product::withCount(['orderItems as sold' => $soldInPeriod])
+            ->withSum(['orderItems as revenue' => $soldInPeriod], 'total')
             ->orderByDesc('sold')
             ->paginate($request->input('per_page', 10))->withQueryString();
 
@@ -264,36 +278,28 @@ class ReportController extends Controller
             ->take(10)
             ->get();
 
-        return view('admin.reports.products', compact('products', 'stats', 'categoryBreakdown', 'period'));
+        return view('admin.reports.products', compact('products', 'stats', 'categoryBreakdown', 'range'));
     }
 
     public function customers(Request $request): View
     {
-        $period = $this->period($request);
-        $startDate = now()->subDays($period);
-        $excludedStatuses = ['cancelled', 'returned'];
+        $range = $this->range($request);
+        [$startDate, $endDate] = [$range->start, $range->end];
 
         // New vs returning
         $newCustomers = Customer::where('created_at', '>=', $startDate)->count();
-        $returningCustomers = Order::where('created_at', '>=', $startDate)
-            ->where('payment_status', 'paid')
-            ->whereNotIn('status', $excludedStatuses)
+        $returningCustomers = Order::countsAsSale()
+            ->whereBetween('orders.created_at', [$startDate, $endDate])
             ->select('user_id')
             ->distinct()
             ->whereHas('user', fn ($q) => $q->where('created_at', '<', $startDate))
             ->count();
 
         // Top customers
-        $topCustomers = Customer::withCount(['orders as order_count' => function ($query) use ($startDate, $excludedStatuses) {
-            $query->where('created_at', '>=', $startDate)
-                ->where('payment_status', 'paid')
-                ->whereNotIn('status', $excludedStatuses);
-        }])
-            ->withSum(['orders as total_spent' => function ($query) use ($startDate, $excludedStatuses) {
-                $query->where('created_at', '>=', $startDate)
-                    ->where('payment_status', 'paid')
-                    ->whereNotIn('status', $excludedStatuses);
-            }], 'total')
+        $spentInPeriod = fn ($query) => $query->countsAsSale()->whereBetween('orders.created_at', [$startDate, $endDate]);
+
+        $topCustomers = Customer::withCount(['orders as order_count' => $spentInPeriod])
+            ->withSum(['orders as total_spent' => $spentInPeriod], 'total')
             ->orderByDesc('total_spent')
             ->take(10)
             ->get();
@@ -303,7 +309,7 @@ class ReportController extends Controller
             'total_customers' => Customer::count(),
             'new_customers' => $newCustomers,
             'returning_customers' => $returningCustomers,
-            'average_lifetime_value' => Customer::withSum(['orders' => fn ($q) => $q->where('payment_status', 'paid')->whereNotIn('status', $excludedStatuses)], 'total')
+            'average_lifetime_value' => Customer::withSum(['orders' => fn ($q) => $q->countsAsSale()], 'total')
                 ->get()
                 ->avg('orders_sum_total') ?? 0,
         ];
@@ -315,26 +321,25 @@ class ReportController extends Controller
             ->orderBy('date')
             ->get();
 
-        return view('admin.reports.customers', compact('stats', 'topCustomers', 'growth', 'period'));
+        return view('admin.reports.customers', compact('stats', 'topCustomers', 'growth', 'range'));
     }
 
     public function export(Request $request, string $type): StreamedResponse
     {
-        $period = $this->period($request);
-        $startDate = now()->subDays($period);
-        $excludedStatuses = ['cancelled', 'returned'];
+        $range = $this->range($request);
+        [$startDate, $endDate] = [$range->start, $range->end];
+        $soldInPeriod = $this->soldInPeriod($range);
 
         $filename = "{$type}_report_" . now()->format('Y-m-d') . '.csv';
 
-        return response()->streamDownload(function () use ($type, $startDate, $excludedStatuses) {
+        return response()->streamDownload(function () use ($type, $startDate, $endDate, $soldInPeriod) {
             $handle = fopen('php://output', 'w');
 
             switch ($type) {
                 case 'sales':
                     fputcsv($handle, ['Date', 'Orders', 'Revenue']);
-                    Order::where('created_at', '>=', $startDate)
-                        ->where('payment_status', 'paid')
-                        ->whereNotIn('status', $excludedStatuses)
+                    Order::countsAsSale()
+                        ->whereBetween('orders.created_at', [$startDate, $endDate])
                         ->selectRaw('DATE(created_at) as date, COUNT(*) as orders, SUM(total) as revenue')
                         ->groupBy('date')
                         ->orderBy('date')
@@ -345,16 +350,8 @@ class ReportController extends Controller
 
                 case 'products':
                     fputcsv($handle, ['Product', 'SKU', 'Stock', 'Price', 'Sales', 'Revenue']);
-                    Product::withCount(['orderItems as sold' => function ($query) use ($startDate, $excludedStatuses) {
-                        $query->whereHas('order', fn ($q) => $q->where('created_at', '>=', $startDate)
-                            ->where('payment_status', 'paid')
-                            ->whereNotIn('status', $excludedStatuses));
-                    }])
-                        ->withSum(['orderItems as revenue' => function ($query) use ($startDate, $excludedStatuses) {
-                            $query->whereHas('order', fn ($q) => $q->where('created_at', '>=', $startDate)
-                                ->where('payment_status', 'paid')
-                                ->whereNotIn('status', $excludedStatuses));
-                        }], 'total')
+                    Product::withCount(['orderItems as sold' => $soldInPeriod])
+                        ->withSum(['orderItems as revenue' => $soldInPeriod], 'total')
                         ->each(function ($product) use ($handle) {
                             fputcsv($handle, [
                                 $product->name,
@@ -369,8 +366,8 @@ class ReportController extends Controller
 
                 case 'customers':
                     fputcsv($handle, ['Name', 'Email', 'Orders', 'Total Spent', 'Joined']);
-                    Customer::withCount(['orders' => fn ($q) => $q->where('payment_status', 'paid')->whereNotIn('status', $excludedStatuses)])
-                        ->withSum(['orders' => fn ($q) => $q->where('payment_status', 'paid')->whereNotIn('status', $excludedStatuses)], 'total')
+                    Customer::withCount(['orders' => fn ($q) => $q->countsAsSale()])
+                        ->withSum(['orders' => fn ($q) => $q->countsAsSale()], 'total')
                         ->each(function ($customer) use ($handle) {
                             fputcsv($handle, [
                                 $customer->name,
@@ -389,17 +386,16 @@ class ReportController extends Controller
 
     public function exportExcel(Request $request, string $type): StreamedResponse
     {
-        $period = $this->period($request);
-        $startDate = now()->subDays($period);
-        $excludedStatuses = ['cancelled', 'returned'];
+        $range = $this->range($request);
+        [$startDate, $endDate] = [$range->start, $range->end];
+        $soldInPeriod = $this->soldInPeriod($range);
         $exportService = new ReportExportService();
 
         switch ($type) {
             case 'sales':
                 $headers = ['Date', 'Orders', 'Revenue'];
-                $rows = Order::where('created_at', '>=', $startDate)
-                    ->where('payment_status', 'paid')
-                    ->whereNotIn('status', $excludedStatuses)
+                $rows = Order::countsAsSale()
+                    ->whereBetween('orders.created_at', [$startDate, $endDate])
                     ->selectRaw('DATE(created_at) as date, COUNT(*) as orders, SUM(total) as revenue')
                     ->groupBy('date')
                     ->orderBy('date')
@@ -409,24 +405,16 @@ class ReportController extends Controller
 
             case 'products':
                 $headers = ['Product', 'SKU', 'Stock', 'Price', 'Sales', 'Revenue'];
-                $rows = Product::withCount(['orderItems as sold' => function ($query) use ($startDate, $excludedStatuses) {
-                    $query->whereHas('order', fn ($q) => $q->where('created_at', '>=', $startDate)
-                        ->where('payment_status', 'paid')
-                        ->whereNotIn('status', $excludedStatuses));
-                }])
-                    ->withSum(['orderItems as revenue' => function ($query) use ($startDate, $excludedStatuses) {
-                        $query->whereHas('order', fn ($q) => $q->where('created_at', '>=', $startDate)
-                            ->where('payment_status', 'paid')
-                            ->whereNotIn('status', $excludedStatuses));
-                    }], 'total')
+                $rows = Product::withCount(['orderItems as sold' => $soldInPeriod])
+                    ->withSum(['orderItems as revenue' => $soldInPeriod], 'total')
                     ->get()
                     ->map(fn ($p) => [$p->name, $p->sku, $p->stock_quantity, $p->price, $p->sold ?? 0, $p->revenue ?? 0]);
                 break;
 
             case 'customers':
                 $headers = ['Name', 'Email', 'Orders', 'Total Spent', 'Joined'];
-                $rows = Customer::withCount(['orders' => fn ($q) => $q->where('payment_status', 'paid')->whereNotIn('status', $excludedStatuses)])
-                    ->withSum(['orders' => fn ($q) => $q->where('payment_status', 'paid')->whereNotIn('status', $excludedStatuses)], 'total')
+                $rows = Customer::withCount(['orders' => fn ($q) => $q->countsAsSale()])
+                    ->withSum(['orders' => fn ($q) => $q->countsAsSale()], 'total')
                     ->get()
                     ->map(fn ($c) => [$c->name, $c->email, $c->orders_count, $c->orders_sum_total ?? 0, $c->created_at->format('Y-m-d')]);
                 break;

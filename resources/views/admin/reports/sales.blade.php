@@ -33,6 +33,9 @@
                     {{ $stats['revenue_change'] > 0 ? '+' : '' }}{{ number_format($stats['revenue_change'], 1) }}% vs prev
                 </div>
             @endif
+            @if($stats['awaiting_collection'] > 0)
+                <div style="font-size: 12px; color: #8a6116;">@price($stats['awaiting_collection']) awaiting COD collection</div>
+            @endif
         </div>
         <div style="background: white; padding: 0.875rem 1rem;">
             <div style="font-size: 12px; color: #616161;">Total Orders</div>
@@ -57,7 +60,7 @@
                 <span style="font-size: 12px; color: #616161;">Last {{ $period }} days</span>
             </div>
             <div style="padding: 1rem;">
-                @if($salesData->count() > 0)
+                @if($stats['total_orders'] > 0)
                     <canvas id="salesChart" height="260"></canvas>
                 @else
                     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem 1rem; color: #616161;">
@@ -144,14 +147,14 @@
         </div>
     </div>
 
-    @if($salesData->count() > 0 || $salesByCategory->count() > 0)
+    @if($stats['total_orders'] > 0 || $salesByCategory->count() > 0)
         @push('scripts')
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 const fontFamily = "'Poppins', 'Inter', sans-serif";
 
-                @if($salesData->count() > 0)
+                @if($stats['total_orders'] > 0)
                 // Sales Chart - Bar + Line combo
                 new Chart(document.getElementById('salesChart'), {
                     type: 'bar',
