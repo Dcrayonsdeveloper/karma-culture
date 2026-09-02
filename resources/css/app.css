@@ -1721,6 +1721,19 @@ body:not(.layout-admin) a.kk-social-link:focus-visible {
     color: var(--kk-cream, #efe2cb);
 }
 
+/* The cream glyph above needs the dark circle underneath it, and the circle
+   only came from Tailwind's `hover:bg-*`. On focus the icon turned cream while
+   the circle stayed cream, so the glyph washed out into its own background.
+   That is the state a shopper lands back in: the links open in a new tab, and
+   returning to this one restores focus to the anchor they clicked, which the
+   browser resolves as :focus-visible - so one icon sat there greyed out.
+   Painting the background here keeps the pair in step and doubles as the
+   keyboard focus indicator the global outline reset removed. */
+body:not(.layout-admin) a.kk-social-link:focus-visible {
+    background-color: var(--kk-brown, #4a2d1a);
+    border-color: var(--kk-brown, #4a2d1a);
+}
+
 /* ========================================
    Inline form validation
    ========================================
