@@ -2,9 +2,6 @@
 
 namespace Tests\Feature\Admin;
 
-use App\Models\Admin;
-use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
@@ -21,63 +18,67 @@ use Tests\TestCase;
  * reach it.
  *
  * The same overlay is copy-pasted into the low-stock and out-of-stock screens,
- * so all three are covered.
+ * so all three are covered. That the pages themselves still render is covered
+ * by RouteSmokeTest, which sweeps every parameterless admin GET; this class
+ * stays free of the database so it keeps working while the shared test schema
+ * is contended.
  */
 class InventoryModalCenteringTest extends TestCase
 {
-    use RefreshDatabase;
-
-    private User $adminUser;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        $this->adminUser = User::factory()->create([
-            'first_name' => 'Inventory',
-            'last_name' => 'Admin',
-            'role' => 'admin',
-        ]);
-
-        Admin::create([
-            'user_id' => $this->adminUser->id,
-            'role' => 'super_admin',
-            'is_active' => true,
-        ]);
-    }
-
     /**
-     * @return string[] the opening tag of every x-show element on the page
+     * Every template that makes up an inventory screen, including the shell it
+     * renders inside — the dialog is only centred if nothing in the chain
+     * reintroduces the bug.
      */
-    private function toggledTags(string $url): array
+    public static function inventoryTemplates(): array
     {
-        $html = $this->actingAs($this->adminUser, 'admin')->get($url)
-            ->assertStatus(200)
-            ->getContent();
+        $paths = [
+            'admin/inventory/index.blade.php',
+            'admin/inventory/low-stock.blade.php',
+            'admin/inventory/out-of-stock.blade.php',
+            'admin/partials/header.blade.php',
+            'admin/partials/sidebar.blade.php',
+        ];
 
-        preg_match_all('/<[a-z][^>]*\sx-show=[^>]*>/i', $html, $matches);
-
-        return $matches[0];
+        return array_combine($paths, array_map(fn ($p) => [$p], $paths));
     }
 
-    public static function inventoryPages(): array
+    public static function stockDialogTemplates(): array
     {
-        return [
-            'inventory' => ['/admin/inventory'],
-            'low stock' => ['/admin/inventory/low-stock'],
-            'out of stock' => ['/admin/inventory/out-of-stock'],
+        $paths = [
+            'admin/inventory/index.blade.php',
+            'admin/inventory/low-stock.blade.php',
+            'admin/inventory/out-of-stock.blade.php',
         ];
+
+        return array_combine($paths, array_map(fn ($p) => [$p], $paths));
+    }
+
+    private function template(string $relative): string
+    {
+        $path = resource_path('views/' . $relative);
+        $this->assertFileExists($path);
+
+        return file_get_contents($path);
     }
 
     /**
      * The regression itself: an x-show element may not set display inline,
      * because opening the element throws that declaration away.
      *
-     * @dataProvider inventoryPages
+     * @dataProvider inventoryTemplates
      */
-    public function test_no_toggled_element_declares_display_inline(string $url): void
+    public function test_no_toggled_element_declares_display_inline(string $template): void
     {
-        foreach ($this->toggledTags($url) as $tag) {
+        preg_match_all('/<[a-z][^>]*\sx-show=[^>]*>/is', $this->template($template), $matches);
+
+        $this->assertNotEmpty(
+            $matches[0],
+            "Expected {$template} to still contain x-show elements; if it no longer "
+                . 'does, drop it from the provider rather than leaving a test that checks nothing.'
+        );
+
+        foreach ($matches[0] as $tag) {
             if (! preg_match('/\sstyle="([^"]*)"/i', $tag, $style)) {
                 continue;
             }
@@ -85,23 +86,22 @@ class InventoryModalCenteringTest extends TestCase
             $this->assertDoesNotMatchRegularExpression(
                 '/(^|;)\s*display\s*:/i',
                 $style[1],
-                "x-show strips inline display, so this element loses it on open: {$tag}"
+                "x-show strips inline display, so this element loses it on open.\n"
+                    . "In {$template}: " . trim(preg_replace('/\s+/', ' ', $tag))
             );
         }
     }
 
     /**
-     * @dataProvider inventoryPages
+     * @dataProvider stockDialogTemplates
      */
-    public function test_stock_dialog_uses_the_centred_modal_classes(string $url): void
+    public function test_stock_dialog_uses_the_centred_modal_classes(string $template): void
     {
-        $html = $this->actingAs($this->adminUser, 'admin')->get($url)
-            ->assertStatus(200)
-            ->getContent();
+        $source = $this->template($template);
 
-        $this->assertStringContainsString('class="kk-modal"', $html);
-        $this->assertStringContainsString('kk-modal__backdrop', $html);
-        $this->assertStringContainsString('kk-modal__card', $html);
+        $this->assertStringContainsString('class="kk-modal"', $source);
+        $this->assertStringContainsString('kk-modal__backdrop', $source);
+        $this->assertStringContainsString('kk-modal__card', $source);
     }
 
     /**

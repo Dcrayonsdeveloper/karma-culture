@@ -120,6 +120,18 @@
                 @method('PUT')
                 <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
                     <div>
+                        {{-- Stock sits in a warehouse, so an adjustment has to say
+                             which one it happens at. --}}
+                        <label class="form-label">Location</label>
+                        <select name="location_id" class="form-select" style="width: 100%;">
+                            @forelse($locations as $location)
+                                <option value="{{ $location->id }}" @selected($location->is_default)>{{ $location->name }} ({{ $location->code }})</option>
+                            @empty
+                                <option value="">Main Warehouse</option>
+                            @endforelse
+                        </select>
+                    </div>
+                    <div>
                         <label class="form-label">Adjustment Type <span style="color: #d72c0d;">*</span></label>
                         <select name="type" class="form-select" required>
                             <option value="add">Add Stock</option>
