@@ -21,6 +21,17 @@
         Controls the three rails on the home page's "Shop It Your Way" section. Each tab (Size, Price, Shade) renders one hanger per item, ordered by position.
     </p>
 
+    {{-- Said once here rather than repeated over three tabs. The rule is new:
+         hangers used to be hung whatever their query returned, and most of the
+         live ones opened onto "No products found". --}}
+    <p style="font-size: 12px; color: #616161; margin: 0 0 1rem 0;">
+        <strong style="color: #303030;">Matches</strong> is what the shop returns for that hanger's query right now.
+        A hanger matching <strong style="color: #303030;">0</strong> is left off the home page rather than sent to an empty results page &mdash;
+        it comes back on its own once something matches again. <strong style="color: #303030;">Ignored</strong> means the query names nothing the shop
+        filters on (<code>price=2</code> is not a bound; <code>price_min=2000&amp;price_max=3000</code> is), so that hanger opens the whole catalogue.
+        The Size and Shade query boxes suggest the values this catalogue carries.
+    </p>
+
     @foreach(['size' => 'Size', 'price' => 'Price', 'shade' => 'Shade'] as $type => $label)
         <div class="card" style="margin-bottom: 1.25rem;">
             <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3; display: flex; justify-content: space-between; align-items: center;">
@@ -39,6 +50,7 @@
                             <th style="text-align: left; padding: 0.5rem 1rem; font-weight: 500; color: #616161; font-size: 12px;">Sub-label</th>
                             <th style="text-align: left; padding: 0.5rem 1rem; font-weight: 500; color: #616161; font-size: 12px;">Shade</th>
                             <th style="text-align: left; padding: 0.5rem 1rem; font-weight: 500; color: #616161; font-size: 12px;">Query</th>
+                            <th style="text-align: center; padding: 0.5rem 1rem; font-weight: 500; color: #616161; font-size: 12px;">Matches</th>
                             <th style="text-align: center; padding: 0.5rem 1rem; font-weight: 500; color: #616161; font-size: 12px;">Active</th>
                             <th style="text-align: right; padding: 0.5rem 1rem; font-weight: 500; color: #616161; font-size: 12px;">Actions</th>
                         </tr>
@@ -85,8 +97,30 @@
                                     </td>
                                     <td style="padding: 0.5rem 1rem;"><input type="text" name="query_string" value="{{ $item->query_string }}" maxlength="255"
                                                pattern="[A-Za-z0-9_\-=&amp;%.+,\[\]]+"
+                                               @if(! empty($suggestions[$type])) list="kk-query-{{ $type }}" @endif
                                                title="Enter a query string such as size=M or price_min=1000&amp;price_max=2000."
                                                aria-label="Query string" class="form-input" style="font-size: 13px;" placeholder="size=M"></td>
+                                    {{-- What the shop returns for this query right now. A hanger
+                                         that returns nothing is left off the home page rather than
+                                         promoted as a dead end onto "No products found", so the
+                                         screen that owns it has to be the one that says why. --}}
+                                    @php
+                                        $kkMatches = $matches[$item->id] ?? null;
+                                        $kkUnread = $unread[$item->id] ?? [];
+                                    @endphp
+                                    <td style="padding: 0.5rem 1rem; text-align: center; white-space: nowrap;">
+                                        @if($kkMatches === null)
+                                            <span style="font-size: 11px; color: #616161;" title="No query string, so this hanger links nowhere.">&mdash;</span>
+                                        @elseif($kkMatches === 0)
+                                            <span class="badge badge-error" title="Nothing matches this query, so the hanger is hidden on the home page. Pick a value the shop carries.">0 &middot; hidden</span>
+                                        @elseif($kkUnread)
+                                            {{-- A healthy-looking count on a filter that never runs: the
+                                                 hanger opens the whole shop instead of the edit it names. --}}
+                                            <span class="badge badge-warning" title="The shop does not read {{ implode(', ', $kkUnread) }}, so this hanger opens the full catalogue unfiltered.">ignored</span>
+                                        @else
+                                            <span style="font-size: 12px; color: #303030;">{{ $kkMatches }}</span>
+                                        @endif
+                                    </td>
                                     <td style="padding: 0.5rem 1rem; text-align: center;">
                                         <span class="badge {{ $item->is_active ? 'badge-success' : 'badge-neutral' }}">{{ $item->is_active ? 'Active' : 'Hidden' }}</span>
                                     </td>
@@ -122,11 +156,25 @@
                                     </td>
                             </tr>
                         @empty
-                            <tr><td colspan="6" style="padding: 1.5rem; text-align: center; color: #616161; font-size: 12px;">No {{ $label }} items yet.</td></tr>
+                            <tr><td colspan="7" style="padding: 1.5rem; text-align: center; color: #616161; font-size: 12px;">No {{ $label }} items yet.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
+
+            {{-- The values the catalogue actually carries, offered on both query
+                 fields in this tab. A live hanger read `size=cd` because nothing
+                 here ever showed which sizes the shop stocks, and the shopper who
+                 clicked it landed on an empty page. Still a plain text box: a
+                 datalist suggests, it does not restrict, so a hanger can still be
+                 set up ahead of the stock it is waiting for. --}}
+            @if(! empty($suggestions[$type]))
+                <datalist id="kk-query-{{ $type }}">
+                    @foreach($suggestions[$type] as $kkOption)
+                        <option value="{{ $kkOption }}"></option>
+                    @endforeach
+                </datalist>
+            @endif
 
             {{-- Add new item form --}}
             <div style="padding: 0.75rem 1rem; border-top: 1px solid #e3e3e3; background: #fafafa;">
@@ -175,6 +223,7 @@
                         <label for="filter-{{ $type }}-query-string" class="form-label" style="font-size: 11px; color: #616161;">Query string</label>
                         <input type="text" name="query_string" id="filter-{{ $type }}-query-string" maxlength="255"
                                pattern="[A-Za-z0-9_\-=&amp;%.+,\[\]]+"
+                               @if(! empty($suggestions[$type])) list="kk-query-{{ $type }}" @endif
                                title="Enter a query string such as size=M or price_min=1000&amp;price_max=2000."
                                class="form-input" style="font-size: 13px;" placeholder="size=M">
                     </div>

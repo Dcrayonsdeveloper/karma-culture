@@ -1313,12 +1313,19 @@
                     ];
                 }
             }
+
+            // A tab with nothing left on its rail is dropped outright rather
+            // than rendered as a button onto an empty stage. ShopFilterTiles
+            // takes down the hangers that lead nowhere, so a whole tab can now
+            // empty out - every Shade hanger on the live site named a colour
+            // the shop does not list.
+            $kkTabs = array_filter($kkTabs, fn ($t) => count($t['items']) > 0);
         @endphp
-        @if(collect($kkTabs)->contains(fn($t) => count($t['items']) > 0))
+        @if($kkTabs)
         @php
             // Opened on Size unconditionally, so a shop that only fills in Price or
             // Shade greeted every visitor with an empty rail.
-            $kkFirstTab = collect($kkTabs)->filter(fn ($t) => count($t['items']) > 0)->keys()->first() ?? 'size';
+            $kkFirstTab = array_key_first($kkTabs);
         @endphp
         <section class="kk-shop-your-way" x-data="{ tab: '{{ $kkFirstTab }}' }">
             <div class="container mx-auto px-4 text-center">
@@ -1343,8 +1350,12 @@
                              height from its content now, so without this all three render
                              stacked for the instant before Alpine boots and the section
                              visibly collapses once two of them are hidden. --}}
+                        {{-- Cloaked against the tab that is actually open, not against
+                             Size: a shop with no Size hangers opens on Price, and
+                             hardcoding the name here cloaked the one panel on show
+                             until Alpine booted while uncloaking an empty one. --}}
                         <div class="kk-syw-panel"
-                             @if($tabKey !== 'size') x-cloak @endif
+                             @if($tabKey !== $kkFirstTab) x-cloak @endif
                              :data-on="tab==='{{ $tabKey }}'"
                              x-show="tab==='{{ $tabKey }}'"
                              x-transition:enter="transition ease-out duration-500"

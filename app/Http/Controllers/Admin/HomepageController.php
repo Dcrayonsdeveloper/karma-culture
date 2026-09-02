@@ -11,6 +11,7 @@ use App\Models\Setting;
 use App\Models\ShopFilterItem;
 use App\Models\Testimonial;
 use App\Rules\ValidationRules as V;
+use App\Support\ShopFilterTiles;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
@@ -669,9 +670,21 @@ class HomepageController extends Controller
 
     public function shopFilters()
     {
-        $items = ShopFilterItem::ordered()->get()->groupBy('type');
+        $items = ShopFilterItem::ordered()->get();
 
-        return view('admin.homepage.shop-filters', compact('items'));
+        return view('admin.homepage.shop-filters', [
+            'items' => $items->groupBy('type'),
+            // What each hanger's query string actually returns. A hanger that
+            // returns nothing is left off the home page, so the screen that
+            // owns it has to say so - and say which values would work.
+            'matches' => ShopFilterTiles::counts($items),
+            // Keys the shop ignores. A hanger carrying one filters nothing while
+            // its count reads as healthy, which is the quieter half of the bug.
+            'unread' => $items->mapWithKeys(
+                fn ($item) => [$item->id => ShopFilterTiles::unreadKeys($item->query_string)]
+            )->all(),
+            'suggestions' => ShopFilterTiles::suggestions(),
+        ]);
     }
 
     public function storeShopFilter(Request $request)

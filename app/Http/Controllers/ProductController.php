@@ -22,13 +22,10 @@ class ProductController extends Controller
     {
         // The Shop It Your Way tiles store price_min/price_max/shade, so accept
         // those names as well as the form's own. Renaming the stored strings
-        // instead would break any tile an admin has already set up.
-        $request->merge(array_filter([
-            'min_price' => $request->input('min_price', $request->input('price_min')),
-            'max_price' => $request->input('max_price', $request->input('price_max')),
-            'colour'    => $request->input('colour', $request->filled('shade') ? (array) $request->input('shade') : null),
-            'size'      => $request->filled('size') ? (array) $request->input('size') : null,
-        ], fn ($v) => $v !== null && $v !== ''));
+        // instead would break any tile an admin has already set up. The mapping
+        // lives on ProductFilters because the home page has to run a hanger
+        // through the same one to know whether it leads anywhere.
+        $request->merge(ProductFilters::tileAliases($request));
 
         $filters = ProductFilters::for(
             $request,

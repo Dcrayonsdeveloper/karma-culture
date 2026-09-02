@@ -9,8 +9,8 @@ use App\Models\HomepageSection;
 use App\Models\Product;
 use App\Models\Quality;
 use App\Models\Setting;
-use App\Models\ShopFilterItem;
 use App\Models\Testimonial;
+use App\Support\ShopFilterTiles;
 use Illuminate\View\View;
 
 class HomeController extends Controller
@@ -111,8 +111,10 @@ class HomeController extends Controller
             ->withCount('products')
             ->first();
 
-        // Shop It Your Way filter items grouped by type (size|price|shade)
-        $shopFilters = ShopFilterItem::active()->ordered()->get()->groupBy('type');
+        // Shop It Your Way filter items grouped by type (size|price|shade).
+        // Hangers whose filter comes back with nothing are left off the rail
+        // rather than promoted as dead ends onto "No products found".
+        $shopFilters = ShopFilterTiles::live();
 
         // Our Qualities cards
         $qualities = Quality::active()->ordered()->get();

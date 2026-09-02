@@ -92,6 +92,28 @@ class ProductFilters
         return new self($request, $base, $options);
     }
 
+    /**
+     * The names the "Shop It Your Way" hangers store, mapped onto the sidebar's
+     * own.
+     *
+     * A hanger keeps its query string as an admin typed it - price_min=1000,
+     * shade=Tan - so the shop accepts those spellings as well as its own.
+     * Renaming the stored strings instead would break every hanger already set
+     * up. ShopFilterTiles puts a hanger through this too, so the count it
+     * checks a hanger against is the listing that hanger actually opens.
+     *
+     * @return array<string, mixed>
+     */
+    public static function tileAliases(Request $request): array
+    {
+        return array_filter([
+            'min_price' => $request->input('min_price', $request->input('price_min')),
+            'max_price' => $request->input('max_price', $request->input('price_max')),
+            'colour' => $request->input('colour', $request->filled('shade') ? (array) $request->input('shade') : null),
+            'size' => $request->filled('size') ? (array) $request->input('size') : null,
+        ], fn ($v) => $v !== null && $v !== '');
+    }
+
     /** @return array<string, mixed> */
     public function values(): array
     {
@@ -177,12 +199,8 @@ class ProductFilters
             $query->where('products.rating', '>=', $f['rating']);
         }
 
-        // In Stock Only, read through the one predicate the card's badge uses.
-        // On quantity alone this kept a product flagged out_of_stock that still
-        // had units on hand, and then drew "Out of Stock" across the card it had
-        // just let through.
         if ($f['in_stock']) {
-            $query->inStock();
+            $query->where('products.stock_quantity', '>', 0);
         }
 
         // On sale: priced under its own MRP.
@@ -331,16 +349,58 @@ class ProductFilters
      */
     public function sizes(): Collection
     {
-        return ProductVariant::query()
-            ->where('is_active', true)
-            ->whereIn('product_id', $this->query(['size'])->reorder()->select('products.id'))
-            ->pluck('name')
-            ->map(fn ($n) => ProductVariant::sizeLabel($n))
-            ->filter()
-            ->merge($this->filters['size'])
+        return $this->sizesOf($this->query(['size']))
+            ->merge($this->stocked($this->filters['size'], fn () => $this->sizesOf($this->catalogue())))
             ->unique()
             ->sortBy(fn ($s) => ProductVariant::sizeRank($s))
             ->values();
+    }
+
+    /** The size labels carried by the products a query matches. */
+    private function sizesOf(Builder $query): Collection
+    {
+        return ProductVariant::query()
+            ->where('is_active', true)
+            ->whereIn('product_id', $query->reorder()->select('products.id'))
+            ->pluck('name')
+            ->map(fn ($n) => ProductVariant::sizeLabel($n))
+            ->filter();
+    }
+
+    /**
+     * The page's own bound with every facet lifted off it: what this listing
+     * could ever offer, whatever the shopper has ticked.
+     */
+    private function catalogue(): Builder
+    {
+        return ($this->base)(self::KEYS);
+    }
+
+    /**
+     * Which of the ticked values the listing actually carries.
+     *
+     * A ticked value is added back to its facet list so it can be unticked
+     * again once another filter has emptied it out. That kept whatever the URL
+     * said, though, so ?size=cd - a typo in a home page hanger - drew "cd" as a
+     * pickable size on a page holding nothing, and ?shade=cinnamon drew a
+     * swatch for a colour the shop has never sold. A value nothing here carries
+     * is not one of ours: it stays out of the sidebar, and the Active Filters
+     * row above the grid is what takes it back off.
+     *
+     * The lookup is skipped entirely when nothing is ticked, which is the usual
+     * case - it costs a query only on a page that is already filtered.
+     *
+     * @param  array<int, string>  $selected
+     * @param  Closure(): Collection  $offered
+     * @return array<int, string>
+     */
+    private function stocked(array $selected, Closure $offered): array
+    {
+        if ($selected === []) {
+            return [];
+        }
+
+        return array_values(array_intersect($selected, $offered()->all()));
     }
 
     /**
@@ -350,18 +410,29 @@ class ProductFilters
      */
     public function colours(): Collection
     {
-        return $this->query(['colour'])
+        $ticked = $this->stocked(
+            $this->filters['colour'],
+            fn () => $this->coloursOf($this->catalogue())->pluck('name'),
+        );
+
+        return $this->coloursOf($this->query(['colour']))
+            ->concat(collect($ticked)->map(fn ($n) => ['name' => $n, 'hex' => null]))
+            ->unique('name')
+            ->sortBy('name')
+            ->values();
+    }
+
+    /** The colours listed by the products a query matches, name and swatch. */
+    private function coloursOf(Builder $query): Collection
+    {
+        return $query
             ->reorder()
             ->pluck('attributes')
             ->flatMap(fn ($a) => collect(data_get($a, 'Colours', []))
                 ->map(fn ($c) => is_array($c)
                     ? ['name' => trim((string) ($c['name'] ?? '')), 'hex' => $c['hex'] ?? null]
                     : ['name' => trim((string) $c), 'hex' => null]))
-            ->filter(fn ($c) => $c['name'] !== '')
-            ->concat(collect($this->filters['colour'])->map(fn ($n) => ['name' => $n, 'hex' => null]))
-            ->unique('name')
-            ->sortBy('name')
-            ->values();
+            ->filter(fn ($c) => $c['name'] !== '');
     }
 
     /**
