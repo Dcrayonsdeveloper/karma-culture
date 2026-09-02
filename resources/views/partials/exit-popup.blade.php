@@ -9,6 +9,9 @@
     x-data="exitPopup(@js($exit['code']), {{ $exit['minutes'] }}, @js(auth()->user()?->email ?? ''))"
     x-cloak
     x-show="open"
+    {{-- See the offer popup: this subtree is the popup's own chrome, so clicks
+         inside it are not the engagement signal that stops the cycle. --}}
+    data-kk-popup="exit"
     @keydown.escape.window="close()"
     class="fixed inset-0 z-[75] flex items-center justify-center p-3 sm:p-4"
     role="dialog" aria-modal="true" aria-labelledby="exit-popup-title"

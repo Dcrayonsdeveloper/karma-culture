@@ -14,6 +14,11 @@
          x-transition:leave="transition ease-in duration-200"
          x-transition:leave-start="opacity-100 translate-y-0"
          x-transition:leave-end="opacity-0 translate-y-4"
+         {{-- Not a member of the popup queue - a consent notice must never be
+              made to wait behind a marketing modal - but it is tagged so that
+              answering it does not read as shopping engagement. The queue holds
+              itself until this is answered; see PQ_CONSENT_GRACE_MS in app.js. --}}
+         data-kk-popup="cookie"
          class="fixed bottom-0 left-0 right-0 z-[100] bg-white border-t border-neutral-200 shadow-lg"
          role="dialog" aria-label="Cookie consent">
         <div class="container mx-auto px-4 py-4">
@@ -59,11 +64,16 @@ function cookieConsent() {
             localStorage.setItem('fk_cookie_consent', 'all');
             this.show = false;
             this.loadAnalytics();
+            // Releases the popup queue's consent hold. The existing
+            // 'analytics:loaded' event cannot be reused for this, because
+            // acceptEssential() below never fires it.
+            window.dispatchEvent(new CustomEvent('kk-consent-resolved'));
         },
 
         acceptEssential() {
             localStorage.setItem('fk_cookie_consent', 'essential');
             this.show = false;
+            window.dispatchEvent(new CustomEvent('kk-consent-resolved'));
         },
 
         loadAnalytics() {

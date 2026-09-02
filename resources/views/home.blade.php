@@ -678,16 +678,25 @@
     @if($flashSale ?? false)
         <div x-data="flashSalePopup({{ $flashSale->remaining_time }}, '{{ $flashSale->slug }}')"
              x-show="open" x-cloak
+             {{-- data-kk-popup marks this subtree as the popup's own chrome, so a
+                  click on the close button or the backdrop is read as "no thanks"
+                  rather than as the shopper engaging with the page. --}}
+             data-kk-popup="flash"
              @keydown.escape.window="dismiss()"
+             role="dialog" aria-modal="true" aria-labelledby="flash-popup-title"
              class="fixed inset-0 z-60 flex items-center justify-center p-4">
             <div x-show="open" @click="dismiss()" class="absolute inset-0 bg-kk-brown-darker/70 backdrop-blur-sm"></div>
-            <div x-show="open" class="relative w-full max-w-md overflow-hidden rounded-2xl shadow-2xl" @click.stop>
+            {{-- x-trap.noscroll, the same lock the other two popups already use,
+                 replaces the hand-written document.body.style.overflow writes this
+                 component used to make. Alpine restores its own state on teardown;
+                 the raw writes did not, and two of them could fight. --}}
+            <div x-show="open" x-trap.noscroll="open" class="relative w-full max-w-md overflow-hidden rounded-2xl shadow-2xl" @click.stop>
                 <button @click="dismiss()" class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-kk-cream/80 hover:text-kk-cream rounded-full hover:bg-kk-cream/10 z-10">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
                 <div class="relative bg-kk-brown-dark px-6 pt-8 pb-6 text-center text-kk-cream">
                     <p class="text-kk-cream/70 text-[10px] font-semibold tracking-[0.28em] uppercase mb-2">Limited Time Offer</p>
-                    <h2 class="kk-display text-2xl mb-2">{{ $flashSale->name }}</h2>
+                    <h2 id="flash-popup-title" class="kk-display text-2xl mb-2">{{ $flashSale->name }}</h2>
                     @if($flashSale->description)
                         <p class="text-kk-cream/75 text-sm leading-relaxed max-w-xs mx-auto mb-4">{{ Str::limit($flashSale->description, 100) }}</p>
                     @endif
@@ -721,23 +730,48 @@
         <script>
             function flashSalePopup(remainingSeconds, saleSlug) {
                 return {
-                    open: false, remaining: remainingSeconds, timer: null,
+                    open: false, remaining: remainingSeconds, timer: null, dismissed: false,
                     get hours() { return String(Math.floor(this.remaining / 3600)).padStart(2, '0'); },
                     get minutes() { return String(Math.floor((this.remaining % 3600) / 60)).padStart(2, '0'); },
                     get seconds() { return String(this.remaining % 60).padStart(2, '0'); },
                     init() {
                         const key = 'flash_sale_dismissed_' + saleSlug;
                         if (sessionStorage.getItem(key)) return;
-                        setTimeout(() => { this.open = true; document.body.style.overflow = 'hidden'; }, 1500);
+                        // The queue decides when this opens now, so that the offer
+                        // popup can no longer paint over it two seconds later. It is
+                        // reached at runtime rather than at parse time: this script
+                        // runs while the page is parsing, before the deferred app.js
+                        // module has defined Alpine at all.
+                        const q = window.kkPopupQueue && window.kkPopupQueue();
+                        if (!q) return;   // no queue means no popup, and never a stack
+                        q.register('flash', {
+                            priority: 10, delay: 1500, seenStore: 'session',
+                            root: this.$root,
+                            // Never re-open a sale at 00:00:00, and never re-open
+                            // one the shopper has already closed. Dismissing this
+                            // popup writes a per-session key that survives a
+                            // reload, so bringing it back 45s into the same page
+                            // view would contradict the popup's own contract - and
+                            // its countdown stops on dismissal, so the second
+                            // showing would display a clock frozen at the moment
+                            // it was closed. The restart cycle carries the offer
+                            // popup, which has no such explicit dismissal.
+                            canShow: () => this.remaining > 0 && !this.dismissed,
+                            show: () => { this.open = true; },
+                            hide: () => { this.open = false; },
+                        });
+                        this.$watch('open', (v) => { if (!v) q.release('flash'); });
                         this.timer = setInterval(() => {
                             if (this.remaining > 0) { this.remaining--; } else { clearInterval(this.timer); this.dismiss(); }
                         }, 1000);
                     },
                     dismiss() {
-                        this.open = false; document.body.style.overflow = '';
+                        this.open = false;   // the scroll lock is x-trap.noscroll's job now
+                        this.dismissed = true;
                         sessionStorage.setItem('flash_sale_dismissed_' + saleSlug, '1');
                         if (this.timer) clearInterval(this.timer);
-                    }
+                    },
+                    destroy() { if (window.kkPopupQueue) window.kkPopupQueue().release('flash'); }
                 };
             }
         </script>

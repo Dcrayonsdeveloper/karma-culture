@@ -97,7 +97,10 @@
 
     {{-- Analytics are loaded after cookie consent (see cookie-consent component) --}}
 </head>
-<body class="font-sans antialiased bg-white text-[#222222] overflow-x-clip" style="font-family: 'Poppins', sans-serif;" x-data data-authenticated="{{ auth()->check() ? 'true' : 'false' }}">
+{{-- data-kk-page is how the popup queue in app.js knows it is on home: the
+     cycling and the "stop once the shopper engages" rule are home-only, and the
+     site-wide exit popup must behave exactly as before everywhere else. --}}
+<body class="font-sans antialiased bg-white text-[#222222] overflow-x-clip" style="font-family: 'Poppins', sans-serif;" x-data data-authenticated="{{ auth()->check() ? 'true' : 'false' }}" data-kk-page="{{ Route::currentRouteName() }}">
 {{-- Full-bleed sections (the hero and A+ banners) need the viewport width
      *excluding* the scrollbar. 100vw includes it, so a 100%-wide banner
      overhangs by the scrollbar width and this body's overflow-x-clip silently
@@ -131,7 +134,9 @@
                      'bg-info-50 border-info-200 text-info-800': toast.type === 'info'
                  }">
                 <span x-text="toast.message"></span>
-                <button @click="$store.toast.remove(toast.id)" class="text-current opacity-60 hover:opacity-100" aria-label="Dismiss notification">
+                {{-- Dismissing a status toast is housekeeping, not shopping, so
+                     it does not end the popup cycle either. --}}
+                <button @click="$store.toast.remove(toast.id)" class="text-current opacity-60 hover:opacity-100" data-kk-popup-ignore aria-label="Dismiss notification">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
@@ -440,6 +445,10 @@
                 {{-- Position and size come from .kk-fab-item/.kk-fab-top, so
                      this always sits above whichever floats are switched on. --}}
                 class="kk-fab-item kk-fab-top z-40 bg-kk-brown-dark hover:bg-kk-brown-darker text-white rounded-full shadow-lg flex items-center justify-center transition-colors"
+                {{-- Scrolling back up is a reading gesture, not a browsing one,
+                     so it must not count as the engagement that ends the popup
+                     cycle. --}}
+                data-kk-popup-ignore
                 aria-label="Back to top">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
         </button>
