@@ -13,7 +13,10 @@
 # else's production site.
 #
 # The server has git, composer and php but NO node/npm, and /public/build is
-# gitignored. Assets are therefore built here and shipped over ssh.
+# gitignored. Assets are therefore built here and shipped over ssh. Because the
+# two halves have to agree, the server is checked out to the exact commit the
+# assets were built from rather than to whatever origin/main points at by the
+# time the upload lands.
 #
 # Usage:  ./deploy.sh [ssh-alias]        (default alias: karmaakulture)
 #
@@ -38,10 +41,17 @@ if [ "$LOCAL_HEAD" != "$ORIGIN_HEAD" ]; then
     echo "ERROR: local HEAD does not match origin/main." >&2
     echo "       local     $LOCAL_HEAD" >&2
     echo "       origin    $ORIGIN_HEAD" >&2
-    echo "       The server deploys origin/main, so assets built here would" >&2
-    echo "       not match the deployed code. Push or check out main first." >&2
+    echo "       The server checks out the commit deployed from here, so it" >&2
+    echo "       has to be pushed first. Push or check out main." >&2
     exit 1
 fi
+
+# Pin the deploy to the commit the assets are about to be built from. The check
+# above is a point-in-time snapshot and `npm run build` takes minutes; anyone
+# pushing inside that window would otherwise be picked up by the server's pull
+# while the uploaded assets still came from this older tree. That mismatch is
+# silent — the site serves new blade against a stylesheet built without it.
+DEPLOY_SHA="$LOCAL_HEAD"
 
 echo "==> Locating Karmaa Kulture on ${SSH_ALIAS} ..."
 
@@ -75,7 +85,7 @@ if [ "$(printf '%s\n' "$APP_DIR" | wc -l)" -gt 1 ]; then
 fi
 
 echo "==> Found: $APP_DIR"
-read -rp "Deploy origin/main here? [y/N] " confirm
+read -rp "Deploy ${DEPLOY_SHA:0:7} here? [y/N] " confirm
 [ "$confirm" = "y" ] || { echo "Aborted."; exit 1; }
 
 # --- build assets locally --------------------------------------------------
@@ -94,9 +104,10 @@ npm run build
 # APP_DIR is passed as a positional argument so the heredoc can stay quoted:
 # every variable below is expanded on the server, not here.
 
-ssh "$SSH_ALIAS" "bash -s -- '$APP_DIR'" <<'REMOTE'
+ssh "$SSH_ALIAS" "bash -s -- '$APP_DIR' '$DEPLOY_SHA'" <<'REMOTE'
 set -euo pipefail
 APP_DIR="$1"
+DEPLOY_SHA="$2"
 cd "$APP_DIR"
 
 for tool in git composer php; do
@@ -182,7 +193,22 @@ echo "    saved $BACKUP ($(du -h "$BACKUP" | cut -f1))"
 
 echo "==> Pulling latest code ..."
 git fetch origin
-git reset --hard origin/main
+
+# Check out the commit the assets were built from, not whatever origin/main
+# happens to point at now.
+git cat-file -e "${DEPLOY_SHA}^{commit}" 2>/dev/null || {
+    echo "ERROR: commit $DEPLOY_SHA is not on the server after fetching." >&2
+    echo "       Was main rewritten or force-pushed mid-deploy?" >&2
+    exit 1
+}
+git reset --hard "$DEPLOY_SHA"
+
+ORIGIN_TIP="$(git rev-parse origin/main)"
+if [ "$ORIGIN_TIP" != "$DEPLOY_SHA" ]; then
+    echo "==> NOTE: origin/main moved to ${ORIGIN_TIP:0:7} while this deploy was building."
+    echo "    Checked out ${DEPLOY_SHA:0:7} instead, so the code matches the uploaded assets."
+    echo "    Re-run the deploy to ship the newer commits."
+fi
 
 echo "==> Installing PHP dependencies ..."
 "$PHP_BIN" "$COMPOSER_BIN" install --no-dev --optimize-autoloader --no-interaction
@@ -268,9 +294,10 @@ rm -rf build.previous
 
 # --- server: rebuild caches ------------------------------------------------
 
-ssh "$SSH_ALIAS" "bash -s -- '$APP_DIR'" <<'REMOTE'
+ssh "$SSH_ALIAS" "bash -s -- '$APP_DIR' '$DEPLOY_SHA'" <<'REMOTE'
 set -euo pipefail
 APP_DIR="$1"
+DEPLOY_SHA="$2"
 cd "$APP_DIR"
 
 is84() { [ -x "$1" ] && "$1" -r 'exit(PHP_VERSION_ID >= 80400 ? 0 : 1);' 2>/dev/null; }
@@ -288,6 +315,15 @@ echo "==> Rebuilding caches ..."
 "$PHP_BIN" artisan route:cache
 "$PHP_BIN" artisan view:cache
 "$PHP_BIN" artisan queue:restart
+
+# Assert rather than report: everything above assumed the checkout landed on
+# the built commit, and a silent drift here is the whole failure this script
+# is trying to rule out.
+SERVER_HEAD="$(git rev-parse HEAD)"
+if [ "$SERVER_HEAD" != "$DEPLOY_SHA" ]; then
+    echo "ERROR: server is on $SERVER_HEAD but the assets were built for $DEPLOY_SHA." >&2
+    exit 1
+fi
 
 echo "==> Deployed $(git rev-parse --short HEAD)"
 REMOTE
