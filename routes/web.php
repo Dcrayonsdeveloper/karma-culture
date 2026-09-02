@@ -116,17 +116,28 @@ Route::prefix('cart')->name('cart.')->group(function () {
     Route::delete('/{cartItem}', [App\Http\Controllers\CartController::class, 'destroy'])->whereNumber('cartItem')->name('destroy');
 });
 
-// Checkout - guest checkout (no authentication required).
-// Order is placed without login; payment/shipping (Shiprocket) will be wired in later.
+// Checkout requires an account. Placing the order is the only step that is
+// gated: browsing and the cart stay open to guests, and the guest cart is
+// merged into the account on sign-in, so nothing picked out is lost on the way
+// through the login page. The `auth` middleware records the intended URL, which
+// brings the customer straight back here afterwards.
+//
+// success/ and failed/ stay outside the gate. Orders placed while guest
+// checkout was open are owned by a session id rather than a user, and their
+// confirmation page still has to open; success() checks that ownership itself.
 Route::prefix('checkout')->name('checkout.')->group(function () {
-    Route::get('/', [App\Http\Controllers\CheckoutController::class, 'index'])->name('index');
-    Route::post('/process', [App\Http\Controllers\CheckoutController::class, 'process'])->middleware('throttle:10,1')->name('process');
+    Route::middleware('auth')->group(function () {
+        Route::get('/', [App\Http\Controllers\CheckoutController::class, 'index'])->name('index');
+        Route::post('/process', [App\Http\Controllers\CheckoutController::class, 'process'])->middleware('throttle:10,1')->name('process');
+    });
+
     Route::get('/success/{order}', [App\Http\Controllers\CheckoutController::class, 'success'])->name('success');
     Route::get('/failed', [App\Http\Controllers\CheckoutController::class, 'failed'])->name('failed');
 });
 
-// PayU initiate lives outside the auth group because checkout is guest-friendly;
-// ownership (user id or guest session) is enforced inside the controller.
+// PayU initiate stays outside the auth group so an unpaid guest order from
+// before that change can still be taken to the gateway; ownership (user id or
+// guest session) is enforced inside the controller.
 Route::get('/payu/initiate/{order}', [App\Http\Controllers\PayUController::class, 'initiate'])->name('payu.initiate');
 
 // Wishlist page - client-side (localStorage) wishlist, works for guests

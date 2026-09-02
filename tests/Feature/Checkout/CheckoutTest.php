@@ -58,31 +58,52 @@ class CheckoutTest extends TestCase
     }
 
     /**
-     * Checkout is deliberately guest-friendly — it no longer requires login.
-     * What it does require is a non-empty cart, which sends you back to /cart.
+     * Past the login gate, checkout still needs something to buy — an empty
+     * cart sends the customer back to /cart rather than showing a blank order.
      */
     public function test_checkout_redirects_to_cart_when_empty(): void
     {
-        $response = $this->get('/checkout');
+        $response = $this->actingAs($this->user)->get('/checkout');
 
         $response->assertRedirect('/cart');
     }
 
     /**
-     * Checkout must not be auth-gated. A guest hitting it with an empty cart
-     * goes to /cart, never to /login.
-     *
-     * (Cart-to-checkout continuity for a guest can't be asserted here: the
-     * test client doesn't carry the session cookie between calls, so each
-     * request gets a fresh session id and a fresh guest cart.)
+     * Checkout requires an account. A guest is sent to the login page, and the
+     * intended URL is kept so signing in drops them back on checkout.
      */
-    public function test_checkout_is_not_auth_gated_for_guests(): void
+    public function test_guest_is_sent_to_login_instead_of_checkout(): void
     {
         $response = $this->get('/checkout');
 
-        $response->assertRedirect('/cart');
-        $response->assertRedirectContains('/cart');
-        $this->assertStringNotContainsString('/login', $response->headers->get('Location'));
+        $response->assertRedirect('/login');
+        $this->assertSame(url('/checkout'), session('url.intended'));
+    }
+
+    /**
+     * The gate that actually matters: even posting straight at the endpoint,
+     * with a complete and valid payload, a guest writes no order.
+     */
+    public function test_guest_cannot_place_an_order_by_posting_to_process(): void
+    {
+        $this->post('/cart/add', [
+            'product_id' => $this->product->id,
+            'quantity' => 1,
+        ]);
+
+        $response = $this->post('/checkout/process', [
+            'full_name' => 'Guest Shopper',
+            'email' => 'guest@example.com',
+            'phone' => '9876543210',
+            'address_line_1' => '12 Residency Road',
+            'city' => 'Bengaluru',
+            'state' => 'Karnataka',
+            'postal_code' => '560025',
+            'payment_method' => 'cod',
+        ]);
+
+        $response->assertRedirect('/login');
+        $this->assertDatabaseCount('orders', 0);
     }
 
     public function test_guest_can_add_to_cart(): void
