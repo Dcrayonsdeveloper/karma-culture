@@ -22,6 +22,7 @@ class HomeController extends Controller
             ->where('is_active', true)
             ->where('is_featured', true)
             ->with(['category', 'brand', 'primaryImage'])
+            ->inStockFirst()
             ->orderBy('created_at', 'desc')
             ->take(10)
             ->get();
@@ -30,6 +31,7 @@ class HomeController extends Controller
         $newArrivals = Product::query()
             ->where('is_active', true)
             ->with(['category', 'brand', 'primaryImage'])
+            ->inStockFirst()
             ->orderBy('created_at', 'desc')
             ->take(10)
             ->get();
@@ -38,6 +40,7 @@ class HomeController extends Controller
         $bestsellers = Product::query()
             ->where('is_active', true)
             ->with(['category', 'brand', 'primaryImage'])
+            ->inStockFirst()
             ->orderBy('sales_count', 'desc')
             ->take(10)
             ->get();
@@ -50,6 +53,7 @@ class HomeController extends Controller
             ->with(['category', 'brand', 'primaryImage'])
             ->withCount(['views as recent_views' => fn ($q) => $q->where('product_views.created_at', '>=', now()->subDays(30))])
             ->having('recent_views', '>', 0)
+            ->inStockFirst()
             ->orderByDesc('recent_views')
             ->take(10)
             ->get();
@@ -58,6 +62,7 @@ class HomeController extends Controller
             $trending = Product::query()
                 ->where('is_active', true)
                 ->with(['category', 'brand', 'primaryImage'])
+                ->inStockFirst()
                 ->orderByDesc('sales_count')
                 ->orderByDesc('created_at')
                 ->take(10)
@@ -69,6 +74,7 @@ class HomeController extends Controller
             ->where('is_active', true)
             ->whereColumn('price', '<', 'mrp')
             ->with(['category', 'brand', 'primaryImage'])
+            ->inStockFirst()
             ->orderByRaw('(mrp - price) / mrp DESC')
             ->take(10)
             ->get();

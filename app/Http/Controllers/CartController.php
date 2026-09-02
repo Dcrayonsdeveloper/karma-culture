@@ -53,7 +53,7 @@ class CartController extends Controller
             $query->whereNotIn('id', $productIds)
                 ->when(! empty($categoryIds), fn ($q) => $q->whereIn('category_id', $categoryIds));
         }
-        $recommended = $query->inRandomOrder()->take(4)->get();
+        $recommended = $query->inStockFirst()->inRandomOrder()->take(4)->get();
 
         if ($recommended->count() < 4) {
             $exclude = $recommended->pluck('id')->merge($productIds)->all();
@@ -62,13 +62,18 @@ class CartController extends Controller
                     ->whereNotIn('id', $exclude)
                     ->whereHas('images')
                     ->with($with)
+                    ->inStockFirst()
                     ->inRandomOrder()
                     ->take(4 - $recommended->count())
                     ->get()
             );
         }
 
-        return collect($recommended);
+        // The top-up runs as its own query, so concat can drop an available
+        // product behind a sold-out one. Re-sort the joined row once.
+        return collect($recommended)
+            ->sortBy(fn (Product $p) => $p->isInStock() ? 0 : 1)
+            ->values();
     }
 
     public function data(): JsonResponse
@@ -572,6 +577,7 @@ class CartController extends Controller
             ->whereIn('category_id', $categoryIds)
             ->whereHas('images')
             ->with('primaryImage')
+            ->inStockFirst()
             ->inRandomOrder()
             ->take(6)
             ->get()

@@ -25,6 +25,7 @@ class SearchController extends Controller
                     ->orWhere('sku', 'like', "%{$query}%");
             })
             ->with(['category:id,name,slug', 'brand:id,name,slug'])
+            ->inStockFirst()
             ->paginate($request->per_page ?? 20);
 
         return response()->json($products);
@@ -42,6 +43,7 @@ class SearchController extends Controller
             ->where('status', 'approved')
             ->where('name', 'like', "%{$query}%")
             ->select('id', 'name', 'slug', 'price')
+            ->inStockFirst()
             ->limit(10)
             ->get();
 

@@ -33,6 +33,7 @@ class WishlistController extends Controller
         $products = Product::whereIn('id', $ids)
             ->where('is_active', true)
             ->with(['primaryImage', 'category'])
+            ->inStockFirst()
             ->get()
             ->map(fn ($p) => [
                 'id' => $p->id,

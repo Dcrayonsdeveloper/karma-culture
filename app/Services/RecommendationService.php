@@ -50,6 +50,7 @@ class RecommendationService
         return Cache::remember('recommendations.popular', 900, function () use ($limit) {
             return Product::where('is_active', true)
                 ->whereNull('deleted_at')
+                ->inStockFirst()
                 ->orderByDesc('sales_count')
                 ->orderByDesc('rating')
                 ->with(['images' => fn ($q) => $q->orderBy('position')->limit(1)])
@@ -74,6 +75,7 @@ class RecommendationService
                     $q->where('category_id', $product->category_id)
                       ->orWhere('brand_id', $product->brand_id);
                 })
+                ->inStockFirst()
                 ->orderByRaw("CASE WHEN category_id = ? AND brand_id = ? THEN 0 WHEN category_id = ? THEN 1 ELSE 2 END", [
                     $product->category_id, $product->brand_id, $product->category_id,
                 ])
@@ -106,6 +108,7 @@ class RecommendationService
             return Product::whereIn('id', $coProductIds)
                 ->where('is_active', true)
                 ->whereNull('deleted_at')
+                ->inStockFirst()
                 ->with(['images' => fn ($q) => $q->orderBy('position')->limit(1)])
                 ->get();
         });
@@ -130,16 +133,23 @@ class RecommendationService
                 ->where('is_active', true)
                 ->whereNull('deleted_at')
                 ->whereNotIn('id', $excludeIds)
+                ->inStockFirst()
                 ->orderByDesc('sales_count')
                 ->with(['images' => fn ($q) => $q->orderBy('position')->limit(1)])
                 ->limit(4)
                 ->get();
         }
 
+        // Each source already sorts sold-out last, but merging three of them
+        // re-interleaves them, so the rail is re-sorted once before it is cut
+        // to $limit - otherwise a sold-out card can take one of the slots an
+        // available product would have had. sortBy is stable, so the
+        // viewed-then-category-then-popular ranking survives inside each block.
         return $recentlyViewed
             ->merge($categoryBased)
             ->merge($popular)
             ->unique('id')
+            ->sortBy(fn (Product $p) => $p->isInStock() ? 0 : 1)
             ->take($limit)
             ->values();
     }

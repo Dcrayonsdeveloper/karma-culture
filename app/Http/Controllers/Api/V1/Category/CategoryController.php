@@ -65,6 +65,7 @@ class CategoryController extends Controller
             ->where('is_active', true)
             ->where('status', 'approved')
             ->with(['brand:id,name,slug'])
+            ->inStockFirst()
             ->paginate($request->per_page ?? 20);
 
         return response()->json($products);

@@ -32,6 +32,10 @@ class ProductController extends Controller
             $query->where('price', '<=', $request->max_price);
         }
 
+        // Sold-out products sort to the back of the page, whatever sort was
+        // asked for - it stays the tie-break inside each block.
+        $query->inStockFirst();
+
         if ($request->has('sort')) {
             match ($request->sort) {
                 'price_low' => $query->orderBy('price', 'asc'),
@@ -77,6 +81,7 @@ class ProductController extends Controller
             ->where('status', 'approved')
             ->where('is_featured', true)
             ->with(['category:id,name,slug', 'brand:id,name,slug'])
+            ->inStockFirst()
             ->limit(12)
             ->get();
 
@@ -90,6 +95,7 @@ class ProductController extends Controller
         $products = Product::where('is_active', true)
             ->where('status', 'approved')
             ->with(['category:id,name,slug', 'brand:id,name,slug'])
+            ->inStockFirst()
             ->orderBy('sales_count', 'desc')
             ->limit(12)
             ->get();
@@ -104,6 +110,7 @@ class ProductController extends Controller
         $products = Product::where('is_active', true)
             ->where('status', 'approved')
             ->with(['category:id,name,slug', 'brand:id,name,slug'])
+            ->inStockFirst()
             ->orderBy('created_at', 'desc')
             ->limit(12)
             ->get();

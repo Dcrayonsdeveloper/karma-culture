@@ -31,6 +31,7 @@ class HomeController extends Controller
                     ->where('is_featured', true)
                     ->whereNull('deleted_at')
                     ->with(['images' => fn ($q) => $q->orderBy('position')->limit(1)])
+                    ->inStockFirst()
                     ->orderByDesc('sales_count')
                     ->limit(10)
                     ->get(['id', 'name', 'slug', 'price', 'mrp', 'rating', 'review_count']),
@@ -38,6 +39,7 @@ class HomeController extends Controller
                 'new_arrivals' => Product::where('is_active', true)
                     ->whereNull('deleted_at')
                     ->with(['images' => fn ($q) => $q->orderBy('position')->limit(1)])
+                    ->inStockFirst()
                     ->orderByDesc('created_at')
                     ->limit(10)
                     ->get(['id', 'name', 'slug', 'price', 'mrp', 'rating', 'created_at']),
@@ -45,6 +47,7 @@ class HomeController extends Controller
                 'bestsellers' => Product::where('is_active', true)
                     ->whereNull('deleted_at')
                     ->with(['images' => fn ($q) => $q->orderBy('position')->limit(1)])
+                    ->inStockFirst()
                     ->orderByDesc('sales_count')
                     ->limit(10)
                     ->get(['id', 'name', 'slug', 'price', 'mrp', 'rating', 'sales_count']),
@@ -52,7 +55,7 @@ class HomeController extends Controller
                 'flash_sales' => FlashSale::where('is_active', true)
                     ->where('starts_at', '<=', now())
                     ->where('ends_at', '>=', now())
-                    ->with(['products' => fn ($q) => $q->limit(6)])
+                    ->with(['products' => fn ($q) => $q->inStockFirst()->limit(6)])
                     ->limit(3)
                     ->get(),
             ];

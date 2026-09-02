@@ -277,6 +277,25 @@ class Product extends Model
         return $query->where('stock_status', 'in_stock');
     }
 
+    /**
+     * Push sold-out products to the end of a listing.
+     *
+     * Apply this BEFORE the list's own sort, so it becomes the primary key and
+     * the shopper's chosen order (newest, price, rating) still runs inside the
+     * available block and again inside the sold-out tail. A card the shopper
+     * cannot buy has no business sitting second in a row of four.
+     *
+     * The test mirrors isInStock() exactly - both halves of it. Ordering on
+     * stock_status alone would leave a product marked in_stock with nothing on
+     * the shelf sorted as available while its card reads "Out of Stock".
+     */
+    public function scopeInStockFirst($query)
+    {
+        return $query->orderByRaw(
+            "CASE WHEN products.stock_status = 'in_stock' AND products.stock_quantity > 0 THEN 0 ELSE 1 END"
+        );
+    }
+
     // Accessors
     public function getDiscountPercentageAttribute(): int
     {
