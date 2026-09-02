@@ -222,7 +222,31 @@
                             </div>
                         @endif
 
-                        <form method="POST" action="{{ route('register') }}" class="space-y-4">
+                        {{-- novalidate, with the checks moved into kkRegisterForm(): the browser's
+                             own bubble names no field, shows one problem at a time and disappears
+                             on the next click. The component reports every field at once, inline,
+                             in the same words the server uses - and it runs as each field is left,
+                             rather than only when Create Account is pressed.
+
+                             The form still posts normally: with JS off nothing here runs and the
+                             server stays the only thing that has to be right. The summary box
+                             above is what a no-JS shopper reads, which is why the per-field
+                             messages below can be x-cloaked.
+
+                             The seed carries whatever the server just said into the same message
+                             slots the live checks write to, so one field can never end up showing
+                             two contradictory messages. email and password stay gated on
+                             old('_register') because the sign-in form on this page shares the
+                             error bag. --}}
+                        <form method="POST" action="{{ route('register') }}" class="space-y-4" novalidate
+                              x-data="kkRegisterForm(@js([
+                                  'full_name' => $errors->first('full_name'),
+                                  'email' => old('_register') ? $errors->first('email') : '',
+                                  'phone' => $errors->first('phone'),
+                                  'password' => old('_register') ? $errors->first('password') : '',
+                                  'terms' => $errors->first('terms'),
+                              ]))"
+                              @submit="onSubmit($event)">
                             @csrf
                             <input type="hidden" name="_register" value="1">
 
@@ -230,11 +254,11 @@
                             <div>
                                 <label for="full_name" class="block text-sm font-medium text-neutral-700 mb-1.5">Full Name</label>
                                 <input type="text" name="full_name" id="full_name" value="{{ old('full_name') }}" required
-                                       class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all @error('full_name') border-red-300 bg-red-50 @enderror"
+                                       x-ref="full_name" @blur="blur('full_name')" @input="input('full_name')"
+                                       class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all"
+                                       :class="errors.full_name && 'border-red-300 bg-red-50'"
                                        placeholder="Enter your full name">
-                                @error('full_name')
-                                    <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p>
-                                @enderror
+                                <p class="mt-1.5 text-xs text-red-600" x-show="errors.full_name" x-text="errors.full_name" x-cloak></p>
                             </div>
 
                             <!-- Email + Phone -->
@@ -242,24 +266,30 @@
                                 <div>
                                     <label for="reg_email" class="block text-sm font-medium text-neutral-700 mb-1.5">Email Address</label>
                                     <input type="email" name="email" id="reg_email" value="{{ old('_register') ? old('email') : '' }}" required
-                                           class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all @if(old('_register')) @error('email') border-red-300 bg-red-50 @enderror @endif"
+                                           x-ref="email" @blur="blur('email')" @input="input('email')"
+                                           class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all"
+                                           :class="errors.email && 'border-red-300 bg-red-50'"
                                            placeholder="you@example.com">
-                                    @if(old('_register'))
-                                        @error('email')
-                                            <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p>
-                                        @enderror
-                                    @endif
+                                    {{-- Whether the address is already registered is the one check
+                                         that cannot run here: it needs the database, and an endpoint
+                                         answering it would be an account-enumeration oracle. That
+                                         message still arrives after submit, into this same slot. --}}
+                                    <p class="mt-1.5 text-xs text-red-600" x-show="errors.email" x-text="errors.email" x-cloak></p>
                                 </div>
                                 <div>
-                                    <label for="phone" class="block text-sm font-medium text-neutral-700 mb-1.5">
-                                        Phone <span class="text-neutral-600 font-normal">(optional)</span>
-                                    </label>
-                                    <input type="tel" name="phone" id="phone" value="{{ old('phone') }}"
-                                           class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all @error('phone') border-red-300 bg-red-50 @enderror"
+                                    {{-- The label said "(optional)" while RegisterController has always
+                                         validated this with V::mobile() - required - so leaving it blank
+                                         produced a rejected signup for a field the form said could be
+                                         skipped. Validating inline without fixing the label would only
+                                         have made that contradiction louder. --}}
+                                    <label for="phone" class="block text-sm font-medium text-neutral-700 mb-1.5">Mobile Number</label>
+                                    <input type="tel" name="phone" id="phone" value="{{ old('phone') }}" required
+                                           inputmode="numeric" maxlength="20" autocomplete="tel"
+                                           x-ref="phone" @blur="blur('phone')" @input="input('phone')"
+                                           class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all"
+                                           :class="errors.phone && 'border-red-300 bg-red-50'"
                                            placeholder="+91 98765 43210">
-                                    @error('phone')
-                                        <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p>
-                                    @enderror
+                                    <p class="mt-1.5 text-xs text-red-600" x-show="errors.phone" x-text="errors.phone" x-cloak></p>
                                 </div>
                             </div>
 
@@ -269,7 +299,9 @@
                                     <label for="reg_password" class="block text-sm font-medium text-neutral-700 mb-1.5">Password</label>
                                     <div class="relative" x-data="{ show: false }">
                                         <input :type="show ? 'text' : 'password'" name="password" id="reg_password" required
-                                               class="w-full px-4 pr-11 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all @if(old('_register')) @error('password') border-red-300 bg-red-50 @enderror @endif"
+                                               x-ref="password" @blur="blur('password')" @input="input('password')"
+                                               class="w-full px-4 pr-11 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all"
+                                               :class="errors.password && 'border-red-300 bg-red-50'"
                                                placeholder="Min 8 characters">
                                         <button type="button" @click="show = !show" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-neutral-600 hover:text-neutral-600 transition-colors">
                                             <svg x-show="!show" class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -281,17 +313,20 @@
                                             </svg>
                                         </button>
                                     </div>
-                                    @if(old('_register'))
-                                        @error('password')
-                                            <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p>
-                                        @enderror
-                                    @endif
+                                    <p class="mt-1.5 text-xs text-red-600" x-show="errors.password" x-text="errors.password" x-cloak></p>
                                 </div>
                                 <div>
                                     <label for="password_confirmation" class="block text-sm font-medium text-neutral-700 mb-1.5">Confirm Password</label>
                                     <input type="password" name="password_confirmation" id="password_confirmation" required
+                                           x-ref="password_confirmation"
+                                           @blur="blur('password_confirmation')" @input="input('password_confirmation')"
                                            class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all"
+                                           :class="errors.password_confirmation && 'border-red-300 bg-red-50'"
                                            placeholder="Repeat password">
+                                    {{-- This field had no message slot at all: a mismatch is reported
+                                         by the server against `password`, so the sentence appeared
+                                         under the box the shopper had already got right. --}}
+                                    <p class="mt-1.5 text-xs text-red-600" x-show="errors.password_confirmation" x-text="errors.password_confirmation" x-cloak></p>
                                 </div>
                             </div>
 
@@ -309,7 +344,9 @@
                                            class="peer appearance-none w-4.5 h-4.5 mt-0.5 shrink-0 rounded border-2 border-neutral-500 bg-white
                                                   checked:bg-[#2D1810] checked:border-[#3A6166]
                                                   focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:ring-offset-1
-                                                  transition-all cursor-pointer @error('terms') border-red-400 @enderror">
+                                                  transition-all cursor-pointer"
+                                           x-ref="terms" @change="blur('terms')"
+                                           :class="errors.terms && 'border-red-400'">
                                     <svg class="pointer-events-none absolute left-0 top-0.5 w-4.5 h-4.5 p-0.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity"
                                          fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
@@ -321,9 +358,7 @@
                                         <a href="{{ route('privacy') }}" class="text-[#3A6166] hover:text-[#2A494D] font-medium">Privacy Policy</a>
                                     </span>
                                 </label>
-                                @error('terms')
-                                    <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p>
-                                @enderror
+                                <p class="mt-1.5 text-xs text-red-600" x-show="errors.terms" x-text="errors.terms" x-cloak></p>
                             </div>
 
                             <!-- Submit -->

@@ -48,11 +48,17 @@
                                             <label class="flex items-start gap-3 border rounded-lg px-4 py-3 cursor-pointer transition-colors"
                                                    :class="addrId === '{{ $kkAddr->id }}' ? 'border-primary-500 ring-1 ring-primary-200 bg-primary-50' : 'border-neutral-200 hover:border-neutral-300'">
                                                 <input type="radio" name="address_id" value="{{ $kkAddr->id }}" x-model="addrId" class="mt-1 accent-primary-600">
-                                                <span class="min-w-0 flex-1">
+                                                {{-- overflow-wrap:anywhere, and it inherits, so all three lines
+                                                     below are covered by the one declaration. min-w-0 alone is not
+                                                     enough: a label or street line saved as one unbroken string has
+                                                     no break opportunity in it, so the flex item shrinks but the text
+                                                     still runs off the card - and off the screen on a phone, where
+                                                     html{overflow-x:clip} silently cuts it rather than scrolling. --}}
+                                                <span class="min-w-0 flex-1 [overflow-wrap:anywhere]">
                                                     <span class="flex items-center gap-2 text-sm font-semibold text-neutral-900">
-                                                        {{ $kkAddr->label ?: 'Address' }}
+                                                        <span class="min-w-0">{{ $kkAddr->label ?: 'Address' }}</span>
                                                         @if($kkAddr->is_default)
-                                                            <span class="text-[10px] font-medium text-primary-700 bg-primary-100 rounded px-1.5 py-0.5">Default</span>
+                                                            <span class="shrink-0 text-[10px] font-medium text-primary-700 bg-primary-100 rounded px-1.5 py-0.5">Default</span>
                                                         @endif
                                                     </span>
                                                     <span class="block text-xs text-neutral-700 mt-0.5">{{ trim($kkAddr->first_name . ' ' . $kkAddr->last_name) }} &middot; {{ $kkAddr->phone }}</span>

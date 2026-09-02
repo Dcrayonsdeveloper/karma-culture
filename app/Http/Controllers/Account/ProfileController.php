@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
@@ -26,7 +27,7 @@ class ProfileController extends Controller
     {
         $user = $request->user();
 
-        $validated = $request->validate([
+        $validated = $this->validateSection($request, 'personal-information', [
             // V::name() brings the Unicode letters and separators real names
             // use, so "रवि कुमार" and "O'Connor" pass while "dev123" and a
             // pasted URL do not.
@@ -92,7 +93,7 @@ class ProfileController extends Controller
 
     public function updatePassword(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
+        $validated = $this->validateSection($request, 'change-password', [
             'current_password' => 'required|current_password',
             // Unchanged policy - V::password() is the same Password::defaults()
             // + confirmed this already used. max:255 is an input bound, and
@@ -108,5 +109,26 @@ class ProfileController extends Controller
         ]);
 
         return back()->with('success', 'Password updated successfully.');
+    }
+
+    /**
+     * Validate, and on failure return the shopper to the section they were in.
+     *
+     * Both forms on the profile page post back to the profile page, so a failed
+     * save reloads it at the top - with the error messages that were just added
+     * sitting off screen below. Pinning a fragment to the redirect lands them on
+     * their own mistake instead.
+     *
+     * The failure is raised as a ValidationException rather than a hand-rolled
+     * back()->withErrors() so the framework's own dontFlash list still runs and
+     * the submitted passwords never reach the session.
+     */
+    private function validateSection(Request $request, string $section, array $rules, array $messages = []): array
+    {
+        try {
+            return $request->validate($rules, $messages);
+        } catch (ValidationException $e) {
+            throw $e->redirectTo(route('account.profile').'#'.$section);
+        }
     }
 }

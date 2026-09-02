@@ -32,7 +32,15 @@
                     </div>
 
                     {{-- Personal Information --}}
-                    <div class="bg-white rounded-xl border border-neutral-200 overflow-hidden mb-4">
+                    {{-- id + scroll-margin: a failed save redirects back to this page,
+                         which the browser then opens at the top - above the error
+                         messages it just added. The controller sends the matching
+                         fragment so the shopper lands on the section they were
+                         editing. The margin clears the sticky header, whose live
+                         height header.blade.php publishes as --kk-header-h. --}}
+                    <div id="personal-information"
+                         class="bg-white rounded-xl border border-neutral-200 overflow-hidden mb-4"
+                         style="scroll-margin-top: calc(var(--kk-header-h, 5rem) + 1rem);">
                         <div class="px-5 py-3 border-b border-neutral-100 flex items-center gap-2">
                             <svg class="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                             <h2 class="text-sm font-bold text-neutral-900">Personal Information</h2>
@@ -111,7 +119,9 @@
                     </div>
 
                     {{-- Change Password --}}
-                    <div class="bg-white rounded-xl border border-neutral-200 overflow-hidden"
+                    <div id="change-password"
+                         class="bg-white rounded-xl border border-neutral-200 overflow-hidden"
+                         style="scroll-margin-top: calc(var(--kk-header-h, 5rem) + 1rem);"
                          x-data="{ showPassword: false, showNew: false, showConfirm: false }">
                         <div class="px-5 py-3 border-b border-neutral-100 flex items-center gap-2">
                             <svg class="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>

@@ -663,6 +663,171 @@ const _nameError = (v) => {
     return '';
 };
 
+// Client-side mirror of App\Rules\IndianMobile::normalize(). Returns the bare
+// ten digits, or null when the number is not one - so, like the PHP, it doubles
+// as the validity check. The prefix stripping is the whole point: a naive
+// client test of /^[6-9]\d{9}$/ against the raw field rejects "+91 98765 43210",
+// which the server accepts, and a client rule stricter than the server turns a
+// valid signup into one the shopper cannot complete.
+const _normalizeMobile = (value) => {
+    let d = (value || '').replace(/\D+/g, '');
+    if (d.length === 13 && d.startsWith('091')) d = d.slice(3);
+    else if (d.length === 12 && d.startsWith('91')) d = d.slice(2);
+    else if (d.length === 11 && d.startsWith('0')) d = d.slice(1);
+    if (!/^[6-9]\d{9}$/.test(d)) return null;
+    if (/^(\d)\1{9}$/.test(d)) return null; // 9999999999 - legal shape, never a subscriber
+    return d;
+};
+
+// ========================================
+// Create Account form - inline field validation (auth/login.blade.php)
+// ========================================
+//
+// The form still posts normally and the server is still the authority. This
+// only runs the checks that CAN be answered in the browser, at the moment the
+// shopper leaves a field, instead of making them submit the whole form to find
+// out that the name had a digit in it.
+//
+// Two server rules are deliberately NOT mirrored, because answering them needs
+// the database: whether the email or the mobile number is already registered.
+// An endpoint that reports whether an address has an account is an enumeration
+// oracle, so those two keep surfacing after submit, exactly as they do today.
+//
+// Every message below is copied from RegisterController's $messages array, or
+// from the rule object that raises it, so a field says the same sentence
+// whichever side rejected it. The _nameError() above is deliberately not
+// reused: it words its messages for the popup's "name" field, and this form's
+// server messages say "full name".
+const _fullNameError = (v) => {
+    const name = (v || '').trim();
+    // RegisterController maps full_name.required and full_name.min to the same
+    // sentence, so both land here.
+    if (!name) return 'Please enter your full name.';
+    // Code points, not UTF-16 units - PHP's mb_strlen counts the same way.
+    const len = [...name].length;
+    if (len < 2) return 'Please enter your full name.';
+    if (len > 100) return 'Your name must be 100 characters or fewer.';
+    if (!_NAME_CHARSET.test(name)) return 'The full name may only contain letters, spaces, hyphens, apostrophes and periods.';
+    if (_NAME_URLISH.test(name)) return 'The full name may not contain a web address.';
+    if (_NAME_MASHED.test(name)) return 'Please enter a real name.';
+    // The single field is split on the first space into two varchar(50)
+    // columns, so the halves are what the length limit really applies to.
+    const first = name.split(' ')[0];
+    const last = name.slice(first.length).trim();
+    if ([...first].length > 50 || [...last].length > 50) {
+        return 'Please enter your first and last name, each 50 characters or fewer.';
+    }
+    return '';
+};
+
+// Laravel's email:strict rejects "you@gmail" (no TLD), which is the shape this
+// checks. Deliberately permissive about the local part: strict accepts quoted
+// forms this pattern would not, and being the stricter of the two is the one
+// failure mode a client mirror must never have.
+const _EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@.]+$/;
+const _emailError = (v) => {
+    const email = (v || '').trim();
+    if (!email) return 'Please enter your email address.';
+    if (email.length > 255) return 'That email address is too long.';
+    if (!_EMAIL_SHAPE.test(email)) return 'Enter a valid email address, like you@example.com.';
+    return '';
+};
+
+const _mobileError = (v) => {
+    const raw = (v || '').trim();
+    if (!raw) return 'Please enter your mobile number.';
+    if (raw.length > 20) return 'That phone number is too long.';
+    if (_normalizeMobile(raw) === null) return 'Please enter a valid 10-digit mobile number starting with 6, 7, 8 or 9.';
+    return '';
+};
+
+// Mirrors Password::min(8)->mixedCase()->numbers()->symbols() from
+// AppServiceProvider. Laravel tests those with Unicode properties rather than
+// ASCII classes, so this does too - an accented capital still counts as one.
+// Only the first unmet requirement is shown; the hint under the field already
+// lists all four.
+const _passwordError = (v) => {
+    const pw = v || '';
+    if (!pw) return 'Please choose a password.';
+    if (pw.length < 8) return 'Your password must be at least 8 characters long.';
+    if (pw.length > 255) return 'Your password must be 255 characters or fewer.';
+    if (!/\p{Lu}/u.test(pw) || !/\p{Ll}/u.test(pw)) return 'Your password must include both an uppercase and a lowercase letter.';
+    if (!/\p{N}/u.test(pw)) return 'Your password must include at least one number.';
+    if (!/[\p{Z}\p{S}\p{P}]/u.test(pw)) return 'Your password must include at least one special character, such as @ # ! or ?.';
+    return '';
+};
+
+Alpine.data('kkRegisterForm', (serverErrors = {}) => ({
+    // One message slot per field, seeded from whatever the server just said, so
+    // a rejected submit and a live check write to the same place and a field can
+    // never end up showing two contradictory messages at once.
+    errors: { ...serverErrors },
+
+    // A field is judged only once the shopper has left it - typing "p" into an
+    // empty email box should not immediately be called wrong. A field the server
+    // already flagged starts out touched, so its message clears as it is fixed.
+    touched: Object.fromEntries(
+        Object.entries(serverErrors).filter(([, m]) => m).map(([f]) => [f, true])
+    ),
+
+    fields: ['full_name', 'email', 'phone', 'password', 'password_confirmation', 'terms'],
+
+    messageFor(field) {
+        const el = this.$refs[field];
+        const value = el ? el.value : '';
+        switch (field) {
+            case 'full_name': return _fullNameError(value);
+            case 'email': return _emailError(value);
+            case 'phone': return _mobileError(value);
+            case 'password': return _passwordError(value);
+            case 'password_confirmation': {
+                const pw = this.$refs.password ? this.$refs.password.value : '';
+                // With both boxes empty the password field carries the message;
+                // adding "they do not match" is just noise. It is also what the
+                // server does - `confirmed` passes when both sides are null.
+                if (!pw && !value) return '';
+                return value === pw ? '' : 'The two passwords do not match.';
+            }
+            case 'terms':
+                return this.$refs.terms && this.$refs.terms.checked
+                    ? '' : 'Please accept the Terms and Privacy Policy to continue.';
+            default: return '';
+        }
+    },
+
+    check(field) { this.errors[field] = this.messageFor(field); },
+
+    blur(field) {
+        this.touched[field] = true;
+        this.check(field);
+    },
+
+    // Re-check only a field already left once, so a message appears a single
+    // time and then tracks the correction keystroke by keystroke.
+    input(field) {
+        if (this.touched[field]) this.check(field);
+        // The confirmation is a judgement about the pair, so editing either half
+        // has to re-run it.
+        if (field === 'password' && this.touched.password_confirmation) this.check('password_confirmation');
+    },
+
+    onSubmit(event) {
+        let first = null;
+        for (const field of this.fields) {
+            this.touched[field] = true;
+            this.check(field);
+            if (this.errors[field] && !first) first = field;
+        }
+        if (!first) return; // nothing local left to catch - let the POST go
+        event.preventDefault();
+        const el = this.$refs[first];
+        if (el) {
+            el.focus();
+            el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }
+    },
+}));
+
 Alpine.data('offerPopup', () => ({
     open: false, submitting: false, done: false, error: '',
     form: { name: '', email: '', phone: '' },
