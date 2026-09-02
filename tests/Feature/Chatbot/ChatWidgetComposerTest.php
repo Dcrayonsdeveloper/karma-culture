@@ -17,9 +17,15 @@ class ChatWidgetComposerTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** The widget rides on the storefront layout, and only signed-in shoppers get the composer. */
+    /**
+     * The widget rides on the storefront layout, and only signed-in shoppers
+     * get the composer. The layout also hides it entirely until a provider key
+     * is saved, so give it one.
+     */
     private function storefrontHtml(): string
     {
+        config(['services.anthropic.key' => 'test-key']);
+
         $user = User::factory()->create(['role' => 'customer']);
 
         return $this->actingAs($user)->get('/')->assertOk()->getContent();

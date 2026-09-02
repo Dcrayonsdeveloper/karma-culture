@@ -517,9 +517,9 @@ function chatbotWidget() {
         /**
          * Enter sends, Shift+Enter starts a new line.
          *
-         * Matched by hand rather than with `@keydown.enter`: Alpine has no
-         * `.exact` modifier, so a plain `.enter` handler fires for the Shift
-         * chord too and the newline would never survive. Keydowns raised
+         * Matched by hand rather than with a keydown modifier: Alpine has no
+         * `exact` modifier, and a plain enter binding fires for the Shift
+         * chord too, so the newline would never survive. Keydowns raised
          * mid-IME composition (Android soft keyboards report keyCode 229) are
          * a predictive-text commit, not a send.
          */
