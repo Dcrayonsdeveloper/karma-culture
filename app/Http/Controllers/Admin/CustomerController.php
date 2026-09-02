@@ -5,8 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Order;
+use App\Rules\IndianMobile;
+use App\Rules\ValidationRules as V;
+use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class CustomerController extends Controller
@@ -87,16 +91,66 @@ class CustomerController extends Controller
         abort_if(!in_array($customer->role, ['customer', 'delivery_partner']), 404);
 
         $validated = $request->validate([
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $customer->id,
-            'phone' => 'nullable|string|max:20',
+            // max:50, not the old max:255: users.first_name and users.last_name
+            // are both varchar(50), so the previous rule waved through a name
+            // twice the width of the column it was about to be written into.
+            'first_name' => V::name(max: 50),
+
+            // Optional, matching sign-up and the customer's own profile form.
+            // RegisterController splits one "full name" field on the first
+            // space, so an account created as "dev" has last_name = ''. Marking
+            // this required meant staff could not save this form at all for
+            // such a customer - not even to correct a phone number - without
+            // inventing a surname and writing it onto the account.
+            'last_name' => V::name(required: false, max: 50),
+
+            // email:strict, matching registration. Plain 'email' is
+            // RFC-permissive and accepts "dev@gmail" with no TLD, so the old
+            // rule let staff change an address to one the customer could never
+            // have signed up with - and could not then use to sign in.
+            'email' => [
+                ...V::email(),
+                Rule::unique('users', 'email')->ignore($customer->id),
+            ],
+
+            // The old 'nullable|string|max:20' accepted anything twenty
+            // characters wide and stored it verbatim, so this form was the way
+            // "78657 86785" got into a column that holds bare ten-digit
+            // numbers everywhere else - and the way a second account could end
+            // up on a number already in use, since nothing checked uniqueness
+            // on the canonical form here.
+            'phone' => [
+                ...V::mobile(required: false),
+                function (string $attribute, mixed $value, Closure $fail) use ($customer): void {
+                    $normalized = IndianMobile::normalize(is_scalar($value) ? (string) $value : null);
+
+                    if ($normalized !== null
+                        && User::where('phone', $normalized)->whereKeyNot($customer->id)->exists()) {
+                        $fail('An account with this mobile number already exists.');
+                    }
+                },
+            ],
+
             'is_active' => 'boolean',
+        ], [
+            'first_name.required' => 'Please enter a first name.',
+            'email.required' => 'Please enter an email address.',
+            'email.email' => 'Enter a valid email address, like name@example.com.',
+            'email.unique' => 'An account already exists for this email address.',
         ]);
 
-        $validated['is_active'] = $request->boolean('is_active');
-
-        $customer->update($validated);
+        // Built field by field rather than mass-assigning $validated, so the
+        // phone lands in the column canonicalised.
+        $customer->update([
+            'first_name' => $validated['first_name'],
+            // The column is NOT NULL, and sign-up writes '' for a single-word
+            // name; keep that shape rather than introducing nulls.
+            'last_name' => $validated['last_name'] ?? '',
+            'email' => $validated['email'],
+            // Store the bare ten digits, not whatever spacing was typed.
+            'phone' => IndianMobile::normalize($validated['phone'] ?? null),
+            'is_active' => $request->boolean('is_active'),
+        ]);
 
         return redirect()->route('admin.customers.show', $customer)
             ->with('success', 'Customer updated successfully.');
