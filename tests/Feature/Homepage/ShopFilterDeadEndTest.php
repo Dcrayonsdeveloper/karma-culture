@@ -20,9 +20,14 @@ use Tests\TestCase;
  * checked it against a product. On the live catalogue six of the eight size
  * hangers and all six shade hangers were the same dead end.
  *
- * Two halves, both covered here: the rail stops promoting a filter with
- * nothing behind it, and the sidebar stops offering a value off the URL that
- * no product carries.
+ * The rail was made to hide those hangers and that was taken back out: it
+ * emptied the whole Shade tab off the live storefront, and a section the admin
+ * curated disappearing on its own is worse than one that opens an empty
+ * listing. So the rail hangs every active hanger, and the count that would
+ * have hidden it is reported in Homepage > Shop Filters instead, where it can
+ * be fixed. What is still fixed here: the sidebar stops offering a value off
+ * the URL that no product carries, and the admin screen flags the hangers that
+ * lead nowhere.
  */
 class ShopFilterDeadEndTest extends TestCase
 {
@@ -69,7 +74,12 @@ class ShopFilterDeadEndTest extends TestCase
         ]);
     }
 
-    public function test_a_size_the_shop_does_not_stock_is_left_off_the_rail(): void
+    /**
+     * The rail shows what the admin saved. A hanger onto an empty listing is a
+     * hanger to fix in the admin, not one for the storefront to quietly drop -
+     * dropping them took the Shade tab off the live site altogether.
+     */
+    public function test_a_size_the_shop_does_not_stock_still_hangs(): void
     {
         $this->hanger('size', 'M', 'size=M');
         $this->hanger('size', 'cd', 'size=cd', 1);
@@ -77,12 +87,12 @@ class ShopFilterDeadEndTest extends TestCase
         $html = $this->get('/')->assertOk()->getContent();
 
         $this->assertStringContainsString('?size=M"', $html);
-        $this->assertStringNotContainsString('?size=cd"', $html);
-        // And the rail is sized to what is left on it, not to what was saved.
-        $this->assertStringContainsString('--kk-rail-count: 1', $html);
+        $this->assertStringContainsString('?size=cd"', $html);
+        // And the rail is sized to every hanger on it.
+        $this->assertStringContainsString('--kk-rail-count: 2', $html);
     }
 
-    public function test_a_shade_no_product_lists_is_left_off_the_rail(): void
+    public function test_a_shade_no_product_lists_still_hangs(): void
     {
         $this->hanger('shade', 'Black', 'shade=Black');
         $this->hanger('shade', 'Cinnamon', 'shade=cinnamon', 1);
@@ -90,10 +100,12 @@ class ShopFilterDeadEndTest extends TestCase
         $html = $this->get('/')->assertOk()->getContent();
 
         $this->assertStringContainsString('?shade=Black"', $html);
-        $this->assertStringNotContainsString('?shade=cinnamon"', $html);
+        $this->assertStringContainsString('?shade=cinnamon"', $html);
+        // The tab itself is the point: this is the one that went missing.
+        $this->assertStringContainsString("tab='shade'", $html);
     }
 
-    public function test_a_price_bound_holding_nothing_is_left_off_the_rail(): void
+    public function test_a_price_bound_holding_nothing_still_hangs(): void
     {
         $this->hanger('price', 'Under 1k', 'price_max=1000');
         $this->hanger('price', 'Over 7k', 'price_min=7000', 1);
@@ -101,7 +113,7 @@ class ShopFilterDeadEndTest extends TestCase
         $html = $this->get('/')->assertOk()->getContent();
 
         $this->assertStringContainsString('?price_max=1000"', $html);
-        $this->assertStringNotContainsString('?price_min=7000"', $html);
+        $this->assertStringContainsString('?price_min=7000"', $html);
     }
 
     /** A hanger with no query is a plain tile, not a dead end - it still hangs. */
@@ -112,11 +124,10 @@ class ShopFilterDeadEndTest extends TestCase
         $this->get('/')->assertOk()->assertSee('Coming Soon');
     }
 
-    /** A tab whose hangers have all come down is a button onto a bare rail. */
-    public function test_a_tab_left_with_nothing_on_it_is_not_rendered(): void
+    /** A tab the admin has saved nothing for is a button onto a bare rail. */
+    public function test_a_tab_with_no_hangers_saved_is_not_rendered(): void
     {
         $this->hanger('size', 'M', 'size=M');
-        $this->hanger('shade', 'Cinnamon', 'shade=cinnamon');
 
         $html = $this->get('/')->assertOk()->getContent();
 

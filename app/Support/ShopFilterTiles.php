@@ -7,7 +7,6 @@ use App\Models\ProductVariant;
 use App\Models\ShopFilterItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
 
 /**
  * The "Shop It Your Way" hangers, checked against the catalogue before they
@@ -21,42 +20,17 @@ use Illuminate\Support\Facades\Cache;
  * eight size hangers and all six shade hangers: the rail's whole job is to
  * open a listing, and most of it opened nothing.
  *
- * So a hanger is hung only if the listing behind it is not empty. That also
- * takes one down by itself when the last of a size sells out and puts it back
- * when it is restocked, and the admin screen prints the same count against
- * every row, so a missing hanger is explained rather than mysterious.
+ * The count is reported where the hanger is edited rather than used to hide
+ * it. Hiding the empty ones was tried and taken back out: it emptied the Shade
+ * tab off the live storefront outright, and a rail vanishing on its own is
+ * harder to understand - and impossible to fix from the admin - than one that
+ * opens a listing with nothing on it. So Homepage > Shop Filters prints what
+ * each hanger currently matches, flags a query the shop does not read at all,
+ * and offers the sizes and shades the catalogue really carries; the storefront
+ * hangs whatever is active.
  */
 class ShopFilterTiles
 {
-    /**
-     * Long enough to keep the home page off the count queries. Every admin edit
-     * to a hanger flushes the cache outright, so the only staleness left is a
-     * hanger whose stock ran out in the last few minutes.
-     */
-    private const TTL = 600;
-
-    /** Active hangers that lead somewhere, grouped by type, for the home page. */
-    public static function live(): Collection
-    {
-        $items = ShopFilterItem::active()->ordered()->get();
-
-        if ($items->isEmpty()) {
-            return collect();
-        }
-
-        // Keyed by what is actually being counted, so an edited or added hanger
-        // is counted at once instead of waiting out the previous list's TTL.
-        $key = 'shop_filter_tiles.counts.'.md5($items->map(
-            fn ($i) => $i->id.':'.$i->query_string
-        )->implode('|'));
-
-        $counts = Cache::remember($key, self::TTL, fn () => self::counts($items));
-
-        return $items
-            ->filter(fn ($item) => ($counts[$item->id] ?? null) !== 0)
-            ->groupBy('type');
-    }
-
     /**
      * How many products each hanger opens, keyed by id. Null where a hanger has
      * no query string at all: that one is a plain tile linking nowhere, which

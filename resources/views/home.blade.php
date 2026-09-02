@@ -1439,11 +1439,10 @@
                 }
             }
 
-            // A tab with nothing left on its rail is dropped outright rather
-            // than rendered as a button onto an empty stage. ShopFilterTiles
-            // takes down the hangers that lead nowhere, so a whole tab can now
-            // empty out - every Shade hanger on the live site named a colour
-            // the shop does not list.
+            // A tab with no hangers at all is dropped rather than rendered as
+            // a button onto an empty stage. This is about what the admin has
+            // saved, nothing more: every active hanger hangs, whether or not
+            // the listing behind it has anything on it today.
             $kkTabs = array_filter($kkTabs, fn ($t) => count($t['items']) > 0);
         @endphp
         @if($kkTabs)

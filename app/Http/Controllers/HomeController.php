@@ -9,8 +9,8 @@ use App\Models\HomepageSection;
 use App\Models\Product;
 use App\Models\Quality;
 use App\Models\Setting;
+use App\Models\ShopFilterItem;
 use App\Models\Testimonial;
-use App\Support\ShopFilterTiles;
 use Illuminate\View\View;
 
 class HomeController extends Controller
@@ -112,9 +112,14 @@ class HomeController extends Controller
             ->first();
 
         // Shop It Your Way filter items grouped by type (size|price|shade).
-        // Hangers whose filter comes back with nothing are left off the rail
-        // rather than promoted as dead ends onto "No products found".
-        $shopFilters = ShopFilterTiles::live();
+        // Every active hanger is hung, whether or not the listing behind it
+        // has anything on it today. Hiding the empty ones took the whole
+        // Shade tab off the live storefront - six hangers, all naming colours
+        // the catalogue does not carry - and a rail the admin curated
+        // disappearing without being edited is worse than a rail that opens
+        // an empty listing. The count still shows against every row in
+        // Homepage > Shop Filters, which is where a dead hanger gets fixed.
+        $shopFilters = ShopFilterItem::active()->ordered()->get()->groupBy('type');
 
         // Our Qualities cards
         $qualities = Quality::active()->ordered()->get();
