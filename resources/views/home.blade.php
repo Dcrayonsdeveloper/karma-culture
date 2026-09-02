@@ -771,14 +771,17 @@
 
                             {{-- The link used to be honoured for image banners only, so a
                                  video banner's Link URL was collected, stored and ignored.
-                                 Both shapes are wrapped the same way now, and in a tab of
-                                 their own: a banner points at a campaign, a lookbook or a
-                                 clip off-site, and following it used to throw away whatever
-                                 the shopper had scrolled to. --}}
+                                 Both shapes are wrapped the same way now. A banner pointing
+                                 off-site - a campaign, a lookbook, a clip - opens in a tab
+                                 of its own, because following it used to throw away whatever
+                                 the shopper had scrolled to. One pointing back into the
+                                 store stays in this tab: a banner for New In should move
+                                 the shopper along, not leave the storefront open twice. --}}
                             @if($banner->link)
+                                @php $bannerOffsite = is_offsite_url($banner->link); @endphp
                                 <a href="{{ $banner->link }}" class="kk-hero-link"
-                                   target="_blank" rel="noopener noreferrer"
-                                   aria-label="{{ $banner->title ?: $heroName }} (opens in a new tab)">
+                                   @if($bannerOffsite) target="_blank" rel="noopener noreferrer" @endif
+                                   aria-label="{{ $banner->title ?: $heroName }}{{ $bannerOffsite ? ' (opens in a new tab)' : '' }}">
                             @endif
 
                             {{-- Contained, not cropped. A banner carries its own headline
@@ -1276,7 +1279,13 @@
                 </div>
 
                 <div class="kk-about-cta">
-                    <a href="{{ $aboutLink }}" class="kk-btn-brown">{{ $aboutButton }}</a>
+                    {{-- Button Link is admin-entered and often points at a lookbook or a
+                         press piece rather than /about, so an off-site one opens in its
+                         own tab instead of closing the storefront behind it. --}}
+                    @php $aboutOffsite = is_offsite_url($aboutLink); @endphp
+                    <a href="{{ $aboutLink }}" class="kk-btn-brown"
+                       @if($aboutOffsite) target="_blank" rel="noopener noreferrer"
+                       aria-label="{{ $aboutButton }} (opens in a new tab)" @endif>{{ $aboutButton }}</a>
                 </div>
             </div>
         </section>

@@ -149,3 +149,60 @@ if (!function_exists('asset_v')) {
         return $url . (str_contains($url, '?') ? '&' : '?') . 'v=' . $stamp;
     }
 }
+
+if (!function_exists('is_offsite_url')) {
+    /**
+     * Does this admin-entered URL leave the storefront?
+     *
+     * Banner links, section buttons and the like are typed into the admin as
+     * free text and land in two very different places: a campaign page, a
+     * lookbook or a clip elsewhere on the web, or another page of this same
+     * store. The two want opposite handling. Following an off-site link in
+     * place closes the storefront on whoever clicked it and loses wherever
+     * they had scrolled to, so those open in a tab of their own; a link back
+     * into the store must not, because a banner for New In should move the
+     * shopper along rather than leave the storefront open twice.
+     *
+     * Only an http(s) URL naming a host other than ours counts as off-site:
+     *
+     *  - "/new-in", "new-in", "?sort=new" and "#section" carry no host, so
+     *    they are ours by definition.
+     *  - mailto:, tel:, whatsapp: and every other scheme hands off to another
+     *    app instead of navigating; target="_blank" on one of those leaves an
+     *    empty tab behind, so none of them count.
+     *  - "//example.com/x" is protocol-relative and does name a host.
+     *
+     * The host is matched against both the domain serving the request and the
+     * configured APP_URL, either of which may be the canonical one - they
+     * differ on the live site - and a leading "www." is ignored on both sides
+     * so www.example.com is not read as a different site from example.com.
+     */
+    function is_offsite_url(?string $url): bool
+    {
+        $url = trim((string) $url);
+
+        // Protocol-relative aside, anything that is not http(s) is either a
+        // path on this site or a hand-off to another app. Neither is off-site.
+        if (!str_starts_with($url, '//') && !preg_match('#^https?://#i', $url)) {
+            return false;
+        }
+
+        $host = parse_url($url, PHP_URL_HOST);
+
+        if (!$host) {
+            return false;
+        }
+
+        $bare = static fn (?string $h): string => preg_replace('/^www\./i', '', strtolower((string) $h));
+
+        $ours = [$bare(parse_url((string) config('app.url'), PHP_URL_HOST))];
+
+        // There is no request host under the console (queued mail, artisan),
+        // so the configured URL is the only reference point there.
+        if (app()->bound('request') && request()->server->has('HTTP_HOST')) {
+            $ours[] = $bare(request()->getHost());
+        }
+
+        return !in_array($bare($host), array_filter($ours), true);
+    }
+}
