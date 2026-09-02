@@ -80,6 +80,11 @@
         </form>
     </div>
 
+    {{-- Permission, listening and failure states. Same panel as the desktop
+         bar: without it the mic button on a phone had no way to say anything,
+         so every refusal was a button that just did nothing. --}}
+    @include('partials.voice-search-panel')
+
     {{-- Results --}}
     <div class="flex-1 overflow-y-auto overscroll-contain">
         {{-- Typed enough, and something came back. --}}
