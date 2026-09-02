@@ -99,10 +99,25 @@
 
             /* Hero */
             .kk-hero { position: relative; width: 100%; overflow: hidden; background: var(--kk-cream); }
-            .kk-hero-slide { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; }
-            /* The banner itself is fitted by the .kk-media frame wrapped around it -
-               see .kk-hero-media further down with the rest of the hero styles. */
-            @media (max-width: 767px) { .kk-hero-slide { aspect-ratio: 4 / 5; } }
+            /* The slide's box, one ratio per breakpoint. It used to be 16/9 on
+               desktop, which no hero file is: the clip the store ships with is
+               a 1426x370 strip, so an image slide stood more than twice as tall
+               as the video slide beside it and the carousel lurched between the
+               two. Both defaults now come from Banner's constants, which is
+               also what the admin screen recommends uploading.
+
+               A video-led slide overrides its variable to `auto` and takes its
+               height from the file instead; the two breakpoints are set
+               separately, so a banner can play a clip on desktop and show a
+               still on phones. The media itself is fitted by the .kk-media
+               frame wrapped around it - see .kk-hero-media further down. */
+            .kk-hero-slide {
+                position: relative; width: 100%; overflow: hidden;
+                aspect-ratio: var(--kk-hero-ratio, {{ \App\Models\Banner::HERO_DESKTOP_SIZE[0] }} / {{ \App\Models\Banner::HERO_DESKTOP_SIZE[1] }});
+            }
+            @media (max-width: 767px) {
+                .kk-hero-slide { aspect-ratio: var(--kk-hero-ratio-mobile, {{ \App\Models\Banner::HERO_MOBILE_SIZE[0] }} / {{ \App\Models\Banner::HERO_MOBILE_SIZE[1] }}); }
+            }
 
             /* Tile cards (Category / Aesthetics / Occasions) */
             .kk-tile { position: relative; display: block; overflow: hidden; border-radius: 4px; color: var(--kk-cream); text-decoration: none; background: var(--kk-cream-dark); aspect-ratio: 4/5; }
@@ -759,8 +774,45 @@
                             // A banner may carry a video, an image or both; the image
                             // doubles as the poster frame when a video is present.
                             $hasOverlayText = $banner->title || $banner->subtitle || $banner->button_text;
+
+                            // ...and it may answer that question differently per
+                            // breakpoint. The desktop hero is a wide strip; a phone
+                            // gives the slide a 4:5 portrait box, and the same file
+                            // shrunk into it is barely taller than the caption drawn
+                            // on top. A banner may therefore carry its own mobile
+                            // image, its own mobile clip, or neither - and neither is
+                            // the ordinary case, which renders exactly as it always
+                            // has, one media element with a plain src.
+                            $mobileOverride = $banner->has_mobile_media;
+                            $desktopIsVideo = $banner->has_video;
+                            $mobileIsVideo = $mobileOverride ? $banner->has_mobile_video : $desktopIsVideo;
+
+                            // A video-led breakpoint is sized by its own file, so it
+                            // opts out of the slide's aspect-ratio rather than fitting
+                            // a clip into a box it was not cut for.
+                            $slideStyle = ($desktopIsVideo ? '--kk-hero-ratio: auto;' : '')
+                                .($mobileIsVideo ? '--kk-hero-ratio-mobile: auto;' : '');
+
+                            $heroFrames = [[
+                                'device' => 'desktop',
+                                'isVideo' => $desktopIsVideo,
+                                'src' => $desktopIsVideo ? $banner->video : $banner->image,
+                                'poster' => $desktopIsVideo && $banner->image_url ? $banner->image : null,
+                            ]];
+
+                            if ($mobileOverride) {
+                                $heroFrames[] = [
+                                    'device' => 'mobile',
+                                    'isVideo' => $mobileIsVideo,
+                                    // mobile_image falls back to the desktop still, which is
+                                    // what a video-only override wants for its poster anyway.
+                                    'src' => $mobileIsVideo ? $banner->mobile_video : $banner->mobile_image,
+                                    'poster' => $mobileIsVideo && $banner->mobile_image_url ? $banner->mobile_image : null,
+                                ];
+                            }
                         @endphp
-                        <div class="kk-hero-slide {{ $banner->has_video ? 'kk-hero-slide--video' : '' }}"
+                        <div class="kk-hero-slide{{ $desktopIsVideo ? ' kk-hero-slide--video-desktop' : '' }}{{ $mobileIsVideo ? ' kk-hero-slide--video-mobile' : '' }}"
+                             @if($slideStyle) style="{{ $slideStyle }}" @endif
                              @if($heroCount > 1)
                                  x-show="current === {{ $i }}"
                                  x-transition:enter="kk-fade-enter" x-transition:enter-start="kk-fade-start"
@@ -789,30 +841,55 @@
                                  desktop and off the top and bottom on the 4/5 mobile box.
                                  A blurred copy of the artwork fills what is left over so
                                  an off-ratio banner does not read as letterboxed. --}}
-                            <div class="kk-media kk-media--dark kk-hero-media {{ $banner->has_video ? 'kk-hero-media--video' : '' }}">
-                                @if($banner->has_video)
-                                    {{-- No blurred copy behind a hero video: the slide sizes
-                                         itself to the file, so there is no margin to fill and
-                                         a second copy of a full-bleed clip is not worth it. --}}
-                                    <video class="kk-hero-video"
-                                           src="{{ $banner->video }}"
-                                           @if($banner->image_url) poster="{{ $banner->image }}" @endif
-                                           autoplay muted loop playsinline preload="{{ $i === 0 ? 'auto' : 'metadata' }}"
-                                           aria-label="{{ $banner->title ?: $heroName }} hero video"></video>
-                                @else
-                                    <img class="kk-media__fill" src="{{ $banner->image }}" alt="" aria-hidden="true"
-                                         @if($i === 0) fetchpriority="high" @else loading="lazy" @endif decoding="async">
-                                    <img src="{{ $banner->image }}" alt="{{ $banner->title ?: $heroName }}"
-                                         @if($i === 0) fetchpriority="high" @else loading="lazy" @endif>
-                                @endif
-                                <span class="kk-media__fallback" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                        <rect x="3" y="4" width="18" height="16" rx="2"/>
-                                        <circle cx="8.5" cy="9.5" r="1.5"/>
-                                        <path d="M21 15l-5-5L5 20"/>
-                                    </svg>
-                                </span>
-                            </div>
+                            @foreach($heroFrames as $frame)
+                                {{-- One frame per breakpoint, and only one of them is ever
+                                     drawn. Where a banner has mobile media the source is
+                                     handed over by the script below the carousel rather than
+                                     written into `src` here, so the hidden frame is never
+                                     fetched: a phone should not pull down a 15 MB desktop
+                                     clip on its way to the portrait one. A banner without
+                                     mobile media renders a single frame with a plain `src`,
+                                     which the preload scanner still finds. --}}
+                                <div class="kk-media kk-media--dark kk-hero-media{{ $frame['isVideo'] ? ' kk-hero-media--video' : '' }}{{ $mobileOverride ? ' kk-hero-media--'.$frame['device'] : '' }}">
+                                    @if($frame['isVideo'])
+                                        {{-- No blurred copy behind a hero video: the slide sizes
+                                             itself to the file, so there is no margin to fill and
+                                             a second copy of a full-bleed clip is not worth it. --}}
+                                        <video class="kk-hero-video"
+                                               @if($mobileOverride)
+                                                   data-kk-for="{{ $frame['device'] }}" data-kk-src="{{ $frame['src'] }}"
+                                                   @if($frame['poster']) data-kk-poster="{{ $frame['poster'] }}" @endif
+                                               @else
+                                                   src="{{ $frame['src'] }}"
+                                                   @if($frame['poster']) poster="{{ $frame['poster'] }}" @endif
+                                               @endif
+                                               autoplay muted loop playsinline preload="{{ $i === 0 ? 'auto' : 'metadata' }}"
+                                               aria-label="{{ $banner->title ?: $heroName }} hero video"></video>
+                                    @else
+                                        <img class="kk-media__fill" alt="" aria-hidden="true"
+                                             @if($mobileOverride)
+                                                 data-kk-for="{{ $frame['device'] }}" data-kk-src="{{ $frame['src'] }}"
+                                             @else
+                                                 src="{{ $frame['src'] }}"
+                                             @endif
+                                             @if($i === 0) fetchpriority="high" @else loading="lazy" @endif decoding="async">
+                                        <img alt="{{ $banner->title ?: $heroName }}"
+                                             @if($mobileOverride)
+                                                 data-kk-for="{{ $frame['device'] }}" data-kk-src="{{ $frame['src'] }}"
+                                             @else
+                                                 src="{{ $frame['src'] }}"
+                                             @endif
+                                             @if($i === 0) fetchpriority="high" @else loading="lazy" @endif>
+                                    @endif
+                                    <span class="kk-media__fallback" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                            <rect x="3" y="4" width="18" height="16" rx="2"/>
+                                            <circle cx="8.5" cy="9.5" r="1.5"/>
+                                            <path d="M21 15l-5-5L5 20"/>
+                                        </svg>
+                                    </span>
+                                </div>
+                            @endforeach
 
                             {{-- Heading, subtitle and button were editable in the admin
                                  and stored, but no template ever printed them, and the
@@ -854,9 +931,40 @@
                         @endforeach
                     </div>
                 @endif
+
+                @if($heroBanners->contains(fn ($b) => $b->has_mobile_media))
+                    {{-- Hands each banner that has mobile media of its own the one
+                         source this viewport will actually show. Inline and in the
+                         markup on purpose: it runs the moment the slides are parsed,
+                         before the frames would otherwise start fetching, and neither
+                         `media` on a <source> inside <video> nor a display:none frame
+                         reliably stops the browser downloading the file it is hiding.
+
+                         Deliberately not re-run on resize: a phone rotated into
+                         landscape keeps the clip it already has rather than fetching
+                         the other one mid-scroll. --}}
+                    <script>
+                        (function () {
+                            var wantMobile = window.matchMedia('(max-width: 767px)').matches;
+                            var nodes = document.querySelectorAll('.kk-hero [data-kk-src]');
+
+                            for (var i = 0; i < nodes.length; i++) {
+                                var el = nodes[i];
+
+                                if ((el.getAttribute('data-kk-for') === 'mobile') !== wantMobile) {
+                                    continue;
+                                }
+                                if (el.getAttribute('data-kk-poster')) {
+                                    el.poster = el.getAttribute('data-kk-poster');
+                                }
+                                el.src = el.getAttribute('data-kk-src');
+                            }
+                        })();
+                    </script>
+                @endif
             @else
                 <div class="kk-hero-viewport">
-                    <div class="kk-hero-slide kk-hero-slide--video">
+                    <div class="kk-hero-slide kk-hero-slide--video-desktop kk-hero-slide--video-mobile" style="--kk-hero-ratio: auto; --kk-hero-ratio-mobile: auto;">
                         <div class="kk-media kk-media--dark kk-hero-media kk-hero-media--video">
                             <video class="kk-hero-video"
                                    src="{{ asset_v('images/karmaa-kulture-web-banner-v3.mp4') }}"
@@ -887,11 +995,8 @@
                 overflow: hidden;
             }
             .kk-hero-viewport { position: relative; }
-            .kk-hero-slide--video {
-                aspect-ratio: auto;
-                background: var(--kk-brown-dark);
-                overflow: hidden;
-            }
+            .kk-hero-slide--video-desktop,
+            .kk-hero-slide--video-mobile { background: var(--kk-brown-dark); overflow: hidden; }
             .kk-hero-video {
                 width: 100%;
                 height: auto;
@@ -902,14 +1007,34 @@
             /* An image slide takes its height from the slide's aspect-ratio, so the
                frame is pinned to it - and the link with it, since the link wraps the
                frame and would otherwise collapse to nothing to click on. A video slide
-               is sized by the file (aspect-ratio: auto above), so both stay in flow. */
-            .kk-hero-slide:not(.kk-hero-slide--video) .kk-hero-link,
-            .kk-hero-slide:not(.kk-hero-slide--video) .kk-hero-media { position: absolute; inset: 0; }
+               sets --kk-hero-ratio to auto and is sized by the file, so both stay in
+               flow. Each breakpoint decides on its own, because a banner may play a
+               clip on desktop and show a still on phones. */
+            .kk-hero-slide:not(.kk-hero-slide--video-desktop) .kk-hero-link,
+            .kk-hero-slide:not(.kk-hero-slide--video-desktop) .kk-hero-media { position: absolute; inset: 0; }
+            @media (max-width: 767px) {
+                .kk-hero-slide:not(.kk-hero-slide--video-mobile) .kk-hero-link,
+                .kk-hero-slide:not(.kk-hero-slide--video-mobile) .kk-hero-media { position: absolute; inset: 0; }
+                /* Doubled class to match the specificity of the :not() rule above,
+                   which would otherwise keep pinning a slide that is image-led on
+                   desktop and video-led here. */
+                .kk-hero-slide.kk-hero-slide--video-mobile .kk-hero-link { position: static; inset: auto; }
+                .kk-hero-slide.kk-hero-slide--video-mobile .kk-hero-media { position: relative; inset: auto; }
+            }
+
+            /* Only one breakpoint's frame is drawn, and only banners carrying media
+               of their own for phones have two to choose between. */
+            .kk-hero-media--mobile { display: none; }
+            @media (max-width: 767px) {
+                .kk-hero-media--desktop { display: none; }
+                .kk-hero-media--mobile { display: block; }
+            }
+
             .kk-hero-media--video > video { height: auto; }
             /* A video that fails to load is hidden, which would leave the frame with
                no height at all, so the broken state borrows the slide's own box. */
-            .kk-hero-media--video.is-broken { aspect-ratio: 16 / 9; }
-            @media (max-width: 767px) { .kk-hero-media--video.is-broken { aspect-ratio: 4 / 5; } }
+            .kk-hero-media--video.is-broken { aspect-ratio: {{ \App\Models\Banner::HERO_DESKTOP_SIZE[0] }} / {{ \App\Models\Banner::HERO_DESKTOP_SIZE[1] }}; }
+            @media (max-width: 767px) { .kk-hero-media--video.is-broken { aspect-ratio: {{ \App\Models\Banner::HERO_MOBILE_SIZE[0] }} / {{ \App\Models\Banner::HERO_MOBILE_SIZE[1] }}; } }
 
             /* Caption. Only drawn when the admin filled in a heading, subtitle
                or button, so a plain image banner stays a plain image banner. */

@@ -10,6 +10,33 @@
 
     <x-admin.form-errors title="The banner was not saved" />
 
+    @php
+        // One source of truth for "what size should I upload?": the same two
+        // constants set the slide's aspect-ratio on the home page, so the advice
+        // here cannot drift away from the box the artwork lands in.
+        [$kkDeskW, $kkDeskH] = \App\Models\Banner::HERO_DESKTOP_SIZE;
+        [$kkMobW, $kkMobH] = \App\Models\Banner::HERO_MOBILE_SIZE;
+
+        // "4:5" reads better than "0.8:1", but reducing 1426x370 gives 713:185,
+        // which reads worse than "3.85:1" - so the tidy form is used only when
+        // it actually is tidy.
+        $kkRatio = function (int $w, int $h): string {
+            $divisor = 1;
+            for ($i = 2; $i <= min($w, $h); $i++) {
+                if ($w % $i === 0 && $h % $i === 0) {
+                    $divisor = $i;
+                }
+            }
+            $short = intdiv($h, $divisor);
+
+            return $short <= 20
+                ? intdiv($w, $divisor).':'.$short
+                : round($w / $h, 2).':1';
+        };
+        $kkDeskRatio = $kkRatio($kkDeskW, $kkDeskH);
+        $kkMobRatio = $kkRatio($kkMobW, $kkMobH);
+    @endphp
+
     <div style="margin-bottom: 0.25rem;">
         <a href="{{ route('admin.homepage.index') }}" style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 13px; color: #005bd3; text-decoration: none;">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M12 16l-6-6 6-6" stroke="#005bd3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -38,21 +65,45 @@
                             <label for="hero-new-name" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Name</label>
                             <input type="text" name="name" id="hero-new-name" maxlength="255" class="form-input" placeholder="Banner name">
                         </div>
-                        <div>
-                            <label for="hero-new-image" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Image</label>
-                            <input type="file" name="image" id="hero-new-image" accept="image/jpeg,image/png,image/webp,image/gif" class="form-input">
-                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Recommended: 1920x700px, JPG/PNG/WebP/GIF &middot; max 5MB</p>
-                        </div>
-                        <div>
-                            <label for="hero-new-video" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Video</label>
-                            <input type="file" name="video" id="hero-new-video" accept="video/mp4,video/webm,video/quicktime" class="form-input">
-                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">MP4, WebM or MOV &middot; max 64MB. Plays muted and looped, with no controls.</p>
-                        </div>
-                        <p style="font-size: 12px; color: #616161; margin: -0.35rem 0 0; padding: 0.5rem 0.65rem; background: #f6f6f7; border-radius: 6px; line-height: 1.5;">
-                            Provide an <strong>image or a video</strong> - at least one is required. Supplying both
-                            shows the image first while the video loads, and keeps it as the fallback where a video
-                            cannot autoplay.
-                        </p>
+                        <x-admin.banner-media-section
+                            device="desktop"
+                            :width="$kkDeskW" :height="$kkDeskH" :ratio="$kkDeskRatio">
+                            <div>
+                                <label for="hero-new-image" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Image</label>
+                                <input type="file" name="image" id="hero-new-image" accept="image/jpeg,image/png,image/webp,image/gif" class="form-input">
+                                <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">JPG, PNG, WebP or GIF &middot; max 5MB</p>
+                            </div>
+                            <div>
+                                <label for="hero-new-video" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Video</label>
+                                <input type="file" name="video" id="hero-new-video" accept="video/mp4,video/webm,video/quicktime" class="form-input">
+                                <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">MP4, WebM or MOV &middot; max 64MB. Plays muted and looped, with no controls.</p>
+                            </div>
+                            <p style="font-size: 12px; color: #616161; margin: 0; padding: 0.5rem 0.65rem; background: #f6f6f7; border-radius: 6px; line-height: 1.5;">
+                                Provide an <strong>image or a video</strong> - at least one is required. Supplying both
+                                shows the image first while the video loads, and keeps it as the fallback where a video
+                                cannot autoplay.
+                            </p>
+                        </x-admin.banner-media-section>
+
+                        <x-admin.banner-media-section
+                            device="mobile"
+                            :width="$kkMobW" :height="$kkMobH" :ratio="$kkMobRatio">
+                            <div>
+                                <label for="hero-new-mobile-image" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Mobile Image</label>
+                                <input type="file" name="mobile_image" id="hero-new-mobile-image" accept="image/jpeg,image/png,image/webp,image/gif" class="form-input">
+                                <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">JPG, PNG, WebP or GIF &middot; max 5MB</p>
+                            </div>
+                            <div>
+                                <label for="hero-new-mobile-video" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Mobile Video</label>
+                                <input type="file" name="mobile_video" id="hero-new-mobile-video" accept="video/mp4,video/webm,video/quicktime" class="form-input">
+                                <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">MP4, WebM or MOV &middot; max 64MB</p>
+                            </div>
+                            <p style="font-size: 12px; color: #616161; margin: 0; padding: 0.5rem 0.65rem; background: #f6f6f7; border-radius: 6px; line-height: 1.5;">
+                                Both optional. Leave them empty and phones show the desktop banner instead - which is
+                                the right choice for artwork that reads at any width, and the wrong one for a wide
+                                strip that a phone would shrink to a sliver.
+                            </p>
+                        </x-admin.banner-media-section>
                         <div>
                             <label for="hero-new-title" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Heading Text</label>
                             <input type="text" name="title" id="hero-new-title" maxlength="255" class="form-input" placeholder="Banner heading">
@@ -205,6 +256,14 @@
                                             <span>Link: {{ $banner->link }}</span>
                                         @endif
                                         <span>Overlay: {{ \App\Models\Banner::OVERLAY_STYLES[$banner->overlay_style] ?? 'Default' }}</span>
+                                        {{-- Which breakpoint a banner has artwork for is otherwise
+                                             invisible until someone opens Edit, and the thumbnail
+                                             only ever shows the desktop file. --}}
+                                        <span style="{{ $banner->has_mobile_media ? '' : 'color: #8a8a8a;' }}">
+                                            Mobile: {{ $banner->has_mobile_media
+                                                ? ($banner->has_mobile_video ? 'own video' : 'own image')
+                                                : 'uses desktop' }}
+                                        </span>
                                     </div>
                                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem;">
                                         <button @click="editing = true" type="button" class="btn btn-primary" style="font-size: 12px; padding: 0.25rem 0.5rem;">Edit</button>
@@ -269,25 +328,68 @@
                                             @endforeach
                                         </select>
                                     </div>
-                                    <div>
-                                        <label for="hero-{{ $banner->id }}-image" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Replace Image</label>
-                                        <input type="file" name="image" id="hero-{{ $banner->id }}-image" accept="image/jpeg,image/png,image/webp,image/gif" class="form-input">
-                                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Leave empty to keep the current image. JPG, PNG, WebP or GIF, max 5MB.</p>
-                                    </div>
-                                    <div>
-                                        <label for="hero-{{ $banner->id }}-video" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Replace Video</label>
-                                        <input type="file" name="video" id="hero-{{ $banner->id }}-video" accept="video/mp4,video/webm,video/quicktime" class="form-input">
-                                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
-                                            MP4, WebM or MOV &middot; max 64MB.
-                                            @if($banner->video_url) Leave empty to keep the current video. @endif
-                                        </p>
-                                        @if($banner->video_url)
-                                            <label style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 12px; color: #616161; margin-top: 0.4rem; cursor: pointer;">
-                                                <input type="checkbox" name="remove_video" value="1" style="margin: 0;">
-                                                Remove the video and show the image instead
-                                            </label>
-                                        @endif
-                                    </div>
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                                    <x-admin.banner-media-section
+                                        device="desktop"
+                                        :width="$kkDeskW" :height="$kkDeskH" :ratio="$kkDeskRatio">
+                                        <div>
+                                            <label for="hero-{{ $banner->id }}-image" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Replace Image</label>
+                                            <input type="file" name="image" id="hero-{{ $banner->id }}-image" accept="image/jpeg,image/png,image/webp,image/gif" class="form-input">
+                                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
+                                                JPG, PNG, WebP or GIF &middot; max 5MB.
+                                                @if($banner->image_url) Leave empty to keep the current image. @endif
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <label for="hero-{{ $banner->id }}-video" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Replace Video</label>
+                                            <input type="file" name="video" id="hero-{{ $banner->id }}-video" accept="video/mp4,video/webm,video/quicktime" class="form-input">
+                                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
+                                                MP4, WebM or MOV &middot; max 64MB.
+                                                @if($banner->video_url) Leave empty to keep the current video. @endif
+                                            </p>
+                                            @if($banner->video_url)
+                                                <label style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 12px; color: #616161; margin-top: 0.4rem; cursor: pointer;">
+                                                    <input type="checkbox" name="remove_video" value="1" style="margin: 0;">
+                                                    Remove the video and show the image instead
+                                                </label>
+                                            @endif
+                                        </div>
+                                    </x-admin.banner-media-section>
+
+                                    <x-admin.banner-media-section
+                                        device="mobile"
+                                        :width="$kkMobW" :height="$kkMobH" :ratio="$kkMobRatio">
+                                        <div>
+                                            <label for="hero-{{ $banner->id }}-mobile-image" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Replace Mobile Image</label>
+                                            <input type="file" name="mobile_image" id="hero-{{ $banner->id }}-mobile-image" accept="image/jpeg,image/png,image/webp,image/gif" class="form-input">
+                                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
+                                                JPG, PNG, WebP or GIF &middot; max 5MB.
+                                                @if($banner->mobile_image_url) Leave empty to keep the current one. @endif
+                                            </p>
+                                            @if($banner->mobile_image_url)
+                                                <label style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 12px; color: #616161; margin-top: 0.4rem; cursor: pointer;">
+                                                    <input type="checkbox" name="remove_mobile_image" value="1" style="margin: 0;">
+                                                    Remove it and use the desktop image on phones
+                                                </label>
+                                            @endif
+                                        </div>
+                                        <div>
+                                            <label for="hero-{{ $banner->id }}-mobile-video" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Replace Mobile Video</label>
+                                            <input type="file" name="mobile_video" id="hero-{{ $banner->id }}-mobile-video" accept="video/mp4,video/webm,video/quicktime" class="form-input">
+                                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
+                                                MP4, WebM or MOV &middot; max 64MB.
+                                                @if($banner->mobile_video_url) Leave empty to keep the current one. @endif
+                                            </p>
+                                            @if($banner->mobile_video_url)
+                                                <label style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 12px; color: #616161; margin-top: 0.4rem; cursor: pointer;">
+                                                    <input type="checkbox" name="remove_mobile_video" value="1" style="margin: 0;">
+                                                    Remove it and use the desktop banner on phones
+                                                </label>
+                                            @endif
+                                        </div>
+                                    </x-admin.banner-media-section>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem;">
                                     <button type="submit" class="btn btn-primary" style="font-size: 13px;">Save Changes</button>

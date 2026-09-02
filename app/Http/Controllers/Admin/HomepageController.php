@@ -246,12 +246,19 @@ class HomepageController extends Controller
                 ? ['required_without:video', ...V::image(required: false, maxKb: 5120, allowGif: true)]
                 : V::image(required: false, maxKb: 5120, allowGif: true),
             'video' => $this->videoRules(),
+            // The mobile pair is an override, never a requirement: a banner
+            // with neither still shows its desktop media on phones, so nothing
+            // here is conditional on the desktop fields being filled.
+            'mobile_image' => V::image(required: false, maxKb: 5120, allowGif: true),
+            'mobile_video' => $this->videoRules(),
             'link' => ['nullable', 'string', 'max:255', 'regex:'.self::LINK_REGEX],
             'title' => V::text(required: false, max: 255),
             'subtitle' => V::text(required: false, max: 500),
             'button_text' => V::text(required: false, max: 100),
             'overlay_style' => V::option(array_keys(Banner::OVERLAY_STYLES), required: false),
             'remove_video' => V::boolean(),
+            'remove_mobile_image' => V::boolean(),
+            'remove_mobile_video' => V::boolean(),
         ];
     }
 
@@ -260,7 +267,31 @@ class HomepageController extends Controller
         return [
             'image.required_without' => 'Upload an image, or a video to use instead.',
             'link.regex' => 'Enter a path such as /products, or a full https:// address.',
-        ] + $this->videoMessages('video');
+        ] + $this->videoMessages('video')
+          + $this->videoMessages('mobile_video');
+    }
+
+    /**
+     * Store an uploaded hero file, deleting the one it replaces.
+     *
+     * Only a public-disk key is removed. The hero clip that shipped with the
+     * theme is recorded as a path under the web root, and handing that to the
+     * public disk would either miss or, with the right name, delete the wrong
+     * file entirely.
+     */
+    private function replaceHeroFile(?\Illuminate\Http\UploadedFile $file, ?string $previous, string $directory): string
+    {
+        $this->deleteHeroFile($previous);
+
+        return $file->store($directory, 'public');
+    }
+
+    /** Remove a stored hero upload; absolute URLs and web-root paths are left alone. */
+    private function deleteHeroFile(?string $path): void
+    {
+        if ($path && ! str_starts_with($path, 'http') && ! str_starts_with($path, '/')) {
+            Storage::disk('public')->delete($path);
+        }
     }
 
     public function storeHeroBanner(Request $request)
@@ -279,6 +310,12 @@ class HomepageController extends Controller
                 : null,
             'video_url' => $request->hasFile('video')
                 ? $request->file('video')->store('banners/video', 'public')
+                : null,
+            'mobile_image_url' => $request->hasFile('mobile_image')
+                ? $request->file('mobile_image')->store('banners/mobile', 'public')
+                : null,
+            'mobile_video_url' => $request->hasFile('mobile_video')
+                ? $request->file('mobile_video')->store('banners/mobile/video', 'public')
                 : null,
             'link' => $request->link,
             'overlay_style' => $request->overlay_style ?? 'left-dark',
@@ -312,21 +349,32 @@ class HomepageController extends Controller
         $data = $request->only(['name', 'title', 'subtitle', 'button_text', 'link', 'overlay_style']);
 
         if ($request->hasFile('image')) {
-            if ($banner->image_url) {
-                Storage::disk('public')->delete($banner->image_url);
-            }
-            $data['image_url'] = $request->file('image')->store('banners', 'public');
+            $data['image_url'] = $this->replaceHeroFile($request->file('image'), $banner->image_url, 'banners');
         }
 
         if ($request->hasFile('video')) {
-            if ($banner->video_url) {
-                Storage::disk('public')->delete($banner->video_url);
-            }
-            $data['video_url'] = $request->file('video')->store('banners/video', 'public');
+            $data['video_url'] = $this->replaceHeroFile($request->file('video'), $banner->video_url, 'banners/video');
         } elseif ($request->boolean('remove_video') && $banner->video_url) {
             // Explicit removal, so a banner can go back to being image-only.
-            Storage::disk('public')->delete($banner->video_url);
+            $this->deleteHeroFile($banner->video_url);
             $data['video_url'] = null;
+        }
+
+        // The mobile pair needs no equivalent of the guard above: dropping an
+        // override leaves the banner showing its desktop media on phones, which
+        // is what a banner without one does anyway.
+        if ($request->hasFile('mobile_image')) {
+            $data['mobile_image_url'] = $this->replaceHeroFile($request->file('mobile_image'), $banner->mobile_image_url, 'banners/mobile');
+        } elseif ($request->boolean('remove_mobile_image') && $banner->mobile_image_url) {
+            $this->deleteHeroFile($banner->mobile_image_url);
+            $data['mobile_image_url'] = null;
+        }
+
+        if ($request->hasFile('mobile_video')) {
+            $data['mobile_video_url'] = $this->replaceHeroFile($request->file('mobile_video'), $banner->mobile_video_url, 'banners/mobile/video');
+        } elseif ($request->boolean('remove_mobile_video') && $banner->mobile_video_url) {
+            $this->deleteHeroFile($banner->mobile_video_url);
+            $data['mobile_video_url'] = null;
         }
 
         $banner->update($data);
@@ -337,11 +385,8 @@ class HomepageController extends Controller
 
     public function deleteHeroBanner(Banner $banner)
     {
-        if ($banner->image_url) {
-            Storage::disk('public')->delete($banner->image_url);
-        }
-        if ($banner->video_url) {
-            Storage::disk('public')->delete($banner->video_url);
+        foreach ([$banner->image_url, $banner->video_url, $banner->mobile_image_url, $banner->mobile_video_url] as $path) {
+            $this->deleteHeroFile($path);
         }
         $banner->delete();
         Cache::flush();
