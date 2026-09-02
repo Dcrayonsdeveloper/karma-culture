@@ -15,6 +15,10 @@
         </a>
     </div>
 
+    <p style="font-size: 12px; color: #616161; margin: 0 0 1rem 0;">
+        The slides that run across the top of the home page. Every banner needs an image or a video; the heading, subtitle and button are optional overlays drawn on top of it. Drag a card, or use the arrows, to change the order they play in.
+    </p>
+
     <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem;">
         <!-- Add New Banner -->
         <div class="card">
@@ -94,7 +98,16 @@
                          x-on:dragstart="onDragStart($event)"
                          x-on:dragover.prevent="onDragOver($event)"
                          x-on:dragend="onDragEnd()"
-                         :style="draggingId == {{ $banner->id }} ? 'opacity: 0.5; transform: scale(0.98);' : (dropTargetId == {{ $banner->id }} && draggingId != {{ $banner->id }} ? 'border-top: 2px solid #005bd3;' : '')">
+                         {{-- Object form, not a string. Alpine binds a string :style with
+                              setAttribute('style', value), which replaces the whole attribute -
+                              and this expression is '' whenever nothing is being dragged, so the
+                              static padding above was wiped off every card on first render. The
+                              object form writes one property at a time and leaves the rest alone. --}}
+                         :style="{
+                             opacity: draggingId == {{ $banner->id }} ? '0.5' : '',
+                             transform: draggingId == {{ $banner->id }} ? 'scale(0.98)' : '',
+                             borderTop: dropTargetId == {{ $banner->id }} && draggingId != {{ $banner->id }} ? '2px solid #005bd3' : ''
+                         }">
 
                         <!-- Display Mode -->
                         <div x-show="!editing">

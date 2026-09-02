@@ -68,7 +68,11 @@
                                  @click="$refs.mainFileInput.click()"
                                  @dragover.prevent="mainDragOver = true" @dragleave.prevent="mainDragOver = false"
                                  @drop.prevent="mainDragOver = false; handleMainImage($event.dataTransfer.files[0])"
-                                 :style="mainDragOver ? 'border-color: #005bd3; background: #f0f6ff;' : ''">
+                                 {{-- Object form, and the resting border colour is repeated here on
+                                      purpose: a string :style replaces the whole attribute, and the
+                                      object form clears any property it sets to '', so either way
+                                      the static border-color above cannot be relied on. --}}
+                                 :style="{ borderColor: mainDragOver ? '#005bd3' : '#b5b5b5', background: mainDragOver ? '#f0f6ff' : '' }">
                                 <input type="file" name="main_image" accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
                                        x-ref="mainFileInput" style="display: none;" @change="handleMainImage($event.target.files[0])">
                                 <svg style="width: 1.5rem; height: 1.5rem; margin: 0 auto 0.5rem; color: #b5b5b5;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -86,7 +90,7 @@
                              @click="$refs.galleryInput.click()"
                              @dragover.prevent="galleryDragOver = true" @dragleave.prevent="galleryDragOver = false"
                              @drop.prevent="galleryDragOver = false; handleGalleryFiles($event.dataTransfer.files)"
-                             :style="galleryDragOver ? 'border-color: #005bd3; background: #f0f6ff;' : ''">
+                             :style="{ borderColor: galleryDragOver ? '#005bd3' : '#b5b5b5', background: galleryDragOver ? '#f0f6ff' : '' }">
                             <input type="file" name="images[]" multiple accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
                                    x-ref="galleryInput" style="display: none;" @change="handleGalleryFiles($event.target.files)">
                             <p class="text-xs font-medium" style="color: #005bd3;">Add gallery images</p>

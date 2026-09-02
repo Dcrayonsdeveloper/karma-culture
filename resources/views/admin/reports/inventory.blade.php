@@ -42,7 +42,9 @@
                     <span class="badge badge-primary">Active</span>
                 @endif
             </div>
-            <svg style="width: 1rem; height: 1rem; color: #616161; transition: transform 0.2s;" :style="open ? 'transform: rotate(180deg)' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {{-- Object form: a string :style replaces the whole attribute, which took the
+                 width/height with it and left the chevron at its intrinsic SVG size. --}}
+            <svg style="width: 1rem; height: 1rem; color: #616161; transition: transform 0.2s;" :style="{ transform: open ? 'rotate(180deg)' : '' }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
             </svg>
         </div>
