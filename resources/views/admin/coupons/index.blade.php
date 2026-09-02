@@ -117,13 +117,7 @@
                                          the tab that listed the row always agree.
                                          "Inactive" used to cover three different
                                          reasons a coupon was not running. --}}
-                                    <span class="badge {{ [
-                                        \App\Models\Coupon::STATUS_ACTIVE    => 'badge-success',
-                                        \App\Models\Coupon::STATUS_SCHEDULED => 'badge-info',
-                                        \App\Models\Coupon::STATUS_EXPIRED   => 'badge-error',
-                                        \App\Models\Coupon::STATUS_USED_UP   => 'badge-warning',
-                                        \App\Models\Coupon::STATUS_DISABLED  => 'badge-neutral',
-                                    ][$coupon->status()] }}">{{ $coupon->statusLabel() }}</span>
+                                    <span class="badge {{ $coupon->statusBadgeClass() }}">{{ $coupon->statusLabel() }}</span>
                                     @if($coupon->auto_apply)
                                         <span class="badge badge-neutral">Auto</span>
                                     @endif

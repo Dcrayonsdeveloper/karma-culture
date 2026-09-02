@@ -197,6 +197,33 @@ class CouponStatusTest extends TestCase
         }
     }
 
+    public function test_tab_counts_narrow_with_the_search_and_still_add_up(): void
+    {
+        $this->seedEveryState();
+        $this->coupon('OTHERLIVE');
+
+        $html = $this->actingAs($this->adminUser, 'admin')
+            ->get(route('admin.coupons.index', ['search' => 'OFF']))
+            ->assertOk()
+            ->getContent();
+
+        // A count that ignored the search would promise rows the tab cannot
+        // show. EXPIREDOFF and USEDUPOFF are the only matches, and they sit in
+        // two different tabs.
+        preg_match_all('/>\s*([A-Z][a-z]+(?: up)?)\s*<span style="font-size: 11px;[^>]*>(\d+)</s', $html, $m);
+        $counts = array_combine($m[1], array_map('intval', $m[2]));
+
+        $this->assertSame(2, $counts['All']);
+        $this->assertSame(1, $counts['Used up']);
+        $this->assertSame(1, $counts['Expired']);
+        $this->assertSame(0, $counts['Active']);
+
+        $this->assertSame(
+            $counts['All'],
+            $counts['Active'] + $counts['Scheduled'] + $counts['Expired'] + $counts['Used up'] + $counts['Disabled']
+        );
+    }
+
     public function test_an_unknown_status_is_rejected_rather_than_ignored(): void
     {
         // 'inactive' was a valid filter key before the statuses were named for
@@ -204,5 +231,23 @@ class CouponStatusTest extends TestCase
         $this->actingAs($this->adminUser, 'admin')
             ->get(route('admin.coupons.index', ['status' => 'inactive']))
             ->assertSessionHasErrors('status');
+    }
+
+    public function test_the_edit_header_of_a_ticked_but_unstarted_coupon_reads_scheduled(): void
+    {
+        // The reported bug, exactly: Active is ticked, the badge said Inactive.
+        $coupon = $this->coupon('VVK', [
+            'is_active'  => true,
+            'starts_at'  => now()->addMinutes(2),
+            'expires_at' => now()->addMinutes(4),
+        ]);
+
+        $html = $this->actingAs($this->adminUser, 'admin')
+            ->get(route('admin.coupons.edit', $coupon))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('Scheduled', $html);
+        $this->assertStringNotContainsString('>Inactive<', $html);
     }
 }

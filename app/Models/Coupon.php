@@ -116,6 +116,25 @@ class Coupon extends Model
         return self::STATUSES[$this->status()];
     }
 
+    /**
+     * The badge class the admin screens paint this status with.
+     *
+     * Lives here rather than in the blades because the index row and the edit
+     * header both draw this badge, and the map was copied into both - which is
+     * how the two screens came to disagree in the first place. No default arm:
+     * a status with no colour should fail loudly, not paint the wrong one.
+     */
+    public function statusBadgeClass(): string
+    {
+        return match ($this->status()) {
+            self::STATUS_ACTIVE    => 'badge-success',
+            self::STATUS_SCHEDULED => 'badge-info',
+            self::STATUS_EXPIRED   => 'badge-error',
+            self::STATUS_USED_UP   => 'badge-warning',
+            self::STATUS_DISABLED  => 'badge-neutral',
+        };
+    }
+
     public function isValid(): bool
     {
         return $this->status() === self::STATUS_ACTIVE;
@@ -160,7 +179,10 @@ class Coupon extends Model
                 ->where('is_active', true)
                 ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now())),
 
-            default => $query,
+            // No default arm on purpose. An unrecognised status used to mean
+            // "no filter", which quietly returned every coupon under whatever
+            // tab was asked for - the same silent-wrong-answer failure this
+            // whole change exists to remove. match() throws instead.
         };
     }
 

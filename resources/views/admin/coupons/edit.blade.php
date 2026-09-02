@@ -10,13 +10,7 @@
             <h1 style="font-size: 1.125rem; font-weight: 600; color: #303030;">{{ $coupon->code }}</h1>
             {{-- Same source as the index badge, so opening a coupon cannot
                  report a different status to the row you clicked. --}}
-            <span class="badge {{ [
-                \App\Models\Coupon::STATUS_ACTIVE    => 'badge-success',
-                \App\Models\Coupon::STATUS_SCHEDULED => 'badge-info',
-                \App\Models\Coupon::STATUS_EXPIRED   => 'badge-error',
-                \App\Models\Coupon::STATUS_USED_UP   => 'badge-warning',
-                \App\Models\Coupon::STATUS_DISABLED  => 'badge-neutral',
-            ][$coupon->status()] }}">{{ $coupon->statusLabel() }}</span>
+            <span class="badge {{ $coupon->statusBadgeClass() }}">{{ $coupon->statusLabel() }}</span>
         </div>
     </div>
 

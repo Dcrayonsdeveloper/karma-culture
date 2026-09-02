@@ -45,6 +45,18 @@ class CouponController extends Controller
             $query->where('type', $type);
         }
 
+        // The old $stats were four counts the view never rendered. These are
+        // the tab counts, taken before the status filter narrows $query but
+        // after search and type, so each number is exactly what clicking that
+        // tab would return rather than a global total that contradicts the
+        // list underneath it. They come from the same scope the tab links
+        // filter by, so a count cannot disagree with its own tab.
+        $counts = ['' => (clone $query)->count()];
+
+        foreach (array_keys(Coupon::STATUSES) as $key) {
+            $counts[$key] = (clone $query)->statusIs($key)->count();
+        }
+
         // This used to spell the predicate out again in SQL, and it spelled it
         // out differently to Coupon::isValid(), which paints the row badge:
         // starts_at and usage_limit were missing, so a scheduled or used-up
@@ -55,15 +67,6 @@ class CouponController extends Controller
         }
 
         $coupons = $query->latest()->paginate($perPage)->withQueryString();
-
-        // The old $stats were four counts the view never rendered. These are
-        // the tab counts, and they come from the same scope the tab links
-        // filter by, so a count can never disagree with the list behind it.
-        $counts = ['' => Coupon::count()];
-
-        foreach (array_keys(Coupon::STATUSES) as $key) {
-            $counts[$key] = Coupon::statusIs($key)->count();
-        }
 
         return view('admin.coupons.index', compact('coupons', 'counts'));
     }
