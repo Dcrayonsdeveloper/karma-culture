@@ -52,7 +52,9 @@
                       below the fold on a phone until the bar auto-hid. --}}
                  style="height: min(68dvh, 640px); min-height: 380px;">
 
-                <div x-ref="messageList" class="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-5 space-y-4 bg-neutral-50/50">
+                {{-- overscroll-contain stops a scroll past either end of the
+                     conversation from scrolling the page behind it. --}}
+                <div x-ref="messageList" class="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4 sm:p-5 space-y-4 bg-neutral-50/50">
 
                     {{-- Restoring --}}
                     <template x-if="isLoading">
@@ -174,8 +176,9 @@
                     <textarea
                         x-ref="chatInput"
                         x-model="inputText"
-                        @keydown.enter.exact.prevent="send()"
+                        @keydown="composerKeydown($event)"
                         rows="1"
+                        enterkeyhint="send"
                         placeholder="Ask about sizes, colours, delivery, returns…"
                         class="flex-1 resize-none px-4 py-2.5 bg-neutral-50 border border-neutral-300 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all max-h-32"
                     ></textarea>
@@ -216,6 +219,20 @@
                         this.isLoading = false;
                         this.$nextTick(() => this.scrollToBottom());
                     }
+                },
+
+                // Alpine has no `.exact` modifier, so `@keydown.enter.exact` read
+                // "exact" as a second key name and the handler never fired --
+                // Enter just inserted a newline. Match the key by hand instead,
+                // and skip keydowns raised mid-IME composition (Android soft
+                // keyboards fire those with keyCode 229) so a predictive-text
+                // commit is never mistaken for "send".
+                composerKeydown(event) {
+                    if (event.key !== 'Enter' && event.keyCode !== 13) return;
+                    if (event.shiftKey || event.isComposing || event.keyCode === 229) return;
+
+                    event.preventDefault();
+                    this.send();
                 },
 
                 async send(preset) {
