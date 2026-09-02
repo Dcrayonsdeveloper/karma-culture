@@ -11,9 +11,15 @@
         <!-- Full Name -->
         <div>
             <label for="full_name" class="block text-sm font-medium text-neutral-700 mb-1">Full Name</label>
-            <input type="text" name="full_name" id="full_name" value="{{ old('full_name') }}" required autofocus
+            {{-- No `pattern` here on purpose. The obvious one, [A-Za-z\s]{2,50},
+                 is Latin-only: it rejects "रवि कुमार" and "山田太郎" outright, and it also
+                 rejects "O'Connor" and "Mary-Anne". The App\Rules\PersonName rule
+                 behind this field allows any script plus those four separators,
+                 and a client pattern must never be stricter than the server. --}}
+            <input type="text" name="full_name" id="full_name" value="{{ old('full_name') }}"
+                   required autofocus autocomplete="name" minlength="2" maxlength="100"
                    class="form-input w-full @error('full_name') border-error-300 @enderror"
-                   placeholder="John Doe">
+                   placeholder="e.g. Priya Sharma">
             @error('full_name')
                 <p class="mt-1 text-sm text-error-600">{{ $message }}</p>
             @enderror
@@ -22,7 +28,8 @@
         <!-- Email -->
         <div>
             <label for="email" class="block text-sm font-medium text-neutral-700 mb-1">Email address</label>
-            <input type="email" name="email" id="email" value="{{ old('email') }}" required
+            <input type="email" name="email" id="email" value="{{ old('email') }}"
+                   required autocomplete="email" inputmode="email" maxlength="255"
                    class="form-input w-full @error('email') border-error-300 @enderror"
                    placeholder="you@example.com">
             @error('email')
@@ -30,14 +37,24 @@
             @enderror
         </div>
 
-        <!-- Phone (Optional) -->
+        <!-- Mobile number -->
         <div>
-            <label for="phone" class="block text-sm font-medium text-neutral-700 mb-1">
-                Phone number <span class="text-neutral-600">(optional)</span>
-            </label>
+            <label for="phone" class="block text-sm font-medium text-neutral-700 mb-1">Mobile number</label>
+            {{-- type="tel", not type="number": a number input shows a spinner,
+                 accepts "e", "+" and "-", and silently drops a leading zero -
+                 none of which a phone field wants. inputmode="numeric" is what
+                 actually raises the digit keypad on a phone.
+
+                 The pattern mirrors App\Rules\IndianMobile, which strips the
+                 +91/0 prefix and any spacing before checking the ten digits, so
+                 it has to tolerate the shapes people paste in rather than
+                 demanding a bare ^[6-9]\d{9}$. --}}
             <input type="tel" name="phone" id="phone" value="{{ old('phone') }}"
+                   required autocomplete="tel" inputmode="numeric" maxlength="20"
+                   pattern="(\+?91[\s\-]?)?0?[6-9][0-9\s\-]{9,}"
+                   title="Enter a 10-digit Indian mobile number starting with 6, 7, 8 or 9."
                    class="form-input w-full @error('phone') border-error-300 @enderror"
-                   placeholder="+91 98765 43210">
+                   placeholder="98765 43210">
             @error('phone')
                 <p class="mt-1 text-sm text-error-600">{{ $message }}</p>
             @enderror
@@ -46,19 +63,24 @@
         <!-- Password -->
         <div>
             <label for="password" class="block text-sm font-medium text-neutral-700 mb-1">Password</label>
-            <input type="password" name="password" id="password" required
+            <input type="password" name="password" id="password"
+                   required autocomplete="new-password" minlength="8" maxlength="255"
                    class="form-input w-full @error('password') border-error-300 @enderror"
                    placeholder="Create a strong password">
             @error('password')
                 <p class="mt-1 text-sm text-error-600">{{ $message }}</p>
             @enderror
-            <p class="mt-1 text-xs text-neutral-600">Must be at least 8 characters</p>
+            <p class="mt-1 text-xs text-neutral-600">
+                At least 8 characters, including an uppercase and a lowercase letter,
+                a number and a special character.
+            </p>
         </div>
 
         <!-- Confirm Password -->
         <div>
             <label for="password_confirmation" class="block text-sm font-medium text-neutral-700 mb-1">Confirm password</label>
-            <input type="password" name="password_confirmation" id="password_confirmation" required
+            <input type="password" name="password_confirmation" id="password_confirmation"
+                   required autocomplete="new-password" maxlength="255"
                    class="form-input w-full"
                    placeholder="Confirm your password">
         </div>

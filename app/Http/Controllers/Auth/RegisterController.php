@@ -102,10 +102,15 @@ class RegisterController extends Controller
             // Password::defaults() (AppServiceProvider) reports each unmet
             // requirement separately; these replace the framework wording with
             // one consistent sentence per rule.
+            //
+            // The doubled 'password.password.*' keys are not a typo. The Password
+            // rule reports its own failures via addFailure($attribute, 'password.mixed'),
+            // so the lookup key is "{attribute}.{rule}" = password.password.mixed.
+            // Only 'min' comes from an ordinary rule and takes the short key.
             'password.min' => 'Your password must be at least 8 characters long.',
-            'password.mixed' => 'Your password must include both an uppercase and a lowercase letter.',
-            'password.numbers' => 'Your password must include at least one number.',
-            'password.symbols' => 'Your password must include at least one special character, such as @ # ! or ?.',
+            'password.password.mixed' => 'Your password must include both an uppercase and a lowercase letter.',
+            'password.password.numbers' => 'Your password must include at least one number.',
+            'password.password.symbols' => 'Your password must include at least one special character, such as @ # ! or ?.',
             'terms.accepted' => 'Please accept the Terms and Privacy Policy to continue.',
         ]);
 
