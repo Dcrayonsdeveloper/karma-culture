@@ -3,12 +3,16 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Coupon;
 use App\Models\Setting;
+use App\Rules\ValidationRules as V;
+use App\Support\PopupSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class SettingController extends Controller
@@ -402,6 +406,140 @@ class SettingController extends Controller
         Cache::forget('settings.group.integrations');
 
         return back()->with('success', 'Integration settings updated successfully.');
+    }
+
+    /**
+     * The two storefront popups - the homepage newsletter offer and the
+     * exit-intent discount code.
+     *
+     * Their keys have been read out of `settings` since they were written, but
+     * nothing ever wrote them: there was no screen, so changing a word, the
+     * coupon code or the countdown meant editing a blade and deploying.
+     */
+    public function popups(): View
+    {
+        $settings = Setting::whereIn('group', PopupSettings::GROUPS)->pluck('value', 'key');
+
+        // A blank row is not a stored value - Setting::get() falls back to the
+        // default for it - so the form has to show the default too, or the box
+        // would look empty while the storefront showed text.
+        foreach (PopupSettings::defaults() as $key => $default) {
+            if (! isset($settings[$key]) || $settings[$key] === '') {
+                $settings[$key] = $default;
+            }
+        }
+
+        // The exit popup hands the customer a code to type at checkout, and a
+        // code with no coupon behind it fails there, in front of them. Warn
+        // here rather than reject: the coupon may be created afterwards.
+        $couponCodes = Coupon::orderBy('code')->pluck('code')->all();
+        $codeIsKnown = in_array(
+            strtoupper((string) $settings['exit_popup_code']),
+            array_map('strtoupper', $couponCodes),
+            true,
+        );
+
+        return view('admin.settings.popups', compact('settings', 'couponCodes', 'codeIsKnown'));
+    }
+
+    public function updatePopups(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'offer_popup_title'    => 'required|string|max:120',
+            'offer_popup_subtitle' => 'nullable|string|max:400',
+            'exit_popup_title'     => 'required|string|max:120',
+            'exit_popup_subtitle'  => 'nullable|string|max:400',
+            // What a coupon code can be anyway, and it keeps quotes out of the
+            // value the popup renders into its x-data attribute.
+            'exit_popup_code'      => ['required', 'string', 'max:32', 'regex:/^[A-Za-z0-9_-]+$/'],
+            'exit_popup_minutes'   => 'required|integer|min:1|max:180',
+            'offer_popup_image'    => V::image(required: false, maxKb: 2048),
+            'exit_popup_image'     => V::image(required: false, maxKb: 2048),
+        ], [
+            'exit_popup_code.regex' => 'The discount code can only contain letters, numbers, hyphens and underscores.',
+        ]);
+
+        $values = [
+            'offer_popup_title'    => $validated['offer_popup_title'],
+            'offer_popup_subtitle' => $validated['offer_popup_subtitle'] ?? '',
+            'exit_popup_title'     => $validated['exit_popup_title'],
+            'exit_popup_subtitle'  => $validated['exit_popup_subtitle'] ?? '',
+            'exit_popup_code'      => strtoupper($validated['exit_popup_code']),
+            'exit_popup_minutes'   => (string) $validated['exit_popup_minutes'],
+        ];
+
+        // An unchecked box submits nothing at all, so the toggles are read off
+        // the request rather than the validated set.
+        foreach (['offer_popup_enabled', 'exit_popup_enabled'] as $key) {
+            $values[$key] = $request->boolean($key) ? '1' : '0';
+        }
+
+        foreach (['offer_popup_image', 'exit_popup_image'] as $key) {
+            $image = $this->popupImage($request, $key);
+
+            if ($image !== null) {
+                $values[$key] = $image;
+            }
+        }
+
+        foreach ($values as $key => $value) {
+            Setting::updateOrCreate(
+                ['key' => $key],
+                [
+                    'value' => $value,
+                    'group' => PopupSettings::groupFor($key),
+                    'type'  => str_ends_with($key, '_enabled') ? 'boolean' : 'string',
+                ]
+            );
+            // Setting::get() caches every key for an hour; without this the
+            // storefront keeps showing the old copy after a save.
+            Cache::forget("setting.{$key}");
+        }
+
+        foreach (PopupSettings::GROUPS as $group) {
+            Cache::forget("settings.group.{$group}");
+        }
+
+        return back()->with('success', 'Popup settings updated successfully.');
+    }
+
+    /**
+     * The new value for one popup image setting, or null to leave it as it is.
+     *
+     * A file input submits nothing when no file is chosen, and here that has to
+     * mean "keep the current image": one Save covers both popups, so treating
+     * an absent file as "clear it" would wipe the other popup's image every
+     * time a word was edited. Clearing is a checkbox of its own.
+     */
+    private function popupImage(Request $request, string $key): ?string
+    {
+        $current = (string) Setting::get($key, '');
+
+        if ($request->boolean($key.'_remove')) {
+            $this->deletePopupImage($current);
+
+            return '';
+        }
+
+        if (! $request->hasFile($key)) {
+            return null;
+        }
+
+        $path = $request->file($key)->store('popups', 'public');
+        $this->deletePopupImage($current);
+
+        return $path;
+    }
+
+    /**
+     * Only files this screen uploaded are deleted. A value set by hand to a CDN
+     * URL, or to an image shared with something else, is left on disk.
+     */
+    private function deletePopupImage(string $path): void
+    {
+        if ($path !== '' && str_starts_with($path, 'popups/')) {
+            Storage::disk('public')->delete($path);
+        }
     }
 
     public function productCard(): View

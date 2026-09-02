@@ -1,14 +1,10 @@
 @php
-    $offerEnabled  = (bool) \App\Models\Setting::get('offer_popup_enabled', true);
-    $offerTitle    = \App\Models\Setting::get('offer_popup_title', 'Unlock 10% Off Your First Order');
-    $offerSubtitle = \App\Models\Setting::get('offer_popup_subtitle', 'Join the Karmaa Kulture list for early access to new drops, private sales and styling notes.');
-    $offerImage    = \App\Models\Setting::get('offer_popup_image', '');
-    if ($offerImage && !str_starts_with($offerImage, 'http') && !str_starts_with($offerImage, '/')) {
-        $offerImage = asset_v('storage/' . $offerImage);
-    }
+    use App\Support\PopupSettings;
+
+    $offer = PopupSettings::all(PopupSettings::OFFER);
 @endphp
 
-@if($offerEnabled)
+@if($offer['enabled'])
 <div
     x-data="offerPopup()"
     x-cloak
@@ -33,8 +29,8 @@
 
         {{-- Image / brand side (top band on mobile, left column on desktop) --}}
         <div class="relative min-h-[110px] md:min-h-[330px] overflow-hidden" style="background: linear-gradient(150deg, #4a2d1a 0%, #2d1810 55%, #1f1109 100%);">
-            @if($offerImage)
-                <img src="{{ $offerImage }}" alt="Karmaa Kulture" class="absolute inset-0 w-full h-full object-cover" loading="lazy">
+            @if($offer['image'])
+                <img src="{{ $offer['image'] }}" alt="Karmaa Kulture" class="absolute inset-0 w-full h-full object-cover" loading="lazy">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent"></div>
             @endif
             <div class="relative h-full flex flex-col justify-end p-5 md:p-6 text-kk-cream">
@@ -54,8 +50,8 @@
             </div>
 
             <div x-show="!done">
-                <h2 id="offer-popup-title" class="text-xl sm:text-[22px] leading-tight text-kk-brown font-semibold" style="font-family:'Playfair Display',Georgia,serif;">{{ $offerTitle }}</h2>
-                <p class="text-sm text-kk-text-muted mt-2 mb-5 leading-relaxed">{{ $offerSubtitle }}</p>
+                <h2 id="offer-popup-title" class="text-xl sm:text-[22px] leading-tight text-kk-brown font-semibold" style="font-family:'Playfair Display',Georgia,serif;">{{ $offer['title'] }}</h2>
+                <p class="text-sm text-kk-text-muted mt-2 mb-5 leading-relaxed">{{ $offer['subtitle'] }}</p>
 
                 <form @submit.prevent="submit()" novalidate class="space-y-3">
                     <div>

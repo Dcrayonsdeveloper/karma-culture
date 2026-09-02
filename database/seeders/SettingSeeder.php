@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Setting;
+use App\Support\PopupSettings;
 use Illuminate\Database\Seeder;
 
 class SettingSeeder extends Seeder
@@ -52,14 +53,32 @@ class SettingSeeder extends Seeder
             ['group' => 'seo', 'key' => 'meta_description', 'value' => 'Shop premium tailored essentials at Karmaa Kulture. Curated fashion for the modern individual, crafted with care.', 'type' => 'string'],
             ['group' => 'seo', 'key' => 'meta_keywords', 'value' => 'fashion, clothing, premium, tailored, karmaa kulture', 'type' => 'string'],
 
-            // Offer popup (Task 1) - placeholder content, admin-editable
-            ['group' => 'offer_popup', 'key' => 'offer_popup_enabled', 'value' => '1', 'type' => 'boolean'],
-            ['group' => 'offer_popup', 'key' => 'offer_popup_title', 'value' => 'Unlock Exciting Offers!', 'type' => 'string'],
-            ['group' => 'offer_popup', 'key' => 'offer_popup_subtitle', 'value' => 'Join our list and be the first to hear about exclusive deals and new drops.', 'type' => 'string'],
+            // Popups. Seeded from PopupSettings::DEFAULTS rather than spelled out
+            // again: these rows OVERRIDE the fallback the partials use, so a
+            // second copy of the copy here would quietly ship wording nobody
+            // had seen - which is what the old placeholder text did.
 
             // Social proof / purchase notifications (Task 9)
             ['group' => 'social_proof', 'key' => 'purchase_notif_enabled', 'value' => '1', 'type' => 'boolean'],
         ];
+
+        foreach (PopupSettings::DEFAULTS as $group => $keys) {
+            foreach ($keys as $key => $value) {
+                // The image keys default to '' and Setting::get() reads a blank
+                // row as unset, so seeding them would only add rows that mean
+                // nothing.
+                if ($value === '') {
+                    continue;
+                }
+
+                $settings[] = [
+                    'group' => $group,
+                    'key'   => $key,
+                    'value' => $value,
+                    'type'  => str_ends_with($key, '_enabled') ? 'boolean' : 'string',
+                ];
+            }
+        }
 
         foreach ($settings as $settingData) {
             Setting::create($settingData);

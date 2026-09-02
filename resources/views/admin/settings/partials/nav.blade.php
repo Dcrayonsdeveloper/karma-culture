@@ -28,6 +28,10 @@
             'label' => 'Features',
             'route' => 'admin.settings.product-card',
         ],
+        'popups' => [
+            'label' => 'Popups',
+            'route' => 'admin.settings.popups',
+        ],
         'integrations' => [
             'label' => 'Integrations',
             'route' => 'admin.settings.integrations',
@@ -63,7 +67,7 @@
                                       overflow-x is set, and that is what drew the
                                       stray scrollbar. */
     scrollbar-width: none;         /* the strip scrolls by wheel/touch; a visible
-                                      bar under eight tabs just looks broken */
+                                      bar under nine tabs just looks broken */
     -ms-overflow-style: none;
     box-shadow: inset 0 -1px 0 #e3e3e3;
 }
@@ -105,7 +109,7 @@
 
 @push('scripts')
 <script>
-    /* Eight tabs do not fit a phone. Bring the current one into view so the
+    /* Nine tabs do not fit a phone. Bring the current one into view so the
        strip does not open showing "General" when you are on Integrations. */
     document.querySelectorAll('.settings-tabs__scroll').forEach(function (strip) {
         var active = strip.querySelector('.is-active');

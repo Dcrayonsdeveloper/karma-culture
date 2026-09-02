@@ -263,6 +263,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/product-card', [SettingController::class, 'productCard'])->name('product-card');
                 Route::put('/product-card', [SettingController::class, 'updateProductCard'])->name('product-card.update');
 
+                Route::get('/popups', [SettingController::class, 'popups'])->name('popups');
+                Route::put('/popups', [SettingController::class, 'updatePopups'])->name('popups.update');
+
                 Route::get('/integrations', [SettingController::class, 'integrations'])->name('integrations');
                 Route::put('/integrations', [SettingController::class, 'updateIntegrations'])->name('integrations.update');
 

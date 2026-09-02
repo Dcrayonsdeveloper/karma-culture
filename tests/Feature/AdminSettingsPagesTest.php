@@ -31,6 +31,7 @@ class AdminSettingsPagesTest extends TestCase
             'email' => ['admin.settings.email'],
             'seo' => ['admin.settings.seo'],
             'features' => ['admin.settings.product-card'],
+            'popups' => ['admin.settings.popups'],
             'integrations' => ['admin.settings.integrations'],
             'currencies' => ['admin.settings.currencies.index'],
             'currency create' => ['admin.settings.currencies.create'],

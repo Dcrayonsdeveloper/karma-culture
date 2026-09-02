@@ -1,18 +1,12 @@
 @php
-    $exitEnabled  = (bool) \App\Models\Setting::get('exit_popup_enabled', true);
-    $exitCode     = \App\Models\Setting::get('exit_popup_code', 'KARMAA10');
-    $exitMinutes  = (int) \App\Models\Setting::get('exit_popup_minutes', 10);
-    $exitTitle    = \App\Models\Setting::get('exit_popup_title', "Wait - Don't Miss 10% Off");
-    $exitSubtitle = \App\Models\Setting::get('exit_popup_subtitle', 'Complete your order now and save. Apply the code below at checkout before it expires.');
-    $exitImage    = \App\Models\Setting::get('exit_popup_image', '');
-    if ($exitImage && !str_starts_with($exitImage, 'http') && !str_starts_with($exitImage, '/')) {
-        $exitImage = asset_v('storage/' . $exitImage);
-    }
+    use App\Support\PopupSettings;
+
+    $exit = PopupSettings::all(PopupSettings::EXIT);
 @endphp
 
-@if($exitEnabled)
+@if($exit['enabled'])
 <div
-    x-data="exitPopup('{{ $exitCode }}', {{ $exitMinutes }})"
+    x-data="exitPopup(@js($exit['code']), {{ $exit['minutes'] }})"
     x-cloak
     x-show="open"
     @keydown.escape.window="close()"
@@ -35,8 +29,8 @@
 
         {{-- Banner / image side --}}
         <div class="relative min-h-[110px] md:min-h-[330px] overflow-hidden" style="background: linear-gradient(150deg, #8c5c34 0%, #4a2d1a 55%, #2d1810 100%);">
-            @if($exitImage)
-                <img src="{{ $exitImage }}" alt="Karmaa Kulture offer" class="absolute inset-0 w-full h-full object-cover" loading="lazy">
+            @if($exit['image'])
+                <img src="{{ $exit['image'] }}" alt="Karmaa Kulture offer" class="absolute inset-0 w-full h-full object-cover" loading="lazy">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
             @endif
             <div class="relative h-full flex flex-col justify-center items-center text-center p-5 text-kk-cream">
@@ -58,19 +52,19 @@
             </div>
 
             <div x-show="!done">
-                <h2 id="exit-popup-title" class="text-xl leading-tight text-kk-brown font-semibold" style="font-family:'Playfair Display',Georgia,serif;">{{ $exitTitle }}</h2>
-                <p class="text-[13px] text-kk-text-muted mt-1.5 mb-3 leading-relaxed">{{ $exitSubtitle }}</p>
+                <h2 id="exit-popup-title" class="text-xl leading-tight text-kk-brown font-semibold" style="font-family:'Playfair Display',Georgia,serif;">{{ $exit['title'] }}</h2>
+                <p class="text-[13px] text-kk-text-muted mt-1.5 mb-3 leading-relaxed">{{ $exit['subtitle'] }}</p>
 
                 {{-- Countdown --}}
                 <div class="flex items-center gap-2 mb-3 text-kk-brown">
                     <svg class="w-4 h-4 text-kk-tan-dark" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z"/></svg>
                     <span class="text-sm">Offer expires in</span>
-                    <span class="font-mono font-bold text-base tabular-nums" x-text="timeLeft">{{ $exitMinutes }}:00</span>
+                    <span class="font-mono font-bold text-base tabular-nums" x-text="timeLeft">{{ $exit['minutes'] }}:00</span>
                 </div>
 
                 {{-- Discount code --}}
                 <div class="flex items-center justify-between gap-2 border-2 border-dashed border-kk-tan rounded-lg px-3.5 py-2.5 mb-3 bg-kk-cream-lighter">
-                    <span class="text-base font-bold tracking-[0.16em] text-kk-brown" x-text="code">{{ $exitCode }}</span>
+                    <span class="text-base font-bold tracking-[0.16em] text-kk-brown" x-text="code">{{ $exit['code'] }}</span>
                     <span class="text-[10px] uppercase tracking-widest text-kk-text-muted">Apply at checkout</span>
                 </div>
 
