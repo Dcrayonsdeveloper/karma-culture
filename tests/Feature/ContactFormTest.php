@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Enquiry;
+use App\Rules\ValidationRules;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Tests\TestCase;
@@ -150,10 +151,19 @@ class ContactFormTest extends TestCase
      */
     public function test_both_forms_advertise_the_letters_only_pattern(): void
     {
+        // Asserted against the rendered attribute rather than a retyped literal.
+        // The pattern used to be hand-copied into both blades, and its leading
+        // ` *` matched U+0020 only - so a name pasted with the non-breaking space
+        // that Word and WhatsApp Web carry was refused by the browser and
+        // accepted by the server, which is backwards. It now comes from
+        // ValidationRules::namePattern(), and this asserts the real thing so the
+        // test cannot pass while the two disagree.
+        $expected = e(ValidationRules::namePattern(lettersOnly: true));
+
         foreach ([route('contact'), route('wholesale')] as $url) {
             $this->get($url)
                 ->assertStatus(200)
-                ->assertSee('pattern=" *[\p{L}\p{M}][\p{L}\p{M} \xA0]*"', false)
+                ->assertSee('pattern="'.$expected.'"', false)
                 // app.js drops a refused character on the keystroke, so a digit
                 // never reaches the field in the first place.
                 ->assertSee('data-kk-chars="letters"', false);

@@ -69,10 +69,10 @@ class AddressFormValidationTest extends TestCase
     {
         return [
             'name minlength' => ['name', 'minlength="2"', 'min:2'],
-            'street minlength' => ['address_line1', 'minlength="5"', 'min:5'],
+            'street minlength' => ['address_line1', 'minlength="3"', 'min:3'],
             'city minlength' => ['city', 'minlength="2"', 'min:2'],
             'phone pattern' => ['phone', 'pattern="[6-9][0-9]{9}"', 'regex'],
-            'pin pattern' => ['postal_code', 'pattern="[0-9]{6}"', 'regex'],
+            'pin pattern' => ['postal_code', 'pattern="[1-9][0-9]{5}"', 'regex'],
         ];
     }
 
