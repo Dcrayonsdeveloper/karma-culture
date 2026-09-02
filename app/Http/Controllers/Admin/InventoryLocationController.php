@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\InventoryLocation;
 use App\Models\Product;
 use App\Rules\ValidationRules as V;
+use App\Services\InventoryStockService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -88,11 +89,20 @@ class InventoryLocationController extends Controller
         return view('admin.inventory.locations.create');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, InventoryStockService $inventory): RedirectResponse
     {
         $validated = $request->validate($this->rules());
 
-        InventoryLocation::create($validated);
+        // The first warehouse is where the shop's existing stock already is, and
+        // it is the one adjustments fall back to when none is named.
+        $isFirst = ! InventoryLocation::query()->exists();
+
+        $location = InventoryLocation::create($validated + ['is_default' => $isFirst]);
+
+        if ($isFirst && ($seeded = $inventory->seedFromCatalogue($location)) > 0) {
+            return redirect()->route('admin.inventory.locations.show', $location)
+                ->with('success', "Location created with {$seeded} product(s) moved onto its shelves");
+        }
 
         return redirect()->route('admin.inventory.locations.index')->with('success', 'Location created');
     }

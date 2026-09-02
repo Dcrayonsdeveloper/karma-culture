@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\TracksWarehouseStock;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProductVariant extends Model
 {
+    use TracksWarehouseStock;
+
     protected static function booted(): void
     {
         static::saved(fn () => self::bumpFilterCache());
@@ -123,6 +126,12 @@ class ProductVariant extends Model
     public function inventoryStocks(): HasMany
     {
         return $this->hasMany(InventoryStock::class, 'variant_id');
+    }
+
+    /** @see TracksWarehouseStock - a size's shelves are its own, never the product's. */
+    public function warehouseStockKey(): array
+    {
+        return [$this->product_id, $this->id];
     }
 
     public function getEffectivePriceAttribute(): float

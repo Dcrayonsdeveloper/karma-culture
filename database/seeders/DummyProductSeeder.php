@@ -382,14 +382,18 @@ class DummyProductSeeder extends Seeder
                 }
             }
 
-            // Create inventory stock
-            InventoryStock::create([
-                'product_id' => $product->id,
-                'location_id' => $location->id,
-                'quantity' => $pData['stock'],
-                'reserved_quantity' => 0,
-                'available_quantity' => $pData['stock'],
-            ]);
+            // The product's stock already landed on the default shelf when it
+            // was created (see TracksWarehouseStock); a second row here would
+            // count the same units twice, because MySQL lets NULL variant ids
+            // past the unique index.
+            InventoryStock::where('product_id', $product->id)
+                ->whereNull('variant_id')
+                ->where('location_id', $location->id)
+                ->update([
+                    'quantity' => $pData['stock'],
+                    'reserved_quantity' => 0,
+                    'available_quantity' => $pData['stock'],
+                ]);
         }
 
         $this->command->info('Created ' . count($products) . ' products with images, variants, and inventory.');

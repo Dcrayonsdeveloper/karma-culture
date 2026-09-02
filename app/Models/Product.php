@@ -290,7 +290,7 @@ class Product extends Model
         if ($url) {
             // If it's a relative path (stored in storage), prefix with /storage/
             if ($url && ! str_starts_with($url, 'http') && ! str_starts_with($url, '/')) {
-                return asset('storage/'.$url);
+                return asset_v('storage/'.$url);
             }
 
             return $url;
@@ -333,7 +333,7 @@ class Product extends Model
             return asset(ltrim($path, '/'));
         }
 
-        return asset('storage/'.$path);
+        return asset_v('storage/'.$path);
     }
 
     // Helper methods

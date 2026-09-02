@@ -79,7 +79,9 @@ class InventoryController extends Controller
             ->orderBy('stock_quantity')
             ->paginate($perPage)->withQueryString();
 
-        return view('admin.inventory.low-stock', compact('products'));
+        $locations = InventoryLocation::orderBy('name')->get(['id', 'name', 'code', 'is_default']);
+
+        return view('admin.inventory.low-stock', compact('products', 'locations'));
     }
 
     public function outOfStock(): View
@@ -89,7 +91,9 @@ class InventoryController extends Controller
             ->orderBy('name')
             ->paginate($perPage)->withQueryString();
 
-        return view('admin.inventory.out-of-stock', compact('products'));
+        $locations = InventoryLocation::orderBy('name')->get(['id', 'name', 'code', 'is_default']);
+
+        return view('admin.inventory.out-of-stock', compact('products', 'locations'));
     }
 
     /**

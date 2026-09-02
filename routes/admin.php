@@ -255,6 +255,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
                 Route::get('/email', [SettingController::class, 'email'])->name('email');
                 Route::put('/email', [SettingController::class, 'updateEmail'])->name('email.update');
+                Route::post('/email/test', [SettingController::class, 'testEmail'])->name('email.test');
 
                 Route::get('/seo', [SettingController::class, 'seo'])->name('seo');
                 Route::put('/seo', [SettingController::class, 'updateSeo'])->name('seo.update');
@@ -270,7 +271,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
                 // Shipping Zones
                 Route::resource('shipping-zones', ShippingZoneController::class);
-                Route::resource('shipping-zones.rates', ShippingRateController::class)->shallow();
+                // Only the five methods ShippingRateController actually defines.
+                // The full resource also registered index and show, which
+                // resolved to missing methods and 500'd when hit.
+                Route::resource('shipping-zones.rates', ShippingRateController::class)
+                    ->shallow()
+                    ->only(['create', 'store', 'edit', 'update', 'destroy']);
 
                 // Currencies
                 Route::resource('currencies', CurrencyController::class);

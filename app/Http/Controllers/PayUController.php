@@ -304,15 +304,14 @@ class PayUController extends Controller
         $order->load('items');
 
         foreach ($order->items as $item) {
-            if ($item->variant_id) {
-                \App\Models\ProductVariant::where('id', $item->variant_id)
-                    ->increment('stock_quantity', $item->quantity);
-            } elseif ($product = \App\Models\Product::find($item->product_id)) {
-                // Incremented on the model, not the query builder: the returned
-                // units have to go back on a warehouse shelf as well as into
-                // the product total, and only a model save says so.
-                $product->increment('stock_quantity', $item->quantity);
-            }
+            // Incremented on the model rather than the query builder: returned
+            // units have to go back onto a warehouse shelf as well as into the
+            // sellable total, and only a model save reports the change.
+            $holder = $item->variant_id
+                ? \App\Models\ProductVariant::find($item->variant_id)
+                : \App\Models\Product::find($item->product_id);
+
+            $holder?->increment('stock_quantity', $item->quantity);
 
             \App\Models\Product::where('id', $item->product_id)
                 ->decrement('sales_count', $item->quantity);

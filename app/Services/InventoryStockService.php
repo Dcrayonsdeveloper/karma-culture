@@ -120,6 +120,47 @@ class InventoryStockService
     }
 
     /**
+     * Stock a brand new first warehouse with everything the shop already has.
+     *
+     * A shop that only starts tracking locations today still has stock, and it
+     * is all sitting in the one place it just named. Without this the warehouse
+     * page would open empty and only fill up as products were edited one by
+     * one. Products already accounted for elsewhere are left alone, so this is
+     * safe to run against a catalogue that is partly assigned.
+     *
+     * Sizes are not touched: product_variants.stock_quantity is a separate
+     * figure, tracked per warehouse only once someone stocks it by hand.
+     */
+    public function seedFromCatalogue(InventoryLocation $location): int
+    {
+        $seeded = 0;
+
+        Product::query()
+            ->select('id', 'stock_quantity')
+            ->where('stock_quantity', '>', 0)
+            ->orderBy('id')
+            ->chunk(200, function ($products) use ($location, &$seeded) {
+                foreach ($products as $product) {
+                    $elsewhere = (int) InventoryStock::where('product_id', $product->id)
+                        ->whereNull('variant_id')
+                        ->sum('quantity');
+
+                    $shortfall = (int) $product->stock_quantity - $elsewhere;
+
+                    if ($shortfall < 1) {
+                        continue;
+                    }
+
+                    $row = $this->row($product->id, null, $location->id);
+                    $this->write($row, (int) $row->quantity + $shortfall);
+                    $seeded++;
+                }
+            });
+
+        return $seeded;
+    }
+
+    /**
      * Follow a stock figure that was changed somewhere else.
      *
      * The product form, the importer and checkout all write
@@ -144,8 +185,20 @@ class InventoryStockService
             return;
         }
 
-        $row = $this->rowsHolding($productId, $variantId)->first()
-            ?? $this->row($productId, $variantId, $this->defaultLocation()->id, lock: true);
+        // An empty shelf still counts as one: a size that sold out here is
+        // restocked here, not quietly dropped.
+        $row = $this->rows($productId, $variantId)->first();
+
+        if (! $row) {
+            // Sizes are tracked per warehouse only once someone puts one on a
+            // shelf by hand. Opening a shelf here would double-count them
+            // against the product's own line, which already holds these units.
+            if ($variantId !== null) {
+                return;
+            }
+
+            $row = $this->row($productId, null, $this->defaultLocation()->id, lock: true);
+        }
 
         $before = (int) $row->quantity;
 
@@ -202,54 +255,6 @@ class InventoryStockService
     }
 
     /**
-     * Put a cancelled order's units back on the shelves they came off.
-     *
-     * The movements written by consume() say which warehouse gave up what, so
-     * a restore does not have to guess. Nothing recorded means nothing was
-     * taken from a warehouse, and there is nothing to undo.
-     */
-    public function restoreFromOrder(int $orderId, int $productId, ?int $variantId, int $quantity): void
-    {
-        if ($quantity < 1) {
-            return;
-        }
-
-        $query = InventoryMovement::where('reference_type', 'order')
-            ->where('reference_id', $orderId)
-            ->where('product_id', $productId)
-            ->where('type', 'out');
-
-        $variantId === null
-            ? $query->whereNull('variant_id')
-            : $query->where('variant_id', $variantId);
-
-        foreach ($query->orderBy('id')->get() as $movement) {
-            if ($quantity < 1) {
-                break;
-            }
-
-            $give = min((int) $movement->quantity, $quantity);
-
-            if ($give < 1) {
-                continue;
-            }
-
-            $row = $this->row($productId, $variantId, (int) $movement->location_id, lock: true);
-            $before = (int) $row->quantity;
-
-            $this->write($row, $before + $give);
-            $this->record($productId, $variantId, (int) $movement->location_id, $before, $before + $give, [
-                'type' => 'in',
-                'reference_type' => 'order',
-                'reference_id' => $orderId,
-                'reason' => 'Order cancelled',
-            ]);
-
-            $quantity -= $give;
-        }
-    }
-
-    /**
      * The warehouse line for a product, existing or new.
      *
      * MySQL treats every NULL as distinct, so the (product, variant, location)
@@ -281,9 +286,21 @@ class InventoryStockService
     /** Warehouse lines that hold something, emptied in a sensible order. */
     private function rowsHolding(int $productId, ?int $variantId): Collection
     {
-        $query = InventoryStock::with('location')
-            ->where('product_id', $productId)
-            ->where('quantity', '>', 0);
+        return $this->rows($productId, $variantId, holdingOnly: true);
+    }
+
+    /**
+     * Every warehouse line for one figure: the default warehouse first, then
+     * the fullest. That order is what makes a sale come off the shelf a picker
+     * would reach for.
+     */
+    private function rows(int $productId, ?int $variantId, bool $holdingOnly = false): Collection
+    {
+        $query = InventoryStock::with('location')->where('product_id', $productId);
+
+        if ($holdingOnly) {
+            $query->where('quantity', '>', 0);
+        }
 
         $variantId === null
             ? $query->whereNull('variant_id')
@@ -330,6 +347,12 @@ class InventoryStockService
 
     private function record(int $productId, ?int $variantId, int $locationId, int $before, int $after, array $attributes = []): void
     {
+        // Nothing moved, so there is nothing to log - a "+0" line on the
+        // movements page is noise, not history.
+        if ($before === $after) {
+            return;
+        }
+
         InventoryMovement::create(array_merge([
             'product_id' => $productId,
             'variant_id' => $variantId,

@@ -352,10 +352,128 @@ class InventoryLocationStockTest extends TestCase
         $this->assertSame(16, $this->product->fresh()->stock_quantity);
     }
 
+    public function test_selling_a_size_comes_off_that_sizes_shelf(): void
+    {
+        $variant = ProductVariant::create([
+            'product_id' => $this->product->id,
+            'name' => 'M',
+            'sku' => 'WK-001-M',
+            'stock_quantity' => 6,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($this->adminUser, 'admin')
+            ->post(route('admin.inventory.locations.stock.store', $this->main), [
+                'product_id' => $this->product->id,
+                'variant_id' => $variant->id,
+                'quantity' => 4,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $variant->fresh()->decrement('stock_quantity', 2);
+
+        $this->assertSame(2, $this->variantLineAt($this->main, $variant)?->quantity);
+        // The product's own line mirrors the product's own figure, which a size
+        // sale never touches.
+        $this->assertSame(20, $this->lineAt($this->main)?->quantity);
+    }
+
+    public function test_a_sold_out_size_is_restocked_on_the_shelf_it_emptied(): void
+    {
+        $variant = ProductVariant::create([
+            'product_id' => $this->product->id,
+            'name' => 'XL',
+            'sku' => 'WK-001-XL',
+            'stock_quantity' => 2,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($this->adminUser, 'admin')
+            ->post(route('admin.inventory.locations.stock.store', $this->main), [
+                'product_id' => $this->product->id,
+                'variant_id' => $variant->id,
+                'quantity' => 2,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $variant->fresh()->decrement('stock_quantity', 2);
+        $this->assertSame(0, $this->variantLineAt($this->main, $variant)?->quantity);
+
+        $variant->fresh()->increment('stock_quantity', 3);
+
+        // An empty shelf is still that size's shelf - the restock belongs there
+        // rather than nowhere.
+        $this->assertSame(3, $this->variantLineAt($this->main, $variant)?->quantity);
+    }
+
+    public function test_a_size_nobody_shelved_is_not_given_a_shelf_behind_their_back(): void
+    {
+        $variant = ProductVariant::create([
+            'product_id' => $this->product->id,
+            'name' => 'S',
+            'sku' => 'WK-001-S',
+            'stock_quantity' => 6,
+            'is_active' => true,
+        ]);
+
+        $variant->update(['stock_quantity' => 9]);
+
+        // Those units are already counted on the product's line; a second line
+        // for the size would count them twice.
+        $this->assertSame(0, InventoryStock::whereNotNull('variant_id')->count());
+        $this->assertSame(20, $this->lineAt($this->main)?->quantity);
+    }
+
+    public function test_the_first_location_takes_the_stock_the_shop_already_has(): void
+    {
+        // A shop that starts tracking warehouses today still has stock, and it
+        // is all in the one place it just named.
+        InventoryStock::query()->delete();
+        InventoryLocation::query()->delete();
+
+        $this->actingAs($this->adminUser, 'admin')
+            ->post(route('admin.inventory.locations.store'), [
+                'name' => 'First Warehouse',
+                'code' => 'WH-FIRST',
+                'is_active' => 1,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $created = InventoryLocation::where('code', 'WH-FIRST')->firstOrFail();
+
+        $this->assertTrue((bool) $created->is_default);
+        $this->assertSame(20, $this->lineAt($created)?->quantity);
+        $this->assertSame(20, $this->product->fresh()->stock_quantity);
+    }
+
+    public function test_a_later_location_starts_empty(): void
+    {
+        $this->actingAs($this->adminUser, 'admin')
+            ->post(route('admin.inventory.locations.store'), [
+                'name' => 'Third Warehouse',
+                'code' => 'WH-THIRD',
+                'is_active' => 1,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $created = InventoryLocation::where('code', 'WH-THIRD')->firstOrFail();
+
+        $this->assertFalse((bool) $created->is_default);
+        $this->assertSame(0, InventoryStock::where('location_id', $created->id)->count());
+        $this->assertSame(20, $this->lineAt($this->main)?->quantity);
+    }
+
     private function lineAt(InventoryLocation $location): ?InventoryStock
     {
         return InventoryStock::where('product_id', $this->product->id)
             ->whereNull('variant_id')
+            ->where('location_id', $location->id)
+            ->first();
+    }
+
+    private function variantLineAt(InventoryLocation $location, ProductVariant $variant): ?InventoryStock
+    {
+        return InventoryStock::where('variant_id', $variant->id)
             ->where('location_id', $location->id)
             ->first();
     }
