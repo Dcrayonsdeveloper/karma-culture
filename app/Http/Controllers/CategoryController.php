@@ -35,22 +35,36 @@ class CategoryController extends Controller
         $isSubPage = $category->parent !== null;
         $scopeCategory = $isSubPage ? $category->parent : $category;
 
+        // The whole tree in one query. Category::getAllDescendantIds() walks the
+        // children relation, which lazy-loads a query per level - and the sidebar needs
+        // a subtree per sub-category, so the page was firing dozens of them.
+        $tree = Category::query()->get(['id', 'parent_id', 'slug']);
+        $childrenByParent = $tree->groupBy('parent_id');
+        $descendantIds = function (int $id) use (&$descendantIds, $childrenByParent): array {
+            $ids = [$id];
+            foreach ($childrenByParent->get($id, collect()) as $child) {
+                $ids = array_merge($ids, $descendantIds($child->id));
+            }
+
+            return $ids;
+        };
+
         // Outer bound: the scope category and every descendant beneath it, so products
         // filed under deeper subcategories are still included.
-        $categoryIds = $scopeCategory->getAllDescendantIds();
+        $categoryIds = $descendantIds($scopeCategory->id);
 
         // The page's own bound before any sidebar tick: the clicked category and its
         // descendants. An empty category renders the view's "No products found" state -
         // never products from elsewhere in the catalogue.
-        $pageCategoryIds = $isSubPage ? $category->getAllDescendantIds() : $categoryIds;
+        $pageCategoryIds = $isSubPage ? $descendantIds($category->id) : $categoryIds;
 
         // Ticked sub-categories resolve to their own subtrees. A sub page lists its
         // SIBLINGS, so a tick replaces the page's bound rather than narrowing it -
         // intersecting the two would always come back empty.
         $subSlugs = array_values(array_filter((array) $request->input('subcategory', [])));
         $subIds = collect();
-        foreach (Category::whereIn('slug', $subSlugs)->get() as $sub) {
-            $subIds = $subIds->merge($sub->getAllDescendantIds());
+        foreach ($tree->whereIn('slug', $subSlugs) as $sub) {
+            $subIds = $subIds->merge($descendantIds($sub->id));
         }
         $subIds = $subIds->unique()->values();
 
@@ -175,8 +189,8 @@ class CategoryController extends Controller
         // measured with the shopper's other filters applied, so it always matches what
         // ticking the box actually returns.
         $filterSubcategories = $subcategories
-            ->each(function ($sub) use ($filtered) {
-                $sub->setAttribute('products_total', $filtered([], $sub->getAllDescendantIds())->count());
+            ->each(function ($sub) use ($filtered, $descendantIds) {
+                $sub->setAttribute('products_total', $filtered([], $descendantIds($sub->id))->count());
             })
             ->values();
 
