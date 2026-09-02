@@ -26,9 +26,11 @@
                 <span style="font-size: 11px; color: #616161;">{{ ($items[$type] ?? collect())->count() }} item(s)</span>
             </div>
 
-            {{-- Existing items table --}}
-            <div style="padding: 0;">
-                <table style="width: 100%; font-size: 13px;">
+            {{-- Existing items table. Six columns of inputs never fit a phone,
+                 so the table keeps a floor width and scrolls inside its own box
+                 rather than squeezing every field into a sliver. --}}
+            <div style="padding: 0; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                <table style="width: 100%; min-width: 860px; font-size: 13px;">
                     <thead>
                         <tr style="background: #f7f7f7; border-bottom: 1px solid #e3e3e3;">
                             <th style="text-align: left; padding: 0.5rem 1rem; font-weight: 500; color: #616161; font-size: 12px;">Label</th>
@@ -47,9 +49,10 @@
                                     <input type="hidden" name="type" value="{{ $item->type }}">
                                     <td style="padding: 0.5rem 1rem;"><input type="text" name="label" value="{{ $item->label }}" required maxlength="120" aria-label="Label" class="form-input" style="font-size: 13px;"></td>
                                     <td style="padding: 0.5rem 1rem;"><input type="text" name="sub_label" value="{{ $item->sub_label }}" maxlength="120" aria-label="Sub-label" class="form-input" style="font-size: 13px;"></td>
-                                    <td style="padding: 0.5rem 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                                    <td style="padding: 0.5rem 1rem;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
                                         @if($item->shade_hex)
-                                            <span style="display:inline-block; width: 18px; height: 18px; border-radius: 4px; background: {{ $item->shade_hex }}; border: 1px solid #c9cccf;"></span>
+                                            <span style="flex: none; display:inline-block; width: 18px; height: 18px; border-radius: 4px; background: {{ $item->shade_hex }}; border: 1px solid #c9cccf;"></span>
                                         @endif
                                         {{-- Hex only. This value is interpolated into a `style`
                                              attribute on the swatch above and again on the home
@@ -59,6 +62,7 @@
                                                pattern="#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})"
                                                title="Enter a hex colour such as #b8895a." aria-label="Shade hex"
                                                class="form-input" style="font-size: 13px; max-width: 110px;" placeholder="#b8895a">
+                                        </div>
                                     </td>
                                     <td style="padding: 0.5rem 1rem;"><input type="text" name="query_string" value="{{ $item->query_string }}" maxlength="255"
                                                pattern="[A-Za-z0-9_\-=&amp;%.+,\[\]]+"
@@ -67,7 +71,7 @@
                                     <td style="padding: 0.5rem 1rem; text-align: center;">
                                         <span class="badge {{ $item->is_active ? 'badge-success' : 'badge-neutral' }}">{{ $item->is_active ? 'Active' : 'Hidden' }}</span>
                                     </td>
-                                    <td style="padding: 0.5rem 1rem; text-align: right; white-space: nowrap;">
+                                    <td style="padding: 0.5rem 1rem; text-align: right; white-space: nowrap; min-width: 170px;">
                                         <button type="submit" class="btn btn-sm btn-primary" style="font-size: 11px;">Save</button>
                                 </form>
                                 <form action="{{ route('admin.homepage.shop-filters.toggle', $item) }}" method="POST" style="display: inline;">
@@ -89,7 +93,10 @@
 
             {{-- Add new item form --}}
             <div style="padding: 0.75rem 1rem; border-top: 1px solid #e3e3e3; background: #fafafa;">
-                <form action="{{ route('admin.homepage.shop-filters.store') }}" method="POST" style="display: grid; grid-template-columns: 1fr 1fr 130px 1fr auto; gap: 0.5rem; align-items: end;">
+                {{-- auto-fit rather than five fixed tracks: the fields reflow to
+                     however many columns the screen can hold instead of only
+                     ever being all-five or, below 768px, all-stacked. --}}
+                <form action="{{ route('admin.homepage.shop-filters.store') }}" method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.5rem; align-items: end;">
                     @csrf
                     <input type="hidden" name="type" value="{{ $type }}">
                     {{-- for/id pairs matter beyond accessibility here: the inline validator

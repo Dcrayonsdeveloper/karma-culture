@@ -248,7 +248,11 @@
                panel is showing - the old fixed 420px could not contain a rail
                that wrapped to a second row, so the overflow painted straight
                over the section below. */
-            .kk-syw-stage { display: grid; margin-top: 64px; }
+            /* minmax(0, 1fr), not the implicit `auto` track: an auto column is
+               sized by its max-content, so the rail could make the stage wider
+               than the container and the body's overflow-x-clip would quietly
+               cut the right-hand hangers off instead of scrolling to them. */
+            .kk-syw-stage { display: grid; grid-template-columns: minmax(0, 1fr); margin-top: 64px; }
             .kk-syw-panel { grid-area: 1 / 1; display: flex; align-items: flex-start; justify-content: center; }
             .kk-syw-panel[data-on="true"] .kk-rail-cell {
                 animation: kk-rise .55s var(--d, 0ms) cubic-bezier(.22,1,.36,1) both;
@@ -308,17 +312,27 @@
 
                 /* --kk-rail-count is set per tab from the admin row count. */
                 --kk-rail-gap: clamp(6px, 1.2vw, 16px);
-                /* The scroller's gutter comes off the top, or the row lands
-                   a hair wider than the box that holds it and scrolls when it
-                   should have fitted. */
+                /* Fallback only. Tailwind's .container steps its max-width by
+                   breakpoint, so the rail's real width is nothing like a slice
+                   of the viewport - at 993px it gets 732px, not 913px - and a
+                   vw guess made six hangers scroll when they comfortably fit.
+                   The @supports block below measures the box instead. */
                 --kk-rail-avail: min(980px, calc(100vw - 48px - 2 * var(--kk-rail-pad)));
                 /* Shrink each hanger to fit the count, down to a floor - past
                    that the rail scrolls rather than shaving them to slivers. */
                 --kk-rail-cell: clamp(
-                    88px,
+                    84px,
                     calc((var(--kk-rail-avail) - (var(--kk-rail-count, 6) - 1) * var(--kk-rail-gap)) / var(--kk-rail-count, 6)),
                     150px
                 );
+            }
+
+            /* 100cqw is the scroller's own content width, so the hangers are
+               sized against the space they actually have rather than a guess
+               made from the viewport. */
+            @supports (container-type: inline-size) {
+                .kk-rail-scroll { container-type: inline-size; }
+                .kk-rail-cells { --kk-rail-avail: 100cqw; }
             }
             .kk-rail-bar {
                 position: absolute;
