@@ -232,7 +232,7 @@
                 </button>
 
                 <!-- Inline Search Bar with Typewriter + Mic (hidden on mobile) -->
-                <div class="relative hidden sm:block flex-1 min-w-0 max-w-xs lg:max-w-sm mx-1 lg:mx-3"
+                <div class="relative hidden sm:block flex-1 min-w-0 max-w-xs xl:max-w-sm mx-1 xl:mx-3"
                      x-data="searchBar()"
                      @click.outside="showResults = false">
                     <form action="{{ route('search') }}" method="GET" class="relative flex items-center">
