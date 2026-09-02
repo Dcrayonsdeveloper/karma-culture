@@ -887,11 +887,24 @@ Alpine.start();
         note.id = 'kk-err-' + (++noteSeq);
         if (!field.getAttribute('aria-describedby')) field.setAttribute('aria-describedby', note.id);
 
-        // After the field itself, or after its wrapper when the input sits
-        // inside a relative box (icon buttons, password eyes) so the message
-        // does not land between the input and its own decoration.
+        // The message goes after the field's positioned wrapper, never inside
+        // it. A wrapper like
+        //
+        //     <div class="relative">
+        //       <span class="absolute left-3.5 top-1/2 -translate-y-1/2">+91</span>
+        //       <input type="tel">
+        //     </div>
+        //
+        // centres its decoration on the wrapper's height. Putting the note
+        // inside makes the wrapper taller, so "+91" - and the same goes for
+        // password eyes and search icons - slides down out of the input and
+        // lands on top of the error text.
+        //
+        // The previous rule only stepped out to the wrapper when it was NOT the
+        // field's direct parent, which is the rarer arrangement; in the common
+        // one it anchored to the input and inserted the note inside the box.
         const wrapper = field.closest('.relative, .kk-loginmodal__inputwrap');
-        const anchor = wrapper && wrapper.contains(field) && wrapper !== field.parentNode ? wrapper : field;
+        const anchor = wrapper && wrapper !== field ? wrapper : field;
         anchor.parentNode.insertBefore(note, anchor.nextSibling);
         field._kkErrorNote = note;
     }
@@ -932,6 +945,75 @@ Alpine.start();
             if (field.classList.contains(INVALID_CLASS) && field.checkValidity()) clearError(field);
         }, true);
     });
+
+    // Characters a field will accept while it is being typed in.
+    //
+    // `type="tel"` and `pattern` do not restrict typing at all - the browser
+    // happily accepts "sasadasdasdsada" in a phone box and only objects once
+    // the form is submitted. Refusing the character outright is both faster to
+    // understand and impossible to argue with: the letter simply never appears.
+    //
+    // Phone keeps +, spaces, hyphens and brackets because real numbers are
+    // written with them and the server rule strips them before checking.
+    const CHAR_POLICIES = {
+        phone: { allow: /[0-9+\-\s()]/, message: 'Phone numbers can only contain digits.' },
+        digits: { allow: /[0-9]/, message: 'This field takes digits only.' },
+        decimal: { allow: /[0-9.]/, message: 'This field takes numbers only.' },
+    };
+
+    function charPolicy(field) {
+        const named = field.getAttribute && field.getAttribute('data-kk-chars');
+        if (named) return CHAR_POLICIES[named] || null;
+
+        // Inferred, so every existing tel/numeric input is covered without
+        // touching thirteen blade files, and new ones get it for free.
+        if (field.type === 'tel') return CHAR_POLICIES.phone;
+
+        const mode = (field.getAttribute && field.getAttribute('inputmode') || '').toLowerCase();
+        if (mode === 'numeric') return CHAR_POLICIES.digits;
+        if (mode === 'decimal') return CHAR_POLICIES.decimal;
+        return null;
+    }
+
+    document.addEventListener('input', function (event) {
+        const field = event.target;
+        if (!field || typeof field.value !== 'string') return;
+
+        const form = field.form;
+        if (form && form.hasAttribute('data-no-validate')) return;
+
+        const policy = charPolicy(field);
+        if (!policy) return;
+
+        const before = field.value;
+        let cleaned = '';
+        for (let i = 0; i < before.length; i++) {
+            if (policy.allow.test(before[i])) cleaned += before[i];
+        }
+        if (cleaned === before) return;
+
+        // Put the caret back where it was, minus whatever was dropped ahead of
+        // it, so editing the middle of a number does not throw the cursor to
+        // the end on every rejected keystroke.
+        const caret = typeof field.selectionStart === 'number' ? field.selectionStart : before.length;
+        let removedBeforeCaret = 0;
+        for (let i = 0; i < caret && i < before.length; i++) {
+            if (!policy.allow.test(before[i])) removedBeforeCaret++;
+        }
+
+        field.value = cleaned;
+        try { field.setSelectionRange(caret - removedBeforeCaret, caret - removedBeforeCaret); } catch (e) { /* unsupported on some types */ }
+
+        showError(field, policy.message);
+
+        // The note explains a keystroke, not the state of the field, so it
+        // stands down shortly after and hands back to the real message.
+        clearTimeout(field._kkCharTimer);
+        field._kkCharTimer = setTimeout(function () {
+            if (field.checkValidity()) clearError(field);
+            else showError(field, messageFor(field));
+        }, 2000);
+    }, true);
 
     // Report a field the moment the customer leaves it, instead of saving every
     // complaint for the submit button. Finding out at the end that the email
