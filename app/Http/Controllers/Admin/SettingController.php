@@ -453,6 +453,10 @@ class SettingController extends Controller
             // value the popup renders into its x-data attribute.
             'exit_popup_code'      => ['required', 'string', 'max:32', 'regex:/^[A-Za-z0-9_-]+$/'],
             'exit_popup_minutes'   => 'required|integer|min:1|max:180',
+            // nullable, unlike the countdown: this field was added after the
+            // form shipped, and a required rule would 422 any client posting
+            // the older payload. Absent means "leave the horizon alone".
+            'exit_popup_claim_days' => 'nullable|integer|min:1|max:365',
             'offer_popup_image'    => V::image(required: false, maxKb: 2048),
             'exit_popup_image'     => V::image(required: false, maxKb: 2048),
         ], [
@@ -467,6 +471,14 @@ class SettingController extends Controller
             'exit_popup_code'      => strtoupper($validated['exit_popup_code']),
             'exit_popup_minutes'   => (string) $validated['exit_popup_minutes'],
         ];
+
+        // Only written when it was actually submitted. This field arrived after
+        // the form shipped, so its rule is nullable rather than required - and
+        // writing a fallback for an absent field would let any older payload
+        // silently reset a horizon the admin had already chosen.
+        if (isset($validated['exit_popup_claim_days'])) {
+            $values['exit_popup_claim_days'] = (string) $validated['exit_popup_claim_days'];
+        }
 
         // An unchecked box submits nothing at all, so the toggles are read off
         // the request rather than the validated set.

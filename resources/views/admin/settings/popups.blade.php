@@ -179,21 +179,29 @@
                                 </div>
                                 @error('exit_popup_code') <p class="form-error">{{ $message }}</p> @enderror
                             </div>
+                            {{-- Two numbers that both look like "how long the offer lasts"
+                                 sit next to each other here, so each label says which
+                                 question it answers. The countdown only bounds the POPUP;
+                                 the claim is what the customer actually walks away with. --}}
                             <div>
-                                <label for="exit-popup-minutes" class="form-label form-label-required" style="font-size: 12px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Countdown</label>
+                                <label for="exit-popup-minutes" class="form-label form-label-required" style="font-size: 12px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Countdown in the popup</label>
                                 <input type="number" name="exit_popup_minutes" id="exit-popup-minutes" min="1" max="180" step="1" required inputmode="numeric"
                                        title="Whole minutes, 1 to 180." style="width: 7rem;"
                                        value="{{ old('exit_popup_minutes', $settings['exit_popup_minutes'] ?? '10') }}" class="form-input">
-                                <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">minutes</p>
+                                <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">minutes, then the form closes</p>
                                 @error('exit_popup_minutes') <p class="form-error">{{ $message }}</p> @enderror
+                            </div>
+                            <div>
+                                <label for="exit-popup-claim-days" class="form-label" style="font-size: 12px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">A claimed offer lasts</label>
+                                <input type="number" name="exit_popup_claim_days" id="exit-popup-claim-days" min="1" max="365" step="1" inputmode="numeric"
+                                       title="Whole days, 1 to 365." style="width: 7rem;"
+                                       value="{{ old('exit_popup_claim_days', $settings['exit_popup_claim_days'] ?? '7') }}" class="form-input">
+                                <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">days after they claim</p>
+                                @error('exit_popup_claim_days') <p class="form-error">{{ $message }}</p> @enderror
                             </div>
                         </div>
 
-                        {{-- The countdown is display only: it does not expire the coupon, and
-                             nothing else checks that this code exists. A customer given a code
-                             with no coupon behind it finds out at checkout.
-
-                             Always rendered and shown by Alpine rather than by the server, so
+                        {{-- Always rendered and shown by Alpine rather than by the server, so
                              that picking a real code out of the list clears the warning there
                              and then instead of leaving it contradicting the field until the
                              page is saved. --}}
@@ -203,7 +211,9 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
                                 </svg>
                                 <p style="font-size: 12px; color: #8a6100; margin: 0;">
-                                    No coupon matches this code, so it will be rejected at checkout.
+                                    No coupon matches this code. Customers can still claim the offer and their
+                                    claims are being recorded - they will start applying automatically, including
+                                    for everyone who already claimed, the moment the coupon exists.
                                     <a href="{{ route('admin.coupons.create') }}">Create it under Coupons</a>, or pick an existing code.
                                 </p>
                             </div>

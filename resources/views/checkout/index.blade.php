@@ -273,6 +273,16 @@
                                         <svg class="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
                                         <span class="text-sm font-semibold text-neutral-800">Coupon Applied</span>
                                     </div>
+                                    {{-- Checkout draws no auto/manual distinction of its own, so
+                                         a coupon the customer never typed arrives with nothing
+                                         explaining where it came from - which reads as a pricing
+                                         glitch rather than the offer they claimed. Unlike the
+                                         cart's one-shot note this shows every time, because the
+                                         claim row can answer "is this the claimed one" on any
+                                         request, for one indexed lookup. --}}
+                                    @if($claimedOffer['coupon'] ?? false)
+                                        <p class="text-[11px] text-neutral-500 mb-2 -mt-1.5">From the offer you claimed - nothing to type.</p>
+                                    @endif
                                     <div class="flex items-center justify-between px-3 py-2 bg-success-50 border border-dashed border-success-300 rounded-md">
                                         <span class="text-xs font-bold text-success-700 bg-success-100 px-2 py-0.5 rounded">{{ $cart->coupon->code }}</span>
                                         <span class="text-xs font-semibold text-success-700">-@price($cart->discount)</span>

@@ -8,6 +8,7 @@ use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Product;
 use App\Rules\ValidationRules as V;
+use App\Support\OfferClaims;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,12 +31,18 @@ class CartController extends Controller
             $cart->recalculate();
         }
 
+        // An offer claimed from the exit popup, honoured now that we know who
+        // the customer is. Deliberately AFTER recalculate(): the auto-apply
+        // pass has run by this point, so applyTo() compares against the real
+        // incumbent rather than a coupon that is about to appear underneath it.
+        $claimedOffer = OfferClaims::applyTo($cart, request()->user());
+
         $cart->load(['items.product.primaryImage', 'items.variant']);
 
         // "You May Also Like" - products related to the cart's items (else popular).
         $recommended = $this->recommendedForCart($cart);
 
-        return view('cart.index', compact('cart', 'recommended'));
+        return view('cart.index', compact('cart', 'recommended', 'claimedOffer'));
     }
 
     /**
