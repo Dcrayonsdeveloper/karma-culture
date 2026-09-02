@@ -1092,6 +1092,18 @@ Alpine.store('popupQueue', {
     // ---- internals --------------------------------------------------
     _cap() { return this.reduced ? 1 : PQ_MAX_CYCLES; },
 
+    // Is a hold currently blocking the queue? A timed marketing popup always
+    // waits - that is what the consent hold is for. An exit gesture does not:
+    // it is shopper-initiated and time-critical, and the thing that triggered it
+    // is the shopper leaving, so deferring it for the consent grace does not
+    // delay it, it cancels it. That would silently take abandoned-cart recovery
+    // off every page for first-time visitors, who are the ones being held.
+    _heldOut() {
+        if (!this.holds.size) return false;
+        const u = this._urgent && this.members[this._urgent];
+        return !(u && u.mode === 'event');
+    },
+
     _buildOrder() {
         this.order = Object.keys(this.members)
             .filter((id) => this.members[id].mode === 'timed')
@@ -1135,7 +1147,7 @@ Alpine.store('popupQueue', {
             if (root && !document.contains(root)) this.current = null;
             else return;
         }
-        if (this.stopped || this.holds.size || this._waitFn) return;
+        if (this.stopped || this._heldOut() || this._waitFn) return;
         const id = this._peek();
         if (!id) { this._scheduleRestart(); return; }
         const ms = delayMs === undefined ? this.members[id].delay : delayMs;
@@ -1143,7 +1155,7 @@ Alpine.store('popupQueue', {
     },
 
     _fire() {
-        if (this.stopped || this.current || this.holds.size) return;
+        if (this.stopped || this.current || this._heldOut()) return;
         const id = this._peek();
         if (!id) { this._scheduleRestart(); return; }
         if (this._urgent === id) this._urgent = null; else this.idx++;
@@ -1204,8 +1216,18 @@ Alpine.store('popupQueue', {
     _onPagehide() {
         // Never let a bfcache restore paint a stale modal over a page whose
         // scroll lock was torn down with it.
-        if (this.current && this.members[this.current]) this.members[this.current].hide();
+        const id = this.current;
+        if (id && this.members[id]) this.members[id].hide();
         this.current = null;
+        // Retire it here rather than leaving it to the $watch. hide() only flips
+        // the component's `open` flag, and Alpine defers a watcher to a
+        // microtask - by the time it runs, current is null and release() bails
+        // before retiring. That matters most for the exit popup, whose likeliest
+        // ending is exactly this one: it appears because the shopper is leaving,
+        // and then they leave. Without this its 30-day key is never written and
+        // it greets them again on the next visit. _maybeRetire is idempotent, so
+        // a later real release() costs nothing.
+        if (id) this._maybeRetire(id);
         // The pending callback has to go with its timer. _clearWait() only drops
         // the timer handle, and _advance()/request() both refuse to do anything
         // while _waitFn is set - so leaving it behind parks the queue for the
@@ -1253,7 +1275,11 @@ Alpine.data('offerPopup', () => ({
             seenKey: this.key, seenStore: 'local',
             root: this.$root,
             canShow: () => !this.done,
-            show: () => { this.open = true; },
+            // Clear the transient submit state on the way in, not on the way
+            // out: a shopper who closed this after a failed submit would
+            // otherwise meet the same red error, announced again by role=alert,
+            // when the cycle brings the popup back. What they typed is kept.
+            show: () => { this.error = ''; this.submitting = false; this.open = true; },
             hide: () => { this.open = false; },
         });
         // This tells the queue about every close path there is - the X, the

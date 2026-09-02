@@ -766,6 +766,13 @@
                         }, 1000);
                     },
                     dismiss() {
+                        // Escape is bound with .window, so this runs on every
+                        // Escape anywhere on the page - including the ones aimed
+                        // at the cart drawer, the mobile nav or the search overlay.
+                        // Without this guard one of those would mark the sale
+                        // dismissed before it had ever been on screen, and the
+                        // queue would then skip it for the whole visit.
+                        if (!this.open) return;
                         this.open = false;   // the scroll lock is x-trap.noscroll's job now
                         this.dismissed = true;
                         sessionStorage.setItem('flash_sale_dismissed_' + saleSlug, '1');
