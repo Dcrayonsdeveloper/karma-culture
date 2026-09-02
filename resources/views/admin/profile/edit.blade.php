@@ -44,6 +44,7 @@
                     </div>
                 </div>
 
+                @if(false) {{-- ADMIN_PASSWORD_CARD_HIDDEN_2026-09-02: temporary hide of the Change Password card, restore 2026-09-03 by flipping false to true --}}
                 <div class="card" style="padding: 1.25rem;">
                     <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Change Password</h2>
                     <div style="display: flex; flex-direction: column; gap: 1rem;">
@@ -81,6 +82,7 @@
                         </div>
                     </div>
                 </div>
+                @endif
             </div>
 
             <!-- Right Column -->
