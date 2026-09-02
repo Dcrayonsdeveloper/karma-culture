@@ -918,15 +918,62 @@ Alpine.start();
         first.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, true);
 
+    // Marks a field the customer has actually typed in or chosen from, as
+    // opposed to one they merely tabbed across on the way somewhere else.
+    const TOUCHED = '_kkTouched';
+
     // Clear a field's message as soon as it becomes valid, so the form stops
     // scolding the customer while they are still fixing it.
     ['input', 'change'].forEach(function (type) {
         document.addEventListener(type, function (event) {
             const field = event.target;
             if (!field || !field.willValidate) return;
+            field[TOUCHED] = true;
             if (field.classList.contains(INVALID_CLASS) && field.checkValidity()) clearError(field);
         }, true);
     });
+
+    // Report a field the moment the customer leaves it, instead of saving every
+    // complaint for the submit button. Finding out at the end that the email
+    // three fields back was malformed means walking back up the form; hearing
+    // it on the way past means fixing it while it is still the thing you were
+    // thinking about.
+    //
+    // Two restraints stop this from turning into nagging:
+    //
+    //   - A field that is still empty and was never typed in is left alone.
+    //     Tabbing through a form to see what it asks for should not light it up
+    //     red before the customer has had a chance to answer anything. Once it
+    //     has been touched, or is already showing a message, it is fair game.
+    //   - Checkboxes and radios are skipped. Focus moves between the options of
+    //     a radio group with the arrow keys, so validating on the way out would
+    //     fire on each option in turn while the customer is still choosing.
+    //
+    // `blur` does not bubble, so this listens in the capture phase; that is also
+    // why it can be registered once on the document rather than per field, and
+    // why it works for markup added later by Alpine.
+    function skipOnBlur(field) {
+        if (!field || !field.willValidate || field.disabled) return true;
+        if (field.type === 'checkbox' || field.type === 'radio') return true;
+
+        const form = field.form;
+        return !!(form && form.hasAttribute('data-no-validate'));
+    }
+
+    document.addEventListener('blur', function (event) {
+        const field = event.target;
+        if (skipOnBlur(field)) return;
+
+        const isEmpty = String(field.value == null ? '' : field.value).trim() === '';
+        const alreadyFlagged = field.classList.contains(INVALID_CLASS);
+        if (isEmpty && !field[TOUCHED] && !alreadyFlagged) return;
+
+        if (field.checkValidity()) {
+            clearError(field);
+        } else {
+            showError(field, messageFor(field));
+        }
+    }, true);
 
     // Suppress the native bubble without losing the constraints themselves —
     // and render our own message in its place.
