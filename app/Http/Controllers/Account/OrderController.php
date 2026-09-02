@@ -14,11 +14,14 @@ class OrderController extends Controller
 {
     /**
      * The orders.status enum, which is also the list the filter tabs render.
+     * "on_hold" was added by the 2026-09-02 migration and missed here, so a
+     * ?status=on_hold filter was silently dropped and no tab could show an
+     * order the fraud check had held.
      *
-     * @see database/migrations/2026_02_11_102051_add_tracking_statuses_to_orders_table.php
+     * @see database/migrations/2026_09_02_000001_add_on_hold_status_to_orders_table.php
      */
     public const STATUSES = [
-        'pending', 'confirmed', 'processing', 'packed', 'shipped',
+        'pending', 'on_hold', 'confirmed', 'processing', 'packed', 'shipped',
         'out_for_delivery', 'delivered', 'cancelled', 'returned',
     ];
 
@@ -38,7 +41,17 @@ class OrderController extends Controller
 
         $orders = $query->latest()->paginate(10)->withQueryString();
 
-        return view('account.orders.index', compact('orders'));
+        // The tabs are built from the enum rather than hand-listed beside it.
+        // The hand-written list had drifted: it was missing "pending", which is
+        // the status every order is created in, so a customer whose orders were
+        // all new had no tab that showed any of them.
+        $statusTabs = ['' => 'All'];
+
+        foreach (self::STATUSES as $value) {
+            $statusTabs[$value] = ucfirst(str_replace('_', ' ', $value));
+        }
+
+        return view('account.orders.index', compact('orders', 'statusTabs'));
     }
 
     public function show(Request $request, Order $order): View
