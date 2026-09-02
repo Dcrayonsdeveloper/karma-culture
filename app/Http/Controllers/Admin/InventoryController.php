@@ -43,15 +43,6 @@ class InventoryController extends Controller
             ]);
     }
 
-    /** What each warehouse holds of one product, keyed by location id. */
-    public static function heldByLocation(Product $product): array
-    {
-        return $product->inventoryStocks
-            ->whereNull('variant_id')
-            ->mapWithKeys(fn ($line) => [(string) $line->location_id => (int) $line->quantity])
-            ->all();
-    }
-
     public function index(Request $request): View
     {
         $perPage = min(max((int) $request->input('per_page', 10), 1), 100);

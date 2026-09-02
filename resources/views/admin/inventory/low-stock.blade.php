@@ -74,7 +74,7 @@
                                 </div>
                             </td>
                             <td style="padding: 0.625rem 1rem; text-align: right;">
-                                <button onclick="openStockModal({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->stock_quantity }}, {{ Js::from(\App\Http\Controllers\Admin\InventoryController::heldByLocation($product)) }})"
+                                <button onclick="openStockModal({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->stock_quantity }}, {{ Js::from($product->heldByLocation()) }})"
                                         class="btn btn-secondary" style="font-size: 12px; padding: 0.25rem 0.625rem; display: inline-flex; align-items: center; gap: 0.375rem;">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
                                     Restock

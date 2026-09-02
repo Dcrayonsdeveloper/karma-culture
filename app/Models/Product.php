@@ -200,6 +200,21 @@ class Product extends Model
         return [$this->id, null];
     }
 
+    /**
+     * What each warehouse holds of this product, keyed by location id.
+     *
+     * The Adjust Stock dialog sets stock at one location, so the figure it
+     * shows has to be that location's: reading the product-wide total and
+     * typing it back into "Set stock to" moved the total up by the difference.
+     */
+    public function heldByLocation(): array
+    {
+        return $this->inventoryStocks
+            ->whereNull('variant_id')
+            ->mapWithKeys(fn ($line) => [(string) $line->location_id => (int) $line->quantity])
+            ->all();
+    }
+
     public function wishlists(): HasMany
     {
         return $this->hasMany(Wishlist::class);
@@ -296,7 +311,7 @@ class Product extends Model
             return $url;
         }
 
-        return asset('images/no-product-image.svg');
+        return asset_v('images/no-product-image.svg');
     }
 
     /**
@@ -330,7 +345,7 @@ class Product extends Model
             return $path;
         }
         if (str_starts_with($path, '/')) {
-            return asset(ltrim($path, '/'));
+            return asset_v(ltrim($path, '/'));
         }
 
         return asset_v('storage/'.$path);

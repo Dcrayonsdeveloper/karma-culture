@@ -69,9 +69,11 @@ class InventoryLocationController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
+        // LINES is a reserved word in MariaDB, so the aliases are quoted - the
+        // unquoted one made this whole page a 500.
         $totals = $location->stocks()->toBase()->selectRaw(
-            'COUNT(*) as lines, COALESCE(SUM(quantity), 0) as units, '.
-            'COALESCE(SUM(reserved_quantity), 0) as reserved, COALESCE(SUM(available_quantity), 0) as available'
+            'COUNT(*) as `lines`, COALESCE(SUM(quantity), 0) as `units`, '.
+            'COALESCE(SUM(reserved_quantity), 0) as `reserved`, COALESCE(SUM(available_quantity), 0) as `available`'
         )->first();
 
         // The picker offers every product with its sizes, so a warehouse can

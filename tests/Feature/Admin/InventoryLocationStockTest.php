@@ -529,7 +529,7 @@ class InventoryLocationStockTest extends TestCase
         $this->assertSame([
             (string) $this->main->id => 20,
             (string) $this->overflow->id => 6,
-        ], \App\Http\Controllers\Admin\InventoryController::heldByLocation($product));
+        ], $product->heldByLocation());
     }
 
     private function lineAt(InventoryLocation $location): ?InventoryStock
