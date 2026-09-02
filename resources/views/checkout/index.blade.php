@@ -77,21 +77,25 @@
                                     @error('address_id')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
                                 @endif
 
-                                {{-- Only the typed form is hidden; email is always needed for the
-                                     order confirmation, so it stays visible below. --}}
+                                {{-- The order confirmation goes to the address on the account, so
+                                     this box shows it instead of asking for it. An editable box
+                                     here meant the confirmation for an order placed on this
+                                     account could be sent to any address typed over it; the
+                                     address is changed in the profile, and process() reads it off
+                                     the user row rather than from this form. --}}
                                 <div>
-                                    <label for="kk-co-email" class="block text-[11px] font-medium text-neutral-600 mb-1">Email *</label>
-                                    {{-- type="email" alone accepts a bare hostname, which is how
-                                         "chirag@saas" reached the order confirmation and bounced.
-                                         The pattern demands a dot in the domain, matching the
-                                         server's email:strict rule. --}}
-                                    <input type="email" name="email" id="kk-co-email" value="{{ old('email', $prefill->email ?? '') }}"
-                                           required maxlength="160" autocomplete="email" inputmode="email"
-                                           pattern=".+@.+\..+"
-                                           title="Enter a full email address, including the part after the dot - like you@example.com"
-                                           class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
-                                           placeholder="you@example.com">
-                                    @error('email')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
+                                    <label for="kk-co-email" class="block text-[11px] font-medium text-neutral-600 mb-1">Email</label>
+                                    {{-- readonly AND no name attribute: readonly stops it being
+                                         edited on the page, and dropping the name leaves it out of
+                                         the POST altogether, so there is nothing for devtools to
+                                         rewrite either. --}}
+                                    <input type="email" id="kk-co-email" value="{{ $prefill?->email }}"
+                                           readonly aria-readonly="true"
+                                           class="w-full text-sm border border-neutral-200 bg-neutral-100 text-neutral-600 rounded-lg px-3 py-2 cursor-not-allowed focus:outline-none">
+                                    <p class="mt-1 text-[11px] text-neutral-500">
+                                        Order updates go to your account email.
+                                        <a href="{{ route('account.profile') }}" class="text-primary-600 hover:text-primary-700 font-medium">Change it in your profile</a>.
+                                    </p>
                                 </div>
 
                                 <div x-show="addrId === ''" x-cloak class="space-y-3">

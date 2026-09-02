@@ -110,9 +110,6 @@ class CheckoutController extends Controller
             'address_id'     => ['nullable', 'integer', Rule::exists('user_addresses', 'id')
                                     ->where('user_id', $request->user()?->id ?? 0)],
             'full_name'      => [$whenTyped, ...V::name(required: false)],
-            // 'email' (not 'email:strict') accepted "chirag@saas" - a domain
-            // with no TLD - and the order confirmation then bounced.
-            'email'          => V::email(max: 160),
             // Was /^[6-9]\d{9}$/, which rejected the "+91 98765 43210" and
             // "098765-43210" forms customers actually type. IndianMobile strips
             // the decoration and the trunk/country prefix before testing the
@@ -132,6 +129,13 @@ class CheckoutController extends Controller
             'state.in'          => 'Please choose a state from the list.',
             'postal_code.regex' => 'Please enter a valid 6-digit PIN code.',
         ]);
+
+        // The confirmation address is the account's, not the form's: the box
+        // on checkout is a read-only display with no name attribute now, so an
+        // 'email' arriving in the POST is ignored rather than trusted. Both
+        // checkout routes sit behind the auth middleware (routes/web.php), so
+        // there is always a user to read it from.
+        $validated['email'] = $request->user()->email;
 
         $cart = $this->currentCart(['items.product', 'items.variant', 'coupon']);
 
