@@ -1157,6 +1157,50 @@ Alpine.start();
         if (describedBy && describedBy.startsWith('kk-err-')) field.removeAttribute('aria-describedby');
     }
 
+    // The wrapper a message steps out to is the field's OWN decoration box - the
+    // one holding a "+91" prefix, a password eye or a search icon. Nothing more.
+    //
+    // closest('.relative') does not stop there. `relative` is on cards, modal
+    // panels and page sections too, so a bare <input> in an undecorated <div>
+    // matched the nearest panel instead of a wrapper of its own. On the offer
+    // popup that panel IS the dialog:
+    //
+    //     <div class="fixed inset-0 flex items-center justify-center">
+    //       <div class="absolute inset-0 bg-black/60"></div>   <- backdrop
+    //       <div class="relative w-full max-w-2xl">...</div>   <- the dialog
+    //     </div>
+    //
+    // so the note landed as the dialog's SIBLING, inside the centring row. It
+    // carries flex-basis: 100% (so it clears the field above it rather than
+    // sitting beside it), which as a flex item meant it claimed the row and
+    // shoved the dialog off to the left edge - while the message itself, being
+    // static next to an absolutely positioned backdrop, was painted underneath
+    // it. The customer saw the dialog slide sideways and no reason why.
+    //
+    // A field's own wrapper is close by and holds that field alone; a panel
+    // holds the rest of the form as well, which is what tells the two apart.
+    const WRAPPER_SELECTOR = '.relative, .kk-loginmodal__inputwrap';
+    const WRAPPER_MAX_DEPTH = 3;
+
+    function wrapperFor(field) {
+        let node = field.parentElement;
+
+        for (let depth = 0; node && depth < WRAPPER_MAX_DEPTH; depth++, node = node.parentElement) {
+            if (node.matches('form, fieldset, body')) break;
+            if (!node.matches(WRAPPER_SELECTOR)) continue;
+
+            // More than one control under it makes it a panel, a card or a row
+            // of fields - somewhere this field's message does not belong.
+            // Hidden inputs (CSRF, _method) are not decorated and do not count.
+            const controls = node.querySelectorAll('input:not([type="hidden"]), select, textarea');
+            if (controls.length > 1) break;
+
+            return node;
+        }
+
+        return field;
+    }
+
     function showError(field, message) {
         clearError(field);
         field.classList.add(INVALID_CLASS);
@@ -1187,8 +1231,7 @@ Alpine.start();
         // The previous rule only stepped out to the wrapper when it was NOT the
         // field's direct parent, which is the rarer arrangement; in the common
         // one it anchored to the input and inserted the note inside the box.
-        const wrapper = field.closest('.relative, .kk-loginmodal__inputwrap');
-        const anchor = wrapper && wrapper !== field ? wrapper : field;
+        const anchor = wrapperFor(field);
         anchor.parentNode.insertBefore(note, anchor.nextSibling);
         field._kkErrorNote = note;
     }
