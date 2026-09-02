@@ -98,8 +98,16 @@
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
                                         <label for="kk-co-name" class="block text-[11px] font-medium text-neutral-600 mb-1">Full Name *</label>
+                                        {{-- Length was the only thing this box asked for, so
+                                             "chirag raw arakn@#@!#q13123123" passed the browser and
+                                             was only refused by PersonName after the whole checkout
+                                             had been submitted. The pattern is that rule's charset,
+                                             and data-kk-chars refuses the character as it is typed. --}}
                                         <input type="text" name="full_name" id="kk-co-name" value="{{ old('full_name', $prefill->name ?? '') }}"
                                                minlength="2" maxlength="100" autocomplete="name"
+                                               data-kk-chars="personName"
+                                               pattern=" *[\p{L}\p{M}][\p{L}\p{M} \xA0'\u2019.\-]*"
+                                               title="The full name may only contain letters, spaces, hyphens, apostrophes and periods."
                                                class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
                                                placeholder="Full name" :required="addrId === ''" :disabled="addrId !== ''">
                                         @error('full_name')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror

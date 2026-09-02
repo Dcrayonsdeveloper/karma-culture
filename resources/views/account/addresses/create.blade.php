@@ -77,10 +77,18 @@
                                     <label for="name" class="block text-[13px] font-medium text-neutral-600 mb-1.5">Full Name <span class="text-error-500">*</span></label>
                                     {{-- maxlength matches the server's max:100, and the two
                                          varchar(50) columns the name is split across. It was 255,
-                                         so the box accepted more than twice what could be saved. --}}
+                                         so the box accepted more than twice what could be saved.
+
+                                         Length was then the ONLY thing the box asked for, so a name
+                                         of symbols still passed every browser check and was refused
+                                         by PersonName only after the form had been submitted. The
+                                         pattern is that rule's charset, and data-kk-chars refuses
+                                         the character as it is typed. --}}
                                     <input type="text" name="name" id="name" value="{{ old('name') }}" required
                                            minlength="2" maxlength="100" autocomplete="name"
-                                           title="Enter the full name for this address."
+                                           data-kk-chars="personName"
+                                           pattern=" *[\p{L}\p{M}][\p{L}\p{M} \xA0'\u2019.\-]*"
+                                           title="The full name may only contain letters, spaces, hyphens, apostrophes and periods."
                                            class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors @error('name') border-error-300 ring-1 ring-error-300 @enderror"
                                            placeholder="Enter full name">
                                     @error('name')
@@ -147,9 +155,14 @@
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label for="city" class="block text-[13px] font-medium text-neutral-600 mb-1.5">City <span class="text-error-500">*</span></label>
+                                        {{-- The server validates city with V::name() too, so the same
+                                             charset applies here - it was equally free to take a run
+                                             of symbols and find out only on submit. --}}
                                         <input type="text" name="city" id="city" value="{{ old('city') }}" required
                                                minlength="2" maxlength="100" autocomplete="address-level2"
-                                               title="Enter the city or town name."
+                                               data-kk-chars="personName"
+                                               pattern=" *[\p{L}\p{M}][\p{L}\p{M} \xA0'\u2019.\-]*"
+                                               title="The city may only contain letters, spaces, hyphens, apostrophes and periods."
                                                class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors @error('city') border-error-300 ring-1 ring-error-300 @enderror"
                                                placeholder="Enter city">
                                         @error('city')

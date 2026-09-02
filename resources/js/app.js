@@ -1228,6 +1228,12 @@ Alpine.start();
         digits: { allow: /[0-9]/, message: 'This field takes digits only.' },
         decimal: { allow: /[0-9.]/, message: 'This field takes numbers only.' },
         letters: { allow: /[\p{L}\p{M} \u00A0]/u, message: 'Names can only contain letters.' },
+        // A customer's OWN name, as opposed to `letters` above. The contact
+        // form was specified as letters and spaces; an account, address or
+        // checkout name is the one on the parcel, so the three separators
+        // PersonName keeps have to survive the keystroke - dropping them means
+        // "O'Connor", "Mary-Anne" and "R. Sharma" cannot be typed at all.
+        personName: { allow: /[\p{L}\p{M} \u00A0'\u2019.\-]/u, message: 'Names can only contain letters, spaces, hyphens, apostrophes and periods.' },
     };
 
     function charPolicy(field) {
