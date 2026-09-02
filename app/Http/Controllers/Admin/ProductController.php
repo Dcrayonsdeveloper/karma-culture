@@ -208,8 +208,11 @@ class ProductController extends Controller
         $validated['slug'] = $validated['slug'] ?? Str::slug($validated['name']);
         $validated['is_active'] = $request->boolean('is_active');
         $validated['is_featured'] = $request->boolean('is_featured');
-        $validated['seller_id'] = $validated['seller_id'] ?: null;
-        $validated['brand_id'] = $validated['brand_id'] ?: null;
+        // Both are nullable, so a request that leaves the field out entirely
+        // never puts the key in $validated - reading it raised "Undefined array
+        // key" and turned saving a product into a 500.
+        $validated['seller_id'] = ($validated['seller_id'] ?? null) ?: null;
+        $validated['brand_id'] = ($validated['brand_id'] ?? null) ?: null;
         // `mrp` column is NOT NULL - default it to price when the form omits it
         // (admin form currently only shows a single price field).
         $validated['mrp'] = $validated['mrp'] ?? $validated['price'];
@@ -393,8 +396,11 @@ class ProductController extends Controller
         $validated['is_active'] = $request->boolean('is_active');
         $validated['is_featured'] = $request->boolean('is_featured');
         $validated['is_taxable'] = $request->boolean('is_taxable');
-        $validated['seller_id'] = $validated['seller_id'] ?: null;
-        $validated['brand_id'] = $validated['brand_id'] ?: null;
+        // Both are nullable, so a request that leaves the field out entirely
+        // never puts the key in $validated - reading it raised "Undefined array
+        // key" and turned saving a product into a 500.
+        $validated['seller_id'] = ($validated['seller_id'] ?? null) ?: null;
+        $validated['brand_id'] = ($validated['brand_id'] ?? null) ?: null;
 
         // Save attributes as JSON
         $productAttributes = collect($request->input('product_attributes', []))
