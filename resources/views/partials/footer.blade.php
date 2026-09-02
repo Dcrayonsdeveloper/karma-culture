@@ -11,9 +11,9 @@
                             $footerAbout = \App\Models\Setting::get('footer_about', 'Curated fashion for the modern individual. Discover timeless pieces crafted with care and devotion to our culture.');
                         @endphp
                         @if($footerLogo)
-                            <img src="{{ asset('storage/' . $footerLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-14 object-contain">
+                            <img src="{{ asset_v('storage/' . $footerLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-14 object-contain">
                         @else
-                            <img src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-14 object-contain">
+                            <img src="{{ asset_v('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-14 object-contain">
                         @endif
                     </a>
                     <p class="text-kk-text-muted text-sm mb-4 leading-relaxed max-w-sm">

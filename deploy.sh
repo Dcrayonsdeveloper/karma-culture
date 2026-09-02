@@ -208,6 +208,33 @@ cd \"\$WEBROOT\"
 tar -xzf -
 " && echo "    media synced" || echo "    (no media to sync)"
 
+echo "==> Syncing webroot .htaccess ..."
+# The live webroot is public_html, not the checkout's public/, so a git pull
+# never updates the rules Apache actually reads — the caching directives added
+# to public/.htaccess would sit in the repo doing nothing. Ship it here.
+#
+# The server's copy carries a host-specific prologue above the rewrite block
+# (the CloudLinux "AddHandler ...php84___lsphp" that pins PHP 8.4). That is set
+# through hPanel and is not in the repo, so it is carried across rather than
+# overwritten; losing it drops the site back to the default PHP and 500s.
+cat public/.htaccess | ssh "$SSH_ALIAS" "
+set -eu
+WEBROOT=\"\$(dirname '$APP_DIR')/public_html\"
+[ -f \"\$WEBROOT/index.php\" ] || WEBROOT='$APP_DIR/public'
+cd \"\$WEBROOT\"
+cat > .htaccess.incoming
+: > .htaccess.prologue
+if [ -f .htaccess ] && grep -q '<IfModule mod_rewrite.c>' .htaccess; then
+    sed -n '1,/<IfModule mod_rewrite.c>/p' .htaccess | sed '\$d' > .htaccess.prologue
+fi
+cat .htaccess.prologue .htaccess.incoming > .htaccess.new
+[ -s .htaccess.new ] || { echo '    ERROR: assembled .htaccess is empty, keeping the old one' >&2; rm -f .htaccess.new .htaccess.incoming .htaccess.prologue; exit 1; }
+[ -f .htaccess ] && cp .htaccess .htaccess.previous || true
+mv .htaccess.new .htaccess
+rm -f .htaccess.incoming .htaccess.prologue
+echo \"    .htaccess synced to \$WEBROOT\"
+"
+
 echo "==> Uploading assets ..."
 # Hostinger serves the site from public_html, a real directory beside the app
 # dir whose index.php bootstraps the checkout and calls usePublicPath(): PHP

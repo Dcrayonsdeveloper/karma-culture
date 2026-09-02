@@ -6,7 +6,7 @@
     $exitSubtitle = \App\Models\Setting::get('exit_popup_subtitle', 'Complete your order now and save. Apply the code below at checkout before it expires.');
     $exitImage    = \App\Models\Setting::get('exit_popup_image', '');
     if ($exitImage && !str_starts_with($exitImage, 'http') && !str_starts_with($exitImage, '/')) {
-        $exitImage = asset('storage/' . $exitImage);
+        $exitImage = asset_v('storage/' . $exitImage);
     }
 @endphp
 

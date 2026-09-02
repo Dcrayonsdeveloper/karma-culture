@@ -7,13 +7,13 @@
 
     // Show the product's actual admin-uploaded image; fall back to placeholder
     // only when the product has none.
-    $img = $product->primary_image_url ?? asset('images/placeholder-boys.svg');
+    $img = $product->primary_image_url ?? asset_v('images/placeholder-boys.svg');
 @endphp
 
 <div class="kk-product">
     <a href="{{ route('product.show', $product) }}" class="kk-product__media block">
         <img src="{{ $img }}" alt="{{ $product->name }}" loading="lazy"
-             onerror="this.src='{{ asset('images/placeholder-boys.svg') }}'">
+             onerror="this.src='{{ asset_v('images/placeholder-boys.svg') }}'">
         @if($tag)<span class="kk-product__tag">{{ Str::upper($tag) }}</span>@endif
         @if($hasDiscount && $discount > 0)
             <span class="kk-product__discount">{{ $discount }}% OFF</span>

@@ -93,6 +93,6 @@ class ProductAplusImage extends Model
             return $path;
         }
 
-        return asset('storage/'.$path);
+        return asset_v('storage/'.$path);
     }
 }

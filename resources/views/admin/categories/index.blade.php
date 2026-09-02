@@ -63,7 +63,7 @@
                             <td style="padding-left: 1rem;">
                                 <div style="display: flex; align-items: center; gap: 0.75rem;">
                                     @if($category->image_url)
-                                        <img src="{{ asset('storage/' . $category->image_url) }}" alt=""
+                                        <img src="{{ asset_v('storage/' . $category->image_url) }}" alt=""
                                              style="width: 2.5rem; height: 2.5rem; border-radius: 0.5rem; object-fit: cover; border: 1px solid #e3e3e3;">
                                     @else
                                         <div style="width: 2.5rem; height: 2.5rem; border-radius: 0.5rem; background: #f7f7f7; border: 1px solid #e3e3e3; display: flex; align-items: center; justify-content: center;">

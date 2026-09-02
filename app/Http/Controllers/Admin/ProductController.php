@@ -955,7 +955,7 @@ class ProductController extends Controller
 
                         ProductImage::create([
                             'product_id' => $product->id,
-                            'url' => asset('storage/'.$path),
+                            'url' => asset_v('storage/'.$path),
                             'is_primary' => true,
                             'position' => 0,
                         ]);

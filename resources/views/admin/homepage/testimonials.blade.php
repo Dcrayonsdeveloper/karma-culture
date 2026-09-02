@@ -76,7 +76,7 @@
                     <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
                         <div style="width: 2.5rem; height: 2.5rem; background: #f0f0f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden;">
                             @if($testimonial->avatar_url)
-                                <img src="{{ asset('storage/' . $testimonial->avatar_url) }}" alt="{{ $testimonial->name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                <img src="{{ asset_v('storage/' . $testimonial->avatar_url) }}" alt="{{ $testimonial->name }}" style="width: 100%; height: 100%; object-fit: cover;">
                             @else
                                 <span style="color: #616161; font-weight: 600; font-size: 14px;">{{ substr($testimonial->name, 0, 1) }}</span>
                             @endif

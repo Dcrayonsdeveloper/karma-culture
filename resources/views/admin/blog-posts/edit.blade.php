@@ -107,7 +107,7 @@
                     <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Featured Image</h2>
                     @if($blogPost->featured_image)
                         <div style="margin-bottom: 0.75rem;">
-                            <img src="{{ asset('storage/' . $blogPost->featured_image) }}" alt="{{ $blogPost->title }}"
+                            <img src="{{ asset_v('storage/' . $blogPost->featured_image) }}" alt="{{ $blogPost->title }}"
                                  style="width: 100%; height: 8rem; object-fit: cover; border-radius: 0.5rem;">
                         </div>
                     @endif

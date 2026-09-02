@@ -40,7 +40,7 @@
                 <!-- Logo -->
                 <div class="mb-6">
                     <a href="{{ url('/') }}" class="inline-block">
-                        <img src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-16 lg:h-20 object-contain">
+                        <img src="{{ asset_v('images/karmaa-kulture-logo.png') }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-16 lg:h-20 object-contain">
                     </a>
                 </div>
 

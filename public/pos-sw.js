@@ -8,8 +8,8 @@
  *  - Queue failed POST requests for sync when back online
  */
 
-const CACHE_NAME = 'pos-v1';
-const DATA_CACHE = 'pos-data-v1';
+const CACHE_NAME = 'pos-v2';
+const DATA_CACHE = 'pos-data-v2';
 const OFFLINE_QUEUE_KEY = 'pos-offline-queue';
 
 // Static assets to pre-cache on install

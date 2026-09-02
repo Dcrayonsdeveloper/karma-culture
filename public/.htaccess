@@ -34,17 +34,64 @@
     Require all denied
 </FilesMatch>
 
-# Long-cache fingerprinted/static assets (Vite hashes filenames)
+# ---------------------------------------------------------------------------
+# Caching
+#
+# A CDN sits in front of this host, so whatever we say here is what visitors
+# are held to for as long as we say it. Two rules keep that safe:
+#
+#   1. A URL may only be cached long-term if its content can never change.
+#      /build is Vite output — the content hash is in the filename — and every
+#      other asset we emit carries a ?v=<mtime> stamp from asset_v(), so a
+#      replaced logo or product photo arrives at a URL nobody has seen before.
+#   2. Anything whose URL stays fixed while its bytes change must revalidate.
+#      That is the service worker, the manifest and HTML.
+#
+# The previous rules cached *all* css/js for a year and all images for a month
+# by MIME type alone, with no path condition. That covered pos-sw.js and every
+# uploaded image — swapping a banner left customers on the old one for 30 days
+# with no way to clear it from our side.
+# ---------------------------------------------------------------------------
+
+<IfModule mod_rewrite.c>
+    # Tag requests so the header rules below can match on path, which
+    # <FilesMatch> cannot do and <Directory>/<Location> are not allowed to do
+    # from .htaccess.
+    RewriteRule ^build/ - [E=CC_IMMUTABLE:1]
+    RewriteRule ^(pos-sw\.js|site\.webmanifest|robots\.txt|sitemap.*\.xml)$ - [E=CC_REVALIDATE:1]
+</IfModule>
+
+<IfModule mod_headers.c>
+    # Content-hashed build output: never refetched, never stale.
+    Header always set Cache-Control "public, max-age=31536000, immutable" env=CC_IMMUTABLE
+
+    # Fixed URLs with changing content: keep the copy, but check every time.
+    # The 304 costs a round trip and no body.
+    Header always set Cache-Control "public, max-age=0, must-revalidate" env=CC_REVALIDATE
+    Header always unset Expires env=CC_REVALIDATE
+</IfModule>
+
 <IfModule mod_expires.c>
     ExpiresActive On
-    ExpiresByType text/css "access plus 1 year"
-    ExpiresByType application/javascript "access plus 1 year"
-    ExpiresByType image/jpeg "access plus 1 month"
-    ExpiresByType image/png "access plus 1 month"
-    ExpiresByType image/webp "access plus 1 month"
-    ExpiresByType image/svg+xml "access plus 1 month"
+
+    # Fingerprinted media (asset_v stamps the URL) can be held a long time; a
+    # replacement is served from a different URL, so nobody waits it out.
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType image/avif "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType image/x-icon "access plus 1 week"
     ExpiresByType font/woff2 "access plus 1 year"
-    ExpiresByType video/mp4 "access plus 1 month"
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType video/mp4 "access plus 1 year"
+
+    # Deliberately NOT set for text/css, application/javascript or text/html.
+    # The only css/js we serve outside /build is the service worker, and HTML
+    # carries the fingerprinted URLs — cache the page and the fingerprints
+    # never update, which defeats the whole scheme.
+    ExpiresByType text/html "access plus 0 seconds"
 </IfModule>
 
 <IfModule mod_deflate.c>

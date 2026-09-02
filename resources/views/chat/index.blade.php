@@ -8,8 +8,8 @@
 --}}
 @php
     $kkBotLogo = \App\Models\Setting::get('site_logo', '')
-        ? asset('storage/' . \App\Models\Setting::get('site_logo'))
-        : asset('images/karmaa-kulture-logo.png');
+        ? asset_v('storage/' . \App\Models\Setting::get('site_logo'))
+        : asset_v('images/karmaa-kulture-logo.png');
 @endphp
 
 <x-layouts.app>

@@ -192,6 +192,6 @@ class Category extends Model
             return asset(ltrim($path, '/'));
         }
 
-        return asset('storage/'.$path);
+        return asset_v('storage/'.$path);
     }
 }

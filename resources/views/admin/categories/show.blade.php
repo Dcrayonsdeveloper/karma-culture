@@ -163,7 +163,7 @@
                     @if($category->image_url)
                         <div style="margin-bottom: 1rem; display: flex; justify-content: center;">
                             <div style="width: 96px; height: 96px; border-radius: 0.75rem; overflow: hidden; border: 1px solid #e3e3e3;">
-                                <img src="{{ asset('storage/' . $category->image_url) }}" alt="{{ $category->name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                <img src="{{ asset_v('storage/' . $category->image_url) }}" alt="{{ $category->name }}" style="width: 100%; height: 100%; object-fit: cover;">
                             </div>
                         </div>
                     @endif

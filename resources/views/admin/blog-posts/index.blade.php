@@ -74,7 +74,7 @@
                             <td style="padding: 8px 16px;">
                                 <div style="display: flex; align-items: center; gap: 10px;">
                                     @if($post->featured_image)
-                                        <img src="{{ asset('storage/' . $post->featured_image) }}" alt=""
+                                        <img src="{{ asset_v('storage/' . $post->featured_image) }}" alt=""
                                              style="width: 2.5rem; height: 2.5rem; border-radius: 6px; object-fit: cover; flex-shrink: 0; border: 1px solid #e3e3e3;">
                                     @else
                                         <div style="width: 2.5rem; height: 2.5rem; border-radius: 6px; background: #f1f1f1; flex-shrink: 0; border: 1px solid #e3e3e3;"></div>

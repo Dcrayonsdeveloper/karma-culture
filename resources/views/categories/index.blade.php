@@ -14,7 +14,7 @@
                 <a href="{{ route('category.show', $category) }}" class="group bg-white rounded-lg border border-neutral-100 overflow-hidden hover:shadow-md hover:border-neutral-200 transition-all duration-200">
                     <div class="aspect-[4/3] bg-neutral-50 overflow-hidden relative">
                         @if($category->image_url)
-                            <img src="{{ asset('storage/' . $category->image_url) }}"
+                            <img src="{{ asset_v('storage/' . $category->image_url) }}"
                                  alt="{{ $category->name }}"
                                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                  loading="lazy">

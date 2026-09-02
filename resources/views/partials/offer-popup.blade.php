@@ -4,7 +4,7 @@
     $offerSubtitle = \App\Models\Setting::get('offer_popup_subtitle', 'Join the Karmaa Kulture list for early access to new drops, private sales and styling notes.');
     $offerImage    = \App\Models\Setting::get('offer_popup_image', '');
     if ($offerImage && !str_starts_with($offerImage, 'http') && !str_starts_with($offerImage, '/')) {
-        $offerImage = asset('storage/' . $offerImage);
+        $offerImage = asset_v('storage/' . $offerImage);
     }
 @endphp
 

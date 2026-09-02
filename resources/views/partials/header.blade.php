@@ -75,9 +75,9 @@
                 <a href="{{ url('/') }}" class="absolute inset-0 flex items-center justify-center pointer-events-none sm:static sm:inset-auto sm:justify-start sm:pointer-events-auto shrink-0 sm:mr-3 lg:mr-8">
                     @php $siteLogo = \App\Models\Setting::get('site_logo', ''); @endphp
                     @if($siteLogo)
-                        <img id="site-logo" src="{{ asset('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-16 lg:h-20 object-contain pointer-events-auto">
+                        <img id="site-logo" src="{{ asset_v('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-16 lg:h-20 object-contain pointer-events-auto">
                     @else
-                        <img id="site-logo" src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-16 lg:h-20 object-contain pointer-events-auto">
+                        <img id="site-logo" src="{{ asset_v('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-16 lg:h-20 object-contain pointer-events-auto">
                     @endif
                 </a>
 
@@ -487,7 +487,7 @@
         {{-- LEFT (dark) --}}
         <div class="kk-loginmodal__left">
             <div class="kk-loginmodal__brand">
-                <img src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="kk-loginmodal__logo">
+                <img src="{{ asset_v('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="kk-loginmodal__logo">
             </div>
             <h3 class="kk-loginmodal__welcome">Welcome to {{ config('app.name', 'Karmaa Kulture') }}!</h3>
             <p class="kk-loginmodal__subtitle">Login now to avail best offers</p>

@@ -19,10 +19,10 @@
         $rootCatId = $product->category->parent_id ?? $product->category->id;
     }
     $placeholderImage = match($rootCatId) {
-        1 => asset('images/placeholder-girls.svg'),
-        8 => asset('images/placeholder-boys.svg'),
-        15 => asset('images/placeholder-baby.svg'),
-        default => asset('images/placeholder-boys.svg'),
+        1 => asset_v('images/placeholder-girls.svg'),
+        8 => asset_v('images/placeholder-boys.svg'),
+        15 => asset_v('images/placeholder-baby.svg'),
+        default => asset_v('images/placeholder-boys.svg'),
     };
 @endphp
 

@@ -9,7 +9,7 @@
         <meta property="og:type" content="article">
         <meta property="og:url" content="{{ route('blog.show', $post->slug) }}">
         @if($post->featured_image)
-        <meta property="og:image" content="{{ asset('storage/' . $post->featured_image) }}">
+        <meta property="og:image" content="{{ asset_v('storage/' . $post->featured_image) }}">
         @endif
         <meta property="article:published_time" content="{{ $post->published_at?->toIso8601String() }}">
         <meta property="article:modified_time" content="{{ $post->updated_at->toIso8601String() }}">
@@ -25,7 +25,7 @@
         <meta name="twitter:title" content="{{ $post->seo_data['meta_title'] ?? $post->title }}">
         <meta name="twitter:description" content="{{ $post->excerpt ?? Str::limit(strip_tags($post->content), 160) }}">
         @if($post->featured_image)
-        <meta name="twitter:image" content="{{ asset('storage/' . $post->featured_image) }}">
+        <meta name="twitter:image" content="{{ asset_v('storage/' . $post->featured_image) }}">
         @endif
 
         {{-- BlogPosting JSON-LD --}}
@@ -48,14 +48,14 @@
                 'name' => config('app.name', 'Karmaa Kulture'),
                 'logo' => [
                     '@type' => 'ImageObject',
-                    'url' => asset('images/colorlogo.png'),
+                    'url' => asset_v('images/colorlogo.png'),
                 ],
             ],
             'mainEntityOfPage' => [
                 '@type' => 'WebPage',
                 '@id' => route('blog.show', $post->slug),
             ],
-            'image' => $post->featured_image ? asset('storage/' . $post->featured_image) : null,
+            'image' => $post->featured_image ? asset_v('storage/' . $post->featured_image) : null,
             'articleSection' => $post->category,
             'keywords' => $post->tags ? implode(', ', $post->tags) : null,
             'wordCount' => str_word_count(strip_tags($post->content ?? '')),
@@ -109,7 +109,7 @@
                     {{-- Featured Image --}}
                     @if($post->featured_image)
                         <div class="rounded-xl overflow-hidden mb-6 aspect-video bg-neutral-100">
-                            <img src="{{ asset('storage/' . $post->featured_image) }}" alt="{{ $post->title }}"
+                            <img src="{{ asset_v('storage/' . $post->featured_image) }}" alt="{{ $post->title }}"
                                  class="w-full h-full object-cover">
                         </div>
                     @endif
@@ -163,7 +163,7 @@
                                             {{-- Thumbnail --}}
                                             <div class="w-16 h-12 rounded-lg overflow-hidden bg-neutral-100 shrink-0">
                                                 @if($rPost->featured_image)
-                                                    <img src="{{ asset('storage/' . $rPost->featured_image) }}" alt="{{ $rPost->title }}"
+                                                    <img src="{{ asset_v('storage/' . $rPost->featured_image) }}" alt="{{ $rPost->title }}"
                                                          class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200">
                                                 @else
                                                     <div class="w-full h-full flex items-center justify-center bg-neutral-50">

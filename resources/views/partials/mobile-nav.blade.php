@@ -35,9 +35,9 @@
             <a href="{{ url('/') }}" class="flex items-center">
                 @php $navLogo = \App\Models\Setting::get('site_logo', ''); @endphp
                 @if($navLogo)
-                    <img src="{{ asset('storage/' . $navLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-12 object-contain">
+                    <img src="{{ asset_v('storage/' . $navLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-12 object-contain">
                 @else
-                    <img src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-12 object-contain">
+                    <img src="{{ asset_v('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-12 object-contain">
                 @endif
             </a>
             <button @click="open = false" class="p-2.5 text-neutral-600 hover:text-neutral-600 rounded-full hover:bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-[#2D1810]" aria-label="Close menu">

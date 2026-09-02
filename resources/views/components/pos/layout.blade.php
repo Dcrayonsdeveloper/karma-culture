@@ -9,11 +9,11 @@
     <title>{{ config('app.name') }} - POS</title>
 
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
-    <link rel="manifest" href="{{ asset('site.webmanifest') }}">
+    <link rel="icon" type="image/x-icon" href="{{ asset_v('favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset_v('favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset_v('favicon-16x16.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset_v('apple-touch-icon.png') }}">
+    <link rel="manifest" href="{{ asset_v('site.webmanifest') }}">
     <meta name="theme-color" content="#6F9CA2">
 
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -315,8 +315,17 @@
     {{-- Service Worker for offline support --}}
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/pos-sw.js', { scope: '/pos' })
-                .then(reg => console.log('[POS] Service Worker registered:', reg.scope))
+            // updateViaCache:'none' keeps the browser from serving the worker
+            // script itself out of the HTTP cache. Without it a stale pos-sw.js
+            // can keep answering from `pos-v1` long after a deploy, and the POS
+            // shows yesterday's build with no way for the cashier to clear it.
+            navigator.serviceWorker.register('/pos-sw.js', { scope: '/pos', updateViaCache: 'none' })
+                .then(reg => {
+                    console.log('[POS] Service Worker registered:', reg.scope);
+                    // Pick up a new worker on every page load rather than
+                    // waiting for the browser's own 24h update check.
+                    reg.update();
+                })
                 .catch(err => console.warn('[POS] SW registration failed:', err));
 
             // Listen for offline queue messages from SW

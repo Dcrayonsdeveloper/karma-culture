@@ -62,9 +62,9 @@
                     <a href="{{ url('/') }}" class="inline-block">
                         @php $siteLogo = \App\Models\Setting::get('site_logo', ''); @endphp
                         @if($siteLogo)
-                            <img src="{{ asset('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-16 lg:h-20 object-contain">
+                            <img src="{{ asset_v('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-16 lg:h-20 object-contain">
                         @else
-                            <img src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-16 lg:h-20 object-contain">
+                            <img src="{{ asset_v('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-16 lg:h-20 object-contain">
                         @endif
                     </a>
                 </div>

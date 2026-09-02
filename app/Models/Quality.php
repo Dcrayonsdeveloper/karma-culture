@@ -43,6 +43,6 @@ class Quality extends Model
             return asset(ltrim($this->image_url, '/'));
         }
 
-        return asset('storage/' . $this->image_url);
+        return asset_v('storage/' . $this->image_url);
     }
 }

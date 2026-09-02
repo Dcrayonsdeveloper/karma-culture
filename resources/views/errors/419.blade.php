@@ -93,7 +93,7 @@
 <body>
     <div class="header">
         <a href="{{ url('/') }}">
-            <img src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="{{ config('app.name', 'Karmaa Kulture') }}">
+            <img src="{{ asset_v('images/karmaa-kulture-logo.png') }}" alt="{{ config('app.name', 'Karmaa Kulture') }}">
         </a>
     </div>
     <div class="content">

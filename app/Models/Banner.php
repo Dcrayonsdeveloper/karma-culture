@@ -71,13 +71,13 @@ class Banner extends Model
         if (str_starts_with($this->image_url, '/')) {
             return asset(ltrim($this->image_url, '/'));
         }
-        return asset('storage/' . $this->image_url);
+        return asset_v('storage/' . $this->image_url);
     }
 
     public function getMobileImageAttribute(): string
     {
         return $this->mobile_image_url
-            ? asset('storage/' . $this->mobile_image_url)
+            ? asset_v('storage/' . $this->mobile_image_url)
             : $this->image;
     }
 
@@ -94,7 +94,7 @@ class Banner extends Model
             return asset(ltrim($this->video_url, '/'));
         }
 
-        return asset('storage/' . $this->video_url);
+        return asset_v('storage/' . $this->video_url);
     }
 
     public function getHasVideoAttribute(): bool

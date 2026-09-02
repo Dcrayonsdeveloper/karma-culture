@@ -53,7 +53,7 @@
                             <td style="padding: 0.625rem 1rem;">
                                 <div style="display: flex; align-items: center; gap: 0.75rem;">
                                     @if($banner->image_url)
-                                        <img src="{{ asset('storage/' . $banner->image_url) }}" alt="{{ $banner->name }}"
+                                        <img src="{{ asset_v('storage/' . $banner->image_url) }}" alt="{{ $banner->name }}"
                                              style="width: 80px; height: 48px; object-fit: cover; border-radius: 0.375rem; border: 1px solid #e3e3e3;">
                                     @else
                                         <div style="width: 80px; height: 48px; background: #f1f1f1; border-radius: 0.375rem; border: 1px solid #e3e3e3; display: flex; align-items: center; justify-content: center;">

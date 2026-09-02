@@ -13,8 +13,8 @@
         ])->filter()->values();
 
         $kkLogo = \App\Models\Setting::get('site_logo')
-            ? asset('storage/' . \App\Models\Setting::get('site_logo'))
-            : asset('images/karmaa-kulture-logo.png');
+            ? asset_v('storage/' . \App\Models\Setting::get('site_logo'))
+            : asset_v('images/karmaa-kulture-logo.png');
 
         $kkOrg = array_filter([
             '@type' => 'Organization',
@@ -761,7 +761,7 @@
             @else
                 <div class="kk-hero-slide kk-hero-slide--video">
                     <video class="kk-hero-video"
-                           src="{{ asset('images/karmaa-kulture-web-banner-v3.mp4') }}"
+                           src="{{ asset_v('images/karmaa-kulture-web-banner-v3.mp4') }}"
                            autoplay
                            muted
                            loop
@@ -853,7 +853,7 @@
                                        src="{{ str_starts_with($child->video_url, 'http') ? $child->video_url : asset($child->video_url) }}"
                                        style="width:100%; height:100%; object-fit:cover; display:block;"></video>
                             @elseif($child->image_url)
-                                <img src="{{ asset('storage/' . $child->image_url) }}" alt="{{ $child->name }}" loading="lazy">
+                                <img src="{{ asset_v('storage/' . $child->image_url) }}" alt="{{ $child->name }}" loading="lazy">
                             @else
                                 <div class="w-full h-full" style="background: linear-gradient(135deg, {{ $mensTints[$i % count($mensTints)] }} 0%, var(--kk-brown-dark) 100%);"></div>
                             @endif
@@ -892,7 +892,7 @@
                                        src="{{ str_starts_with($child->video_url, 'http') ? $child->video_url : asset($child->video_url) }}"
                                        style="width:100%; height:100%; object-fit:cover; display:block;"></video>
                             @elseif($child->image_url)
-                                <img src="{{ asset('storage/' . $child->image_url) }}" alt="{{ $child->name }}" loading="lazy">
+                                <img src="{{ asset_v('storage/' . $child->image_url) }}" alt="{{ $child->name }}" loading="lazy">
                             @else
                                 <div class="w-full h-full" style="background: linear-gradient(135deg, {{ $womensTints[$i % count($womensTints)] }} 0%, var(--kk-brown-dark) 100%);"></div>
                             @endif

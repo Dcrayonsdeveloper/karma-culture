@@ -40,8 +40,8 @@
     @php
         $kkOgFallback = $seoOgImage
             ?: (\App\Models\Setting::get('site_logo')
-                ? asset('storage/' . \App\Models\Setting::get('site_logo'))
-                : asset('images/karmaa-kulture-logo.png'));
+                ? asset_v('storage/' . \App\Models\Setting::get('site_logo'))
+                : asset_v('images/karmaa-kulture-logo.png'));
     @endphp
     @unless(str_contains($kkPageMeta, 'og:image'))
         <meta property="og:image" content="{{ $kkOgFallback }}">
@@ -58,11 +58,11 @@
     @endif
 
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
-    <link rel="manifest" href="{{ asset('site.webmanifest') }}">
+    <link rel="icon" type="image/x-icon" href="{{ asset_v('favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset_v('favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset_v('favicon-16x16.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset_v('apple-touch-icon.png') }}">
+    <link rel="manifest" href="{{ asset_v('site.webmanifest') }}">
     <meta name="theme-color" content="#6F9CA2">
 
     <!-- Fonts -->
@@ -179,7 +179,7 @@
 
             {{-- Logo --}}
             <div class="pt-6 pb-2 px-6 text-center">
-                <img src="{{ asset('images/karmaa-kulture-logo.png') }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-14 mx-auto mb-3 object-contain">
+                <img src="{{ asset_v('images/karmaa-kulture-logo.png') }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-14 mx-auto mb-3 object-contain">
                 <h2 class="text-2xl font-bold text-neutral-900"
                     x-text="$store.authModal.mode === 'login' ? 'Login or Signup' : 'Create Account'"></h2>
             </div>

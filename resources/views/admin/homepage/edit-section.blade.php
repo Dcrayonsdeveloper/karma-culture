@@ -77,7 +77,7 @@
                             <label for="section-image" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Background Image</label>
                             @if($section->image_url)
                                 <div style="margin-bottom: 0.5rem;">
-                                    <img src="{{ asset('storage/' . $section->image_url) }}" alt="{{ $section->title }}" style="height: 8rem; object-fit: cover; border-radius: 0.5rem;">
+                                    <img src="{{ asset_v('storage/' . $section->image_url) }}" alt="{{ $section->title }}" style="height: 8rem; object-fit: cover; border-radius: 0.5rem;">
                                 </div>
                             @endif
                             <input type="file" name="image" id="section-image" accept="image/jpeg,image/png,image/webp,image/gif" class="form-input">

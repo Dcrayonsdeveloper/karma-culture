@@ -22,13 +22,13 @@
         // Media = images + videos (ordered by position). Each item carries a type + optional poster.
         $resolveUrl = function ($url) {
             if ($url && !str_starts_with($url, 'http') && !str_starts_with($url, '/')) {
-                return asset('storage/' . $url);
+                return asset_v('storage/' . $url);
             }
             return $url;
         };
         $media = $product->images->sortBy('position')->map(function ($img) use ($resolveUrl) {
             return [
-                'url'   => $resolveUrl($img->url) ?: asset('images/no-product-image.svg'),
+                'url'   => $resolveUrl($img->url) ?: asset_v('images/no-product-image.svg'),
                 'type'  => $img->media_type ?? 'image',
                 'thumb' => $img->thumbnail_url ? $resolveUrl($img->thumbnail_url) : null,
             ];

@@ -29,7 +29,7 @@
             </svg>
         </div>
         <div style="position: relative; z-index: 10; display: flex; flex-direction: column; justify-content: center; padding: 3rem 4rem;">
-            <img src="{{ asset('images/white_logo.webp') }}" alt="{{ config('app.name') }}" style="height: 3rem; object-fit: contain; object-position: left; margin-bottom: 2rem;" onerror="this.style.display='none'">
+            <img src="{{ asset_v('images/white_logo.webp') }}" alt="{{ config('app.name') }}" style="height: 3rem; object-fit: contain; object-position: left; margin-bottom: 2rem;" onerror="this.style.display='none'">
             <h1 style="font-size: 2rem; font-weight: 700; color: white; line-height: 1.2; margin: 0 0 1rem 0;">
                 Welcome to<br>Admin Panel
             </h1>
@@ -54,7 +54,7 @@
         <div style="width: 100%; max-width: 24rem;">
             {{-- Logo + Header --}}
             <div style="margin-bottom: 2rem;">
-                <img src="{{ asset('images/colorlogo.png') }}" alt="{{ config('app.name') }}" style="height: 2.5rem; object-fit: contain; margin-bottom: 1rem;">
+                <img src="{{ asset_v('images/colorlogo.png') }}" alt="{{ config('app.name') }}" style="height: 2.5rem; object-fit: contain; margin-bottom: 1rem;">
                 <h2 style="font-size: 1.5rem; font-weight: 700; color: #303030; margin: 0 0 0.25rem 0;">Sign in</h2>
                 <p style="color: #616161; font-size: 0.875rem; margin: 0;">Enter your credentials to access the admin panel</p>
             </div>
