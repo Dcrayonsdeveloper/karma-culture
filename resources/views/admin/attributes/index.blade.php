@@ -50,13 +50,13 @@
                 @if(request('filterable'))
                     <input type="hidden" name="filterable" value="{{ request('filterable') }}">
                 @endif
-                <select name="type" style="border: 1px solid #c9cccf; border-radius: 0.5rem; font-size: 13px; padding: 0.375rem 0.5rem; color: #303030;">
+                <select name="type" style="border: 1px solid #c9cccf; border-radius: 0.5rem; font-size: 13px; padding: 0.375rem 2rem 0.375rem 0.5rem; color: #303030;">
                     <option value="">All Types</option>
                     <option value="select" @selected(request('type') === 'select')>Select</option>
                     <option value="color" @selected(request('type') === 'color')>Color</option>
                     <option value="text" @selected(request('type') === 'text')>Text</option>
                 </select>
-                <select name="filterable" style="border: 1px solid #c9cccf; border-radius: 0.5rem; font-size: 13px; padding: 0.375rem 0.5rem; color: #303030;">
+                <select name="filterable" style="border: 1px solid #c9cccf; border-radius: 0.5rem; font-size: 13px; padding: 0.375rem 2rem 0.375rem 0.5rem; color: #303030;">
                     <option value="">Filterable</option>
                     <option value="yes" @selected(request('filterable') === 'yes')>Yes</option>
                     <option value="no" @selected(request('filterable') === 'no')>No</option>

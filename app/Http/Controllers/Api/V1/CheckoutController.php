@@ -170,7 +170,13 @@ class CheckoutController extends Controller
 
                 $order = Order::create([
                     'user_id' => auth()->id(),
-                    'status' => 'confirmed',
+                    // Created pending and confirmed below, the same way web
+                    // checkout does it. Writing "confirmed" straight in skipped
+                    // both confirmed_at and the status-history row, so an API
+                    // order showed a confirmed badge over an empty timeline -
+                    // and marked a prepaid order confirmed before anyone had
+                    // paid for it.
+                    'status' => 'pending',
                     'payment_status' => 'pending',
                     'subtotal' => $cart->subtotal,
                     'discount' => $cart->discount,
@@ -259,6 +265,12 @@ class CheckoutController extends Controller
                 return response()->json(['success' => false, 'message' => "\"{$name}\" only has {$available} item(s) in stock."], 422);
             }
             throw $e;
+        }
+
+        // COD has no gateway to wait on, so placement is confirmation. Prepaid
+        // orders stay pending until their payment callback lands.
+        if ($validated['payment_method'] === 'cod') {
+            $order->updateStatus('confirmed', null, 'Order placed (Cash on Delivery)');
         }
 
         OrderPlaced::dispatch($order, 'api');

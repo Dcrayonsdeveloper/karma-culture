@@ -16,7 +16,7 @@
             </div>
         </div>
 
-        <form action="{{ route('admin.products.update', $product) }}" method="POST" enctype="multipart/form-data">
+        <form id="product-form" action="{{ route('admin.products.update', $product) }}" method="POST" enctype="multipart/form-data">
             @csrf
             @method('PUT')
 
@@ -31,13 +31,14 @@
                         <div>
                             <label for="name" class="form-label form-label-required">Title</label>
                             <input type="text" name="name" id="name" value="{{ old('name', $product->name) }}" required
+                                   minlength="2" maxlength="255"
                                    class="form-input w-full @error('name') form-input-error @enderror"
                                    @input="if(!slugManual) slug = toSlug($event.target.value)">
                             @error('name') <p class="form-error">{{ $message }}</p> @enderror
                         </div>
                         <div>
                             <label for="short_description" class="form-label">Short description</label>
-                            <textarea name="short_description" id="short_description" rows="2"
+                            <textarea name="short_description" id="short_description" rows="2" maxlength="500"
                                       class="form-input w-full @error('short_description') form-input-error @enderror">{{ old('short_description', $product->short_description) }}</textarea>
                             @error('short_description') <p class="form-error">{{ $message }}</p> @enderror
                         </div>
@@ -141,7 +142,7 @@
                                 <div class="relative">
                                     <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[13px]" style="color: #616161;">₹</span>
                                     <input type="number" name="price" id="price" value="{{ old('price', $product->price) }}" required
-                                           step="0.01" min="0" class="form-input w-full pl-7 @error('price') form-input-error @enderror">
+                                           step="0.01" min="0" max="9999999.99" class="form-input form-input-prefixed w-full @error('price') form-input-error @enderror">
                                 </div>
                                 @error('price') <p class="form-error">{{ $message }}</p> @enderror
                             </div>
@@ -150,17 +151,19 @@
                                 <div class="relative">
                                     <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[13px]" style="color: #616161;">₹</span>
                                     <input type="number" name="mrp" id="mrp" value="{{ old('mrp', $product->mrp) }}"
-                                           step="0.01" min="0" class="form-input w-full pl-7 @error('mrp') form-input-error @enderror">
+                                           step="0.01" min="0" max="9999999.99" class="form-input form-input-prefixed w-full @error('mrp') form-input-error @enderror">
                                 </div>
                                 @error('mrp') <p class="form-error">{{ $message }}</p> @enderror
-                                <p class="form-hint" style="font-size:11px;color:#999;margin-top:4px;">Shown struck-through on the product page. Must be higher than Price.</p>
+                                {{-- Filled in by the compare-at guard below as the two prices are typed. --}}
+                                <p class="form-error" id="mrp-compare-error" hidden></p>
+                                <p class="form-hint" style="font-size:11px;color:#999;margin-top:4px;">Shown struck-through on the product page. Must be at least the Price.</p>
                             </div>
                             <div>
                                 <label for="cost_price" class="form-label">Cost per item</label>
                                 <div class="relative">
                                     <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[13px]" style="color: #616161;">₹</span>
                                     <input type="number" name="cost_price" id="cost_price" value="{{ old('cost_price', $product->cost_price) }}"
-                                           step="0.01" min="0" class="form-input w-full pl-7 @error('cost_price') form-input-error @enderror">
+                                           step="0.01" min="0" max="9999999.99" class="form-input form-input-prefixed w-full @error('cost_price') form-input-error @enderror">
                                 </div>
                                 @error('cost_price') <p class="form-error">{{ $message }}</p> @enderror
                             </div>
@@ -174,19 +177,23 @@
                             <div>
                                 <label for="sku" class="form-label form-label-required">SKU</label>
                                 <input type="text" name="sku" id="sku" value="{{ old('sku', $product->sku) }}" required
+                                       maxlength="50" pattern="[A-Za-z0-9._/\-]+"
+                                       title="Letters, digits and . _ / - only, up to 50 characters."
                                        class="form-input w-full @error('sku') form-input-error @enderror">
                                 @error('sku') <p class="form-error">{{ $message }}</p> @enderror
                             </div>
                             <div>
                                 <label for="barcode" class="form-label">Barcode (EAN/UPC)</label>
                                 <input type="text" name="barcode" id="barcode" value="{{ old('barcode', $product->barcode) }}"
+                                       maxlength="50" pattern="[A-Za-z0-9\-]+"
+                                       title="Letters, digits and hyphens only, up to 50 characters."
                                        class="form-input w-full @error('barcode') form-input-error @enderror">
                                 @error('barcode') <p class="form-error">{{ $message }}</p> @enderror
                             </div>
                             <div>
                                 <label for="stock_quantity" class="form-label form-label-required">Quantity</label>
                                 <input type="number" name="stock_quantity" id="stock_quantity" value="{{ old('stock_quantity', $product->stock_quantity) }}" required
-                                       min="0" class="form-input w-full @error('stock_quantity') form-input-error @enderror">
+                                       min="0" max="1000000" step="1" class="form-input w-full @error('stock_quantity') form-input-error @enderror">
                                 @error('stock_quantity') <p class="form-error">{{ $message }}</p> @enderror
                             </div>
                         </div>
@@ -200,28 +207,28 @@
                             <div>
                                 <label for="weight" class="form-label">Weight (kg)</label>
                                 <input type="number" name="weight" id="weight" value="{{ old('weight', $product->weight) }}"
-                                       step="0.01" min="0" class="form-input w-full @error('weight') form-input-error @enderror"
+                                       step="0.01" min="0" max="999999.99" class="form-input w-full @error('weight') form-input-error @enderror"
                                        placeholder="0.5">
                                 @error('weight') <p class="form-error">{{ $message }}</p> @enderror
                             </div>
                             <div>
                                 <label for="length" class="form-label">Length (cm)</label>
                                 <input type="number" name="length" id="length" value="{{ old('length', $product->length) }}"
-                                       step="0.1" min="0" class="form-input w-full @error('length') form-input-error @enderror"
+                                       step="0.1" min="0" max="999999.99" class="form-input w-full @error('length') form-input-error @enderror"
                                        placeholder="10">
                                 @error('length') <p class="form-error">{{ $message }}</p> @enderror
                             </div>
                             <div>
                                 <label for="width" class="form-label">Width (cm)</label>
                                 <input type="number" name="width" id="width" value="{{ old('width', $product->width) }}"
-                                       step="0.1" min="0" class="form-input w-full @error('width') form-input-error @enderror"
+                                       step="0.1" min="0" max="999999.99" class="form-input w-full @error('width') form-input-error @enderror"
                                        placeholder="10">
                                 @error('width') <p class="form-error">{{ $message }}</p> @enderror
                             </div>
                             <div>
                                 <label for="height" class="form-label">Height (cm)</label>
                                 <input type="number" name="height" id="height" value="{{ old('height', $product->height) }}"
-                                       step="0.1" min="0" class="form-input w-full @error('height') form-input-error @enderror"
+                                       step="0.1" min="0" max="999999.99" class="form-input w-full @error('height') form-input-error @enderror"
                                        placeholder="10">
                                 @error('height') <p class="form-error">{{ $message }}</p> @enderror
                             </div>
@@ -230,6 +237,8 @@
                             <div>
                                 <label for="hsn_code" class="form-label">HSN code</label>
                                 <input type="text" name="hsn_code" id="hsn_code" value="{{ old('hsn_code', $product->hsn_code) }}"
+                                       inputmode="numeric" maxlength="8" pattern="[0-9]{4,8}"
+                                       title="An HSN code is 4, 6 or 8 digits."
                                        class="form-input w-full @error('hsn_code') form-input-error @enderror"
                                        placeholder="e.g. 6109">
                                 @error('hsn_code') <p class="form-error">{{ $message }}</p> @enderror
@@ -291,27 +300,33 @@
                                                 <input type="hidden" x-bind:name="'variants[' + i + '][id]'" x-bind:value="r.id || ''">
                                                 <input type="hidden" x-bind:name="'variants[' + i + '][delete]'" x-bind:value="r.remove ? 1 : ''">
                                                 <input type="text" x-bind:name="'variants[' + i + '][name]'" x-model="r.name" placeholder="M-40"
+                                                       maxlength="100" aria-label="Size"
                                                        style="width:92px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;">
                                             </td>
                                             <td style="padding:.4rem;text-align:right;">
-                                                <input type="number" step="0.01" min="0" x-bind:name="'variants[' + i + '][price]'" x-model="r.price"
+                                                <input type="number" step="0.01" min="0" max="9999999.99" x-bind:name="'variants[' + i + '][price]'" x-model="r.price"
+                                                       aria-label="Size price"
                                                        style="width:88px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;text-align:right;">
                                             </td>
                                             <td style="padding:.4rem;text-align:right;">
-                                                <input type="number" step="0.01" min="0" x-bind:name="'variants[' + i + '][mrp]'" x-model="r.mrp"
+                                                <input type="number" step="0.01" min="0" max="9999999.99" x-bind:name="'variants[' + i + '][mrp]'" x-model="r.mrp"
+                                                       aria-label="Size MRP"
                                                        style="width:88px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;text-align:right;">
                                             </td>
                                             <td style="padding:.4rem;text-align:right;">
-                                                <input type="number" min="0" x-bind:name="'variants[' + i + '][stock_quantity]'" x-model="r.stock_quantity"
+                                                <input type="number" min="0" max="1000000" step="1" x-bind:name="'variants[' + i + '][stock_quantity]'" x-model="r.stock_quantity"
+                                                       aria-label="Size stock"
                                                        style="width:68px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;text-align:right;">
                                             </td>
                                             <td style="padding:.4rem;">
                                                 <input type="text" x-bind:name="'variants[' + i + '][measurements]'" x-model="r.measurements"
-                                                       placeholder="Chest 40in, Length 28in"
+                                                       placeholder="Chest 40in, Length 28in" maxlength="160" aria-label="Measurements"
                                                        style="width:170px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;">
                                             </td>
                                             <td style="padding:.4rem;">
                                                 <input type="text" x-bind:name="'variants[' + i + '][sku]'" x-model="r.sku" placeholder="auto"
+                                                       maxlength="50" pattern="[A-Za-z0-9._/\-]+" aria-label="Size SKU"
+                                                       title="Letters, digits and . _ / - only, up to 50 characters. Leave blank to generate one."
                                                        style="width:104px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;">
                                             </td>
                                             <td style="padding:.4rem;text-align:center;">
@@ -386,9 +401,10 @@
                         <div x-show="rows.length > 0" x-cloak style="display:flex;flex-direction:column;gap:8px;">
                             <template x-for="(c, i) in rows" :key="c.uid">
                                 <div style="display:flex;align-items:center;gap:8px;">
-                                    <input type="color" x-bind:name="'colours[' + i + '][hex]'" x-model="c.hex"
+                                    <input type="color" x-bind:name="'colours[' + i + '][hex]'" x-model="c.hex" aria-label="Colour swatch"
                                            style="width:34px;height:32px;border:1px solid #d4d4d4;border-radius:.375rem;padding:0;background:none;flex:0 0 auto;">
                                     <input type="text" x-bind:name="'colours[' + i + '][name]'" x-model="c.name" placeholder="Navy"
+                                           maxlength="60" aria-label="Colour name"
                                            style="flex:1 1 auto;max-width:240px;font-size:13px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.4rem .6rem;">
                                     <button type="button" @click="rows.splice(i, 1)" title="Remove"
                                             style="color:#d72c0d;background:none;border:0;cursor:pointer;font-size:16px;line-height:1;">&times;</button>
@@ -466,6 +482,8 @@
                         <div>
                             <label for="slug" class="form-label">URL handle</label>
                             <input type="text" name="slug" id="slug" x-model="slug"
+                                   maxlength="255" pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                                   title="Lower-case letters, digits and single hyphens, e.g. short-sleeve-t-shirt."
                                    class="form-input w-full @error('slug') form-input-error @enderror"
                                    @input="slugManual = ($event.target.value.trim() !== '')">
                             @error('slug') <p class="form-error">{{ $message }}</p> @enderror
@@ -477,13 +495,13 @@
                         <h2 class="text-[13px] font-semibold" style="color: #303030;">Search engine listing</h2>
                         <div>
                             <label for="meta_title" class="form-label">Page title</label>
-                            <input type="text" name="meta_title" id="meta_title" value="{{ old('meta_title', $product->meta_title) }}"
+                            <input type="text" name="meta_title" id="meta_title" value="{{ old('meta_title', $product->meta_title) }}" maxlength="255"
                                    class="form-input w-full @error('meta_title') form-input-error @enderror">
                             @error('meta_title') <p class="form-error">{{ $message }}</p> @enderror
                         </div>
                         <div>
                             <label for="meta_description" class="form-label">Meta description</label>
-                            <textarea name="meta_description" id="meta_description" rows="3"
+                            <textarea name="meta_description" id="meta_description" rows="3" maxlength="500"
                                       class="form-input w-full @error('meta_description') form-input-error @enderror">{{ old('meta_description', $product->meta_description) }}</textarea>
                             @error('meta_description') <p class="form-error">{{ $message }}</p> @enderror
                         </div>
@@ -532,6 +550,24 @@
             };
         }
 
+        // Gallery previews used to be appended from an async FileReader callback, so
+        // the "max 10" guard read a count that was still zero while the loop ran and
+        // a 20-file selection attached all 20. Object URLs are created synchronously,
+        // so the preview list and the FileList that actually gets submitted now grow
+        // in step, the cap bites on the first pick, and a preview's index still
+        // matches its file's index when a tile is removed. The videos below already
+        // worked this way; they only gained the same wording and clean-up.
+        //
+        // The caps mirror the server: images[] max:10 and videos[] max:5 per save,
+        // counted over the files added in this submission, not over what the product
+        // already has.
+        const GALLERY_MAX = 10;
+        const VIDEO_MAX = 5;
+        const IMAGE_MAX_BYTES = 2 * 1024 * 1024;
+        const VIDEO_MAX_BYTES = 50 * 1024 * 1024;
+        const IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+        const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
+
         function imageManager(reorderUrl = '') {
             return {
                 reorderUrl,
@@ -544,8 +580,9 @@
                 videoFileList: new DataTransfer(),
                 dragEl: null,
                 handleMainImage(file) {
-                    if (!file || !file.type.startsWith('image/')) return;
-                    if (file.size > 2 * 1024 * 1024) { toastr.error(file.name + ' exceeds 2MB limit.'); return; }
+                    if (!file) return;
+                    if (!IMAGE_TYPES.includes(file.type)) { toastr.error(file.name + ' is not a JPG, PNG, WEBP or GIF.'); return; }
+                    if (file.size > IMAGE_MAX_BYTES) { toastr.error(file.name + ' exceeds 2MB limit.'); return; }
                     const dt = new DataTransfer();
                     dt.items.add(file);
                     this.$refs.mainFileInput.files = dt.files;
@@ -556,29 +593,46 @@
                 },
                 markForDelete(id) { if (!confirm('Remove this media item?')) return; this.deletedIds.push(id); },
                 handleGalleryFiles(files) {
+                    let overCap = 0;
                     for (const file of files) {
-                        if (!file.type.startsWith('image/')) continue;
-                        if (file.size > 2 * 1024 * 1024) { toastr.error(file.name + ' exceeds 2MB.'); continue; }
-                        if (this.galleryPreviews.length >= 10) { toastr.error('Max 10 images.'); break; }
+                        if (!IMAGE_TYPES.includes(file.type)) { toastr.error(file.name + ' is not a JPG, PNG, WEBP or GIF.'); continue; }
+                        if (file.size > IMAGE_MAX_BYTES) { toastr.error(file.name + ' exceeds 2MB.'); continue; }
+                        // Count what is attached to the input, not what has been previewed.
+                        if (this.galleryFileList.items.length >= GALLERY_MAX) { overCap++; continue; }
                         this.galleryFileList.items.add(file);
-                        const reader = new FileReader();
-                        reader.onload = (e) => { this.galleryPreviews.push({ url: e.target.result, name: file.name }); };
-                        reader.readAsDataURL(file);
+                        this.galleryPreviews.push({ url: URL.createObjectURL(file), name: file.name });
                     }
                     this.$refs.galleryInput.files = this.galleryFileList.files;
+                    if (overCap > 0) {
+                        toastr.error('Only ' + GALLERY_MAX + ' new images per save - ' + overCap + (overCap === 1 ? ' was' : ' were') + ' left out.');
+                    }
                 },
-                removeGalleryImage(index) { this.galleryPreviews.splice(index, 1); this.galleryFileList.items.remove(index); this.$refs.galleryInput.files = this.galleryFileList.files; },
+                removeGalleryImage(index) {
+                    URL.revokeObjectURL(this.galleryPreviews[index].url);
+                    this.galleryPreviews.splice(index, 1);
+                    this.galleryFileList.items.remove(index);
+                    this.$refs.galleryInput.files = this.galleryFileList.files;
+                },
                 handleVideoFiles(files) {
+                    let overCap = 0;
                     for (const file of files) {
-                        if (!file.type.startsWith('video/')) continue;
-                        if (file.size > 50 * 1024 * 1024) { toastr.error(file.name + ' exceeds 50MB.'); continue; }
-                        if (this.videoPreviews.length >= 5) { toastr.error('Max 5 videos.'); break; }
+                        if (!VIDEO_TYPES.includes(file.type)) { toastr.error(file.name + ' is not an MP4, WEBM or MOV.'); continue; }
+                        if (file.size > VIDEO_MAX_BYTES) { toastr.error(file.name + ' exceeds 50MB.'); continue; }
+                        if (this.videoFileList.items.length >= VIDEO_MAX) { overCap++; continue; }
                         this.videoFileList.items.add(file);
                         this.videoPreviews.push({ url: URL.createObjectURL(file), name: file.name });
                     }
                     this.$refs.videoInput.files = this.videoFileList.files;
+                    if (overCap > 0) {
+                        toastr.error('Only ' + VIDEO_MAX + ' new videos per save - ' + overCap + (overCap === 1 ? ' was' : ' were') + ' left out.');
+                    }
                 },
-                removeVideo(index) { this.videoPreviews.splice(index, 1); this.videoFileList.items.remove(index); this.$refs.videoInput.files = this.videoFileList.files; },
+                removeVideo(index) {
+                    URL.revokeObjectURL(this.videoPreviews[index].url);
+                    this.videoPreviews.splice(index, 1);
+                    this.videoFileList.items.remove(index);
+                    this.$refs.videoInput.files = this.videoFileList.files;
+                },
                 // ---- Drag reorder (saves instantly) ----
                 onDragStart(e) { this.dragEl = e.currentTarget; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', e.currentTarget.dataset.id || ''); },
                 onDragOver(e) {
@@ -619,5 +673,7 @@
             ]}
         }).catch(error => console.error(error));
     </script>
+
+    @include('admin.products.partials.price-guard')
     @endpush
 </x-layouts.admin>

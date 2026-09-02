@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductAplusImage;
+use App\Rules\ValidationRules as V;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -15,8 +16,15 @@ class ProductAplusImageController extends Controller
     public function store(Request $request, Product $product): JsonResponse
     {
         $request->validate([
-            'images' => 'required|array|max:20',
-            'images.*' => 'image|mimes:jpeg,jpg,png,webp,gif|max:5120', // 5 MB each
+            'images' => ['required', 'array', 'max:20'],
+            // 5 MB each. V::image() adds the sniffed mimetypes check that
+            // `mimes` alone (filename only) does not perform.
+            //
+            // The height ceiling is raised from the shared default: an A+ banner
+            // is often one long stacked infographic, and 5000px would reject a
+            // legitimate one. Width stays capped, and the 5 MB limit still
+            // rules out a decompression bomb.
+            'images.*' => V::image(maxKb: 5120, allowGif: true, maxHeight: 15000),
         ]);
 
         $position = (int) ($product->aplusImages()->max('sort_order') ?? -1);
@@ -44,7 +52,7 @@ class ProductAplusImageController extends Controller
         $sizeRule = ['nullable', 'string', 'max:20', 'regex:'.ProductAplusImage::DISPLAY_SIZE_REGEX];
 
         $request->validate([
-            'alt_text' => 'nullable|string|max:255',
+            'alt_text' => V::text(required: false, max: 255),
             'display_width' => $sizeRule,
             'display_height' => $sizeRule,
         ], [
@@ -92,8 +100,8 @@ class ProductAplusImageController extends Controller
     public function reorder(Request $request, Product $product): JsonResponse
     {
         $data = $request->validate([
-            'order' => 'required|array',
-            'order.*' => 'integer',
+            'order' => ['required', 'array', 'max:200'],
+            'order.*' => ['integer', 'min:1'],
         ]);
 
         foreach ($data['order'] as $position => $id) {

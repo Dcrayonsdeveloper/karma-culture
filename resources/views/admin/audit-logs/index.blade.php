@@ -15,7 +15,7 @@
             </div>
             <div>
                 <label style="display: block; font-size: 12px; font-weight: 500; color: #6d7175; margin-bottom: 0.25rem;">Action</label>
-                <select name="action" style="padding: 0.5rem 2rem 0.5rem 0.75rem; border: 1px solid #c9cccf; border-radius: 0.5rem; font-size: 13px; background: #fff;">
+                <select name="action" style="padding: 0.5rem 2rem 0.5rem 0.75rem; border: 1px solid #c9cccf; border-radius: 0.5rem; font-size: 13px; background-color: #fff;">
                     <option value="">All</option>
                     <option value="created" {{ request('action') === 'created' ? 'selected' : '' }}>Created</option>
                     <option value="updated" {{ request('action') === 'updated' ? 'selected' : '' }}>Updated</option>

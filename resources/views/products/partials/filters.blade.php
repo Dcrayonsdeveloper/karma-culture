@@ -152,6 +152,32 @@
         <div class="border-t border-neutral-100"></div>
     @endif
 
+    {{-- Brand --}}
+    @if(($brands ?? collect())->isNotEmpty())
+        <div x-data="{ open: true }">
+            <button type="button" @click="open = !open" class="flex items-center justify-between w-full py-2 text-sm font-semibold text-neutral-900">
+                Brand
+                <svg class="w-4 h-4 text-neutral-600 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </button>
+            <div x-show="open" x-collapse>
+                <div class="space-y-1.5 max-h-52 overflow-y-auto pt-1 pb-2">
+                    @php $kkActiveBrands = array_filter((array) request('brand')); @endphp
+                    @foreach($brands as $kkBrand)
+                        <label class="flex items-center gap-2.5 cursor-pointer group py-0.5">
+                            <input type="checkbox" name="brand[]" value="{{ $kkBrand->slug }}" onchange="this.form.submit()"
+                                   {{ in_array($kkBrand->slug, $kkActiveBrands, true) ? 'checked' : '' }}
+                                   class="w-3.5 h-3.5 rounded border-neutral-300 text-[#6F9CA2] focus:ring-[#6F9CA2] focus:ring-offset-0">
+                            <span class="text-sm text-neutral-600 group-hover:text-neutral-900 transition-colors">{{ $kkBrand->name }}</span>
+                        </label>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+        <div class="border-t border-neutral-100"></div>
+    @endif
+
     {{-- Price Range --}}
     <div x-data="{ open: true }">
         <button type="button" @click="open = !open" class="flex items-center justify-between w-full py-2 text-sm font-semibold text-neutral-900">

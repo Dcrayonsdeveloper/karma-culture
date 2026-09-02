@@ -109,6 +109,7 @@
                                     <div>
                                         <label for="title" class="block text-xs font-medium text-neutral-600 mb-1">Review Title</label>
                                         <input type="text" name="title" id="title" value="{{ old('title') }}"
+                                               maxlength="255"
                                                placeholder="Summarize your experience"
                                                class="w-full rounded-lg border border-neutral-200 text-sm px-3 py-2.5 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50">
                                         @error('title')
@@ -119,7 +120,11 @@
                                     {{-- Content --}}
                                     <div>
                                         <label for="content" class="block text-xs font-medium text-neutral-600 mb-1">Detailed Review <span class="text-red-500">*</span></label>
-                                        <textarea name="content" id="content" rows="4"
+                                        {{-- required matches the server, which has always required a
+                                             body; the box did not say so, so the only way to find out
+                                             was to lose the review to a reload. --}}
+                                        <textarea name="content" id="content" rows="4" required
+                                                  maxlength="2000"
                                                   placeholder="What did you like or dislike? How was the quality? Would you recommend it?"
                                                   class="w-full rounded-lg border border-neutral-200 text-sm px-3 py-2.5 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50 resize-none">{{ old('content') }}</textarea>
                                         @error('content')
@@ -134,7 +139,7 @@
                                                 <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                                                 Pros <span class="text-neutral-600">(one per line)</span>
                                             </label>
-                                            <textarea name="pros" id="pros" rows="3"
+                                            <textarea name="pros" id="pros" rows="3" maxlength="1000"
                                                       placeholder="Soft fabric&#10;True to size&#10;Great quality"
                                                       class="w-full rounded-lg border border-neutral-200 text-sm px-3 py-2.5 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50 resize-none">{{ old('pros') }}</textarea>
                                         </div>
@@ -143,7 +148,7 @@
                                                 <svg class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
                                                 Cons <span class="text-neutral-600">(one per line)</span>
                                             </label>
-                                            <textarea name="cons" id="cons" rows="3"
+                                            <textarea name="cons" id="cons" rows="3" maxlength="1000"
                                                       placeholder="Packaging could be better&#10;Slightly expensive"
                                                       class="w-full rounded-lg border border-neutral-200 text-sm px-3 py-2.5 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50 resize-none">{{ old('cons') }}</textarea>
                                         </div>

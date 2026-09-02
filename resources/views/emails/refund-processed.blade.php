@@ -37,7 +37,7 @@ Depending on your payment method, please allow the following timeframes for the 
 - **UPI/Net Banking:** 3-5 business days
 - **Store Credit:** Immediately available in your account
 
-@component('mail::button', ['url' => url('/orders/' . $orderReturn->order_id)])
+@component('mail::button', ['url' => route('account.orders.show', $orderReturn->order_id)])
 View Order Details
 @endcomponent
 

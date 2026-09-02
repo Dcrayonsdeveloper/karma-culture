@@ -473,33 +473,73 @@ class ValidationRulesTest extends TestCase
     // ------------------------------------------------------------------
 
     #[Test]
-    public function password_enforces_the_apps_existing_minimum_of_eight(): void
+    public function password_enforces_the_site_wide_policy(): void
     {
         $rules = ['password' => V::password()];
 
         $ok = Validator::make(
-            ['password' => 'correct-horse', 'password_confirmation' => 'correct-horse'],
+            ['password' => 'Correct-Horse1', 'password_confirmation' => 'Correct-Horse1'],
             $rules
         );
-        $this->assertFalse($ok->fails(), 'An 8+ character confirmed password should pass');
+        $this->assertFalse($ok->fails(), 'Eight or more characters with all four classes should pass');
 
         $short = Validator::make(
-            ['password' => 'short', 'password_confirmation' => 'short'],
+            ['password' => 'Ab1!', 'password_confirmation' => 'Ab1!'],
             $rules
         );
         $this->assertTrue($short->fails(), 'Fewer than 8 characters should fail');
 
         $mismatch = Validator::make(
-            ['password' => 'correct-horse', 'password_confirmation' => 'battery-staple'],
+            ['password' => 'Correct-Horse1', 'password_confirmation' => 'Battery-Staple2'],
             $rules
         );
         $this->assertTrue($mismatch->fails(), 'A mismatched confirmation should fail');
     }
 
+    /**
+     * The policy lives in one place - the Password::defaults() callback in
+     * AppServiceProvider - so this pins each requirement rather than the
+     * wording of any one form.
+     */
+    #[Test]
+    public function password_requires_mixed_case_a_number_and_a_symbol(): void
+    {
+        $rules = ['password' => V::password(confirmed: false)];
+
+        foreach ([
+            'no uppercase' => 'lowercase1!',
+            'no lowercase' => 'UPPERCASE1!',
+            'no number' => 'NoDigitsHere!',
+            'no symbol' => 'NoSymbol123',
+        ] as $why => $password) {
+            $this->assertTrue(
+                Validator::make(['password' => $password], $rules)->fails(),
+                "A password with {$why} should be rejected"
+            );
+        }
+    }
+
+    /**
+     * The four classes are required, but the character set is NOT closed to
+     * them. A regex like [A-Za-z\d@$!%*?&]{8,} would reject this password for
+     * containing '#' and '_' - characters that make it stronger, not weaker,
+     * and that password managers emit by default.
+     */
+    #[Test]
+    public function password_accepts_symbols_outside_the_common_shortlist(): void
+    {
+        $v = Validator::make(
+            ['password' => 'Str#ng_Pass1'],
+            ['password' => V::password(confirmed: false)]
+        );
+
+        $this->assertFalse($v->fails(), 'Symbols beyond @$!%*?& must be accepted');
+    }
+
     #[Test]
     public function password_confirmation_can_be_waived(): void
     {
-        $v = Validator::make(['password' => 'correct-horse'], ['password' => V::password(confirmed: false)]);
+        $v = Validator::make(['password' => 'Correct-Horse1'], ['password' => V::password(confirmed: false)]);
 
         $this->assertFalse($v->fails());
     }

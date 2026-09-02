@@ -679,6 +679,27 @@ const _normalizeMobile = (value) => {
     return d;
 };
 
+// The signup fields ask for the bare ten digits and hold the box to exactly
+// that: an Indian mobile number IS ten digits, and a field that quietly takes
+// fifteen is one a shopper can fill in completely and still get wrong.
+//
+// Deliberately not `maxlength="10"`. The browser applies maxlength to a PASTE
+// before any script sees it, so "+91 98765 43210" would arrive as "+91 98765"
+// with the real digits already thrown away. Stripping the prefix first and
+// cutting afterwards keeps the number that was actually pasted.
+//
+// The prefix stripping only fires once there are more than ten digits, which is
+// also what makes typing the country code by hand work: "919876543210" loses
+// its 91 on the eleventh keystroke rather than the second, so the digits on
+// screen are never rewritten while they still read as a number in progress.
+const _capMobile = (value) => {
+    let d = (value || '').replace(/\D+/g, '');
+    while (d.length > 10 && (d.startsWith('91') || d.startsWith('0'))) {
+        d = d.startsWith('91') ? d.slice(2) : d.slice(1);
+    }
+    return d.slice(0, 10);
+};
+
 // ========================================
 // Create Account form - inline field validation (auth/login.blade.php)
 // ========================================
@@ -706,7 +727,7 @@ const _fullNameError = (v) => {
     // Code points, not UTF-16 units - PHP's mb_strlen counts the same way.
     const len = [...name].length;
     if (len < 2) return 'Please enter your full name.';
-    if (len > 100) return 'Your name must be 100 characters or fewer.';
+    if (len > 30) return 'Please keep your name to 30 characters or fewer.';
     if (!_NAME_CHARSET.test(name)) return 'The full name may only contain letters, spaces, hyphens, apostrophes and periods.';
     if (_NAME_URLISH.test(name)) return 'The full name may not contain a web address.';
     if (_NAME_MASHED.test(name)) return 'Please enter a real name.';
@@ -720,16 +741,36 @@ const _fullNameError = (v) => {
     return '';
 };
 
-// Laravel's email:strict rejects "you@gmail" (no TLD), which is the shape this
-// checks. Deliberately permissive about the local part: strict accepts quoted
-// forms this pattern would not, and being the stricter of the two is the one
-// failure mode a client mirror must never have.
-const _EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@.]+$/;
+// Client-side mirror of App\Rules\EmailAddress, which registration adds on top
+// of Laravel's email:strict - same checks, in the same order, in the same
+// sentences, so the browser and the server never disagree about which part of
+// the address is wrong.
+//
+// The RFC, and therefore email:strict, is far wider than what any provider
+// issues: "_asha@gmail.com" and "!!!@gmail.com" are both legal mail. Signup is
+// where an address is minted rather than matched, so the local part has to open
+// on a letter or a digit and carry only . _ % + - after it.
+const _EMAIL_LOCAL = /^[A-Za-z0-9](?:[A-Za-z0-9._%+\-]*[A-Za-z0-9])?$/;
+const _EMAIL_DOMAIN = /^(?:[A-Za-z0-9](?:[A-Za-z0-9\-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$/;
+const _EMAIL_GENERIC = 'Enter a valid email address, like you@example.com.';
+const _EMAIL_STARTS = 'An email address must start with a letter or a number.';
+const _EMAIL_DOTS = 'An email address cannot contain two dots in a row.';
+
 const _emailError = (v) => {
     const email = (v || '').trim();
     if (!email) return 'Please enter your email address.';
     if (email.length > 255) return 'That email address is too long.';
-    if (!_EMAIL_SHAPE.test(email)) return 'Enter a valid email address, like you@example.com.';
+
+    const parts = email.split('@');
+    if (parts.length !== 2) return _EMAIL_GENERIC;
+    const [local, domain] = parts;
+
+    // Empty local part lands here too: "" has no opening letter either, and the
+    // server says the same sentence about it.
+    if (!/^[A-Za-z0-9]/.test(local)) return _EMAIL_STARTS;
+    if (email.includes('..')) return _EMAIL_DOTS;
+    if (!_EMAIL_LOCAL.test(local)) return 'The part before the @ may only contain letters, numbers and . _ % + -';
+    if (!_EMAIL_DOMAIN.test(domain)) return _EMAIL_GENERIC;
     return '';
 };
 
@@ -754,6 +795,38 @@ const _passwordError = (v) => {
     if (!/\p{Lu}/u.test(pw) || !/\p{Ll}/u.test(pw)) return 'Your password must include both an uppercase and a lowercase letter.';
     if (!/\p{N}/u.test(pw)) return 'Your password must include at least one number.';
     if (!/[\p{Z}\p{S}\p{P}]/u.test(pw)) return 'Your password must include at least one special character, such as @ # ! or ?.';
+    return '';
+};
+
+// Problems that are already true no matter what is typed next: the value is
+// past its limit, or carries a character the field never accepts. Those are
+// worth saying on the keystroke that causes them, rather than making the
+// shopper leave the field to be told they typed one character too many.
+//
+// Everything else a full check would catch - an empty box, half an address, a
+// name that is still one letter long - is unfinished rather than wrong, and
+// still waits for blur. That distinction is the whole reason this is a separate
+// function and not a flag on messageFor().
+const _instantError = (field, value) => {
+    const trimmed = (value || '').trim();
+    if (!trimmed) return '';
+
+    if (field === 'full_name') {
+        if ([...trimmed].length > 30) return 'Please keep your name to 30 characters or fewer.';
+        // A digit or a symbol in a name is wrong the moment it appears. The
+        // rest of _fullNameError (too short, reads as a URL) is not: both can
+        // still be typed out of.
+        if (!_NAME_CHARSET.test(trimmed)) return 'The full name may only contain letters, spaces, hyphens, apostrophes and periods.';
+        return '';
+    }
+
+    if (field === 'email') {
+        if (trimmed.length > 255) return 'That email address is too long.';
+        if (!/^[A-Za-z0-9]/.test(trimmed)) return _EMAIL_STARTS;
+        if (trimmed.includes('..')) return _EMAIL_DOTS;
+        return '';
+    }
+
     return '';
 };
 
@@ -804,8 +877,23 @@ Alpine.data('kkRegisterForm', (serverErrors = {}) => ({
 
     // Re-check only a field already left once, so a message appears a single
     // time and then tracks the correction keystroke by keystroke.
+    //
+    // The exception is a mistake that is already certain - a name past 30
+    // characters, an address opening on a dot. Waiting for blur to report those
+    // means the shopper carries on typing into a field that is already wrong,
+    // so the first one to appear marks the field touched and takes over from
+    // there like any other message.
     input(field) {
-        if (this.touched[field]) this.check(field);
+        if (this.touched[field]) {
+            this.check(field);
+        } else {
+            const el = this.$refs[field];
+            const instant = _instantError(field, el ? el.value : '');
+            if (instant) {
+                this.touched[field] = true;
+                this.errors[field] = instant;
+            }
+        }
         // The confirmation is a judgement about the pair, so editing either half
         // has to re-run it.
         if (field === 'password' && this.touched.password_confirmation) this.check('password_confirmation');
@@ -996,6 +1084,12 @@ Alpine.start();
     function messageFor(field) {
         const v = field.validity;
         const name = labelFor(field);
+
+        // A message set with setCustomValidity() was written for this exact
+        // failure, by the code that knows why the value is wrong. Anything
+        // derived from the constraint below can only be vaguer — for a date
+        // field, "must be 2026-09-02T10:55 or more" vaguer.
+        if (v.customError && field.validationMessage) return field.validationMessage;
 
         if (v.valueMissing) {
             return field.type === 'checkbox'
@@ -1190,6 +1284,36 @@ Alpine.start();
         }, 2000);
     }, true);
 
+    // Mobile fields that want the bare ten digits and nothing else, capped as
+    // they are typed by _capMobile().
+    //
+    // Opt-in through data-kk-mobile="10" rather than inferred from type="tel":
+    // only the fields the server validates with IndianMobile can be held to ten
+    // digits. A wholesale enquiry, for one, is allowed to leave an
+    // international number.
+    //
+    // Registered in the capture phase, so it runs before Alpine's own input
+    // listener on the element and an x-model bound to the same field reads the
+    // capped value rather than the one the keystroke produced.
+    document.addEventListener('input', function (event) {
+        const field = event.target;
+        if (!field || typeof field.value !== 'string') return;
+        if (field.getAttribute && field.getAttribute('data-kk-mobile') !== '10') return;
+
+        const before = field.value;
+        const capped = _capMobile(before);
+        if (capped === before) return;
+
+        // Same caret arithmetic as the character filter above: however much of
+        // the capped value lies before the caret is where the caret belongs, so
+        // editing the middle of a number does not throw the cursor to the end.
+        const caret = typeof field.selectionStart === 'number' ? field.selectionStart : before.length;
+        const kept = Math.min(_capMobile(before.slice(0, caret)).length, capped.length);
+
+        field.value = capped;
+        try { field.setSelectionRange(kept, kept); } catch (e) { /* unsupported on some types */ }
+    }, true);
+
     // Report a field the moment the customer leaves it, instead of saving every
     // complaint for the submit button. Finding out at the end that the email
     // three fields back was malformed means walking back up the form; hearing
@@ -1267,4 +1391,114 @@ Alpine.start();
         }
         pendingInvalid.push(field);
     }, true);
+})();
+
+
+// ========================================
+// Schedule pairs - a start date and an end date
+// ========================================
+//
+// The same three rules the server applies (App\Rules\NotPastDateTime, and the
+// `after:` on the end field), applied here BEFORE the form is submitted:
+//
+//   * a newly chosen date may not be in the past
+//   * the end must be later than the start
+//   * a date the page was RENDERED with stays valid, so a coupon or sale that
+//     has already begun can still be edited and saved without its schedule
+//     being dragged forward
+//
+// The pair is declared in the markup, not listed here, so a new form picks this
+// up by naming its fields:
+//
+//   <input type="datetime-local" id="starts_at" data-schedule-start
+//          data-schedule-original="2026-09-01T10:00">
+//   <input type="datetime-local" data-schedule-end="starts_at"
+//          data-schedule-original="2026-09-05T10:00">
+//
+// `min` is kept in step so the native calendar greys the impossible dates out,
+// and the messages go through setCustomValidity so the inline validator above
+// prints them under the field instead of the browser's own bubble.
+(function () {
+    const pad = (n) => String(n).padStart(2, '0');
+
+    // A datetime-local value is a minute-granular ISO string, so every
+    // comparison below is plain text ordering - no Date parsing, no timezone.
+    function nowValue() {
+        const d = new Date();
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+            + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+
+    // Some browsers append seconds; the floors never carry them.
+    const valueOf = (field) => (field.value || '').slice(0, 16);
+    const originalOf = (field) => (field.dataset.scheduleOriginal || '').slice(0, 16);
+
+    function labelOf(field, fallback) {
+        const label = field.labels && field.labels[0];
+        return label ? label.textContent.replace(/\*/g, '').trim() : fallback;
+    }
+
+    function wire(end) {
+        const start = document.getElementById(end.dataset.scheduleEnd);
+        if (!start) return;
+
+        function refresh() {
+            const now = nowValue();
+            const startValue = valueOf(start);
+            const endValue = valueOf(end);
+            const startName = labelOf(start, 'The start date');
+            const endName = labelOf(end, 'The end date');
+            const startFloor = originalOf(start) && originalOf(start) < now ? originalOf(start) : now;
+            const endFloor = originalOf(end) && originalOf(end) < now ? originalOf(end) : now;
+
+            // What the picker itself offers. The end cannot open before the
+            // start, so the start's own value is the end's floor once set.
+            start.min = startFloor;
+            end.min = startValue || endFloor;
+
+            start.setCustomValidity(
+                startValue && startValue !== originalOf(start) && startValue < now
+                    ? startName + ' cannot be in the past.'
+                    : ''
+            );
+
+            // Order first: an end before the start is wrong whether or not the
+            // date was the one already stored, and saying so is more use than
+            // calling it past.
+            if (startValue && endValue && endValue <= startValue) {
+                end.setCustomValidity(endName + ' must be later than ' + startName + '.');
+            } else if (endValue && endValue !== originalOf(end) && endValue < now) {
+                end.setCustomValidity(endName + ' cannot be in the past.');
+            } else {
+                end.setCustomValidity('');
+            }
+        }
+
+        [start, end].forEach((field) => {
+            ['input', 'change', 'blur'].forEach((type) => field.addEventListener(type, refresh));
+        });
+
+        // A click on the submit button lands BEFORE the browser checks the
+        // form's constraints, which makes it the last chance to re-floor "now"
+        // on a page that has been sitting open.
+        document.addEventListener('click', function (event) {
+            const control = event.target.closest && event.target.closest('button, input[type="submit"]');
+            if (control && control.type === 'submit' && control.form === start.form) refresh();
+        }, true);
+
+        // And for a submit by Enter, which never produces that click.
+        window.setInterval(refresh, 20000);
+
+        refresh();
+    }
+
+    function init() {
+        document.querySelectorAll('[data-schedule-end]').forEach(wire);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
 })();

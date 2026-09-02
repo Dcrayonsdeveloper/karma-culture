@@ -1044,51 +1044,69 @@ a:focus-visible,
    Scrollbar Styles (subtle)
    ======================================== */
 
+/* Chromium 121+ ignores every ::-webkit-scrollbar rule as soon as the standard
+   `scrollbar-width`/`scrollbar-color` properties are set to anything but `auto`,
+   and its own `thin` scrollbar is ~11px with a painted track. That is why the
+   admin sidebar showed a chunky light gutter instead of the 6px thumb below.
+   So: declare the standard properties for Firefox, then hand Chromium/Safari
+   back to the webkit rules by resetting them to `auto` inside a @supports
+   block that only those engines match. */
 .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: var(--color-neutral-300) transparent;
 }
 
-.scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
-
-.scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: var(--color-neutral-300);
-    border-radius: 3px;
-}
-
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background-color: var(--color-neutral-400);
-}
-
-/* Dark scrollbar for dark backgrounds */
 .scrollbar-dark {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
 }
 
-.scrollbar-dark::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
+@supports selector(::-webkit-scrollbar) {
+    .scrollbar-thin,
+    .scrollbar-dark {
+        scrollbar-width: auto;
+        scrollbar-color: auto;
+    }
 
-.scrollbar-dark::-webkit-scrollbar-track {
-    background: transparent;
-}
+    .scrollbar-thin::-webkit-scrollbar,
+    .scrollbar-dark::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
 
-.scrollbar-dark::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.2);
-    border-radius: 3px;
-}
+    .scrollbar-thin::-webkit-scrollbar-track,
+    .scrollbar-dark::-webkit-scrollbar-track {
+        background: transparent;
+    }
 
-.scrollbar-dark::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(255, 255, 255, 0.35);
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+        background-color: var(--color-neutral-300);
+        border-radius: 3px;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+        background-color: var(--color-neutral-400);
+    }
+
+    .scrollbar-dark::-webkit-scrollbar-thumb {
+        background-color: rgba(255, 255, 255, 0.22);
+        border-radius: 3px;
+    }
+
+    .scrollbar-dark::-webkit-scrollbar-thumb:hover {
+        background-color: rgba(255, 255, 255, 0.4);
+    }
+
+    /* No arrow buttons, and no filled corner where the two bars meet. */
+    .scrollbar-thin::-webkit-scrollbar-button,
+    .scrollbar-dark::-webkit-scrollbar-button {
+        display: none;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-corner,
+    .scrollbar-dark::-webkit-scrollbar-corner {
+        background: transparent;
+    }
 }
 
 /* Hide scrollbar but keep functionality */
@@ -1284,6 +1302,37 @@ a:focus-visible,
     transition: border-color 0.1s ease, box-shadow 0.1s ease;
     line-height: 1.4;
 }
+
+/* The shared input rule above sets `background: white` - a shorthand, so it
+   wipes the chevron background-image that .form-select paints. With that rule's
+   `appearance: none` still in force, every admin select rendered as a plain text
+   box with nothing to say it opens: the returns "New Status" field read as a
+   filled-in input. Repaint the arrow and reserve the room its text needs.
+
+   The arrow was redrawn once already, in #616161 at a 1.5 hairline. That is
+   legible on a 2x display and all but invisible on a 1x one, so the ticket
+   header still read as three buttons - "Open" next to "Update" and "Delete" -
+   with nothing marking the first as a menu. Same glyph, drawn in the text
+   colour at a weight that survives a single pixel per CSS pixel. */
+.layout-admin .form-select,
+.layout-admin select:not([multiple]) {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 2rem;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23303030' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.4375rem center;
+    background-repeat: no-repeat;
+    background-size: 1.15em 1.15em;
+    cursor: pointer;
+}
+
+/* Selects sit beside real buttons in the admin headers, and those buttons
+   answer the pointer. Give the menu the same tell so it reads as something
+   you press, not a field that happens to be filled in. */
+.layout-admin .form-select:hover:not(:disabled),
+.layout-admin select:not([multiple]):hover:not(:disabled) {
+    border-color: #8c9196;
+}
 .layout-admin .form-input:focus,
 .layout-admin .form-select:focus,
 .layout-admin .form-textarea:focus,
@@ -1298,6 +1347,17 @@ a:focus-visible,
 .layout-admin input::placeholder,
 .layout-admin textarea::placeholder {
     color: #999;
+}
+
+/* Inputs that carry a currency prefix (the product pricing fields). The symbol
+   is positioned at left: .75rem inside the box, but the admin rule above sets
+   `padding` as a shorthand and outranks Tailwind's pl-7, so the first digit
+   landed underneath it - "1500" read as "500". Reserve the left gutter here,
+   at a specificity the admin rules cannot undo. */
+.form-input-prefixed,
+.layout-admin .form-input-prefixed,
+.layout-admin input[type="number"].form-input-prefixed {
+    padding-left: 1.75rem;
 }
 .layout-admin .form-label {
     font-size: 0.8125rem;
@@ -1824,4 +1884,78 @@ body:not(.layout-admin) a.kk-social-link:focus-visible {
 .kk-input-invalid[type='radio'] {
     outline: 2px solid #9b1c1c;
     outline-offset: 1px;
+}
+
+/* ========================================
+   MODAL / DIALOG
+   ======================================== */
+
+/* x-show owns the inline `display` property: it sets `display: none` to hide
+   and calls removeProperty('display') to show. An overlay that declared
+   `display: flex` in its own style attribute therefore lost its centering the
+   first time it opened and dropped its card at the top-left corner. Keep the
+   layout in a class so x-show only ever toggles the inline value. */
+.kk-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.kk-modal__backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+/* The card scrolls inside the viewport rather than growing past it, so a long
+   form stays reachable on a short screen. */
+.kk-modal__card {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 28rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: #fff;
+    border-radius: 0.75rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* dvh where supported: the mobile URL bar otherwise cuts the card short. */
+@supports (height: 100dvh) {
+    .kk-modal__card {
+        max-height: calc(100dvh - 2rem);
+    }
+}
+
+@media (max-width: 480px) {
+    .kk-modal {
+        padding: 0.75rem;
+    }
+
+    .kk-modal__card {
+        max-height: calc(100vh - 1.5rem);
+    }
+
+    @supports (height: 100dvh) {
+        .kk-modal__card {
+            max-height: calc(100dvh - 1.5rem);
+        }
+    }
+}
+
+/* While a modal is open, freeze whatever is actually scrolling behind it. The
+   admin shell scrolls its <main>, not the body, so locking the body alone let
+   the page slide around under the dialog. */
+body.kk-modal-open {
+    overflow: hidden;
+}
+
+body.kk-modal-open main {
+    overflow: hidden;
 }

@@ -123,20 +123,26 @@ class Review extends Model
         return $this->belongsTo(User::class, 'moderated_by');
     }
 
-    public function approve(): void
+    public function approve(?int $moderatorId = null): void
     {
-        $this->update([
-            'is_approved' => true,
-            'status' => 'approved',
-            'moderated_at' => now(),
-        ]);
+        $this->moderate('approved', true, $moderatorId);
     }
 
-    public function reject(): void
+    public function reject(?int $moderatorId = null): void
+    {
+        $this->moderate('rejected', false, $moderatorId);
+    }
+
+    /**
+     * The single place a moderation decision is written. status drives the admin
+     * screens and is_approved drives the storefront, so they only move together.
+     */
+    protected function moderate(string $status, bool $isApproved, ?int $moderatorId): void
     {
         $this->update([
-            'is_approved' => false,
-            'status' => 'rejected',
+            'is_approved' => $isApproved,
+            'status' => $status,
+            'moderated_by' => $moderatorId ?? $this->moderated_by,
             'moderated_at' => now(),
         ]);
     }

@@ -1,0 +1,362 @@
+<?php
+
+namespace Tests\Feature\Admin;
+
+use App\Models\Admin;
+use App\Models\Category;
+use App\Models\InventoryLocation;
+use App\Models\InventoryMovement;
+use App\Models\InventoryStock;
+use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+/**
+ * A warehouse holds products, and the locations screen is where staff say which
+ * ones. inventory_stocks was only ever written by the seeder before this, so the
+ * warehouse page described a fraction of the catalogue and nothing an admin did
+ * ever changed it. The rule these tests pin down: a warehouse line and the
+ * product total the storefront sells from always move together.
+ */
+class InventoryLocationStockTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private User $adminUser;
+    private InventoryLocation $main;
+    private InventoryLocation $overflow;
+    private Product $product;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->adminUser = User::factory()->create([
+            'first_name' => 'Stock',
+            'last_name' => 'Keeper',
+            'role' => 'admin',
+        ]);
+
+        Admin::create([
+            'user_id' => $this->adminUser->id,
+            'role' => 'super_admin',
+            'is_active' => true,
+        ]);
+
+        $this->main = InventoryLocation::create([
+            'name' => 'Main Warehouse',
+            'code' => 'WH-MAIN',
+            'type' => 'warehouse',
+            'is_active' => true,
+            'is_default' => true,
+        ]);
+
+        $this->overflow = InventoryLocation::create([
+            'name' => 'Overflow Store',
+            'code' => 'WH-OVER',
+            'type' => 'store',
+            'is_active' => true,
+        ]);
+
+        $category = Category::create([
+            'name' => 'Stock Test Category',
+            'slug' => 'stock-test-category',
+            'is_active' => true,
+        ]);
+
+        // The product's opening stock lands on the default shelf, which is what
+        // the backfill migration does for the catalogue that already exists.
+        $this->product = Product::create([
+            'name' => 'Warehouse Kurti',
+            'slug' => 'warehouse-kurti',
+            'sku' => 'WK-001',
+            'price' => 999,
+            'mrp' => 1299,
+            'stock_quantity' => 20,
+            'category_id' => $category->id,
+            'status' => 'approved',
+            'is_active' => true,
+        ]);
+    }
+
+    public function test_a_location_lists_the_products_it_holds(): void
+    {
+        $this->actingAs($this->adminUser, 'admin')
+            ->get(route('admin.inventory.locations.show', $this->main))
+            ->assertOk()
+            ->assertSee('Warehouse Kurti')
+            ->assertSee('WK-001');
+    }
+
+    public function test_opening_stock_lands_on_the_default_shelf(): void
+    {
+        $this->assertSame(20, $this->lineAt($this->main)?->quantity);
+    }
+
+    public function test_adding_a_product_stocks_it_and_raises_the_product_total(): void
+    {
+        $this->actingAs($this->adminUser, 'admin')
+            ->post(route('admin.inventory.locations.stock.store', $this->overflow), [
+                'product_id' => $this->product->id,
+                'quantity' => 5,
+                'reason' => 'Received from supplier',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(5, $this->lineAt($this->overflow)?->quantity);
+        $this->assertSame(25, $this->product->fresh()->stock_quantity);
+
+        $this->assertDatabaseHas('inventory_movements', [
+            'product_id' => $this->product->id,
+            'location_id' => $this->overflow->id,
+            'type' => 'in',
+            'quantity' => 5,
+            'reason' => 'Received from supplier',
+            'created_by' => $this->adminUser->id,
+        ]);
+    }
+
+    public function test_stocking_the_same_product_again_tops_up_one_line(): void
+    {
+        foreach ([5, 3] as $quantity) {
+            $this->actingAs($this->adminUser, 'admin')
+                ->post(route('admin.inventory.locations.stock.store', $this->overflow), [
+                    'product_id' => $this->product->id,
+                    'quantity' => $quantity,
+                ])
+                ->assertSessionHasNoErrors();
+        }
+
+        // MySQL lets a second NULL-variant row past the unique index, so the
+        // merge has to be deliberate - two lines would count the same units twice.
+        $this->assertSame(1, InventoryStock::where('product_id', $this->product->id)
+            ->where('location_id', $this->overflow->id)
+            ->count());
+        $this->assertSame(8, $this->lineAt($this->overflow)?->quantity);
+        $this->assertSame(28, $this->product->fresh()->stock_quantity);
+    }
+
+    public function test_a_size_from_another_product_is_rejected(): void
+    {
+        $other = Product::create([
+            'name' => 'Other Kurti',
+            'slug' => 'other-kurti',
+            'sku' => 'OK-001',
+            'price' => 499,
+            'stock_quantity' => 0,
+            'category_id' => $this->product->category_id,
+            'status' => 'approved',
+            'is_active' => true,
+        ]);
+
+        $variant = ProductVariant::create([
+            'product_id' => $other->id,
+            'name' => 'M',
+            'sku' => 'OK-001-M',
+            'stock_quantity' => 4,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($this->adminUser, 'admin')
+            ->post(route('admin.inventory.locations.stock.store', $this->overflow), [
+                'product_id' => $this->product->id,
+                'variant_id' => $variant->id,
+                'quantity' => 2,
+            ])
+            ->assertSessionHasErrors('variant_id');
+
+        $this->assertDatabaseMissing('inventory_stocks', [
+            'product_id' => $this->product->id,
+            'variant_id' => $variant->id,
+        ]);
+    }
+
+    public function test_a_size_of_the_same_product_gets_its_own_line(): void
+    {
+        $variant = ProductVariant::create([
+            'product_id' => $this->product->id,
+            'name' => 'L',
+            'sku' => 'WK-001-L',
+            'stock_quantity' => 6,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($this->adminUser, 'admin')
+            ->post(route('admin.inventory.locations.stock.store', $this->main), [
+                'product_id' => $this->product->id,
+                'variant_id' => $variant->id,
+                'quantity' => 4,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('inventory_stocks', [
+            'product_id' => $this->product->id,
+            'variant_id' => $variant->id,
+            'location_id' => $this->main->id,
+            'quantity' => 4,
+        ]);
+
+        // The size's own figure moves, not the product's.
+        $this->assertSame(10, $variant->fresh()->stock_quantity);
+        $this->assertSame(20, $this->product->fresh()->stock_quantity);
+        $this->assertSame(20, $this->lineAt($this->main)?->quantity);
+    }
+
+    public function test_setting_a_line_moves_the_product_total_by_the_difference(): void
+    {
+        $this->actingAs($this->adminUser, 'admin')
+            ->put(route('admin.inventory.locations.stock.update', [$this->main, $this->lineAt($this->main)]), [
+                'type' => 'set',
+                'quantity' => 12,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(12, $this->lineAt($this->main)?->quantity);
+        $this->assertSame(12, $this->product->fresh()->stock_quantity);
+    }
+
+    public function test_removing_more_than_the_shelf_holds_is_rejected(): void
+    {
+        $this->actingAs($this->adminUser, 'admin')
+            ->put(route('admin.inventory.locations.stock.update', [$this->main, $this->lineAt($this->main)]), [
+                'type' => 'remove',
+                'quantity' => 99,
+            ])
+            ->assertSessionHasErrors('quantity');
+
+        $this->assertSame(20, $this->lineAt($this->main)?->quantity);
+        $this->assertSame(20, $this->product->fresh()->stock_quantity);
+    }
+
+    public function test_taking_a_product_off_a_shelf_takes_its_units_out_of_stock(): void
+    {
+        $line = $this->lineAt($this->main);
+
+        $this->actingAs($this->adminUser, 'admin')
+            ->delete(route('admin.inventory.locations.stock.destroy', [$this->main, $line]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseMissing('inventory_stocks', ['id' => $line->id]);
+        $this->assertSame(0, $this->product->fresh()->stock_quantity);
+    }
+
+    public function test_a_line_cannot_be_adjusted_through_another_location(): void
+    {
+        $this->actingAs($this->adminUser, 'admin')
+            ->put(route('admin.inventory.locations.stock.update', [$this->overflow, $this->lineAt($this->main)]), [
+                'type' => 'set',
+                'quantity' => 1,
+            ])
+            ->assertNotFound();
+
+        $this->assertSame(20, $this->lineAt($this->main)?->quantity);
+    }
+
+    public function test_a_location_holding_stock_cannot_be_deleted(): void
+    {
+        $this->actingAs($this->adminUser, 'admin')
+            ->from(route('admin.inventory.locations.index'))
+            ->delete(route('admin.inventory.locations.destroy', $this->main))
+            ->assertRedirect(route('admin.inventory.locations.index'))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('inventory_locations', ['id' => $this->main->id]);
+    }
+
+    public function test_an_empty_location_can_be_deleted(): void
+    {
+        $this->actingAs($this->adminUser, 'admin')
+            ->delete(route('admin.inventory.locations.destroy', $this->overflow))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseMissing('inventory_locations', ['id' => $this->overflow->id]);
+    }
+
+    public function test_a_sale_comes_off_the_shelf_it_was_held_on(): void
+    {
+        // How checkout takes stock down: decrement() on the model, which fires
+        // "updated" but never "saved".
+        $this->product->decrement('stock_quantity', 3);
+
+        $this->assertSame(17, $this->lineAt($this->main)?->quantity);
+        $this->assertDatabaseHas('inventory_movements', [
+            'product_id' => $this->product->id,
+            'location_id' => $this->main->id,
+            'type' => 'out',
+            'quantity' => 3,
+        ]);
+    }
+
+    public function test_stock_edited_on_the_product_form_follows_onto_the_shelf(): void
+    {
+        $this->product->update(['stock_quantity' => 30]);
+
+        $this->assertSame(30, $this->lineAt($this->main)?->quantity);
+    }
+
+    public function test_the_product_level_adjustment_names_the_location_it_happens_at(): void
+    {
+        $this->actingAs($this->adminUser, 'admin')
+            ->put(route('admin.inventory.update-stock', $this->product), [
+                'location_id' => $this->overflow->id,
+                'type' => 'add',
+                'quantity' => 7,
+                'reason' => 'Transfer in',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(7, $this->lineAt($this->overflow)?->quantity);
+        $this->assertSame(20, $this->lineAt($this->main)?->quantity);
+        $this->assertSame(27, $this->product->fresh()->stock_quantity);
+    }
+
+    public function test_the_inventory_list_can_be_filtered_to_one_location(): void
+    {
+        $elsewhere = Product::create([
+            'name' => 'Unstocked Dupatta',
+            'slug' => 'unstocked-dupatta',
+            'sku' => 'UD-001',
+            'price' => 299,
+            'stock_quantity' => 0,
+            'category_id' => $this->product->category_id,
+            'status' => 'approved',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($this->adminUser, 'admin')
+            ->get(route('admin.inventory.index', ['location' => $this->main->id]))
+            ->assertOk()
+            ->assertSee('Warehouse Kurti')
+            ->assertDontSee($elsewhere->name);
+    }
+
+    public function test_movements_are_recorded_against_the_location(): void
+    {
+        $this->actingAs($this->adminUser, 'admin')
+            ->put(route('admin.inventory.locations.stock.update', [$this->main, $this->lineAt($this->main)]), [
+                'type' => 'remove',
+                'quantity' => 4,
+                'reason' => 'Damaged',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $movement = InventoryMovement::where('reason', 'Damaged')->firstOrFail();
+
+        $this->assertSame($this->main->id, $movement->location_id);
+        $this->assertSame('out', $movement->type);
+        $this->assertSame(20, $movement->quantity_before);
+        $this->assertSame(16, $movement->quantity_after);
+        $this->assertSame(16, $this->product->fresh()->stock_quantity);
+    }
+
+    private function lineAt(InventoryLocation $location): ?InventoryStock
+    {
+        return InventoryStock::where('product_id', $this->product->id)
+            ->whereNull('variant_id')
+            ->where('location_id', $location->id)
+            ->first();
+    }
+}

@@ -48,8 +48,7 @@
         </div>
 
         {{-- Search + Filter bar --}}
-        <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;"
-             x-data="{ showFilters: {{ request()->hasAny(['payment_status', 'date_from', 'date_to']) ? 'true' : 'false' }} }">
+        <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;">
             <form action="{{ route('admin.orders.index') }}" method="GET" style="display: flex; align-items: center; gap: 0.5rem; flex: 1;">
                 @if(request('status'))<input type="hidden" name="status" value="{{ request('status') }}">@endif
                 <div style="position: relative; flex: 1; max-width: 24rem;">

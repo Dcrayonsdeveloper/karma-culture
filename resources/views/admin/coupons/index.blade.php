@@ -20,14 +20,24 @@
     {{-- Discounts list card --}}
     <div class="card">
 
-        {{-- Tab filters --}}
-        <div style="border-bottom: 1px solid #e3e3e3; display: flex; align-items: center; gap: 0;">
-            <a href="{{ route('admin.coupons.index', request()->except('status', 'page')) }}"
-               style="display: inline-flex; align-items: center; padding: 0.5rem 1rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ !request('status') ? '#303030' : 'transparent' }}; color: {{ !request('status') ? '#303030' : '#616161' }}; margin-bottom: -1px;">All</a>
-            <a href="{{ route('admin.coupons.index', ['status' => 'active'] + request()->except('status', 'page')) }}"
-               style="display: inline-flex; align-items: center; padding: 0.5rem 1rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('status') === 'active' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'active' ? '#303030' : '#616161' }}; margin-bottom: -1px;">Active</a>
-            <a href="{{ route('admin.coupons.index', ['status' => 'expired'] + request()->except('status', 'page')) }}"
-               style="display: inline-flex; align-items: center; padding: 0.5rem 1rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('status') === 'expired' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'expired' ? '#303030' : '#616161' }}; margin-bottom: -1px;">Expired</a>
+        {{-- Tab filters. One per Coupon::STATUSES, so every state a coupon can
+             reach is reachable from here - "Disabled" and "Used up" had no tab,
+             which is why switched-off and spent coupons seemed to vanish.
+             overflow-x keeps the five tabs on one scrollable row on a phone. --}}
+        <div style="border-bottom: 1px solid #e3e3e3; display: flex; align-items: center; gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+            @php
+                $tabs = ['' => 'All'] + \App\Models\Coupon::STATUSES;
+                $current = request('status', '');
+            @endphp
+            @foreach($tabs as $key => $label)
+                @php $on = $current === $key; @endphp
+                <a href="{{ route('admin.coupons.index', array_filter(['status' => $key] + request()->except('status', 'page'), fn ($v) => $v !== '' && $v !== null)) }}"
+                   @if($on) aria-current="page" @endif
+                   style="display: inline-flex; align-items: center; gap: 0.375rem; white-space: nowrap; padding: 0.5rem 1rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ $on ? '#303030' : 'transparent' }}; color: {{ $on ? '#303030' : '#616161' }}; margin-bottom: -1px;">
+                    {{ $label }}
+                    <span style="font-size: 11px; font-weight: 600; color: {{ $on ? '#303030' : '#8a8a8a' }}; background: {{ $on ? '#e3e3e3' : '#f1f1f1' }}; border-radius: 0.5rem; padding: 0.0625rem 0.375rem;">{{ $counts[$key] ?? 0 }}</span>
+                </a>
+            @endforeach
         </div>
 
         {{-- Search bar --}}
@@ -38,11 +48,11 @@
                     <svg style="position: absolute; left: 0.625rem; top: 50%; transform: translateY(-50%); color: #999; width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
-                    <input type="text" name="search" value="{{ request('search') }}"
+                    <input type="text" name="search" maxlength="100" aria-label="Search" value="{{ request('search') }}"
                            placeholder="Search discounts"
                            style="padding-left: 2rem; border: 1px solid #c9cccf; border-radius: 0.5rem; font-size: 13px; width: 100%; padding-top: 0.375rem; padding-bottom: 0.375rem; padding-right: 0.625rem;">
                 </div>
-                @if(request()->hasAny(['search', 'status']))
+                @if(request()->hasAny(['search', 'status', 'type']))
                     <a href="{{ route('admin.coupons.index') }}" style="font-size: 13px; color: #005bd3; font-weight: 500; text-decoration: none; white-space: nowrap;">Clear all</a>
                 @endif
             </form>
@@ -103,13 +113,17 @@
                             </td>
                             <td>
                                 <div style="display: flex; align-items: center; gap: 0.375rem;">
-                                    @if($coupon->isValid())
-                                        <span class="badge badge-success">Active</span>
-                                    @elseif($coupon->expires_at?->isPast())
-                                        <span class="badge badge-error">Expired</span>
-                                    @else
-                                        <span class="badge badge-neutral">Inactive</span>
-                                    @endif
+                                    {{-- Straight from the model, so the badge and
+                                         the tab that listed the row always agree.
+                                         "Inactive" used to cover three different
+                                         reasons a coupon was not running. --}}
+                                    <span class="badge {{ [
+                                        \App\Models\Coupon::STATUS_ACTIVE    => 'badge-success',
+                                        \App\Models\Coupon::STATUS_SCHEDULED => 'badge-info',
+                                        \App\Models\Coupon::STATUS_EXPIRED   => 'badge-error',
+                                        \App\Models\Coupon::STATUS_USED_UP   => 'badge-warning',
+                                        \App\Models\Coupon::STATUS_DISABLED  => 'badge-neutral',
+                                    ][$coupon->status()] }}">{{ $coupon->statusLabel() }}</span>
                                     @if($coupon->auto_apply)
                                         <span class="badge badge-neutral">Auto</span>
                                     @endif
@@ -146,13 +160,13 @@
                                     </div>
                                     <h3 style="font-size: 15px; font-weight: 600; color: #303030; margin-bottom: 0.25rem;">No discounts found</h3>
                                     <p style="font-size: 13px; color: #616161; margin-bottom: 1rem;">
-                                        @if(request()->hasAny(['search', 'status']))
+                                        @if(request()->hasAny(['search', 'status', 'type']))
                                             No discounts match your current filters.
                                         @else
                                             Create your first discount code to get started.
                                         @endif
                                     </p>
-                                    @if(request()->hasAny(['search', 'status']))
+                                    @if(request()->hasAny(['search', 'status', 'type']))
                                         <a href="{{ route('admin.coupons.index') }}" style="font-size: 13px; color: #005bd3; font-weight: 500; text-decoration: none;">Clear all filters</a>
                                     @else
                                         <a href="{{ route('admin.coupons.create') }}" class="btn btn-primary" style="font-size: 13px;">Create discount</a>

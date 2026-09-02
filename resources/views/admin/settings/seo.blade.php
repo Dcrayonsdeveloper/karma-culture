@@ -104,7 +104,7 @@
                         <p style="font-size: 12px; color: #616161; margin: 0.125rem 0 0 0;">Saved to <code style="background: #f6f6f7; padding: 0.125rem 0.25rem; border-radius: 0.25rem; font-size: 12px;">public/robots.txt</code> on submit. HTML is stripped automatically.</p>
                     </div>
                     <div style="padding: 1rem;">
-                        <textarea name="robots_txt" rows="10" class="form-textarea" style="font-family: monospace; font-size: 12px;" placeholder="User-agent: *&#10;Allow: /&#10;Disallow: /admin/&#10;Disallow: /account/">{{ old('robots_txt', $settings['robots_txt'] ?? file_get_contents(public_path('robots.txt'))) }}</textarea>
+                        <textarea name="robots_txt" rows="10" class="form-textarea" style="font-family: monospace; font-size: 12px;" placeholder="User-agent: *&#10;Allow: /&#10;Disallow: /admin/&#10;Disallow: /account/">{{ old('robots_txt', $settings['robots_txt'] ?? (is_file(public_path('robots.txt')) ? file_get_contents(public_path('robots.txt')) : '')) }}</textarea>
                     </div>
                 </div>
             </div>

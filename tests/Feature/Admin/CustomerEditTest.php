@@ -156,6 +156,11 @@ class CustomerEditTest extends TestCase
         $response = $this->get(route('admin.customers.edit', $this->customer));
 
         $response->assertOk();
-        $response->assertSee('Last Name <span style="color: #616161; font-weight: 400;">(optional)</span>', false);
+
+        // The input tag itself, not the label: a `required` here is what put
+        // staff in front of an empty starred field they could not get past.
+        preg_match("/<input[^>]*name=\"last_name\"[^>]*>/", $response->getContent(), $m);
+        $this->assertNotEmpty($m, 'No last_name input found on the edit form.');
+        $this->assertStringNotContainsString('required', $m[0]);
     }
 }

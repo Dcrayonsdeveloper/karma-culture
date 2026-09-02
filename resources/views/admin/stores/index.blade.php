@@ -39,7 +39,6 @@
                         <th style="padding: 0.5rem 1rem; text-align: left; font-weight: 500; color: #616161; font-size: 12px;">Store</th>
                         <th style="padding: 0.5rem 1rem; text-align: left; font-weight: 500; color: #616161; font-size: 12px;">Code</th>
                         <th style="padding: 0.5rem 1rem; text-align: left; font-weight: 500; color: #616161; font-size: 12px;">Contact</th>
-                        <th style="padding: 0.5rem 1rem; text-align: center; font-weight: 500; color: #616161; font-size: 12px;">Registers</th>
                         <th style="padding: 0.5rem 1rem; text-align: left; font-weight: 500; color: #616161; font-size: 12px;">Status</th>
                         <th style="padding: 0.5rem 1rem; text-align: right; font-weight: 500; color: #616161; font-size: 12px;">Actions</th>
                     </tr>
@@ -71,9 +70,6 @@
                                     <span>--</span>
                                 @endif
                             </td>
-                            <td style="padding: 0.625rem 1rem; text-align: center; font-weight: 500; color: #303030;">
-                                {{ $store->registers_count }}
-                            </td>
                             <td style="padding: 0.625rem 1rem;">
                                 @if($store->is_active)
                                     <span style="display: inline-block; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 12px; font-weight: 500; background: #cdfee1; color: #1a7a2e;">Active</span>
@@ -96,7 +92,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" style="padding: 3rem 1rem; text-align: center;">
+                            <td colspan="5" style="padding: 3rem 1rem; text-align: center;">
                                 <div style="display: flex; flex-direction: column; align-items: center;">
                                     <svg style="width: 3rem; height: 3rem; color: #c9cccf; margin-bottom: 0.75rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>

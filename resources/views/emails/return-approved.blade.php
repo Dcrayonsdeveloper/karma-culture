@@ -43,7 +43,7 @@ Your return request **#{{ $orderReturn->return_number }}** for order **#{{ $orde
 **Pickup Scheduled For:** {{ $orderReturn->pickup_scheduled_at->format('M d, Y \a\t h:i A') }}
 @endif
 
-@component('mail::button', ['url' => url('/orders/' . $orderReturn->order_id)])
+@component('mail::button', ['url' => route('account.orders.show', $orderReturn->order_id)])
 View Return Details
 @endcomponent
 

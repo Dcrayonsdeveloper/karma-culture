@@ -22,8 +22,9 @@
             <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Location Details</h2>
             <div style="display: flex; flex-direction: column; gap: 1rem;">
                 <div>
-                    <label class="form-label">Name <span style="color: #d72c0d;">*</span></label>
-                    <input type="text" name="name" value="{{ old('name', $location->name) }}" required
+                    <label for="name" class="form-label">Name <span style="color: #d72c0d;">*</span></label>
+                    <input type="text" name="name" id="name" value="{{ old('name', $location->name) }}" required
+                           minlength="2" maxlength="255"
                            class="form-input">
                     @error('name')
                         <p class="form-error">{{ $message }}</p>
@@ -31,8 +32,10 @@
                 </div>
 
                 <div>
-                    <label class="form-label">Code <span style="color: #d72c0d;">*</span></label>
-                    <input type="text" name="code" value="{{ old('code', $location->code) }}" required
+                    <label for="code" class="form-label">Code <span style="color: #d72c0d;">*</span></label>
+                    <input type="text" name="code" id="code" value="{{ old('code', $location->code) }}" required
+                           maxlength="20" pattern="[A-Za-z0-9_-]+"
+                           title="Letters, digits, hyphens and underscores only, up to 20 characters."
                            class="form-input">
                     @error('code')
                         <p class="form-error">{{ $message }}</p>
@@ -40,8 +43,8 @@
                 </div>
 
                 <div>
-                    <label class="form-label">Address</label>
-                    <textarea name="address" rows="2" class="form-textarea">{{ old('address', $location->address) }}</textarea>
+                    <label for="address" class="form-label">Address</label>
+                    <textarea name="address" id="address" rows="2" minlength="3" maxlength="255" class="form-textarea">{{ old('address', $location->address) }}</textarea>
                     @error('address')
                         <p class="form-error">{{ $message }}</p>
                     @enderror

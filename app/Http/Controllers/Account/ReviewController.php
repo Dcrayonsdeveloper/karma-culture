@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Account;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Review;
+use App\Rules\ValidationRules as V;
 use App\Support\ReviewMediaUploader;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -57,14 +58,28 @@ class ReviewController extends Controller
 
         $validated = $request->validate([
             'rating' => 'required|integer|min:1|max:5',
-            'title' => 'nullable|string|max:255',
-            'content' => 'required|string|max:2000',
-            'pros' => 'nullable|string|max:1000',
-            'cons' => 'nullable|string|max:1000',
+            // The three text fields were plain string|max rules, so a review
+            // could carry markup into a column that the product page, the
+            // moderation queue and the review emails all render.
+            'title' => V::text(required: false, max: 255),
+            'content' => V::textarea(max: 2000),
+            'pros' => V::textarea(required: false, max: 1000),
+            'cons' => V::textarea(required: false, max: 1000),
             'images' => 'nullable|array|max:5',
-            'images.*' => 'image|mimes:jpeg,jpg,png,webp|max:5120',
+            // mimes checks the extension, mimetypes sniffs the bytes: with
+            // mimes alone a PHP script named photo.jpg passes.
+            'images.*' => V::image(required: false, maxKb: 5120),
             'videos' => 'nullable|array|max:2',
-            'videos.*' => 'mimetypes:video/mp4,video/webm,video/quicktime|max:20480',
+            'videos.*' => [
+                'nullable',
+                'file',
+                'mimes:mp4,webm,mov',
+                'mimetypes:video/mp4,video/webm,video/quicktime',
+                'max:20480',
+            ],
+        ], [
+            'rating.required' => 'Please choose a star rating.',
+            'content.required' => 'Please write a few words about the product.',
         ]);
 
         if (! empty($validated['pros'])) {

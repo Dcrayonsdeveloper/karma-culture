@@ -75,8 +75,11 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label for="name" class="block text-[13px] font-medium text-neutral-600 mb-1.5">Full Name <span class="text-error-500">*</span></label>
+                                    {{-- maxlength matches the server's max:100, and the two
+                                         varchar(50) columns the name is split across. It was 255,
+                                         so the box accepted more than twice what could be saved. --}}
                                     <input type="text" name="name" id="name" value="{{ old('name') }}" required
-                                           minlength="2" maxlength="255" autocomplete="name"
+                                           minlength="2" maxlength="100" autocomplete="name"
                                            title="Enter the full name for this address."
                                            class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors @error('name') border-error-300 ring-1 ring-error-300 @enderror"
                                            placeholder="Enter full name">
@@ -89,8 +92,13 @@
                                     <label for="phone" class="block text-[13px] font-medium text-neutral-600 mb-1.5">Phone Number <span class="text-error-500">*</span></label>
                                     <div class="relative">
                                         <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-neutral-600">+91</span>
+                                        {{-- The pattern tolerates exactly what IndianMobile tolerates:
+                                             an optional +91/0 prefix and the spaces or hyphens people
+                                             write a number with. pattern="[6-9][0-9]{9}" was stricter
+                                             than the server, so pasting "+91 98765 43210" - which the
+                                             server accepts and normalises - was refused here first. --}}
                                         <input type="tel" name="phone" id="phone" value="{{ old('phone') }}" required
-                                               maxlength="10" minlength="10" pattern="[6-9][0-9]{9}"
+                                               maxlength="20" pattern="(\+?91[\s\-]?)?0?[6-9][0-9\s\-]{9,}"
                                                inputmode="numeric" autocomplete="tel-national"
                                                title="Enter a 10-digit Indian mobile number starting with 6, 7, 8 or 9."
                                                class="w-full rounded-lg border border-neutral-200 pl-12 pr-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors @error('phone') border-error-300 ring-1 ring-error-300 @enderror"
@@ -110,8 +118,10 @@
                             <div class="space-y-4">
                                 <div>
                                     <label for="address_line1" class="block text-[13px] font-medium text-neutral-600 mb-1.5">Address Line 1 <span class="text-error-500">*</span></label>
+                                    {{-- minlength 3, matching V::addressLine(): 5 rejected "A/4",
+                                         which is a whole address line in parts of the country. --}}
                                     <input type="text" name="address_line1" id="address_line1" value="{{ old('address_line1') }}" required
-                                           minlength="5" maxlength="255" autocomplete="address-line1"
+                                           minlength="3" maxlength="255" autocomplete="address-line1"
                                            title="House or flat number, building and street."
                                            class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors @error('address_line1') border-error-300 ring-1 ring-error-300 @enderror"
                                            placeholder="House/Flat no., Building, Street">
@@ -121,8 +131,12 @@
                                 </div>
 
                                 <div>
-                                    <label for="address_line2" class="block text-[13px] font-medium text-neutral-600 mb-1.5">Address Line 2 <span class="text-neutral-600 font-normal">(Optional)</span></label>
+                                    <label for="address_line2" class="block text-[13px] font-medium text-neutral-600 mb-1.5">Address Line 2</label>
+                                    {{-- Optional, so no `required` - but once something is typed it
+                                         has to be an address line, same as line 1. --}}
                                     <input type="text" name="address_line2" id="address_line2" value="{{ old('address_line2') }}"
+                                           minlength="3" maxlength="255" autocomplete="address-line2"
+                                           title="Area, colony or a nearby landmark."
                                            class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors @error('address_line2') border-error-300 ring-1 ring-error-300 @enderror"
                                            placeholder="Area, Colony, Landmark">
                                     @error('address_line2')
@@ -135,6 +149,7 @@
                                         <label for="city" class="block text-[13px] font-medium text-neutral-600 mb-1.5">City <span class="text-error-500">*</span></label>
                                         <input type="text" name="city" id="city" value="{{ old('city') }}" required
                                                minlength="2" maxlength="100" autocomplete="address-level2"
+                                               title="Enter the city or town name."
                                                class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors @error('city') border-error-300 ring-1 ring-error-300 @enderror"
                                                placeholder="Enter city">
                                         @error('city')
@@ -147,18 +162,9 @@
                                         <select name="state" id="state" required
                                                 class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors @error('state') border-error-300 ring-1 ring-error-300 @enderror">
                                             <option value="">Select state</option>
-                                            @php
-                                                $states = [
-                                                    'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
-                                                    'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand',
-                                                    'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
-                                                    'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
-                                                    'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura',
-                                                    'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
-                                                    'Andaman and Nicobar Islands', 'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu',
-                                                    'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry',
-                                                ];
-                                            @endphp
+                                            {{-- $states is AddressController::STATES, the same list the
+                                                 controller validates against, so the options offered and
+                                                 the values accepted cannot drift apart. --}}
                                             @foreach ($states as $state)
                                                 <option value="{{ $state }}" {{ old('state') === $state ? 'selected' : '' }}>{{ $state }}</option>
                                             @endforeach
@@ -172,10 +178,12 @@
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label for="postal_code" class="block text-[13px] font-medium text-neutral-600 mb-1.5">PIN Code <span class="text-error-500">*</span></label>
+                                        {{-- [1-9] first, matching the server's /^[1-9]\d{5}$/: the old
+                                             [0-9]{6} passed "012345" here and failed it on the server. --}}
                                         <input type="text" name="postal_code" id="postal_code" value="{{ old('postal_code') }}" required
-                                               maxlength="6" minlength="6" pattern="[0-9]{6}"
+                                               maxlength="6" minlength="6" pattern="[1-9][0-9]{5}"
                                                inputmode="numeric" autocomplete="postal-code"
-                                               title="Enter a 6-digit PIN code."
+                                               title="Enter a 6-digit PIN code. It cannot start with 0."
                                                class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors @error('postal_code') border-error-300 ring-1 ring-error-300 @enderror"
                                                placeholder="6-digit PIN code">
                                         @error('postal_code')

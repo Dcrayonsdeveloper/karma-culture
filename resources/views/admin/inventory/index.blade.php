@@ -121,11 +121,20 @@
                            style="width: 100%; padding: 0.4rem 0.5rem 0.4rem 1.75rem; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; outline: none; color: #303030;">
                 </div>
                 <button type="submit" class="btn btn-secondary btn-sm">Search</button>
+                @if($locations->isNotEmpty())
+                    <select name="location" onchange="this.form.submit()" aria-label="Filter by location"
+                            style="padding: 0.4rem 2rem 0.4rem 0.5rem; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; color: #303030; background-color: #fff; outline: none;">
+                        <option value="">All locations</option>
+                        @foreach($locations as $location)
+                            <option value="{{ $location->id }}" {{ (string) request('location') === (string) $location->id ? 'selected' : '' }}>{{ $location->name }}</option>
+                        @endforeach
+                    </select>
+                @endif
                 @if(request('search'))
                     <a href="{{ route('admin.inventory.index', request()->except('search', 'page')) }}" style="padding: 0.4rem 0.75rem; font-size: 13px; color: #616161; text-decoration: none;">Clear</a>
                 @endif
                 <div style="margin-left: auto;">
-                    <select name="per_page" onchange="this.form.submit()" style="padding: 0.4rem 0.5rem; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; color: #303030; background: #fff; outline: none;">
+                    <select name="per_page" onchange="this.form.submit()" style="padding: 0.4rem 2rem 0.4rem 0.5rem; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; color: #303030; background-color: #fff; outline: none;">
                         @foreach([10, 25, 50, 100] as $n)
                             <option value="{{ $n }}" {{ request('per_page', 10) == $n ? 'selected' : '' }}>{{ $n }} per page</option>
                         @endforeach
@@ -151,6 +160,7 @@
                         <th>Product</th>
                         <th>SKU</th>
                         <th style="text-align: center;">Stock</th>
+                        <th>Warehouses</th>
                         <th style="text-align: center;">Threshold</th>
                         <th>Status</th>
                         <th style="text-align: right;">Actions</th>
@@ -174,6 +184,19 @@
                                     $qtyColor = $isOut ? '#d72c0d' : ($isLow ? '#b98900' : '#1a7a2e');
                                 @endphp
                                 <span style="font-size: 13px; font-weight: 700; color: {{ $qtyColor }};">{{ $qty }}</span>
+                            </td>
+                            <td>
+                                @php $byLocation = $product->inventoryStocks->groupBy('location_id'); @endphp
+                                @forelse($byLocation as $lines)
+                                    @php $atLocation = $lines->first()->location; @endphp
+                                    <a href="{{ $atLocation ? route('admin.inventory.locations.show', $atLocation) : '#' }}"
+                                       title="{{ $atLocation->name ?? 'Location' }}"
+                                       style="display: inline-block; margin: 1px 2px 1px 0; padding: 0.125rem 0.375rem; border-radius: 0.25rem; background: #f6f6f7; color: #616161; font-size: 12px; text-decoration: none;">
+                                        {{ $atLocation->code ?? '?' }} <span style="font-weight: 600; color: #303030;">{{ $lines->sum('quantity') }}</span>
+                                    </a>
+                                @empty
+                                    <span style="font-size: 12px; color: #8a8a8a;">Not in a warehouse</span>
+                                @endforelse
                             </td>
                             <td style="text-align: center; color: #616161;">
                                 {{ $product->low_stock_threshold ?? '-' }}
@@ -199,7 +222,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" style="padding: 4rem 1rem; text-align: center;">
+                            <td colspan="7" style="padding: 4rem 1rem; text-align: center;">
                                 <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
                                     <div style="width: 3rem; height: 3rem; background: #f6f6f7; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                                         <svg style="width: 1.5rem; height: 1.5rem; color: #616161;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -207,7 +230,7 @@
                                         </svg>
                                     </div>
                                     <p style="font-size: 13px; font-weight: 500; color: #303030; margin: 0;">No products found</p>
-                                    @if(request()->hasAny(['search', 'status']))
+                                    @if(request()->hasAny(['search', 'status', 'location']))
                                         <a href="{{ route('admin.inventory.index') }}" style="font-size: 13px; color: #005bd3; text-decoration: none;">Clear filters</a>
                                     @endif
                                 </div>
@@ -230,13 +253,15 @@
     <div x-data="{ open: false, productId: null, productName: '', currentStock: 0, isNew: false }"
          x-on:open-stock-modal.window="open = true; productId = $event.detail.id; productName = $event.detail.name; currentStock = $event.detail.stock; isNew = !$event.detail.id"
          x-show="open" x-cloak
-         style="position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;">
+         x-transition.opacity.duration.150ms
+         x-effect="document.body.classList.toggle('kk-modal-open', open)"
+         class="kk-modal">
 
         {{-- Overlay --}}
-        <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.5);" x-on:click="open = false"></div>
+        <div class="kk-modal__backdrop" x-on:click="open = false"></div>
 
         {{-- Modal Card --}}
-        <div style="position: relative; background: #fff; border-radius: 0.75rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); width: 100%; max-width: 28rem; margin: 0 1rem;" x-transition>
+        <div class="kk-modal__card">
 
             {{-- Modal Header --}}
             <div style="padding: 1rem; border-bottom: 1px solid #e3e3e3; display: flex; align-items: center; justify-content: space-between;">
@@ -266,8 +291,10 @@
                 {{-- Modal Body --}}
                 <div style="padding: 1rem; display: flex; flex-direction: column; gap: 1rem;">
                     <div x-show="isNew">
-                        <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: #303030; margin-bottom: 0.25rem;">Product <span style="color: #d72c0d;">*</span></label>
-                        <select class="form-select" style="width: 100%; padding: 0.4rem 0.5rem; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; color: #303030; background: #fff; outline: none;"
+                        <label for="stock_product" class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: #303030; margin-bottom: 0.25rem;">Product <span style="color: #d72c0d;">*</span></label>
+                        {{-- No name attribute: this select only picks which product the
+                             form POSTs to, and route-model binding validates the id. --}}
+                        <select id="stock_product" class="form-select" style="width: 100%; padding: 0.4rem 2rem 0.4rem 0.5rem; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; color: #303030; background-color: #fff; outline: none;"
                                 x-on:change="productId = $event.target.value; let opt = $event.target.selectedOptions[0]; currentStock = opt.dataset.stock || 0" x-bind:required="isNew">
                             <option value="">Select a product...</option>
                             @foreach(\App\Models\Product::select('id', 'name', 'stock_quantity')->orderBy('name')->get() as $p)
@@ -277,21 +304,36 @@
                         <p style="font-size: 12px; color: #616161; margin: 0.25rem 0 0 0;" x-show="productId && isNew">Current stock: <span style="font-weight: 600; color: #303030;" x-text="currentStock"></span></p>
                     </div>
                     <div>
-                        <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: #303030; margin-bottom: 0.25rem;">Adjustment Type <span style="color: #d72c0d;">*</span></label>
-                        <select name="type" class="form-select" required style="width: 100%; padding: 0.4rem 0.5rem; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; color: #303030; background: #fff; outline: none;">
+                        {{-- Stock sits in a warehouse, so an adjustment has to say
+                             which one it happens at. The product's total follows
+                             the same change. --}}
+                        <label for="stock_location" class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: #303030; margin-bottom: 0.25rem;">Location</label>
+                        <select name="location_id" id="stock_location" class="form-select" style="width: 100%; padding: 0.4rem 2rem 0.4rem 0.5rem; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; color: #303030; background-color: #fff; outline: none;">
+                            @forelse($locations as $location)
+                                <option value="{{ $location->id }}" @selected($location->is_default)>{{ $location->name }} ({{ $location->code }})</option>
+                            @empty
+                                <option value="">Main Warehouse</option>
+                            @endforelse
+                        </select>
+                    </div>
+                    <div>
+                        <label for="stock_type" class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: #303030; margin-bottom: 0.25rem;">Adjustment Type <span style="color: #d72c0d;">*</span></label>
+                        <select name="type" id="stock_type" class="form-select" required style="width: 100%; padding: 0.4rem 2rem 0.4rem 0.5rem; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; color: #303030; background-color: #fff; outline: none;">
                             <option value="add">Add Stock</option>
                             <option value="remove">Remove Stock</option>
                             <option value="set">Set Stock To</option>
                         </select>
                     </div>
                     <div>
-                        <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: #303030; margin-bottom: 0.25rem;">Quantity <span style="color: #d72c0d;">*</span></label>
-                        <input type="number" name="quantity" min="0" required class="form-input" placeholder="0"
+                        <label for="stock_quantity" class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: #303030; margin-bottom: 0.25rem;">Quantity <span style="color: #d72c0d;">*</span></label>
+                        {{-- "Remove" is additionally capped server-side at the stock on hand:
+                             the column is UNSIGNED, so removing more was a DB error. --}}
+                        <input type="number" name="quantity" id="stock_quantity" min="0" max="1000000" step="1" required class="form-input" placeholder="0"
                                style="width: 100%; padding: 0.4rem 0.5rem; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; color: #303030; outline: none; box-sizing: border-box;">
                     </div>
                     <div>
-                        <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: #303030; margin-bottom: 0.25rem;">Reason <span style="font-weight: 400; color: #616161;">(optional)</span></label>
-                        <input type="text" name="reason" class="form-input" placeholder="e.g. Restock, Damaged, Correction"
+                        <label for="stock_reason" class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: #303030; margin-bottom: 0.25rem;">Reason</label>
+                        <input type="text" name="reason" id="stock_reason" maxlength="255" class="form-input" placeholder="e.g. Restock, Damaged, Correction"
                                style="width: 100%; padding: 0.4rem 0.5rem; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; color: #303030; outline: none; box-sizing: border-box;">
                     </div>
                 </div>

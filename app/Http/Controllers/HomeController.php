@@ -89,8 +89,13 @@ class HomeController extends Controller
             ->orderBy('priority')
             ->get();
 
-        // Homepage sections
-        $sections = HomepageSection::active()->ordered()->get()->keyBy('key');
+        // Homepage sections. Inactive rows are loaded too, not filtered out: the
+        // home page markup is hand-built rather than generated from this table,
+        // so a section that is simply missing from the collection falls back to
+        // its hardcoded default and renders anyway. The view needs to be able to
+        // tell "admin switched this off" apart from "never configured", which it
+        // can only do if the switched-off row is present to be inspected.
+        $sections = HomepageSection::ordered()->get()->keyBy('key');
 
         // Testimonials
         $testimonials = Testimonial::active()->ordered()->take(6)->get();

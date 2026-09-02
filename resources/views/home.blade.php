@@ -258,20 +258,77 @@
                 to   { opacity: 1; transform: translateY(0); }
             }
 
-            /* The visible rail */
+            /* The visible rail.
+
+               One rail, one row, at every count and every width. The rail used
+               to be a grid whose column count came from the item list, so the
+               moment an admin added a seventh size the extra hanger dropped
+               onto a second row that the rail bar never reached and that
+               painted straight over the section below. Now the hangers size
+               themselves down to fit the count and the rail scrolls sideways
+               once they hit their floor, so the shape holds for 3 items or 30. */
             .kk-rail-wrap {
                 position: relative;
-                padding-top: 14px;
                 width: 100%;
-                max-width: 980px;
+                /* The rail itself is still 980px; the extra is the scroller's
+                   own gutter, so the hangers keep the width they always had. */
+                --kk-rail-pad: 16px;
+                max-width: calc(980px + 2 * var(--kk-rail-pad));
                 margin: 0 auto;
+            }
+            .kk-rail-scroll {
+                overflow-x: auto;
+                overflow-y: hidden;
+                overscroll-behavior-x: contain;
+                -webkit-overflow-scrolling: touch;
+                scroll-snap-type: x proximity;
+                /* Room for the bar's end caps and the hangers' drop shadows. */
+                padding: 16px var(--kk-rail-pad) 6px;
+                scrollbar-width: thin;
+                scrollbar-color: rgba(45,24,16,.22) transparent;
+            }
+            .kk-rail-scroll::-webkit-scrollbar { height: 6px; }
+            .kk-rail-scroll::-webkit-scrollbar-track { background: transparent; }
+            .kk-rail-scroll::-webkit-scrollbar-thumb { background: rgba(45,24,16,.20); border-radius: 999px; }
+            .kk-rail-scroll:hover::-webkit-scrollbar-thumb { background: rgba(45,24,16,.34); }
+
+            /* Cells along the rail */
+            .kk-rail-cells {
+                /* max-content keeps the row (and the bar spanning it) intact
+                   when the hangers overflow; min-width:100% lets a short rail
+                   still spread across the full width the way the grid did. */
+                display: flex;
+                justify-content: space-around;
+                align-items: flex-start;
+                width: max-content;
+                min-width: 100%;
+                gap: var(--kk-rail-gap);
+                position: relative;
+                z-index: 1;
+
+                /* --kk-rail-count is set per tab from the admin row count. */
+                --kk-rail-gap: clamp(6px, 1.2vw, 16px);
+                /* The scroller's gutter comes off the top, or the row lands
+                   a hair wider than the box that holds it and scrolls when it
+                   should have fitted. */
+                --kk-rail-avail: min(980px, calc(100vw - 48px - 2 * var(--kk-rail-pad)));
+                /* Shrink each hanger to fit the count, down to a floor - past
+                   that the rail scrolls rather than shaving them to slivers. */
+                --kk-rail-cell: clamp(
+                    88px,
+                    calc((var(--kk-rail-avail) - (var(--kk-rail-count, 6) - 1) * var(--kk-rail-gap)) / var(--kk-rail-count, 6)),
+                    150px
+                );
             }
             .kk-rail-bar {
                 position: absolute;
-                top: 38px;
-                left: 4%;
-                right: 4%;
-                height: 5px;
+                /* Pinned to a fraction of the hanger width instead of a fixed
+                   38px: the hook sits at the same point on every hanger, so a
+                   fixed offset slid off them as soon as the hangers shrank. */
+                top: calc(var(--kk-rail-cell) * 0.16);
+                left: 12px;
+                right: 12px;
+                height: clamp(3px, calc(var(--kk-rail-cell) * 0.033), 5px);
                 background: linear-gradient(to bottom, #2d1810, #1f1109);
                 border-radius: 4px;
                 box-shadow: 0 3px 6px rgba(45,24,16,.30);
@@ -280,28 +337,21 @@
             .kk-rail-bar::before, .kk-rail-bar::after {
                 content: '';
                 position: absolute;
-                width: 14px; height: 14px;
+                width: clamp(9px, calc(var(--kk-rail-cell) * 0.093), 14px);
+                height: clamp(9px, calc(var(--kk-rail-cell) * 0.093), 14px);
                 background: #2d1810;
                 border-radius: 50%;
-                top: -5px;
+                top: 50%;
+                transform: translateY(-50%);
                 box-shadow: 0 2px 4px rgba(0,0,0,.2);
             }
             .kk-rail-bar::before { left: -10px; }
             .kk-rail-bar::after  { right: -10px; }
 
-            /* Cells along the rail */
-            .kk-rail-cells {
-                display: grid;
-                /* Driven by the item count, not hardcoded: the tabs are filled
-                   from admin-managed rows, so a seventh size dropped onto a
-                   second row the moment someone added one. */
-                grid-template-columns: repeat(var(--kk-rail-cols, 6), minmax(0, 1fr));
-                gap: 8px;
-                row-gap: 26px;
-                position: relative;
-                z-index: 1;
-            }
             .kk-rail-cell {
+                flex: 0 0 auto;
+                width: var(--kk-rail-cell);
+                scroll-snap-align: center;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
@@ -311,7 +361,6 @@
             }
             .kk-shirt-hanger {
                 width: 100%;
-                max-width: 150px;
                 transform-origin: top center;
                 transition: transform .4s cubic-bezier(.22,1,.36,1), filter .35s;
             }
@@ -321,42 +370,49 @@
                 filter: drop-shadow(0 12px 20px rgba(45,24,16,.28));
             }
 
-            /* Labels under each hanger */
+            /* Labels under each hanger - sized off the hanger so they stay in
+               proportion (and inside the cell) as the rail tightens up. */
             .kk-rail-label {
                 font-family: var(--kk-display);
-                font-size: 22px;
+                font-size: clamp(15px, calc(var(--kk-rail-cell) * 0.145), 22px);
                 font-weight: 600;
                 color: var(--kk-text);
                 letter-spacing: 0.04em;
+                line-height: 1.2;
                 margin-top: 6px;
+                overflow-wrap: anywhere;
                 transition: color .3s;
             }
             .kk-rail-cell:hover .kk-rail-label { color: var(--kk-tan-dark); }
             .kk-rail-count {
-                font-size: 10px;
-                letter-spacing: 0.24em;
+                font-size: clamp(8px, calc(var(--kk-rail-cell) * 0.067), 10px);
+                letter-spacing: 0.18em;
                 text-transform: uppercase;
                 color: var(--kk-text-muted);
                 font-weight: 500;
+                line-height: 1.3;
                 margin-top: -2px;
+                overflow-wrap: anywhere;
             }
 
             @media (max-width: 1024px) {
                 .kk-syw-heading { font-size: 36px; }
-                .kk-rail-cells { gap: 4px; }
-                .kk-shirt-hanger { max-width: 120px; }
             }
             @media (max-width: 767px) {
                 .kk-shop-your-way { padding: 16px 0 20px; }
                 .kk-syw-heading { font-size: 28px; }
-                .kk-syw-tabs { padding: 4px; gap: 2px; margin-top: 24px; }
-                .kk-syw-tab { padding: 10px 16px; min-width: 100px; }
+                .kk-syw-tabs { padding: 4px; gap: 2px; margin-top: 24px; max-width: 100%; }
+                .kk-syw-tab { padding: 10px 16px; min-width: 0; flex: 1 1 0; }
                 .kk-syw-tab small { font-size: 8px; letter-spacing: 0.22em; }
                 .kk-syw-tab span { font-size: 14px; }
-                .kk-rail-bar { display: none; }
-                .kk-rail-cells { grid-template-columns: repeat(3, 1fr); row-gap: 28px; }
-                .kk-shirt-hanger { max-width: 110px; }
-                .kk-rail-label { font-size: 18px; }
+                .kk-syw-stage { margin-top: 36px; }
+                .kk-rail-wrap { --kk-rail-pad: 12px; }
+            }
+            @media (max-width: 520px) {
+                /* Three eyebrows at ~150px each ran the tab row past the
+                   viewport and gave the whole page a sideways scroll. */
+                .kk-syw-tab small { display: none; }
+                .kk-syw-tab { padding: 11px 14px; }
             }
 
             /* Product cards - compact 4-up grid */
@@ -948,14 +1004,21 @@
              ABOUT US - video-led, minimal text
              ============================================ --}}
         @php
-            $aboutTitle = ($sections['about_us']->title ?? null) ?: 'Crafted to Last';
+            $aboutSection = $sections['about_us'] ?? null;
+            // The admin's Visible/Hidden switch on this section has to actually
+            // hide it. A missing row still renders with the defaults below, so
+            // the section works before it has ever been configured; only a row
+            // that exists and is switched off suppresses the block.
+            $aboutVisible = $aboutSection === null || $aboutSection->is_active;
+            $aboutTitle = ($aboutSection->title ?? null) ?: 'Crafted to Last';
             // subtitle, not content: content is cast to an array and the admin
             // edits it as a repeater of title/description/icon items, so reading
             // it here produced an array where a sentence was wanted and the
             // admin's own tagline field never reached the page.
-            $aboutText  = ($sections['about_us']->subtitle ?? null) ?: 'A closer look at the cloth, cut and craft.';
-            $aboutLink  = ($sections['about_us']->button_link ?? null);
+            $aboutText  = ($aboutSection->subtitle ?? null) ?: 'A closer look at the cloth, cut and craft.';
+            $aboutLink  = ($aboutSection->button_link ?? null);
             $aboutLink  = ($aboutLink && $aboutLink !== '#') ? $aboutLink : route('about');
+            $aboutButton = ($aboutSection->button_text ?? null) ?: 'Our Story';
             // Three reel-style videos, each admin-configurable (Site Settings).
             // Falls back to numbered default paths so the section works pre-config.
             $aboutVideoKeys     = ['about_us_video_url', 'about_us_video_url_2', 'about_us_video_url_3'];
@@ -968,6 +1031,7 @@
                     : asset($aboutVideoDefaults[$ai]);
             }
         @endphp
+        @if($aboutVisible)
         <section class="kk-about">
             <div class="container mx-auto px-4">
                 <span class="kk-eyebrow">About Us</span>
@@ -985,10 +1049,11 @@
                 </div>
 
                 <div class="kk-about-cta">
-                    <a href="{{ $aboutLink }}" class="kk-btn-brown">Our Story</a>
+                    <a href="{{ $aboutLink }}" class="kk-btn-brown">{{ $aboutButton }}</a>
                 </div>
             </div>
         </section>
+        @endif
 
         {{-- ============================================
              SHOP IT YOUR WAY - Rail of hangers per tab
@@ -1048,42 +1113,50 @@
                              x-transition:leave-start="opacity-100"
                              x-transition:leave-end="opacity-0">
                             <div class="kk-rail-wrap">
-                                <div class="kk-rail-bar" aria-hidden="true"></div>
-                                {{-- Capped so a long list wraps to a second row instead of
-                                     shrinking every hanger into a sliver. --}}
-                                <div class="kk-rail-cells" style="--kk-rail-cols: {{ max(1, min(count($tabCfg['items']), 8)) }};">
-                                    @foreach($tabCfg['items'] as $i => $item)
-                                        {{-- Display only. These linked through to the shop with a
-                                             size/price/shade filter, which returned nothing, so every
-                                             hanger was a dead end onto an empty results page. --}}
-                                        <div class="kk-rail-cell"
-                                             style="--d: {{ $i * 80 }}ms;">
-                                            <div class="kk-shirt-hanger" style="color: {{ $item['shade'] }};">
-                                                <svg viewBox="0 0 100 170" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                                                    {{-- Hook --}}
-                                                    <path d="M50 4 Q52 4 52 10 C52 14 47 15 47 20 Q49 24 52 24"
-                                                          stroke="#3a2a1f" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                                                    {{-- Hanger triangle --}}
-                                                    <path d="M52 24 L17 51 L83 51"
-                                                          stroke="#3a2a1f" stroke-width="2" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
-                                                    <line x1="17" y1="51" x2="83" y2="51" stroke="#3a2a1f" stroke-width="2" stroke-linecap="round"/>
-                                                    {{-- T-shirt body --}}
-                                                    <path d="M30 52 L15 60 L6 78 L20 90 L25 82 L25 156 Q25 162 31 162 L69 162 Q75 162 75 156 L75 82 L80 90 L94 78 L85 60 L70 52 L65 54 Q50 64 35 54 Z"
-                                                          fill="currentColor" stroke="rgba(0,0,0,0.10)" stroke-width="1"/>
-                                                    {{-- Neckline shadow --}}
-                                                    <path d="M38 55 Q50 63 62 55"
-                                                          fill="none" stroke="rgba(0,0,0,0.18)" stroke-width="1.2" stroke-linecap="round"/>
-                                                </svg>
+                                {{-- The scroller is what keeps a long list on one rail: the
+                                     hangers size themselves down to the item count and, once
+                                     they hit their floor, the rail slides sideways instead of
+                                     wrapping onto a second row. --}}
+                                <div class="kk-rail-scroll">
+                                    <div class="kk-rail-cells" style="--kk-rail-count: {{ max(1, count($tabCfg['items'])) }};">
+                                        {{-- Only where there is something to hang off it: an
+                                             emptied-out tab otherwise showed a bare rail. --}}
+                                        @if(count($tabCfg['items']))
+                                            <div class="kk-rail-bar" aria-hidden="true"></div>
+                                        @endif
+                                        @foreach($tabCfg['items'] as $i => $item)
+                                            {{-- Display only. These linked through to the shop with a
+                                                 size/price/shade filter, which returned nothing, so every
+                                                 hanger was a dead end onto an empty results page. --}}
+                                            <div class="kk-rail-cell"
+                                                 style="--d: {{ $i * 80 }}ms;">
+                                                <div class="kk-shirt-hanger" style="color: {{ $item['shade'] }};">
+                                                    <svg viewBox="0 0 100 170" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                                        {{-- Hook --}}
+                                                        <path d="M50 4 Q52 4 52 10 C52 14 47 15 47 20 Q49 24 52 24"
+                                                              stroke="#3a2a1f" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                                                        {{-- Hanger triangle --}}
+                                                        <path d="M52 24 L17 51 L83 51"
+                                                              stroke="#3a2a1f" stroke-width="2" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+                                                        <line x1="17" y1="51" x2="83" y2="51" stroke="#3a2a1f" stroke-width="2" stroke-linecap="round"/>
+                                                        {{-- T-shirt body --}}
+                                                        <path d="M30 52 L15 60 L6 78 L20 90 L25 82 L25 156 Q25 162 31 162 L69 162 Q75 162 75 156 L75 82 L80 90 L94 78 L85 60 L70 52 L65 54 Q50 64 35 54 Z"
+                                                              fill="currentColor" stroke="rgba(0,0,0,0.10)" stroke-width="1"/>
+                                                        {{-- Neckline shadow --}}
+                                                        <path d="M38 55 Q50 63 62 55"
+                                                              fill="none" stroke="rgba(0,0,0,0.18)" stroke-width="1.2" stroke-linecap="round"/>
+                                                    </svg>
+                                                </div>
+                                                <div class="kk-rail-label">{{ $item['label'] }}</div>
+                                                {{-- Printed as authored. The admin sub-label field already
+                                                     carries the noun (its placeholder is "120 Styles"), so
+                                                     appending one here read "120 Styles Styles". --}}
+                                                @if($item['count'] !== '')
+                                                    <div class="kk-rail-count">{{ $item['count'] }}</div>
+                                                @endif
                                             </div>
-                                            <div class="kk-rail-label">{{ $item['label'] }}</div>
-                                            {{-- Printed as authored. The admin sub-label field already
-                                                 carries the noun (its placeholder is "120 Styles"), so
-                                                 appending one here read "120 Styles Styles". --}}
-                                            @if($item['count'] !== '')
-                                                <div class="kk-rail-count">{{ $item['count'] }}</div>
-                                            @endif
-                                        </div>
-                                    @endforeach
+                                        @endforeach
+                                    </div>
                                 </div>
                             </div>
                         </div>

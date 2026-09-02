@@ -3,26 +3,35 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\EnquiryReplied;
 use App\Models\Enquiry;
+use App\Models\EnquiryReply;
 use App\Models\Notification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
 class EnquiryController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = Enquiry::query();
+        $search = $request->input('search');
 
-        // Search
-        if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('subject', 'like', "%{$search}%");
-            });
-        }
+        $applySearch = function ($query) use ($search) {
+            if ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%")
+                      ->orWhere('subject', 'like', "%{$search}%");
+                });
+            }
+
+            return $query;
+        };
+
+        $query = $applySearch(Enquiry::query());
 
         // Filter by status
         if ($status = $request->input('status')) {
@@ -31,11 +40,20 @@ class EnquiryController extends Controller
 
         $enquiries = $query->latest()->paginate(15)->withQueryString();
 
+        // Counts follow the search so the tab labels never contradict the rows
+        // underneath them. `closed` was missing entirely, which left the Closed
+        // tab as the only one without a number.
+        $counts = $applySearch(Enquiry::query())
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
+
         $stats = [
-            'total' => Enquiry::count(),
-            'new' => Enquiry::where('status', 'new')->count(),
-            'read' => Enquiry::where('status', 'read')->count(),
-            'replied' => Enquiry::where('status', 'replied')->count(),
+            'total' => (int) $counts->sum(),
+            'new' => (int) $counts->get('new', 0),
+            'read' => (int) $counts->get('read', 0),
+            'replied' => (int) $counts->get('replied', 0),
+            'closed' => (int) $counts->get('closed', 0),
         ];
 
         return view('admin.enquiries.index', compact('enquiries', 'stats'));
@@ -51,7 +69,41 @@ class EnquiryController extends Controller
             ->unread()
             ->update(['is_read' => true, 'read_at' => now()]);
 
+        $enquiry->load('replies.user');
+
         return view('admin.enquiries.show', compact('enquiry'));
+    }
+
+    public function reply(Request $request, Enquiry $enquiry): RedirectResponse
+    {
+        $validated = $request->validate([
+            'message' => ['required', 'string', 'min:5', 'max:5000'],
+        ]);
+
+        EnquiryReply::create([
+            'enquiry_id' => $enquiry->id,
+            'user_id' => auth('admin')->id(),
+            'message' => $validated['message'],
+        ]);
+
+        $enquiry->update(['status' => 'replied']);
+
+        // An enquiry comes from the public contact form, so there is no account to
+        // notify in-app -- email is the only way the reply reaches the sender. Keep
+        // the saved reply even when the address is unroutable or the mailer is down.
+        try {
+            Mail::to($enquiry->email)->send(new EnquiryReplied($enquiry, $validated['message']));
+        } catch (\Throwable $e) {
+            Log::error('Failed to email enquiry reply', [
+                'enquiry_id' => $enquiry->id,
+                'email' => $enquiry->email,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->with('warning', "Reply saved, but the email to {$enquiry->email} could not be sent.");
+        }
+
+        return back()->with('success', "Reply sent to {$enquiry->email}.");
     }
 
     public function toggleRead(Enquiry $enquiry): RedirectResponse

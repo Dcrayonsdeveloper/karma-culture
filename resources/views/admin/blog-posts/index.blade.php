@@ -40,7 +40,7 @@
                     <svg style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: #8a8a8a;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
-                    <input type="text" name="search" value="{{ request('search') }}"
+                    <input type="text" name="search" maxlength="100" aria-label="Search" value="{{ request('search') }}"
                            placeholder="Search blog posts"
                            style="width: 100%; padding: 6px 10px 6px 32px; font-size: 13px; border: 1px solid #c9cccf; border-radius: 8px; outline: none; color: #303030; background: #fff;">
                 </div>
@@ -120,6 +120,13 @@
                                     @endif
                                     <a href="{{ route('admin.blog-posts.edit', $post) }}"
                                        style="color: #005bd3; text-decoration: none; font-size: 13px; font-weight: 500;">Edit</a>
+                                    <form action="{{ route('admin.blog-posts.toggle-status', $post) }}" method="POST" style="margin: 0;">
+                                        @csrf
+                                        @method('PUT')
+                                        <button type="submit" style="background: none; border: none; color: #005bd3; cursor: pointer; font-size: 13px; font-weight: 500; padding: 0;">
+                                            {{ $post->is_published ? 'Unpublish' : 'Publish' }}
+                                        </button>
+                                    </form>
                                     <form action="{{ route('admin.blog-posts.destroy', $post) }}" method="POST"
                                           onsubmit="return confirm('Delete this blog post?')" style="margin: 0;">
                                         @csrf

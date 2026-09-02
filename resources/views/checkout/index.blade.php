@@ -16,7 +16,9 @@
 
             @php
                 $prefill = auth()->user();
-                $states = ['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Andaman and Nicobar Islands','Chandigarh','Dadra and Nagar Haveli and Daman and Diu','Delhi','Jammu and Kashmir','Ladakh','Lakshadweep','Puducherry'];
+                // One source of truth with the Rule::in that validates the POST,
+                // so an option can never be offered that the server rejects.
+                $states = \App\Http\Controllers\CheckoutController::STATES;
             @endphp
 
             @php
@@ -78,58 +80,77 @@
                                 {{-- Only the typed form is hidden; email is always needed for the
                                      order confirmation, so it stays visible below. --}}
                                 <div>
-                                    <label class="block text-[11px] font-medium text-neutral-600 mb-1">Email *</label>
-                                    <input type="email" name="email" value="{{ old('email', $prefill->email ?? '') }}"
+                                    <label for="kk-co-email" class="block text-[11px] font-medium text-neutral-600 mb-1">Email *</label>
+                                    {{-- type="email" alone accepts a bare hostname, which is how
+                                         "chirag@saas" reached the order confirmation and bounced.
+                                         The pattern demands a dot in the domain, matching the
+                                         server's email:strict rule. --}}
+                                    <input type="email" name="email" id="kk-co-email" value="{{ old('email', $prefill->email ?? '') }}"
+                                           required maxlength="160" autocomplete="email" inputmode="email"
+                                           pattern=".+@.+\..+"
+                                           title="Enter a full email address, including the part after the dot - like you@example.com"
                                            class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
-                                           placeholder="you@example.com" required>
+                                           placeholder="you@example.com">
                                     @error('email')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
                                 </div>
 
                                 <div x-show="addrId === ''" x-cloak class="space-y-3">
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label class="block text-[11px] font-medium text-neutral-600 mb-1">Full Name *</label>
-                                        <input type="text" name="full_name" value="{{ old('full_name', $prefill->name ?? '') }}"
+                                        <label for="kk-co-name" class="block text-[11px] font-medium text-neutral-600 mb-1">Full Name *</label>
+                                        <input type="text" name="full_name" id="kk-co-name" value="{{ old('full_name', $prefill->name ?? '') }}"
+                                               minlength="2" maxlength="100" autocomplete="name"
                                                class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
-                                               placeholder="Full name" :required="addrId === ''">
+                                               placeholder="Full name" :required="addrId === ''" :disabled="addrId !== ''">
                                         @error('full_name')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
                                     </div>
                                     <div>
-                                        <label class="block text-[11px] font-medium text-neutral-600 mb-1">Phone *</label>
-                                        <input type="tel" name="phone" value="{{ old('phone') }}" maxlength="10"
+                                        <label for="kk-co-phone" class="block text-[11px] font-medium text-neutral-600 mb-1">Phone *</label>
+                                        {{-- maxlength was 10, which made the box reject the
+                                             "+91 98765 43210" form the server happily accepts.
+                                             The pattern tolerates exactly what IndianMobile
+                                             strips before testing the ten digits. --}}
+                                        <input type="tel" name="phone" id="kk-co-phone" value="{{ old('phone') }}"
+                                               maxlength="20" inputmode="numeric" autocomplete="tel"
+                                               pattern="(\+?91[\s\-]?)?0?[6-9][0-9\s\-]{9,}"
+                                               title="Enter a 10-digit Indian mobile number starting with 6, 7, 8 or 9."
                                                class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
-                                               placeholder="10-digit mobile number" :required="addrId === ''">
+                                               placeholder="10-digit mobile number" :required="addrId === ''" :disabled="addrId !== ''">
                                         @error('phone')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
                                     </div>
                                 </div>
 
 
                                 <div>
-                                    <label class="block text-[11px] font-medium text-neutral-600 mb-1">Address Line 1 *</label>
-                                    <input type="text" name="address_line_1" value="{{ old('address_line_1') }}"
+                                    <label for="kk-co-addr1" class="block text-[11px] font-medium text-neutral-600 mb-1">Address Line 1 *</label>
+                                    <input type="text" name="address_line_1" id="kk-co-addr1" value="{{ old('address_line_1') }}"
+                                           minlength="3" maxlength="255" autocomplete="address-line1"
                                            class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
-                                           placeholder="House no., Building, Street" :required="addrId === ''">
+                                           placeholder="House no., Building, Street" :required="addrId === ''" :disabled="addrId !== ''">
                                     @error('address_line_1')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
                                 </div>
 
                                 <div>
-                                    <label class="block text-[11px] font-medium text-neutral-600 mb-1">Address Line 2</label>
-                                    <input type="text" name="address_line_2" value="{{ old('address_line_2') }}"
+                                    <label for="kk-co-addr2" class="block text-[11px] font-medium text-neutral-600 mb-1">Address Line 2</label>
+                                    <input type="text" name="address_line_2" id="kk-co-addr2" value="{{ old('address_line_2') }}"
+                                           minlength="3" maxlength="255" autocomplete="address-line2"
                                            class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
-                                           placeholder="Area, Landmark (optional)">
+                                           placeholder="Area, Landmark" :disabled="addrId !== ''">
+                                    @error('address_line_2')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
                                 </div>
 
                                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                     <div>
-                                        <label class="block text-[11px] font-medium text-neutral-600 mb-1">City *</label>
-                                        <input type="text" name="city" value="{{ old('city') }}"
+                                        <label for="kk-co-city" class="block text-[11px] font-medium text-neutral-600 mb-1">City *</label>
+                                        <input type="text" name="city" id="kk-co-city" value="{{ old('city') }}"
+                                               minlength="1" maxlength="100" autocomplete="address-level2"
                                                class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
-                                               placeholder="City" :required="addrId === ''">
+                                               placeholder="City" :required="addrId === ''" :disabled="addrId !== ''">
                                         @error('city')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
                                     </div>
                                     <div>
-                                        <label class="block text-[11px] font-medium text-neutral-600 mb-1">State *</label>
-                                        <select name="state" class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100" :required="addrId === ''">
+                                        <label for="kk-co-state" class="block text-[11px] font-medium text-neutral-600 mb-1">State *</label>
+                                        <select name="state" id="kk-co-state" autocomplete="address-level1" class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100" :required="addrId === ''" :disabled="addrId !== ''">
                                             <option value="">Select state</option>
                                             @foreach($states as $s)
                                                 <option value="{{ $s }}" {{ old('state') === $s ? 'selected' : '' }}>{{ $s }}</option>
@@ -138,10 +159,15 @@
                                         @error('state')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
                                     </div>
                                     <div>
-                                        <label class="block text-[11px] font-medium text-neutral-600 mb-1">PIN Code *</label>
-                                        <input type="text" name="postal_code" value="{{ old('postal_code') }}" maxlength="6"
+                                        <label for="kk-co-pin" class="block text-[11px] font-medium text-neutral-600 mb-1">PIN Code *</label>
+                                        {{-- inputmode="numeric" is what makes the box refuse letters
+                                             as they are typed, so "asdasd" can no longer be entered. --}}
+                                        <input type="text" name="postal_code" id="kk-co-pin" value="{{ old('postal_code') }}"
+                                               inputmode="numeric" minlength="6" maxlength="6" autocomplete="postal-code"
+                                               pattern="[1-9][0-9]{5}"
+                                               title="Enter a 6-digit PIN code. It cannot start with 0."
                                                class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
-                                               placeholder="400001" :required="addrId === ''">
+                                               placeholder="400001" :required="addrId === ''" :disabled="addrId !== ''">
                                         @error('postal_code')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
                                     </div>
                                 </div>
@@ -159,7 +185,7 @@
                                 @if($codAvailable)
                                     <label class="flex items-start gap-3 border rounded-lg px-4 py-3 cursor-pointer transition-colors"
                                            :class="pm === 'cod' ? 'border-primary-500 ring-1 ring-primary-200 bg-primary-50' : 'border-neutral-200 hover:border-neutral-300'">
-                                        <input type="radio" name="payment_method" value="cod" x-model="pm" class="mt-1 accent-primary-600">
+                                        <input type="radio" name="payment_method" value="cod" x-model="pm" required class="mt-1 accent-primary-600">
                                         <span class="min-w-0">
                                             <span class="flex items-center gap-1.5 text-sm font-semibold text-neutral-900">
                                                 <svg class="w-4 h-4 text-neutral-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
@@ -173,7 +199,7 @@
                                 @if($onlineAvailable)
                                     <label class="flex items-start gap-3 border rounded-lg px-4 py-3 cursor-pointer transition-colors"
                                            :class="pm === 'online' ? 'border-primary-500 ring-1 ring-primary-200 bg-primary-50' : 'border-neutral-200 hover:border-neutral-300'">
-                                        <input type="radio" name="payment_method" value="online" x-model="pm" class="mt-1 accent-primary-600">
+                                        <input type="radio" name="payment_method" value="online" x-model="pm" required class="mt-1 accent-primary-600">
                                         <span class="min-w-0">
                                             <span class="flex items-center gap-1.5 text-sm font-semibold text-neutral-900">
                                                 <svg class="w-4 h-4 text-neutral-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
@@ -200,11 +226,13 @@
                                 <svg class="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                 </svg>
-                                <h2 class="text-sm font-semibold text-neutral-900">Order Notes <span class="font-normal text-neutral-600">(Optional)</span></h2>
+                                <h2 class="text-sm font-semibold text-neutral-900">Order Notes</h2>
                             </div>
                             <div class="p-4">
-                                <textarea name="notes" rows="2" class="form-input w-full text-[13px]"
+                                <textarea name="notes" id="kk-co-notes" rows="2" maxlength="500"
+                                          aria-label="Order notes" class="form-input w-full text-[13px]"
                                           placeholder="Special instructions for delivery or your order...">{{ old('notes') }}</textarea>
+                                @error('notes')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
                             </div>
                         </div>
                     </div>

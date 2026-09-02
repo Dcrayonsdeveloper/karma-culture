@@ -225,8 +225,8 @@
                         {{-- novalidate, with the checks moved into kkRegisterForm(): the browser's
                              own bubble names no field, shows one problem at a time and disappears
                              on the next click. The component reports every field at once, inline,
-                             in the same words the server uses - and it runs as each field is left,
-                             rather than only when Create Account is pressed.
+                             in the same words the server would have used - and it runs as each
+                             field is left, rather than only when Create Account is pressed.
 
                              The form still posts normally: with JS off nothing here runs and the
                              server stays the only thing that has to be right. The summary box
@@ -253,11 +253,22 @@
                             <!-- Full Name -->
                             <div>
                                 <label for="full_name" class="block text-sm font-medium text-neutral-700 mb-1.5">Full Name</label>
-                                <input type="text" name="full_name" id="full_name" value="{{ old('full_name') }}" required
+                                {{-- No `pattern`: the obvious [A-Za-z\s]{2,50} is Latin-only and would
+                                     reject "रवि कुमार", "O'Connor" and "Mary-Anne" before the request is
+                                     even sent. App\Rules\PersonName does the charset work server-side,
+                                     in every script.
+
+                                     maxlength is the field's hard bound, NOT the limit being asked for.
+                                     The limit is 30 (RegisterController::NAME_LIMIT), and it is reported
+                                     as a message on the keystroke that crosses it - maxlength="30" would
+                                     swallow the 31st character in silence and leave the shopper wondering
+                                     why the box stopped taking letters. --}}
+                                <input type="text" name="full_name" id="full_name" value="{{ old('full_name') }}"
+                                       required autocomplete="name" minlength="2" maxlength="100"
                                        x-ref="full_name" @blur="blur('full_name')" @input="input('full_name')"
                                        class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all"
                                        :class="errors.full_name && 'border-red-300 bg-red-50'"
-                                       placeholder="Enter your full name">
+                                       placeholder="e.g. Priya Sharma">
                                 <p class="mt-1.5 text-xs text-red-600" x-show="errors.full_name" x-text="errors.full_name" x-cloak></p>
                             </div>
 
@@ -265,7 +276,8 @@
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label for="reg_email" class="block text-sm font-medium text-neutral-700 mb-1.5">Email Address</label>
-                                    <input type="email" name="email" id="reg_email" value="{{ old('_register') ? old('email') : '' }}" required
+                                    <input type="email" name="email" id="reg_email" value="{{ old('_register') ? old('email') : '' }}"
+                                           required autocomplete="email" inputmode="email" maxlength="255"
                                            x-ref="email" @blur="blur('email')" @input="input('email')"
                                            class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all"
                                            :class="errors.email && 'border-red-300 bg-red-50'"
@@ -277,18 +289,36 @@
                                     <p class="mt-1.5 text-xs text-red-600" x-show="errors.email" x-text="errors.email" x-cloak></p>
                                 </div>
                                 <div>
-                                    {{-- The label said "(optional)" while RegisterController has always
-                                         validated this with V::mobile() - required - so leaving it blank
-                                         produced a rejected signup for a field the form said could be
-                                         skipped. Validating inline without fixing the label would only
-                                         have made that contradiction louder. --}}
                                     <label for="phone" class="block text-sm font-medium text-neutral-700 mb-1.5">Mobile Number</label>
-                                    <input type="tel" name="phone" id="phone" value="{{ old('phone') }}" required
-                                           inputmode="numeric" maxlength="20" autocomplete="tel"
+                                    {{-- type="tel", not type="number": a number input adds a spinner, accepts
+                                         "e"/"+"/"-" and silently drops a leading zero. inputmode="numeric" is
+                                         what actually raises the digit keypad. The pattern mirrors
+                                         App\Rules\IndianMobile, which strips the +91/0 prefix and any spacing
+                                         before testing the ten digits, so it deliberately tolerates more than
+                                         a bare ^[6-9]\d{9}$ would — a client pattern stricter than the server
+                                         just blocks valid input. --}}
+                                    {{-- The pattern is kept for semantics but no longer gates submit
+                                         (novalidate): _normalizeMobile() in app.js mirrors
+                                         IndianMobile::normalize() step for step, including the
+                                         +91/0 stripping and the repdigit refusal, which a regex in
+                                         an attribute cannot express.
+
+                                         data-kk-mobile="10" is what actually holds the box to ten
+                                         digits: _capMobile() strips the decoration and the +91/0
+                                         prefix on every keystroke and cuts what is left at ten, so
+                                         an eleventh digit simply never lands. maxlength stays at 20
+                                         on purpose - the browser applies it to a paste before any
+                                         script runs, and "+91 98765 43210" is 15 characters that
+                                         have to survive long enough to be normalised. --}}
+                                    <input type="tel" name="phone" id="phone" value="{{ old('phone') }}"
+                                           required autocomplete="tel" inputmode="numeric" maxlength="20"
+                                           data-kk-mobile="10"
+                                           pattern="(\+?91[\s\-]?)?0?[6-9][0-9\s\-]{9,}"
+                                           title="Enter a 10-digit Indian mobile number starting with 6, 7, 8 or 9."
                                            x-ref="phone" @blur="blur('phone')" @input="input('phone')"
                                            class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all"
                                            :class="errors.phone && 'border-red-300 bg-red-50'"
-                                           placeholder="+91 98765 43210">
+                                           placeholder="9876543210">
                                     <p class="mt-1.5 text-xs text-red-600" x-show="errors.phone" x-text="errors.phone" x-cloak></p>
                                 </div>
                             </div>
@@ -298,7 +328,8 @@
                                 <div>
                                     <label for="reg_password" class="block text-sm font-medium text-neutral-700 mb-1.5">Password</label>
                                     <div class="relative" x-data="{ show: false }">
-                                        <input :type="show ? 'text' : 'password'" name="password" id="reg_password" required
+                                        <input :type="show ? 'text' : 'password'" name="password" id="reg_password"
+                                               required autocomplete="new-password" minlength="8" maxlength="255"
                                                x-ref="password" @blur="blur('password')" @input="input('password')"
                                                class="w-full px-4 pr-11 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all"
                                                :class="errors.password && 'border-red-300 bg-red-50'"
@@ -314,15 +345,37 @@
                                         </button>
                                     </div>
                                     <p class="mt-1.5 text-xs text-red-600" x-show="errors.password" x-text="errors.password" x-cloak></p>
+                                    <p class="mt-1.5 text-[11px] text-neutral-600 leading-snug">
+                                        8+ characters with an uppercase and a lowercase letter, a number
+                                        and a special character.
+                                    </p>
                                 </div>
                                 <div>
                                     <label for="password_confirmation" class="block text-sm font-medium text-neutral-700 mb-1.5">Confirm Password</label>
-                                    <input type="password" name="password_confirmation" id="password_confirmation" required
-                                           x-ref="password_confirmation"
-                                           @blur="blur('password_confirmation')" @input="input('password_confirmation')"
-                                           class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all"
-                                           :class="errors.password_confirmation && 'border-red-300 bg-red-50'"
-                                           placeholder="Repeat password">
+                                    {{-- Its own `show`, not the one above: revealing a password the
+                                         shopper can already see is not the point of this box - checking
+                                         what they typed the second time is, and that is a different
+                                         decision from the first field. --}}
+                                    <div class="relative" x-data="{ show: false }">
+                                        <input :type="show ? 'text' : 'password'" name="password_confirmation" id="password_confirmation"
+                                               required autocomplete="new-password" maxlength="255"
+                                               x-ref="password_confirmation"
+                                               @blur="blur('password_confirmation')" @input="input('password_confirmation')"
+                                               class="w-full px-4 pr-11 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all"
+                                               :class="errors.password_confirmation && 'border-red-300 bg-red-50'"
+                                               placeholder="Repeat password">
+                                        <button type="button" @click="show = !show"
+                                                :aria-label="show ? 'Hide password' : 'Show password'"
+                                                class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-neutral-600 hover:text-neutral-600 transition-colors">
+                                            <svg x-show="!show" class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                            </svg>
+                                            <svg x-show="show" x-cloak class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                                            </svg>
+                                        </button>
+                                    </div>
                                     {{-- This field had no message slot at all: a mismatch is reported
                                          by the server against `password`, so the sentence appeared
                                          under the box the shopper had already got right. --}}

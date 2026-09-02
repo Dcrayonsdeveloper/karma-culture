@@ -7,30 +7,24 @@
         </div>
     </x-slot>
 
-    @php
-        $totalReviews = \App\Models\Review::count();
-        $approvedReviews = \App\Models\Review::where('status', 'approved')->count();
-        $pendingReviews = \App\Models\Review::where('status', 'pending')->count();
-    @endphp
-
     <div class="card" style="overflow: hidden;">
         {{-- Tab filters --}}
         <div style="display: flex; align-items: center; gap: 0; border-bottom: 1px solid #e3e3e3; padding: 0 1rem;">
             <a href="{{ route('admin.reviews.index', request()->except('status')) }}"
                style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ !request('status') ? '#303030' : 'transparent' }}; color: {{ !request('status') ? '#303030' : '#616161' }};">
-                All <span style="color: #616161; font-size: 12px;">({{ $totalReviews }})</span>
+                All <span style="color: #616161; font-size: 12px;">({{ array_sum($counts) }})</span>
             </a>
             <a href="{{ route('admin.reviews.index', array_merge(request()->except('status'), ['status' => 'pending'])) }}"
                style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('status') === 'pending' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'pending' ? '#303030' : '#616161' }};">
-                Pending <span style="color: #616161; font-size: 12px;">({{ $pendingReviews }})</span>
+                Pending <span style="color: #616161; font-size: 12px;">({{ $counts['pending'] ?? 0 }})</span>
             </a>
             <a href="{{ route('admin.reviews.index', array_merge(request()->except('status'), ['status' => 'approved'])) }}"
                style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('status') === 'approved' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'approved' ? '#303030' : '#616161' }};">
-                Approved <span style="color: #616161; font-size: 12px;">({{ $approvedReviews }})</span>
+                Approved <span style="color: #616161; font-size: 12px;">({{ $counts['approved'] ?? 0 }})</span>
             </a>
             <a href="{{ route('admin.reviews.index', array_merge(request()->except('status'), ['status' => 'rejected'])) }}"
                style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('status') === 'rejected' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'rejected' ? '#303030' : '#616161' }};">
-                Rejected
+                Rejected <span style="color: #616161; font-size: 12px;">({{ $counts['rejected'] ?? 0 }})</span>
             </a>
         </div>
 
@@ -44,7 +38,7 @@
                     <svg style="position: absolute; left: 0.625rem; top: 50%; transform: translateY(-50%); color: #999; width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search by product or customer" style="padding-left: 2rem; border: 1px solid #c9cccf; border-radius: 0.5rem; font-size: 13px; width: 100%; padding-top: 0.375rem; padding-bottom: 0.375rem;">
+                    <input type="text" name="search" maxlength="100" aria-label="Search" value="{{ request('search') }}" placeholder="Search by product or customer" style="padding-left: 2rem; border: 1px solid #c9cccf; border-radius: 0.5rem; font-size: 13px; width: 100%; padding-top: 0.375rem; padding-bottom: 0.375rem;">
                 </div>
                 <button type="submit" class="btn btn-secondary btn-sm">Search</button>
             </form>
@@ -98,12 +92,12 @@
                                     <div style="display: flex; flex-direction: column; gap: 0.25rem;">
                                         @if($review->status === 'approved')
                                             <span class="badge badge-success">Approved</span>
-                                        @elseif($review->status === 'pending')
-                                            <span class="badge badge-warning">Pending</span>
                                         @elseif($review->status === 'rejected')
                                             <span class="badge badge-error">Rejected</span>
                                         @elseif($review->status === 'flagged')
                                             <span class="badge badge-warning">Flagged</span>
+                                        @else
+                                            <span class="badge badge-warning">Pending</span>
                                         @endif
                                         @if($review->is_verified_purchase)
                                             <span class="badge badge-success">Verified</span>

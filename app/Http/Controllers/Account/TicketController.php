@@ -8,12 +8,22 @@ use App\Models\Setting;
 use App\Models\SupportTicket;
 use App\Models\SupportTicketReply;
 use App\Models\User;
+use App\Rules\ValidationRules as V;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class TicketController extends Controller
 {
+    /** The categories the form offers. */
+    public const CATEGORIES = ['general', 'order', 'payment', 'product', 'account', 'other'];
+
+    /** The priorities the form offers. */
+    public const PRIORITIES = ['low', 'normal', 'high'];
+
+    /** The statuses the filter tabs offer, and the only ones a ticket holds. */
+    public const STATUSES = ['open', 'answered', 'closed'];
+
     public function __construct()
     {
         abort_unless(Setting::get('support_tickets_enabled', true), 404);
@@ -23,7 +33,12 @@ class TicketController extends Controller
     {
         $query = $request->user()->supportTickets();
 
-        if ($status = $request->input('status')) {
+        // The tab links are the only intended source of ?status=, but the query
+        // string is the customer's to write. An unknown value now shows the
+        // unfiltered list rather than being passed into the where clause.
+        $status = $request->query('status');
+
+        if (is_string($status) && in_array($status, self::STATUSES, true)) {
             $query->where('status', $status);
         }
 
@@ -40,10 +55,17 @@ class TicketController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'subject' => ['required', 'string', 'max:255'],
-            'category' => ['required', 'string', 'in:general,order,payment,product,account,other'],
-            'priority' => ['required', 'string', 'in:low,normal,high'],
-            'message' => ['required', 'string', 'min:10', 'max:5000'],
+            // NotBlank and NoHtml on top of the old string|max: the subject is
+            // rendered in the admin queue and in the notification body below,
+            // and "   " used to be a valid subject.
+            'subject' => V::text(max: 255, min: 3),
+            'category' => V::option(self::CATEGORIES),
+            'priority' => V::option(self::PRIORITIES),
+            'message' => V::textarea(max: 5000, min: 10),
+        ], [
+            'category.in' => 'Please choose a category from the list.',
+            'priority.in' => 'Please choose a priority from the list.',
+            'message.min' => 'Please describe the issue in at least 10 characters.',
         ]);
 
         $ticket = SupportTicket::create([
@@ -91,7 +113,9 @@ class TicketController extends Controller
         abort_if($ticket->status === 'closed', 403, 'This ticket is closed.');
 
         $validated = $request->validate([
-            'message' => ['required', 'string', 'min:5', 'max:5000'],
+            'message' => V::textarea(max: 5000, min: 5),
+        ], [
+            'message.min' => 'Please write at least 5 characters.',
         ]);
 
         SupportTicketReply::create([

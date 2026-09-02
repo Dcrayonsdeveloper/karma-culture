@@ -109,9 +109,11 @@
     <div x-data="{ open: false, productId: null, productName: '', currentStock: 0 }"
          x-on:open-stock-modal.window="open = true; productId = $event.detail.id; productName = $event.detail.name; currentStock = $event.detail.stock"
          x-show="open" x-cloak
-         style="position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;">
-        <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.5);" x-on:click="open = false"></div>
-        <div style="position: relative; background: white; border-radius: 0.75rem; box-shadow: 0 20px 60px rgba(0,0,0,0.15); width: 100%; max-width: 28rem; margin: 0 1rem;" x-transition>
+         x-transition.opacity.duration.150ms
+         x-effect="document.body.classList.toggle('kk-modal-open', open)"
+         class="kk-modal">
+        <div class="kk-modal__backdrop" x-on:click="open = false"></div>
+        <div class="kk-modal__card">
             <div style="padding: 1rem 1.5rem; border-bottom: 1px solid #e3e3e3; display: flex; align-items: center; justify-content: space-between;">
                 <div>
                     <h3 style="font-size: 14px; font-weight: 600; color: #303030; margin: 0;">Restock Product</h3>
@@ -143,7 +145,7 @@
                         <input type="number" name="quantity" min="1" required class="form-input" placeholder="0">
                     </div>
                     <div>
-                        <label class="form-label">Reason <span style="font-weight: 400; color: #616161;">(optional)</span></label>
+                        <label class="form-label">Reason</label>
                         <input type="text" name="reason" class="form-input" placeholder="e.g. Restock, Purchase order">
                     </div>
                 </div>

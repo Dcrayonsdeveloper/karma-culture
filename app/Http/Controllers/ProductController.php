@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BackInStockSubscription;
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Coupon;
 use App\Models\OrderItem;
@@ -101,6 +102,12 @@ class ProductController extends Controller
             });
         }
 
+        // Brand filter. Slugs, not ids, so the URL stays readable and shareable.
+        if ($filters['brand'] !== []) {
+            $brandSlugs = $filters['brand'];
+            $query->whereHas('brand', fn ($q) => $q->whereIn('slug', $brandSlugs));
+        }
+
         if ($filters['min_price'] !== null) {
             $query->where('price', '>=', $filters['min_price']);
         }
@@ -140,7 +147,17 @@ class ProductController extends Controller
         $categories = Category::whereNull('parent_id')->where('is_active', true)->get();
         $subcategories = Category::whereNotNull('parent_id')->where('is_active', true)->orderBy('name')->get();
 
-        return view('products.index', compact('products', 'categories', 'subcategories'));
+        // Only brands that actually carry a live product. The table holds 26 rows
+        // left over from the demo seed, and offering "Canon" on a kidswear shop
+        // returns nothing. The view has always dereferenced $brands for the active
+        // filter chip and the meta description, so omitting it 500'd /shop?brand=x.
+        $brands = Brand::query()
+            ->where('is_active', true)
+            ->whereHas('products', fn ($q) => $q->where('is_active', true))
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug']);
+
+        return view('products.index', compact('products', 'categories', 'subcategories', 'brands'));
     }
 
     /**
@@ -157,7 +174,7 @@ class ProductController extends Controller
      * keeps an array whole when only one of its elements fails `size.*` - it
      * would have handed the bad element straight back.
      *
-     * @return array{category: ?string, subcategory: array<int, string>, size: array<int, string>, colour: array<int, string>, min_price: ?float, max_price: ?float, rating: ?int, in_stock: bool, on_sale: bool, sort: string}
+     * @return array{category: ?string, subcategory: array<int, string>, size: array<int, string>, colour: array<int, string>, brand: array<int, string>, min_price: ?float, max_price: ?float, rating: ?int, in_stock: bool, on_sale: bool, sort: string}
      */
     private function filters(Request $request): array
     {
@@ -191,6 +208,7 @@ class ProductController extends Controller
             'subcategory' => $this->filterList($request->input('subcategory'), 120),
             'size' => $this->filterList($request->input('size'), 40),
             'colour' => $this->filterList($request->input('colour'), 60),
+            'brand' => $this->filterList($request->input('brand'), 120),
             'min_price' => $number('min_price'),
             'max_price' => $number('max_price'),
             'rating' => ($rating === null || $rating === '') ? null : (int) $rating,

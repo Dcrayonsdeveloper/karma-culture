@@ -23,12 +23,11 @@
         <div style="padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
             @forelse($sections as $section)
                 <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; background: #f6f6f7; border-radius: 0.5rem; border: 1px solid #e3e3e3; {{ !$section->is_active ? 'opacity: 0.6;' : '' }}">
+                    {{-- The drag handle that used to sit here had no drag behaviour
+                         behind it, and nothing to drag towards: the home page renders
+                         these blocks in a fixed hand-built order, so `position` is not
+                         something an admin can usefully change. --}}
                     <div style="display: flex; align-items: center; gap: 0.75rem;">
-                        <div style="cursor: move; color: #616161;">
-                            <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/>
-                            </svg>
-                        </div>
                         <div>
                             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.125rem;">
                                 <span style="font-size: 13px; font-weight: 600; color: #303030;">{{ $section->title }}</span>

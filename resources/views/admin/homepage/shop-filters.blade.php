@@ -45,15 +45,25 @@
                                 <form action="{{ route('admin.homepage.shop-filters.update', $item) }}" method="POST" style="display: contents;">
                                     @csrf @method('PUT')
                                     <input type="hidden" name="type" value="{{ $item->type }}">
-                                    <td style="padding: 0.5rem 1rem;"><input type="text" name="label" value="{{ $item->label }}" required class="form-input" style="font-size: 13px;"></td>
-                                    <td style="padding: 0.5rem 1rem;"><input type="text" name="sub_label" value="{{ $item->sub_label }}" class="form-input" style="font-size: 13px;"></td>
+                                    <td style="padding: 0.5rem 1rem;"><input type="text" name="label" value="{{ $item->label }}" required maxlength="120" aria-label="Label" class="form-input" style="font-size: 13px;"></td>
+                                    <td style="padding: 0.5rem 1rem;"><input type="text" name="sub_label" value="{{ $item->sub_label }}" maxlength="120" aria-label="Sub-label" class="form-input" style="font-size: 13px;"></td>
                                     <td style="padding: 0.5rem 1rem; display: flex; align-items: center; gap: 0.5rem;">
                                         @if($item->shade_hex)
                                             <span style="display:inline-block; width: 18px; height: 18px; border-radius: 4px; background: {{ $item->shade_hex }}; border: 1px solid #c9cccf;"></span>
                                         @endif
-                                        <input type="text" name="shade_hex" value="{{ $item->shade_hex }}" class="form-input" style="font-size: 13px; max-width: 110px;" placeholder="#b8895a">
+                                        {{-- Hex only. This value is interpolated into a `style`
+                                             attribute on the swatch above and again on the home
+                                             page, so anything that is not a colour is arbitrary
+                                             CSS in the page. --}}
+                                        <input type="text" name="shade_hex" value="{{ $item->shade_hex }}" maxlength="9"
+                                               pattern="#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})"
+                                               title="Enter a hex colour such as #b8895a." aria-label="Shade hex"
+                                               class="form-input" style="font-size: 13px; max-width: 110px;" placeholder="#b8895a">
                                     </td>
-                                    <td style="padding: 0.5rem 1rem;"><input type="text" name="query_string" value="{{ $item->query_string }}" class="form-input" style="font-size: 13px;" placeholder="size=M"></td>
+                                    <td style="padding: 0.5rem 1rem;"><input type="text" name="query_string" value="{{ $item->query_string }}" maxlength="255"
+                                               pattern="[A-Za-z0-9_\-=&amp;%.+,\[\]]+"
+                                               title="Enter a query string such as size=M or price_min=1000&amp;price_max=2000."
+                                               aria-label="Query string" class="form-input" style="font-size: 13px;" placeholder="size=M"></td>
                                     <td style="padding: 0.5rem 1rem; text-align: center;">
                                         <span class="badge {{ $item->is_active ? 'badge-success' : 'badge-neutral' }}">{{ $item->is_active ? 'Active' : 'Hidden' }}</span>
                                     </td>
@@ -82,21 +92,30 @@
                 <form action="{{ route('admin.homepage.shop-filters.store') }}" method="POST" style="display: grid; grid-template-columns: 1fr 1fr 130px 1fr auto; gap: 0.5rem; align-items: end;">
                     @csrf
                     <input type="hidden" name="type" value="{{ $type }}">
+                    {{-- for/id pairs matter beyond accessibility here: the inline validator
+                         names the field from its own <label>, so an unlabelled input reports
+                         "This field is required" instead of "Label is required". --}}
                     <div>
-                        <label class="form-label" style="font-size: 11px; color: #616161;">Label *</label>
-                        <input type="text" name="label" required class="form-input" style="font-size: 13px;" placeholder="@if($type==='size')M @elseif($type==='price')₹1k - 2k @else Tan @endif">
+                        <label for="filter-{{ $type }}-label" class="form-label" style="font-size: 11px; color: #616161;">Label *</label>
+                        <input type="text" name="label" id="filter-{{ $type }}-label" required maxlength="120" class="form-input" style="font-size: 13px;" placeholder="@if($type==='size')M @elseif($type==='price')₹1k - 2k @else Tan @endif">
                     </div>
                     <div>
-                        <label class="form-label" style="font-size: 11px; color: #616161;">Sub-label</label>
-                        <input type="text" name="sub_label" class="form-input" style="font-size: 13px;" placeholder="120 Styles">
+                        <label for="filter-{{ $type }}-sub-label" class="form-label" style="font-size: 11px; color: #616161;">Sub-label</label>
+                        <input type="text" name="sub_label" id="filter-{{ $type }}-sub-label" maxlength="120" class="form-input" style="font-size: 13px;" placeholder="120 Styles">
                     </div>
                     <div>
-                        <label class="form-label" style="font-size: 11px; color: #616161;">Shade hex</label>
-                        <input type="text" name="shade_hex" class="form-input" style="font-size: 13px;" placeholder="#b8895a">
+                        <label for="filter-{{ $type }}-shade-hex" class="form-label" style="font-size: 11px; color: #616161;">Shade hex</label>
+                        <input type="text" name="shade_hex" id="filter-{{ $type }}-shade-hex" maxlength="9"
+                               pattern="#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})"
+                               title="Enter a hex colour such as #b8895a."
+                               class="form-input" style="font-size: 13px;" placeholder="#b8895a">
                     </div>
                     <div>
-                        <label class="form-label" style="font-size: 11px; color: #616161;">Query string</label>
-                        <input type="text" name="query_string" class="form-input" style="font-size: 13px;" placeholder="size=M">
+                        <label for="filter-{{ $type }}-query-string" class="form-label" style="font-size: 11px; color: #616161;">Query string</label>
+                        <input type="text" name="query_string" id="filter-{{ $type }}-query-string" maxlength="255"
+                               pattern="[A-Za-z0-9_\-=&amp;%.+,\[\]]+"
+                               title="Enter a query string such as size=M or price_min=1000&amp;price_max=2000."
+                               class="form-input" style="font-size: 13px;" placeholder="size=M">
                     </div>
                     <button type="submit" class="btn btn-primary" style="font-size: 12px;">+ Add</button>
                 </form>

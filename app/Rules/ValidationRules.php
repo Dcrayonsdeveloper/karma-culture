@@ -2,6 +2,7 @@
 
 namespace App\Rules;
 
+use DateTimeInterface;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
@@ -75,17 +76,31 @@ final class ValidationRules
      * hand-rolled regex, and without the DNS lookup that 'email:dns' performs
      * on every request.
      *
+     * `strictShape` adds {@see EmailAddress} on top, which narrows the RFC's
+     * very wide idea of a local part to the shape providers actually issue -
+     * chiefly, it has to open on a letter or a digit. Pass it where an address
+     * is being CREATED (signup); leave it off where one is being matched
+     * (sign-in, lookups), or an address stored before the rule existed can no
+     * longer be typed by the person it belongs to.
+     *
      * Client-side counterpart:
      *   type="email" required maxlength="255"
+     *   and, for strictShape, the _emailError() mirror in resources/js/app.js
      */
-    public static function email(bool $required = true, int $max = 255): array
+    public static function email(bool $required = true, int $max = 255, bool $strictShape = false): array
     {
-        return [
+        $rules = [
             $required ? 'required' : 'nullable',
             'string',
             'email:strict',
             "max:{$max}",
         ];
+
+        if ($strictShape) {
+            $rules[] = new EmailAddress;
+        }
+
+        return $rules;
     }
 
     /**
@@ -397,6 +412,52 @@ final class ValidationRules
             'integer',
             'min:1',
             Rule::exists($table, $column),
+        ];
+    }
+
+    /**
+     * The start of a schedule - a date and time that may not be in the past.
+     *
+     * On an EDIT form pass the stored value as $current, so a coupon or sale
+     * that has already begun can be saved without its start being dragged
+     * forward; only a changed start has to be in the future.
+     *
+     *     'starts_at' => V::scheduleStart(required: false, current: $coupon?->starts_at),
+     *
+     * Client-side counterpart:
+     *   type="datetime-local" min="{now, or the stored value if that is older}"
+     *   data-schedule-start data-schedule-original="{the stored value}"
+     */
+    public static function scheduleStart(bool $required = true, DateTimeInterface|string|null $current = null): array
+    {
+        return [
+            $required ? 'required' : 'nullable',
+            'date',
+            new NotPastDateTime($current),
+        ];
+    }
+
+    /**
+     * The end of a schedule - after its start field, and not in the past.
+     *
+     *     'expires_at' => V::scheduleEnd('starts_at', required: false, current: $coupon?->expires_at),
+     *
+     * `after` is deliberately strict rather than after_or_equal: a window that
+     * opens and closes on the same minute is never what was meant. Where the
+     * start is optional and left empty the ordering rule has nothing to compare
+     * against, and the future check below is what still holds.
+     *
+     * Client-side counterpart:
+     *   type="datetime-local" data-schedule-end="{id of the start input}"
+     *   data-schedule-original="{the stored value}"
+     */
+    public static function scheduleEnd(string $startField, bool $required = true, DateTimeInterface|string|null $current = null): array
+    {
+        return [
+            $required ? 'required' : 'nullable',
+            'date',
+            "after:{$startField}",
+            new NotPastDateTime($current),
         ];
     }
 

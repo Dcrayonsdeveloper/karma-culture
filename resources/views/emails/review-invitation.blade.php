@@ -23,7 +23,7 @@ We hope you are enjoying your recent purchase! We would love to hear your though
 
 As a thank you for sharing your experience, we will send you a **5% discount code** after you submit your review. It is our way of saying thanks for helping other parents.
 
-@component('mail::button', ['url' => url('/products'), 'color' => 'primary'])
+@component('mail::button', ['url' => route('shop'), 'color' => 'primary'])
 Review Your Purchases
 @endcomponent
 

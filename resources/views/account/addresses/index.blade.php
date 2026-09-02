@@ -104,6 +104,10 @@
                                                 <input type="hidden" name="state" value="{{ $address->state }}">
                                                 <input type="hidden" name="postal_code" value="{{ $address->postal_code }}">
                                                 <input type="hidden" name="country" value="{{ $address->country }}">
+                                                {{-- The label was the one field this form did not post
+                                                     back, so using Set Default was also how an address
+                                                     quietly stopped being "Home". --}}
+                                                <input type="hidden" name="label" value="{{ $address->label }}">
                                                 <input type="hidden" name="is_default" value="1">
                                                 <button type="submit"
                                                         class="inline-flex items-center gap-1 text-[13px] font-medium text-neutral-600 hover:text-primary-600 transition-colors">

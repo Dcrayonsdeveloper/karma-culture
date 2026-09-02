@@ -8,17 +8,47 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\ProductVariant;
 use App\Models\Seller;
+use App\Rules\NoHtml;
+use App\Rules\ValidationRules as V;
+use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProductController extends Controller
 {
+    /**
+     * Field shapes shared by store() and update(), so the two forms cannot
+     * drift apart and let a value through on edit that create refuses.
+     *
+     * Each is a plain rule array; append the per-action bits by spreading:
+     * `[...self::SKU_RULES, 'required', 'unique:products,sku']`.
+     */
+    private const SLUG_RULES = ['nullable', 'string', 'max:255', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/'];
+
+    /** products.sku / product_variants.sku are both varchar(50). */
+    private const SKU_RULES = ['string', 'max:50', 'regex:/^[A-Za-z0-9._\/-]+$/'];
+
+    /** stock_quantity is an UNSIGNED INT column - a negative value is a DB error, not a 422. */
+    private const STOCK_RULES = ['required', 'integer', 'min:0', 'max:1000000'];
+
+    /** A #rrggbb swatch, which is all <input type="color"> ever posts. */
+    private const HEX_RULES = ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'];
+
+    /**
+     * `extensions` checks the filename and `mimetypes` sniffs the bytes; both
+     * are needed, since either one alone is trivially spoofed.
+     */
+    private const VIDEO_RULES = ['file', 'extensions:mp4,webm,mov', 'mimetypes:video/mp4,video/webm,video/quicktime', 'max:51200'];
+
     public function index(Request $request): View
     {
         $query = Product::with(['category', 'seller']);
@@ -76,13 +106,31 @@ class ProductController extends Controller
     public function bulkAction(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'action' => 'required|in:activate,deactivate,approve,delete',
-            'ids' => 'required|string',
+            'action' => ['required', Rule::in(['activate', 'deactivate', 'approve', 'delete'])],
+            // A JSON array of ids built by the page's checkboxes. Bounded so a
+            // crafted request cannot post a megabyte of payload to decode.
+            'ids' => ['required', 'string', 'max:20000'],
         ]);
 
-        $ids = json_decode($validated['ids'], true);
+        $decoded = json_decode($validated['ids'], true);
 
-        if (empty($ids) || ! is_array($ids)) {
+        if (! is_array($decoded)) {
+            return back()->with('error', 'No products selected.');
+        }
+
+        // The decoded values are client-supplied: keep the positive integers and
+        // discard everything else rather than handing arbitrary types to the
+        // query builder.
+        $ids = collect($decoded)
+            ->filter(fn ($id) => is_int($id) || (is_string($id) && ctype_digit($id)))
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn (int $id) => $id > 0)
+            ->unique()
+            ->take(500)
+            ->values()
+            ->all();
+
+        if (empty($ids)) {
             return back()->with('error', 'No products selected.');
         }
 
@@ -108,7 +156,7 @@ class ProductController extends Controller
 
     public function create(): View
     {
-        $categories = Category::optionsWithPath();
+        $categories = Category::assignableOptions();
         $sellers = Seller::with('user')->orderBy('store_name')->get();
         $brands = Brand::where('is_active', true)->orderBy('name')->get();
         $attributes = Attribute::with('values')->orderBy('name')->get();
@@ -119,33 +167,42 @@ class ProductController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:products',
-            'description' => 'required|string',
-            'short_description' => 'nullable|string|max:500',
-            'sku' => 'required|string|max:100|unique:products',
-            'barcode' => 'nullable|string|max:128',
-            'price' => 'required|numeric|min:0',
-            'mrp' => 'nullable|numeric|min:0|gte:price',
-            'cost_price' => 'nullable|numeric|min:0',
-            'stock_quantity' => 'required|integer|min:0',
-            'category_id' => 'required|exists:categories,id',
-            'seller_id' => 'nullable|exists:sellers,id',
-            'brand_id' => 'nullable|exists:brands,id',
-            'is_active' => 'boolean',
-            'is_featured' => 'boolean',
-            'meta_title' => 'nullable|string|max:255',
-            'meta_description' => 'nullable|string|max:500',
-            'main_image' => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:2048',
-            'images' => 'nullable|array|max:10',
-            'images.*' => 'image|mimes:jpeg,jpg,png,webp,gif|max:2048',
-            'videos' => 'nullable|array|max:5',
-            'videos.*' => 'mimetypes:video/mp4,video/webm,video/quicktime|max:51200',
-            'product_attributes' => 'nullable|array',
+            'name' => V::text(max: 255, min: 2),
+            'slug' => [...self::SLUG_RULES, 'unique:products,slug'],
+            // CKEditor output - HTML by design, so NoHtml deliberately does not
+            // apply here. The `description` column is TEXT (65535 bytes).
+            'description' => ['required', 'string', 'max:65535'],
+            'short_description' => V::textarea(required: false, max: 500),
+            // products.sku is varchar(50) and unique - a longer value used to be
+            // accepted by validation and then truncated or rejected by MySQL.
+            'sku' => [...self::SKU_RULES, 'required', 'unique:products,sku'],
+            'barcode' => ['nullable', 'string', 'max:50', 'regex:/^[A-Za-z0-9-]+$/', 'unique:products,barcode'],
+            'price' => V::money(),
+            'mrp' => [...V::money(required: false), 'gte:price'],
+            'cost_price' => V::money(required: false),
+            'stock_quantity' => self::STOCK_RULES,
+            'category_id' => V::foreignId('categories'),
+            'seller_id' => V::foreignId('sellers', required: false),
+            'brand_id' => V::foreignId('brands', required: false),
+            'is_active' => V::boolean(),
+            'is_featured' => V::boolean(),
+            'meta_title' => V::text(required: false, max: 255),
+            'meta_description' => V::textarea(required: false, max: 500),
+            'main_image' => V::image(required: false, maxKb: 2048, allowGif: true),
+            'images' => ['nullable', 'array', 'max:10'],
+            'images.*' => V::image(maxKb: 2048, allowGif: true),
+            'videos' => ['nullable', 'array', 'max:5'],
+            'videos.*' => self::VIDEO_RULES,
+            'product_attributes' => ['nullable', 'array', 'max:50'],
             // A value may be a single string (text attributes) or an array of
             // checked values (size, colour, …) so one product can offer several.
             'product_attributes.*' => 'nullable',
-            'product_attributes.*.*' => 'nullable|string|max:255',
+            'product_attributes.*.*' => ['nullable', 'string', 'max:255', new NoHtml],
+            // Read straight off the request further down, so it has to be
+            // validated here or it reaches the JSON column unchecked.
+            'colours' => ['nullable', 'array', 'max:50'],
+            'colours.*.name' => ['nullable', 'string', 'max:60', new NoHtml],
+            'colours.*.hex' => self::HEX_RULES,
         ]);
 
         $validated['slug'] = $validated['slug'] ?? Str::slug($validated['name']);
@@ -184,7 +241,13 @@ class ProductController extends Controller
 
         $validated['attributes'] = ! empty($productAttributes) ? $productAttributes : null;
 
-        unset($validated['images'], $validated['videos'], $validated['main_image'], $validated['product_attributes']);
+        unset(
+            $validated['images'],
+            $validated['videos'],
+            $validated['main_image'],
+            $validated['product_attributes'],
+            $validated['colours'],
+        );
 
         $product = Product::create($validated);
 
@@ -242,7 +305,7 @@ class ProductController extends Controller
 
     public function edit(Product $product): View
     {
-        $categories = Category::optionsWithPath();
+        $categories = Category::assignableOptions($product->category_id);
         $sellers = Seller::with('user')->orderBy('store_name')->get();
         $brands = Brand::where('is_active', true)->orderBy('name')->get();
         $attributes = Attribute::with('values')->orderBy('name')->get();
@@ -254,63 +317,76 @@ class ProductController extends Controller
     public function update(Request $request, Product $product): RedirectResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:products,slug,'.$product->id,
-            'description' => 'required|string',
-            'short_description' => 'nullable|string|max:500',
-            'sku' => 'required|string|max:100|unique:products,sku,'.$product->id,
-            'barcode' => 'nullable|string|max:128',
-            'price' => 'required|numeric|min:0',
-            'mrp' => 'nullable|numeric|min:0|gte:price',
-            'cost_price' => 'nullable|numeric|min:0',
-            'stock_quantity' => 'required|integer|min:0',
-            'category_id' => 'required|exists:categories,id',
-            'seller_id' => 'nullable|exists:sellers,id',
-            'brand_id' => 'nullable|exists:brands,id',
-            'is_active' => 'boolean',
-            'is_featured' => 'boolean',
-            'meta_title' => 'nullable|string|max:255',
-            'meta_description' => 'nullable|string|max:500',
-            'weight' => 'nullable|numeric|min:0',
-            'length' => 'nullable|numeric|min:0',
-            'width' => 'nullable|numeric|min:0',
-            'height' => 'nullable|numeric|min:0',
-            'hsn_code' => 'nullable|string|max:20',
-            'main_image' => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:2048',
-            'images' => 'nullable|array|max:10',
-            'images.*' => 'image|mimes:jpeg,jpg,png,webp,gif|max:2048',
-            'videos' => 'nullable|array|max:5',
-            'videos.*' => 'mimetypes:video/mp4,video/webm,video/quicktime|max:51200', // 50 MB each
-            'delete_images' => 'nullable|array',
-            'delete_images.*' => 'integer|exists:product_images,id',
-            'product_attributes' => 'nullable|array',
+            'name' => V::text(max: 255, min: 2),
+            'slug' => [...self::SLUG_RULES, Rule::unique('products', 'slug')->ignore($product->id)],
+            // CKEditor output - HTML by design, so NoHtml deliberately does not
+            // apply here. The `description` column is TEXT (65535 bytes).
+            'description' => ['required', 'string', 'max:65535'],
+            'short_description' => V::textarea(required: false, max: 500),
+            'sku' => [...self::SKU_RULES, 'required', Rule::unique('products', 'sku')->ignore($product->id)],
+            'barcode' => ['nullable', 'string', 'max:50', 'regex:/^[A-Za-z0-9-]+$/', Rule::unique('products', 'barcode')->ignore($product->id)],
+            'price' => V::money(),
+            'mrp' => [...V::money(required: false), 'gte:price'],
+            'cost_price' => V::money(required: false),
+            'stock_quantity' => self::STOCK_RULES,
+            'category_id' => V::foreignId('categories'),
+            'seller_id' => V::foreignId('sellers', required: false),
+            'brand_id' => V::foreignId('brands', required: false),
+            'is_active' => V::boolean(),
+            'is_featured' => V::boolean(),
+            'is_taxable' => V::boolean(),
+            'meta_title' => V::text(required: false, max: 255),
+            'meta_description' => V::textarea(required: false, max: 500),
+            // weight/length/width/height are decimal(8,2) columns.
+            'weight' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:999999.99'],
+            'length' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:999999.99'],
+            'width' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:999999.99'],
+            'height' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:999999.99'],
+            // An Indian HSN code is 4, 6 or 8 digits.
+            'hsn_code' => ['nullable', 'string', 'regex:/^[0-9]{4,8}$/'],
+            'main_image' => V::image(required: false, maxKb: 2048, allowGif: true),
+            'images' => ['nullable', 'array', 'max:10'],
+            'images.*' => V::image(maxKb: 2048, allowGif: true),
+            'videos' => ['nullable', 'array', 'max:5'],
+            'videos.*' => self::VIDEO_RULES, // 50 MB each
+            'delete_images' => ['nullable', 'array', 'max:200'],
+            // Scoped to this product: `exists` alone would let a crafted request
+            // delete another product's images.
+            'delete_images.*' => ['integer', Rule::exists('product_images', 'id')->where('product_id', $product->id)],
+            'product_attributes' => ['nullable', 'array', 'max:50'],
             // A value may be a single string (text attributes) or an array of
             // checked values (size, colour, …) so one product can offer several.
             'product_attributes.*' => 'nullable',
-            'product_attributes.*.*' => 'nullable|string|max:255',
-            'variants' => 'nullable|array',
+            'product_attributes.*.*' => ['nullable', 'string', 'max:255', new NoHtml],
+            'variants' => ['nullable', 'array', 'max:100'],
             // id is absent on rows added with the "Add size" button, so a new row
-            // is created rather than rejected by validation.
-            'variants.*.id' => 'nullable|integer|exists:product_variants,id',
-            'variants.*.name' => 'nullable|string|max:100',
-            'variants.*.measurements' => 'nullable|string|max:160',
-            'variants.*.colour' => 'nullable|string|max:60',
-            'variants.*.colour_hex' => 'nullable|string|max:7',
-            'variants.*.sku' => 'nullable|string|max:100',
-            'variants.*.price' => 'nullable|numeric|min:0',
-            'variants.*.mrp' => 'nullable|numeric|min:0',
-            'variants.*.stock_quantity' => 'nullable|integer|min:0',
-            'variants.*.delete' => 'nullable',
-            'variants.*.is_active' => 'nullable',
+            // is created rather than rejected by validation. When present it must
+            // belong to THIS product.
+            'variants.*.id' => ['nullable', 'integer', Rule::exists('product_variants', 'id')->where('product_id', $product->id)],
+            'variants.*.name' => ['nullable', 'string', 'max:100', new NoHtml],
+            'variants.*.measurements' => ['nullable', 'string', 'max:160', new NoHtml],
+            'variants.*.colour' => ['nullable', 'string', 'max:60', new NoHtml],
+            'variants.*.colour_hex' => self::HEX_RULES,
+            // product_variants.sku is UNIQUE. Without this a duplicate reached
+            // MySQL and blew up with a 500 instead of a field error.
+            'variants.*.sku' => [...self::SKU_RULES, 'nullable', 'distinct:ignore_case', $this->uniqueVariantSku($request)],
+            'variants.*.price' => V::money(required: false),
+            'variants.*.mrp' => [...V::money(required: false), $this->variantMrpAtLeastPrice($request)],
+            'variants.*.stock_quantity' => ['nullable', 'integer', 'min:0', 'max:1000000'],
+            'variants.*.delete' => ['nullable', 'boolean'],
+            'variants.*.is_active' => ['nullable', 'boolean'],
             // Colours are a product-level list, not a per-size value, so one
             // colour is entered once instead of on every size row.
-            'colours' => 'nullable|array',
-            'colours.*.name' => 'nullable|string|max:60',
-            'colours.*.hex' => 'nullable|string|max:7',
-            'model_glb' => 'nullable|file|mimetypes:model/gltf-binary,application/octet-stream|max:10240',
-            'model_usdz' => 'nullable|file|max:10240',
-            'delete_model_glb' => 'nullable|boolean',
-            'delete_model_usdz' => 'nullable|boolean',
+            'colours' => ['nullable', 'array', 'max:50'],
+            'colours.*.name' => ['nullable', 'string', 'max:60', new NoHtml],
+            'colours.*.hex' => self::HEX_RULES,
+            // Both models land on the PUBLIC disk, so the extension has to be
+            // pinned: `file|max:10240` alone accepted a .php upload into a
+            // web-served directory.
+            'model_glb' => ['nullable', 'file', 'extensions:glb,gltf', 'mimetypes:model/gltf-binary,model/gltf+json,application/octet-stream', 'max:10240'],
+            'model_usdz' => ['nullable', 'file', 'extensions:usdz', 'mimetypes:model/vnd.usdz+zip,application/zip,application/octet-stream', 'max:10240'],
+            'delete_model_glb' => ['nullable', 'boolean'],
+            'delete_model_usdz' => ['nullable', 'boolean'],
         ]);
 
         $validated['slug'] = $validated['slug'] ?? Str::slug($validated['name']);
@@ -508,14 +584,97 @@ class ProductController extends Controller
     }
 
     /**
+     * Is this CSV `image_url` safe for the server to fetch?
+     *
+     * The importer downloads whatever URL a row names, which makes the server a
+     * proxy for whoever wrote the CSV. Two things are required: an http(s)
+     * scheme, so file:// and php:// wrappers cannot read local files; and a
+     * public destination address, so the cloud metadata endpoint and anything
+     * on the private network are out of reach.
+     */
+    private function isFetchableImageUrl(string $url): bool
+    {
+        $parts = parse_url($url);
+
+        if (! is_array($parts) || ! in_array(strtolower($parts['scheme'] ?? ''), ['http', 'https'], true)) {
+            return false;
+        }
+
+        $host = $parts['host'] ?? '';
+
+        if ($host === '') {
+            return false;
+        }
+
+        // A literal IP is checked as written; a name is resolved first, because
+        // "internal.example.com" can point straight at 10.0.0.1.
+        $address = filter_var($host, FILTER_VALIDATE_IP) ? $host : gethostbyname($host);
+
+        return (bool) filter_var(
+            $address,
+            FILTER_VALIDATE_IP,
+            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+        );
+    }
+
+    /**
+     * A size's MRP is the struck-through price, so it may not sit below what the
+     * customer actually pays.
+     *
+     * `gte:variants.*.price` would express this, but it also fires when the row
+     * leaves Price blank - a legitimate case, since a blank price falls back to
+     * the product's. This compares the two only when both are filled in.
+     */
+    private function variantMrpAtLeastPrice(Request $request): Closure
+    {
+        return function (string $attribute, mixed $value, Closure $fail) use ($request): void {
+            $index = explode('.', $attribute)[1] ?? null;
+            $price = $request->input("variants.{$index}.price");
+
+            if (! is_numeric($price) || ! is_numeric($value)) {
+                return;
+            }
+
+            if ((float) $value < (float) $price) {
+                $fail('The MRP for this size must not be less than its price.');
+            }
+        };
+    }
+
+    /**
+     * product_variants.sku is UNIQUE across the whole table, so a row may not
+     * take a SKU another row already holds - including a variant of a different
+     * product. The row's own id (when it has one) is excluded, otherwise saving
+     * a size without touching its SKU would report a clash with itself.
+     *
+     * A closure rather than `Rule::unique(...)->ignore()`: the id to ignore
+     * differs per row, and an array rule cannot vary its parameters by index.
+     */
+    private function uniqueVariantSku(Request $request): Closure
+    {
+        return function (string $attribute, mixed $value, Closure $fail) use ($request): void {
+            $index = explode('.', $attribute)[1] ?? null;
+            $variantId = $request->input("variants.{$index}.id");
+
+            $clash = ProductVariant::where('sku', $value)
+                ->when($variantId, fn ($query) => $query->whereKeyNot($variantId))
+                ->exists();
+
+            if ($clash) {
+                $fail("The SKU \"{$value}\" is already used by another size.");
+            }
+        };
+    }
+
+    /**
      * Reorder a product's media (images + videos) from a drag-and-drop list.
      * Mirrors the hero-banners reorder pattern.
      */
     public function reorderImages(Request $request, Product $product): JsonResponse
     {
         $data = $request->validate([
-            'order' => 'required|array',
-            'order.*' => 'integer',
+            'order' => ['required', 'array', 'max:500'],
+            'order.*' => ['integer', 'min:1'],
         ]);
 
         foreach ($data['order'] as $position => $id) {
@@ -620,7 +779,13 @@ class ProductController extends Controller
     public function import(Request $request): RedirectResponse
     {
         $request->validate([
-            'csv_file' => 'required|file|mimes:csv,txt|max:10240',
+            'csv_file' => [
+                'required',
+                'file',
+                'extensions:csv,txt',
+                'mimetypes:text/csv,text/plain,application/csv,application/vnd.ms-excel',
+                'max:10240',
+            ],
         ]);
 
         $file = $request->file('csv_file');
@@ -676,16 +841,56 @@ class ProductController extends Controller
 
             $record = array_combine($header, $data);
 
-            $name = trim($record['name'] ?? '');
-            $sku = trim($record['sku'] ?? '');
-            $price = $record['price'] ?? '';
+            // A CSV is just another way to write these columns, but none of the
+            // HTTP middleware (TrimStrings, ConvertEmptyStringsToNull) runs on
+            // it - so the row is normalised and then put through the same field
+            // rules the admin form enforces.
+            $blankToNull = static function (?string $value): ?string {
+                $value = trim((string) $value);
 
-            if (empty($name) || empty($sku) || ! is_numeric($price)) {
-                $errors[] = "Row {$row}: Missing name, SKU, or invalid price.";
+                return $value === '' ? null : $value;
+            };
+
+            $candidate = [
+                'name' => $blankToNull($record['name'] ?? null),
+                'sku' => $blankToNull($record['sku'] ?? null),
+                'slug' => $blankToNull($record['slug'] ?? null),
+                'price' => $blankToNull($record['price'] ?? null),
+                'sale_price' => $blankToNull($record['sale_price'] ?? null),
+                'cost_price' => $blankToNull($record['cost_price'] ?? null),
+                'stock_quantity' => $blankToNull($record['stock_quantity'] ?? null),
+                'short_description' => $blankToNull($record['short_description'] ?? null),
+                'description' => $blankToNull($record['description'] ?? null),
+                'meta_title' => $blankToNull($record['meta_title'] ?? null),
+                'meta_description' => $blankToNull($record['meta_description'] ?? null),
+                'image_url' => $blankToNull($record['image_url'] ?? null),
+            ];
+
+            $rowValidator = Validator::make($candidate, [
+                'name' => V::text(max: 255, min: 2),
+                'sku' => [...self::SKU_RULES, 'required'],
+                'slug' => self::SLUG_RULES,
+                'price' => V::money(),
+                'sale_price' => V::money(required: false),
+                'cost_price' => V::money(required: false),
+                'stock_quantity' => ['nullable', 'integer', 'min:0', 'max:1000000'],
+                'short_description' => V::textarea(required: false, max: 500),
+                'description' => ['nullable', 'string', 'max:65535'],
+                'meta_title' => V::text(required: false, max: 255),
+                'meta_description' => V::textarea(required: false, max: 500),
+                'image_url' => V::url(required: false),
+            ]);
+
+            if ($rowValidator->fails()) {
+                $errors[] = "Row {$row}: ".$rowValidator->errors()->first();
                 $skipped++;
 
                 continue;
             }
+
+            $name = $candidate['name'];
+            $sku = $candidate['sku'];
+            $price = $candidate['price'];
 
             if (Product::where('sku', $sku)->exists()) {
                 $errors[] = "Row {$row}: SKU '{$sku}' already exists.";
@@ -707,29 +912,44 @@ class ProductController extends Controller
             $product = Product::create([
                 'name' => $name,
                 'sku' => $sku,
-                'slug' => ! empty($record['slug']) ? trim($record['slug']) : Str::slug($name),
+                'slug' => $candidate['slug'] ?? Str::slug($name),
                 'price' => (float) $price,
-                'sale_price' => is_numeric($record['sale_price'] ?? null) ? (float) $record['sale_price'] : null,
-                'cost_price' => is_numeric($record['cost_price'] ?? null) ? (float) $record['cost_price'] : null,
-                'stock_quantity' => (int) ($record['stock_quantity'] ?? 0),
+                'sale_price' => $candidate['sale_price'] !== null ? (float) $candidate['sale_price'] : null,
+                'cost_price' => $candidate['cost_price'] !== null ? (float) $candidate['cost_price'] : null,
+                'stock_quantity' => (int) ($candidate['stock_quantity'] ?? 0),
                 'category_id' => $categoryId,
                 'seller_id' => $sellerId,
-                'short_description' => $record['short_description'] ?? null,
-                'description' => $record['description'] ?? $name,
-                'is_active' => (bool) ($record['is_active'] ?? 1),
-                'is_featured' => (bool) ($record['is_featured'] ?? 0),
-                'meta_title' => $record['meta_title'] ?? null,
-                'meta_description' => $record['meta_description'] ?? null,
+                'short_description' => $candidate['short_description'],
+                'description' => $candidate['description'] ?? $name,
+                'is_active' => filter_var($record['is_active'] ?? '1', FILTER_VALIDATE_BOOLEAN),
+                'is_featured' => filter_var($record['is_featured'] ?? '0', FILTER_VALIDATE_BOOLEAN),
+                'meta_title' => $candidate['meta_title'],
+                'meta_description' => $candidate['meta_description'],
             ]);
 
-            // Handle image URL
-            $imageUrl = trim($record['image_url'] ?? '');
-            if (! empty($imageUrl) && filter_var($imageUrl, FILTER_VALIDATE_URL)) {
+            // Handle image URL. The row supplies a URL the server then fetches,
+            // so the scheme and the host are checked first: FILTER_VALIDATE_URL
+            // alone happily passes file:///etc/passwd and http://169.254.169.254,
+            // which turned this importer into a file-read and SSRF primitive.
+            $imageUrl = $candidate['image_url'];
+            if ($imageUrl !== null && $this->isFetchableImageUrl($imageUrl)) {
                 try {
-                    $imageContents = @file_get_contents($imageUrl);
-                    if ($imageContents) {
-                        $extension = pathinfo(parse_url($imageUrl, PHP_URL_PATH), PATHINFO_EXTENSION);
-                        $extension = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']) ? $extension : 'jpg';
+                    $imageContents = @file_get_contents($imageUrl, false, stream_context_create([
+                        'http' => ['timeout' => 10, 'follow_location' => 0],
+                    ]), 0, 5 * 1024 * 1024);
+
+                    // Trust the bytes, not the URL: only store it if GD agrees
+                    // it is one of the formats the storefront can render.
+                    $info = $imageContents ? @getimagesizefromstring($imageContents) : false;
+                    $extension = match ($info['mime'] ?? null) {
+                        'image/jpeg' => 'jpg',
+                        'image/png' => 'png',
+                        'image/webp' => 'webp',
+                        'image/gif' => 'gif',
+                        default => null,
+                    };
+
+                    if ($extension !== null) {
                         $path = 'products/'.Str::uuid().'.'.$extension;
                         Storage::disk('public')->put($path, $imageContents);
 
@@ -740,7 +960,7 @@ class ProductController extends Controller
                             'position' => 0,
                         ]);
                     }
-                } catch (\Exception $e) {
+                } catch (\Exception) {
                     // Image download failed, skip silently
                 }
             }

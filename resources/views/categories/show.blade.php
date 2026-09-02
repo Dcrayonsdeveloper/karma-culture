@@ -49,7 +49,7 @@
 
     <div class="container mx-auto px-4 py-6">
         <!-- Active Filters -->
-        @if(request()->hasAny(['subcategory', 'min_price', 'max_price', 'in_stock', 'on_sale']))
+        @if(request()->hasAny(['subcategory', 'brand', 'min_price', 'max_price', 'in_stock', 'on_sale']))
             <div class="flex flex-wrap items-center gap-2 mb-5">
                 <span class="text-xs font-medium text-neutral-600 uppercase tracking-wide">Active Filters:</span>
                 @if(request('subcategory'))
@@ -58,6 +58,16 @@
                         <a href="{{ request()->fullUrlWithoutQuery('subcategory') }}"
                            class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#6F9CA2]/5 text-[#5B878D] text-xs font-medium rounded-full border border-[#6F9CA2]/30 hover:bg-[#6F9CA2]/10 transition-colors">
                             {{ $subName }}
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </a>
+                    @endforeach
+                @endif
+                @if(request('brand'))
+                    @foreach((array) request('brand') as $brandSlug)
+                        @php $brandName = $filterBrands->firstWhere('slug', $brandSlug)?->name ?? $brandSlug; @endphp
+                        <a href="{{ request()->fullUrlWithoutQuery('brand') }}"
+                           class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#6F9CA2]/5 text-[#5B878D] text-xs font-medium rounded-full border border-[#6F9CA2]/30 hover:bg-[#6F9CA2]/10 transition-colors">
+                            {{ $brandName }}
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                         </a>
                     @endforeach
@@ -88,8 +98,10 @@
                     </svg>
                     Filters
                     @if(request()->hasAny(['brand', 'min_price', 'max_price', 'in_stock', 'on_sale']))
+                        {{-- brand is multi-value, so it is counted per tick rather than
+                             as one filter - two brands selected read as "1" before. --}}
                         <span class="w-5 h-5 bg-[#F8931D] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                            {{ count(array_filter([request('brand'), request('min_price'), request('max_price'), request('in_stock'), request('on_sale')])) }}
+                            {{ count(array_filter((array) request('brand'))) + count(array_filter([request('min_price'), request('max_price'), request('in_stock'), request('on_sale')])) }}
                         </span>
                     @endif
                 </button>

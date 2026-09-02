@@ -20,13 +20,14 @@
                         <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Brand details</h2>
                         <div style="display: flex; flex-direction: column; gap: 1rem;">
                             <div>
-                                <label class="form-label">Name <span style="color: #d72c0d;">*</span></label>
-                                <input type="text" name="name" value="{{ old('name') }}" required class="form-input" placeholder="e.g. L'Oreal">
+                                <label for="name" class="form-label">Name <span style="color: #d72c0d;">*</span></label>
+                                <input type="text" name="name" id="name" value="{{ old('name') }}" required
+                                       minlength="2" maxlength="255" class="form-input" placeholder="e.g. L'Oreal">
                                 @error('name') <p class="form-error">{{ $message }}</p> @enderror
                             </div>
                             <div>
-                                <label class="form-label">Description</label>
-                                <textarea name="description" rows="3" class="form-textarea" placeholder="Brief description...">{{ old('description') }}</textarea>
+                                <label for="description" class="form-label">Description</label>
+                                <textarea name="description" id="description" rows="3" maxlength="2000" class="form-textarea" placeholder="Brief description...">{{ old('description') }}</textarea>
                                 @error('description') <p class="form-error">{{ $message }}</p> @enderror
                             </div>
                         </div>
@@ -42,8 +43,11 @@
                                 </svg>
                             </div>
                             <div style="flex: 1;">
-                                <input type="file" name="logo" accept="image/*" style="font-size: 13px; color: #616161;">
-                                <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">PNG, JPG or SVG. Max 2MB.</p>
+                                {{-- accept matches the server rule exactly: SVG is not among the
+                                     types the upload accepts, so offering it only wasted a round trip. --}}
+                                <input type="file" name="logo" id="logo" aria-label="Brand logo"
+                                       accept="image/jpeg,image/png,image/webp,image/gif" style="font-size: 13px; color: #616161;">
+                                <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">JPG, PNG, WebP or GIF. Max 2MB.</p>
                                 @error('logo') <p class="form-error">{{ $message }}</p> @enderror
                             </div>
                         </div>

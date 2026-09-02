@@ -27,6 +27,7 @@
                             <div>
                                 <label for="name" class="form-label">Title <span style="color: #d72c0d;">*</span></label>
                                 <input type="text" name="name" id="name" value="{{ old('name', $category->name) }}" required
+                                       minlength="2" maxlength="255"
                                        class="form-input"
                                        @input="if(!slugManual) slug = toSlug($event.target.value)">
                                 @error('name') <p class="form-error">{{ $message }}</p> @enderror
@@ -36,15 +37,20 @@
                                 <div>
                                     <label for="slug" class="form-label">URL handle</label>
                                     <input type="text" name="slug" id="slug" x-model="slug"
+                                           maxlength="255" pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                                           title="Lower-case letters, digits and single hyphens, e.g. girls-dresses."
                                            class="form-input"
                                            @input="slugManual = ($event.target.value.trim() !== '')">
                                     @error('slug') <p class="form-error">{{ $message }}</p> @enderror
                                 </div>
                                 <div>
-                                    <label for="sort_order" class="form-label">Sort order</label>
-                                    <input type="number" name="sort_order" id="sort_order" value="{{ old('sort_order', $category->sort_order) }}" min="0"
+                                    {{-- Named `position` to match the column and the controller rule: as
+                                         `sort_order` the value was validated by nothing, read a property
+                                         that does not exist, and saved nowhere. --}}
+                                    <label for="position" class="form-label">Sort order</label>
+                                    <input type="number" name="position" id="position" value="{{ old('position', $category->position) }}" min="0" max="65535" step="1"
                                            class="form-input">
-                                    @error('sort_order') <p class="form-error">{{ $message }}</p> @enderror
+                                    @error('position') <p class="form-error">{{ $message }}</p> @enderror
                                 </div>
                             </div>
 
@@ -63,7 +69,7 @@
 
                             <div>
                                 <label for="description" class="form-label">Description</label>
-                                <textarea name="description" id="description" rows="3"
+                                <textarea name="description" id="description" rows="3" maxlength="2000"
                                           class="form-textarea">{{ old('description', $category->description) }}</textarea>
                                 @error('description') <p class="form-error">{{ $message }}</p> @enderror
                             </div>
@@ -112,13 +118,17 @@
 
                         {{-- Video --}}
                         <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e3e3e3;">
-                            <label class="form-label">Video (optional)</label>
+                            <label for="video_url_text" class="form-label">Video</label>
                             @if($category->video_url)
                                 <video src="{{ str_starts_with($category->video_url, 'http') ? $category->video_url : asset($category->video_url) }}"
                                        controls muted controlsList="nodownload noplaybackrate noremoteplayback" disablepictureinpicture
                                        style="max-width: 220px; max-height: 140px; border-radius: 10px; margin: 0.5rem 0;"></video>
                             @endif
-                            <input type="text" name="video_url_text" value="{{ old('video_url_text', $category->video_url) }}" class="form-input" placeholder="https://… or storage/categories/videos/file.mp4">
+                            <input type="text" name="video_url_text" id="video_url_text" value="{{ old('video_url_text', $category->video_url) }}"
+                                   maxlength="500" pattern="(https?://\S+|storage/[A-Za-z0-9._/\-]+)"
+                                   title="A full https:// address, or a storage/… path from an upload here."
+                                   class="form-input" placeholder="https://… or storage/categories/videos/file.mp4">
+                            @error('video_url_text') <p class="form-error">{{ $message }}</p> @enderror
                             <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Paste a URL above OR upload an mp4/webm below. Used in the home page bento tile when shown.</p>
                             <input type="file" name="video_file" accept="video/mp4,video/webm,video/quicktime" class="form-input" style="margin-top: 0.5rem;">
                             @error('video_file') <p class="form-error">{{ $message }}</p> @enderror
@@ -137,13 +147,13 @@
                         <div style="display: flex; flex-direction: column; gap: 1rem;">
                             <div>
                                 <label for="meta_title" class="form-label">Page title</label>
-                                <input type="text" name="meta_title" id="meta_title" value="{{ old('meta_title', $category->meta_title) }}"
+                                <input type="text" name="meta_title" id="meta_title" value="{{ old('meta_title', $category->meta_title) }}" maxlength="255"
                                        class="form-input">
                                 @error('meta_title') <p class="form-error">{{ $message }}</p> @enderror
                             </div>
                             <div>
                                 <label for="meta_description" class="form-label">Meta description</label>
-                                <textarea name="meta_description" id="meta_description" rows="2"
+                                <textarea name="meta_description" id="meta_description" rows="2" maxlength="500"
                                           class="form-textarea">{{ old('meta_description', $category->meta_description) }}</textarea>
                                 @error('meta_description') <p class="form-error">{{ $message }}</p> @enderror
                             </div>

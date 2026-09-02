@@ -46,7 +46,7 @@ Great news -- your order has been confirmed and is being prepared with care. Her
 **Expected Delivery:** {{ $order->expected_delivery_date->format('M d, Y') }}
 @endif
 
-@component('mail::button', ['url' => url('/orders/' . $order->id)])
+@component('mail::button', ['url' => route('account.orders.show', $order->id)])
 View Your Order
 @endcomponent
 

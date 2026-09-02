@@ -1513,7 +1513,7 @@
                         <input class="kk-revform__input" type="text" name="guest_name" placeholder="Full name *" value="{{ old('guest_name') }}" required maxlength="100">
                         <input class="kk-revform__input" type="email" name="guest_email" placeholder="Email (not published) *" value="{{ old('guest_email') }}" required maxlength="255">
                     </div>
-                    <input class="kk-revform__input" type="text" name="title" placeholder="Review title (optional)" value="{{ old('title') }}" maxlength="255" style="margin-bottom:12px;">
+                    <input class="kk-revform__input" type="text" name="title" placeholder="Review title" value="{{ old('title') }}" maxlength="255" style="margin-bottom:12px;">
                     <textarea class="kk-revform__textarea" name="content" rows="4" placeholder="Share your experience (at least 20 characters)…" required minlength="20" maxlength="2000">{{ old('content') }}</textarea>
 
                     {{-- Photo & video uploads (Task 10) --}}
@@ -1522,7 +1522,7 @@
                              button cannot re-open the file picker. --}}
                         <div class="kk-revform__file">
                             <label>
-                                <span>Add Photos <em>(optional)</em></span>
+                                <span>Add Photos</span>
                                 <input type="file" name="images[]" accept="image/jpeg,image/png,image/webp" multiple
                                        x-ref="images" @change="pick('images', $event)">
                             </label>
@@ -1531,7 +1531,7 @@
                         </div>
                         <div class="kk-revform__file">
                             <label>
-                                <span>Add Videos <em>(optional)</em></span>
+                                <span>Add Videos</span>
                                 <input type="file" name="videos[]" accept="video/mp4,video/webm,video/quicktime" multiple
                                        x-ref="videos" @change="pick('videos', $event)">
                             </label>

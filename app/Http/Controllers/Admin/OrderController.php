@@ -91,9 +91,12 @@ class OrderController extends Controller
         $oldStatus = $order->status;
 
         // Validate state transitions against the workflow on the model, so the
-        // dropdown and this guard can never drift apart.
-        if (! $order->canTransitionTo($validated['status'])) {
-            return back()->with('error', "Cannot change status from \"{$oldStatus}\" to \"{$validated['status']}\".");
+        // dropdown and this guard can never drift apart. The model hands back
+        // the reason so an admin blocked by the unpaid-prepaid rule is told
+        // that, rather than a generic "cannot change status" that points at the
+        // workflow they did follow.
+        if ($reason = $order->transitionBlockedReason($validated['status'])) {
+            return back()->with('error', $reason);
         }
 
         // Auto-push to Shiprocket when moving to "processing" (or "packed")
@@ -153,6 +156,39 @@ class OrderController extends Controller
         }
 
         return back()->with('success', $msg);
+    }
+
+    /**
+     * Settle an order's payment by hand. Needed because a prepaid order can no
+     * longer be shipped while it reads unpaid, and payment_status had no admin
+     * route at all - so a gateway callback that never arrived, or a customer
+     * who paid by bank transfer, left the order unshippable with no way out.
+     */
+    public function recordPayment(Request $request, Order $order): RedirectResponse
+    {
+        $validated = $request->validate([
+            'payment_status' => ['required', 'in:paid,failed,pending'],
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        if (in_array($order->payment_status, ['refunded', 'partial_refund'], true)) {
+            return back()->with('error', 'This order has been refunded. Its payment status cannot be edited here.');
+        }
+
+        $order->update([
+            'payment_status' => $validated['payment_status'],
+            'paid_amount'    => $validated['payment_status'] === 'paid' ? $order->total : 0,
+        ]);
+
+        // Record it on the timeline at the order's current status: this is not
+        // a fulfilment change, but an admin needs to see who marked it paid.
+        $order->statusHistory()->create([
+            'status'     => $order->status,
+            'comment'    => trim("Payment marked as {$validated['payment_status']}. " . ($validated['note'] ?? '')),
+            'created_by' => auth('admin')->id(),
+        ]);
+
+        return back()->with('success', "Payment marked as {$validated['payment_status']}.");
     }
 
     public function ship(Request $request, Order $order): RedirectResponse

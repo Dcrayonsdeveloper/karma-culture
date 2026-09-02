@@ -18,8 +18,12 @@
                     <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Banner Details</h2>
                     <div style="display: flex; flex-direction: column; gap: 1rem;">
                         <div>
-                            <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Name <span style="color: #d72c0d;">*</span></label>
-                            <input type="text" name="name" value="{{ old('name') }}" required
+                            {{-- for/id pairs matter beyond accessibility here: the inline validator
+                                 names the field from its own <label>, so an unlabelled input reports
+                                 "This field is required" instead of "Name is required". --}}
+                            <label for="banner-name" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Name <span style="color: #d72c0d;">*</span></label>
+                            <input type="text" name="name" id="banner-name" value="{{ old('name') }}" required
+                                   minlength="2" maxlength="255"
                                    class="form-input" style="width: 100%;" placeholder="e.g. Summer Sale Hero Banner">
                             @error('name')
                                 <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
@@ -27,8 +31,9 @@
                         </div>
 
                         <div>
-                            <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Link URL</label>
-                            <input type="url" name="link" value="{{ old('link') }}"
+                            <label for="banner-link" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Link URL</label>
+                            <input type="url" name="link" id="banner-link" value="{{ old('link') }}"
+                                   maxlength="255" pattern="https?://.+" title="Enter a full web address starting with http:// or https://"
                                    class="form-input" style="width: 100%;" placeholder="https://example.com/page">
                             @error('link')
                                 <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
@@ -41,18 +46,22 @@
                     <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Images</h2>
                     <div style="display: flex; flex-direction: column; gap: 1rem;">
                         <div>
-                            <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Banner Image <span style="color: #d72c0d;">*</span></label>
-                            <input type="file" name="image" accept="image/*" required style="font-size: 13px; color: #616161;">
-                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Max 5MB. Recommended: 1920x600px</p>
+                            <label for="banner-image" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Banner Image <span style="color: #d72c0d;">*</span></label>
+                            {{-- accept lists the formats the server rule takes, rather than image/*,
+                                 which offers the admin an SVG or a TIFF the upload will then refuse. --}}
+                            <input type="file" name="image" id="banner-image" required
+                                   accept="image/jpeg,image/png,image/webp,image/gif" style="font-size: 13px; color: #616161;">
+                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">JPG, PNG, WebP or GIF. Max 5MB. Recommended: 1920x600px</p>
                             @error('image')
                                 <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
                             @enderror
                         </div>
 
                         <div>
-                            <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Mobile Image</label>
-                            <input type="file" name="mobile_image" accept="image/*" style="font-size: 13px; color: #616161;">
-                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Optional. Recommended: 768x400px</p>
+                            <label for="banner-mobile-image" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Mobile Image</label>
+                            <input type="file" name="mobile_image" id="banner-mobile-image"
+                                   accept="image/jpeg,image/png,image/webp,image/gif" style="font-size: 13px; color: #616161;">
+                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Optional. JPG, PNG, WebP or GIF. Max 5MB. Recommended: 768x400px</p>
                             @error('mobile_image')
                                 <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
                             @enderror
@@ -66,8 +75,8 @@
                     <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Placement</h2>
                     <div style="display: flex; flex-direction: column; gap: 1rem;">
                         <div>
-                            <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Position <span style="color: #d72c0d;">*</span></label>
-                            <select name="position" required class="form-select" style="width: 100%;">
+                            <label for="banner-position" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Position <span style="color: #d72c0d;">*</span></label>
+                            <select name="position" id="banner-position" required class="form-select" style="width: 100%;">
                                 <option value="">Select position</option>
                                 <option value="hero" @selected(old('position') == 'hero')>Hero</option>
                                 <option value="sidebar" @selected(old('position') == 'sidebar')>Sidebar</option>
@@ -81,31 +90,13 @@
                         </div>
 
                         <div>
-                            <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Priority</label>
-                            <input type="number" name="priority" value="{{ old('priority', 0) }}" min="0"
+                            <label for="banner-priority" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Priority</label>
+                            <input type="number" name="priority" id="banner-priority" value="{{ old('priority', 0) }}"
+                                   min="0" max="65535" step="1" inputmode="numeric"
+                                   title="Enter a whole number between 0 and 65535."
                                    class="form-input" style="width: 100%;">
                             <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Lower number = higher priority</p>
                             @error('priority')
-                                <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                            @enderror
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card" style="padding: 1.25rem;">
-                    <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Schedule</h2>
-                    <div style="display: flex; flex-direction: column; gap: 1rem;">
-                        <div>
-                            <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Starts At</label>
-                            <input type="datetime-local" name="starts_at" value="{{ old('starts_at') }}" class="form-input" style="width: 100%;">
-                            @error('starts_at')
-                                <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                            @enderror
-                        </div>
-                        <div>
-                            <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Ends At</label>
-                            <input type="datetime-local" name="ends_at" value="{{ old('ends_at') }}" class="form-input" style="width: 100%;">
-                            @error('ends_at')
                                 <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
                             @enderror
                         </div>

@@ -25,33 +25,43 @@
                 <form action="{{ route('admin.homepage.testimonials.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        {{-- for/id pairs matter beyond accessibility here: the inline validator
+                             names the field from its own <label>, so an unlabelled input reports
+                             "This field is required" instead of "Customer Name is required". --}}
                         <div>
-                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Customer Name <span style="color: #d72c0d;">*</span></label>
-                            <input type="text" name="name" required class="form-input">
+                            <label for="testimonial-name" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Customer Name <span style="color: #d72c0d;">*</span></label>
+                            {{-- Length only. The charset lives in App\Rules\PersonName, which has to
+                                 keep accepting O'Connor, Mary-Anne, José and रवि कुमार - a client
+                                 pattern narrow enough to be useful here would reject them. --}}
+                            <input type="text" name="name" id="testimonial-name" required minlength="2" maxlength="100"
+                                   autocomplete="off" class="form-input">
                         </div>
                         <div>
-                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Title/Role</label>
-                            <input type="text" name="title" class="form-input" placeholder="e.g. Happy Parent">
+                            <label for="testimonial-title" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Title/Role</label>
+                            <input type="text" name="title" id="testimonial-title" maxlength="255" class="form-input" placeholder="e.g. Happy Parent">
                         </div>
                         <div>
-                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Review <span style="color: #d72c0d;">*</span></label>
-                            <textarea name="content" rows="4" required class="form-textarea"></textarea>
+                            <label for="testimonial-content" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Review <span style="color: #d72c0d;">*</span></label>
+                            <textarea name="content" id="testimonial-content" rows="4" required minlength="3" maxlength="1000" class="form-textarea"></textarea>
                         </div>
                         <div>
-                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Rating <span style="color: #d72c0d;">*</span></label>
-                            <select name="rating" class="form-select">
+                            <label for="testimonial-rating" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Rating <span style="color: #d72c0d;">*</span></label>
+                            <select name="rating" id="testimonial-rating" required class="form-select">
                                 <option value="5">5 Stars</option>
                                 <option value="4">4 Stars</option>
                                 <option value="3">3 Stars</option>
+                                <option value="2">2 Stars</option>
+                                <option value="1">1 Star</option>
                             </select>
                         </div>
                         <div>
-                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Product Name</label>
-                            <input type="text" name="product_name" class="form-input" placeholder="e.g. Velvet Matte Lipstick">
+                            <label for="testimonial-product" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Product Name</label>
+                            <input type="text" name="product_name" id="testimonial-product" maxlength="255" class="form-input" placeholder="e.g. Velvet Matte Lipstick">
                         </div>
                         <div>
-                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Avatar Photo</label>
-                            <input type="file" name="avatar" accept="image/*" class="form-input">
+                            <label for="testimonial-avatar" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Avatar Photo</label>
+                            <input type="file" name="avatar" id="testimonial-avatar" accept="image/jpeg,image/png,image/webp,image/gif" class="form-input">
+                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">JPG, PNG, WebP or GIF. Max 2MB.</p>
                         </div>
                         <button type="submit" class="btn btn-primary" style="font-size: 13px; width: 100%;">Add Testimonial</button>
                     </div>

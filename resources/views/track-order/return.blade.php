@@ -50,7 +50,12 @@
                                     <div class="grid grid-cols-2 gap-3 mt-3">
                                         <div>
                                             <label class="block text-xs text-neutral-600 mb-1">Quantity</label>
-                                            <input type="number" name="items[{{ $i }}][quantity]" value="1" min="1" max="{{ $item->quantity }}" disabled
+                                            {{-- step and inputmode make the box whole-number-only and
+                                                 refuse letters as they are typed; min/max already match
+                                                 the server's min:1 and its ordered-quantity ceiling. --}}
+                                            <input type="number" name="items[{{ $i }}][quantity]" value="1"
+                                                   min="1" max="{{ $item->quantity }}" step="1" inputmode="numeric"
+                                                   required aria-label="Return quantity for {{ $item->product_name }}" disabled
                                                    class="w-full px-3 py-2 text-sm border border-neutral-200 rounded-lg bg-white disabled:bg-neutral-50 disabled:text-neutral-400">
                                         </div>
                                         <div>
@@ -89,7 +94,7 @@
                         </div>
 
                         <div>
-                            <label class="block text-[13px] font-medium text-neutral-700 mb-1.5">Anything else? <span class="text-neutral-400 font-normal">(optional)</span></label>
+                            <label class="block text-[13px] font-medium text-neutral-700 mb-1.5">Anything else?</label>
                             <textarea name="description" rows="3" maxlength="1000"
                                       class="w-full px-3.5 py-2.5 text-sm border border-neutral-200 rounded-lg bg-white"
                                       placeholder="Tell us more so we can sort this out faster">{{ old('description') }}</textarea>

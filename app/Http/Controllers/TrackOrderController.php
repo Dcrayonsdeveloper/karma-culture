@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Rules\ValidationRules as V;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -16,14 +17,19 @@ class TrackOrderController extends Controller
     public function track(Request $request): View
     {
         $rules = [
-            'order_number' => ['required', 'string', 'max:40'],
+            // max:30 is the orders.order_number column width, so nothing longer
+            // can exist to be found, and the charset is every character
+            // Order::generateOrderNumber() can emit. Both together keep this
+            // public, unauthenticated lookup from being fed arbitrary strings.
+            'order_number' => ['required', 'string', 'max:30', 'regex:/^[A-Za-z0-9\-]+$/'],
             // Signed-in customers can look up their own orders with just the
             // number; everyone else proves ownership with the mobile number.
-            'phone' => [auth()->check() ? 'nullable' : 'required', 'string', 'max:20'],
+            'phone' => V::mobile(required: ! auth()->check()),
         ];
 
         $validated = $request->validate($rules, [
             'phone.required' => 'Please enter the mobile number used for the order.',
+            'order_number.regex' => 'Order numbers contain only letters, numbers and hyphens, like ORD-20260211-A1B2C3D4.',
         ]);
 
         $order = Order::where('order_number', trim($validated['order_number']))

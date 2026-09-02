@@ -525,13 +525,11 @@
 
                 {{-- Signup-only: phone --}}
                 <div class="kk-loginmodal__group" x-show="mode === 'signup'">
-                    <label class="kk-loginmodal__label" for="kk-auth-phone">
-                        Phone Number <span class="kk-loginmodal__optional">(optional)</span>
-                    </label>
+                    <label class="kk-loginmodal__label" for="kk-auth-phone">Mobile Number</label>
                     <input type="tel" id="kk-auth-phone" class="kk-loginmodal__field"
                            :class="fieldErrors.phone && 'has-error'"
                            x-model="form.phone" placeholder="98765 43210" autocomplete="tel"
-                           inputmode="numeric" maxlength="15">
+                           inputmode="numeric" maxlength="20">
                     <p class="kk-loginmodal__fielderror" x-show="fieldErrors.phone" x-text="fieldErrors.phone" x-cloak></p>
                 </div>
 
@@ -649,17 +647,37 @@
                     e.email = 'That does not look like a valid email address.';
                 }
 
-                if (signup && this.form.phone.trim()) {
-                    const digits = this.form.phone.replace(/\D/g, '').replace(/^91(?=[6-9]\d{9}$)/, '');
-                    if (!/^[6-9]\d{9}$/.test(digits)) {
-                        e.phone = 'Enter a 10-digit mobile number, or leave this blank.';
+                if (signup) {
+                    if (!this.form.phone.trim()) {
+                        e.phone = 'Please enter your mobile number.';
+                    } else {
+                        // Mirrors App\Rules\IndianMobile: strip the decoration and the
+                        // +91/0 prefix, then test the ten digits that are left.
+                        const digits = this.form.phone.replace(/\D/g, '')
+                            .replace(/^0?91(?=[6-9]\d{9}$)/, '')
+                            .replace(/^0(?=[6-9]\d{9}$)/, '');
+                        if (!/^[6-9]\d{9}$/.test(digits)) {
+                            e.phone = 'Please enter a valid 10-digit mobile number starting with 6, 7, 8 or 9.';
+                        }
                     }
                 }
 
                 if (!this.form.password) {
                     e.password = 'Please enter your password.';
-                } else if (signup && this.form.password.length < 8) {
-                    e.password = 'Password must be at least 8 characters.';
+                } else if (signup) {
+                    // Mirrors the Password::defaults() policy in AppServiceProvider.
+                    // Deliberately no character-set restriction: any non-alphanumeric
+                    // counts as the symbol, so '#', '_' and '-' are all fine.
+                    const pw = this.form.password;
+                    if (pw.length < 8) {
+                        e.password = 'Your password must be at least 8 characters long.';
+                    } else if (!/[a-z]/.test(pw) || !/[A-Z]/.test(pw)) {
+                        e.password = 'Your password must include both an uppercase and a lowercase letter.';
+                    } else if (!/\d/.test(pw)) {
+                        e.password = 'Your password must include at least one number.';
+                    } else if (!/[^A-Za-z0-9]/.test(pw)) {
+                        e.password = 'Your password must include at least one special character, such as @ # ! or ?.';
+                    }
                 }
 
                 if (signup) {
@@ -752,10 +770,22 @@
 </script>
 
 <style>
-    .kk-loginmodal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px; }
-    .kk-loginmodal__overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.55); }
+    /* The signup tab adds three more fields, so the shell can end up taller than
+       a short viewport. The overlay scrolls, and `margin: auto` on the shell
+       centres it while there is room but collapses to zero once there is not --
+       which is what keeps the top of the form reachable instead of clipped. */
+    .kk-loginmodal {
+        position: fixed; inset: 0; z-index: 60;
+        display: flex; align-items: flex-start; justify-content: center;
+        padding: 16px;
+        overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+    }
+    /* Fixed, not absolute: an absolute overlay is sized to the scroll container
+       and would slide off the backdrop as soon as the modal is scrolled. */
+    .kk-loginmodal__overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); }
     .kk-loginmodal__shell {
         position: relative;
+        margin: auto;
         display: grid;
         grid-template-columns: 1fr 1fr;
         width: 100%;
@@ -764,9 +794,6 @@
         border-radius: 6px;
         overflow: hidden;
         box-shadow: 0 24px 60px rgba(0,0,0,0.35);
-    }
-    @media (max-width: 720px) {
-        .kk-loginmodal__shell { grid-template-columns: 1fr; max-width: 420px; }
     }
     .kk-loginmodal__close {
         position: absolute; top: 10px; right: 10px;
@@ -811,7 +838,6 @@
         display: block; margin-bottom: 5px;
         font-size: 12px; font-weight: 600; color: #2d1810; letter-spacing: 0.01em;
     }
-    .kk-loginmodal__optional { font-weight: 400; color: #9ca3af; }
     .kk-loginmodal__inputwrap { position: relative; }
     .kk-loginmodal__field {
         width: 100%; box-sizing: border-box;
@@ -868,5 +894,37 @@
     }
     .kk-loginmodal__fallback a { color: #2d1810; text-decoration: none; font-weight: 600; }
     .kk-loginmodal__fallback a:hover { text-decoration: underline; }
+
+    /* Short viewport, either orientation: trim the vertical rhythm so signup
+       fits without scrolling wherever it still can. */
+    @media (max-height: 760px) {
+        .kk-loginmodal__left { padding: 28px 24px; }
+        .kk-loginmodal__logo { height: 78px; }
+        .kk-loginmodal__right { padding: 24px 26px; }
+        .kk-loginmodal__tabs { margin-bottom: 14px; }
+        .kk-loginmodal__group { margin-bottom: 10px; }
+        .kk-loginmodal__field { padding: 9px 12px; }
+    }
+    /* Below the two-panel breakpoint the brand panel stacks on top of the form,
+       so it is tightened up rather than left pushing the fields down a screen. */
+    @media (max-width: 860px) {
+        .kk-loginmodal__shell { grid-template-columns: 1fr; max-width: 420px; }
+        .kk-loginmodal__left { padding: 22px 20px 20px; }
+        .kk-loginmodal__logo { height: 64px; }
+        .kk-loginmodal__welcome { font-size: 16px; }
+        .kk-loginmodal__subtitle { font-size: 14px; }
+        .kk-loginmodal__right { padding: 24px 20px; }
+    }
+    /* Stacked *and* short -- the brand panel is decoration and it is the one
+       block that can be dropped to buy the form a whole screen of height. */
+    @media (max-width: 860px) and (max-height: 720px) {
+        .kk-loginmodal__left { display: none; }
+    }
+    @media (max-width: 420px) {
+        .kk-loginmodal { padding: 12px 10px; }
+        .kk-loginmodal__right { padding: 22px 16px; }
+        .kk-loginmodal__close { top: 8px; right: 8px; width: 28px; height: 28px; }
+        .kk-loginmodal__close svg { width: 16px; height: 16px; }
+    }
 </style>
 @endguest

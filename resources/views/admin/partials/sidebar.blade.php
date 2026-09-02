@@ -45,11 +45,11 @@
 
 <!-- Sidebar -->
 <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-       class="fixed inset-y-0 left-0 z-30 w-60 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0"
+       class="fixed inset-y-0 left-0 z-30 w-60 flex flex-col transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0"
        style="background: #1a1a1a;">
 
     <!-- Store name + logo -->
-    <div class="flex items-center gap-2.5 h-14 px-4" style="border-bottom: 1px solid #2a2a2a;">
+    <div class="flex items-center gap-2.5 h-14 shrink-0 px-4" style="border-bottom: 1px solid #2a2a2a;">
         <div style="width: 1.75rem; height: 1.75rem; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: #333;">
             <svg style="width: 1rem; height: 1rem; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/>
@@ -61,7 +61,7 @@
     </div>
 
     <!-- Navigation -->
-    <nav class="px-2 py-3 space-y-0.5 overflow-y-auto scrollbar-dark" style="height: calc(100vh - 3.5rem);">
+    <nav class="flex-1 min-h-0 px-2 py-3 space-y-0.5 overflow-y-auto scrollbar-dark" style="overscroll-behavior: contain;">
         @php $user = auth('admin')->user(); @endphp
 
         <!-- Dashboard -->

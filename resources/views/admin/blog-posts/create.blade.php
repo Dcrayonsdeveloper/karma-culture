@@ -19,30 +19,41 @@
                     <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Post Content</h2>
                     <div style="display: flex; flex-direction: column; gap: 1rem;">
                         <div>
-                            <label class="form-label">Title <span style="color: #d72c0d;">*</span></label>
-                            <input type="text" name="title" value="{{ old('title') }}" required
+                            {{-- for/id pairs matter beyond accessibility here: the inline validator
+                                 names the field from its own <label>, so an unlabelled input reports
+                                 "This field is required" instead of "Title is required". --}}
+                            <label for="post-title" class="form-label">Title <span style="color: #d72c0d;">*</span></label>
+                            <input type="text" name="title" id="post-title" value="{{ old('title') }}" required
+                                   minlength="2" maxlength="255"
                                    class="form-input" placeholder="Post title">
                             @error('title')<p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>@enderror
                         </div>
 
                         <div>
-                            <label class="form-label">Slug</label>
-                            <input type="text" name="slug" value="{{ old('slug') }}"
+                            <label for="post-slug" class="form-label">Slug</label>
+                            <input type="text" name="slug" id="post-slug" value="{{ old('slug') }}"
+                                   maxlength="255" pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                                   title="Lower-case letters, numbers and single hyphens only, for example summer-style-guide."
                                    class="form-input" placeholder="auto-generated-from-title">
                             <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Leave empty to auto-generate</p>
                             @error('slug')<p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>@enderror
                         </div>
 
                         <div>
-                            <label class="form-label">Excerpt</label>
-                            <textarea name="excerpt" rows="3" class="form-textarea"
+                            <label for="post-excerpt" class="form-label">Excerpt</label>
+                            <textarea name="excerpt" id="post-excerpt" rows="3" maxlength="500" class="form-textarea"
                                       placeholder="Short description shown in blog listing...">{{ old('excerpt') }}</textarea>
                             <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Max 500 characters</p>
                             @error('excerpt')<p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>@enderror
                         </div>
 
                         <div>
-                            <label class="form-label">Content</label>
+                            <label for="content" class="form-label">Content</label>
+                            {{-- No native constraints on this one. CKEditor hides the textarea and
+                                 only writes back into it as the form submits, which is after the
+                                 inline validator has already read it - a `required` here would
+                                 report an empty field the admin can see is full. Length and markup
+                                 are enforced server-side instead. --}}
                             <textarea name="content" id="content">{{ old('content') }}</textarea>
                             @error('content')<p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>@enderror
                         </div>
@@ -54,13 +65,14 @@
                     <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">SEO</h2>
                     <div style="display: flex; flex-direction: column; gap: 1rem;">
                         <div>
-                            <label class="form-label">Meta Title</label>
-                            <input type="text" name="seo_data[meta_title]" value="{{ old('seo_data.meta_title') }}"
+                            <label for="post-meta-title" class="form-label">Meta Title</label>
+                            <input type="text" name="seo_data[meta_title]" id="post-meta-title" value="{{ old('seo_data.meta_title') }}"
+                                   maxlength="255"
                                    class="form-input" placeholder="SEO title (defaults to post title)">
                         </div>
                         <div>
-                            <label class="form-label">Meta Description</label>
-                            <textarea name="seo_data[meta_description]" rows="2" class="form-textarea"
+                            <label for="post-meta-description" class="form-label">Meta Description</label>
+                            <textarea name="seo_data[meta_description]" id="post-meta-description" rows="2" maxlength="500" class="form-textarea"
                                       placeholder="SEO meta description">{{ old('seo_data.meta_description') }}</textarea>
                         </div>
                     </div>
@@ -87,8 +99,9 @@
                 {{-- Featured Image --}}
                 <div class="card" style="padding: 1.25rem;">
                     <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Featured Image</h2>
-                    <input type="file" name="featured_image" accept="image/*" style="font-size: 13px; color: #616161;">
-                    <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">JPG, PNG, WebP. Max 2MB.</p>
+                    <input type="file" name="featured_image" id="post-featured-image" aria-label="Featured image"
+                           accept="image/jpeg,image/png,image/webp,image/gif" style="font-size: 13px; color: #616161;">
+                    <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">JPG, PNG, WebP or GIF. Max 2MB.</p>
                     @error('featured_image')<p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>@enderror
                 </div>
 
@@ -97,13 +110,15 @@
                     <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Classification</h2>
                     <div style="display: flex; flex-direction: column; gap: 1rem;">
                         <div>
-                            <label class="form-label">Category</label>
-                            <input type="text" name="category" value="{{ old('category') }}"
+                            <label for="post-category" class="form-label">Category</label>
+                            <input type="text" name="category" id="post-category" value="{{ old('category') }}"
+                                   maxlength="100"
                                    class="form-input" placeholder="e.g. Fashion, Parenting Tips">
                         </div>
                         <div>
-                            <label class="form-label">Tags</label>
-                            <input type="text" name="tags" value="{{ old('tags') }}"
+                            <label for="post-tags" class="form-label">Tags</label>
+                            <input type="text" name="tags" id="post-tags" value="{{ old('tags') }}"
+                                   maxlength="500"
                                    class="form-input" placeholder="tag1, tag2, tag3">
                             <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Comma separated</p>
                         </div>

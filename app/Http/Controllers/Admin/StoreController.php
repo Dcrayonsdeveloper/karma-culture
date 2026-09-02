@@ -13,7 +13,7 @@ class StoreController extends Controller
     public function index(): View
     {
         $perPage = request()->input('per_page', 10);
-        $stores = Store::withCount('registers')->orderBy('name')->paginate($perPage)->withQueryString();
+        $stores = Store::orderBy('name')->paginate($perPage)->withQueryString();
 
         return view('admin.stores.index', compact('stores'));
     }
@@ -41,8 +41,6 @@ class StoreController extends Controller
 
     public function edit(Store $store): View
     {
-        $store->load('registers');
-
         return view('admin.stores.edit', compact('store'));
     }
 

@@ -12,7 +12,7 @@
             </div>
         </div>
 
-        <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data">
+        <form id="product-form" action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data">
             @csrf
 
             <!-- Two-column Shopify layout -->
@@ -26,6 +26,7 @@
                         <div>
                             <label for="name" class="form-label form-label-required">Title</label>
                             <input type="text" name="name" id="name" value="{{ old('name') }}" required
+                                   minlength="2" maxlength="255"
                                    class="form-input w-full @error('name') form-input-error @enderror"
                                    placeholder="Short sleeve t-shirt"
                                    @input="if(!slugManual) slug = toSlug($event.target.value)">
@@ -33,7 +34,7 @@
                         </div>
                         <div>
                             <label for="short_description" class="form-label">Short description</label>
-                            <textarea name="short_description" id="short_description" rows="2"
+                            <textarea name="short_description" id="short_description" rows="2" maxlength="500"
                                       class="form-input w-full @error('short_description') form-input-error @enderror"
                                       placeholder="Brief product summary...">{{ old('short_description') }}</textarea>
                             @error('short_description') <p class="form-error">{{ $message }}</p> @enderror
@@ -116,8 +117,8 @@
                                 <label for="price" class="form-label form-label-required">Price</label>
                                 <div class="relative">
                                     <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[13px]" style="color: #616161;">₹</span>
-                                    <input type="number" name="price" id="price" value="{{ old('price') }}" required step="0.01" min="0"
-                                           class="form-input w-full pl-7 @error('price') form-input-error @enderror">
+                                    <input type="number" name="price" id="price" value="{{ old('price') }}" required step="0.01" min="0" max="9999999.99"
+                                           class="form-input form-input-prefixed w-full @error('price') form-input-error @enderror">
                                 </div>
                                 @error('price') <p class="form-error">{{ $message }}</p> @enderror
                             </div>
@@ -125,18 +126,20 @@
                                 <label for="mrp" class="form-label">Compare-at price</label>
                                 <div class="relative">
                                     <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[13px]" style="color: #616161;">₹</span>
-                                    <input type="number" name="mrp" id="mrp" value="{{ old('mrp') }}" step="0.01" min="0"
-                                           class="form-input w-full pl-7 @error('mrp') form-input-error @enderror">
+                                    <input type="number" name="mrp" id="mrp" value="{{ old('mrp') }}" step="0.01" min="0" max="9999999.99"
+                                           class="form-input form-input-prefixed w-full @error('mrp') form-input-error @enderror">
                                 </div>
                                 @error('mrp') <p class="form-error">{{ $message }}</p> @enderror
-                                <p class="form-hint" style="font-size:11px;color:#999;margin-top:4px;">Shown struck-through on the product page. Must be higher than Price.</p>
+                                {{-- Filled in by the compare-at guard below as the two prices are typed. --}}
+                                <p class="form-error" id="mrp-compare-error" hidden></p>
+                                <p class="form-hint" style="font-size:11px;color:#999;margin-top:4px;">Shown struck-through on the product page. Must be at least the Price.</p>
                             </div>
                             <div>
                                 <label for="cost_price" class="form-label">Cost per item</label>
                                 <div class="relative">
                                     <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[13px]" style="color: #616161;">₹</span>
-                                    <input type="number" name="cost_price" id="cost_price" value="{{ old('cost_price') }}" step="0.01" min="0"
-                                           class="form-input w-full pl-7 @error('cost_price') form-input-error @enderror">
+                                    <input type="number" name="cost_price" id="cost_price" value="{{ old('cost_price') }}" step="0.01" min="0" max="9999999.99"
+                                           class="form-input form-input-prefixed w-full @error('cost_price') form-input-error @enderror">
                                 </div>
                                 @error('cost_price') <p class="form-error">{{ $message }}</p> @enderror
                             </div>
@@ -150,18 +153,22 @@
                             <div>
                                 <label for="sku" class="form-label form-label-required">SKU</label>
                                 <input type="text" name="sku" id="sku" value="{{ old('sku') }}" required placeholder="FK-001"
+                                       maxlength="50" pattern="[A-Za-z0-9._/\-]+"
+                                       title="Letters, digits and . _ / - only, up to 50 characters."
                                        class="form-input w-full @error('sku') form-input-error @enderror">
                                 @error('sku') <p class="form-error">{{ $message }}</p> @enderror
                             </div>
                             <div>
                                 <label for="barcode" class="form-label">Barcode (EAN/UPC)</label>
                                 <input type="text" name="barcode" id="barcode" value="{{ old('barcode') }}"
+                                       maxlength="50" pattern="[A-Za-z0-9\-]+"
+                                       title="Letters, digits and hyphens only, up to 50 characters."
                                        class="form-input w-full @error('barcode') form-input-error @enderror">
                                 @error('barcode') <p class="form-error">{{ $message }}</p> @enderror
                             </div>
                             <div>
                                 <label for="stock_quantity" class="form-label form-label-required">Quantity</label>
-                                <input type="number" name="stock_quantity" id="stock_quantity" value="{{ old('stock_quantity', 0) }}" required min="0"
+                                <input type="number" name="stock_quantity" id="stock_quantity" value="{{ old('stock_quantity', 0) }}" required min="0" max="1000000" step="1"
                                        class="form-input w-full @error('stock_quantity') form-input-error @enderror">
                                 @error('stock_quantity') <p class="form-error">{{ $message }}</p> @enderror
                             </div>
@@ -221,6 +228,8 @@
                         <div>
                             <label for="slug" class="form-label">URL handle</label>
                             <input type="text" name="slug" id="slug" x-model="slug" placeholder="auto-generated"
+                                   maxlength="255" pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                                   title="Lower-case letters, digits and single hyphens, e.g. short-sleeve-t-shirt."
                                    class="form-input w-full @error('slug') form-input-error @enderror"
                                    @input="slugManual = ($event.target.value.trim() !== '')">
                             @error('slug') <p class="form-error">{{ $message }}</p> @enderror
@@ -232,13 +241,13 @@
                         <h2 class="text-[13px] font-semibold" style="color: #303030;">Search engine listing</h2>
                         <div>
                             <label for="meta_title" class="form-label">Page title</label>
-                            <input type="text" name="meta_title" id="meta_title" value="{{ old('meta_title') }}"
+                            <input type="text" name="meta_title" id="meta_title" value="{{ old('meta_title') }}" maxlength="255"
                                    class="form-input w-full @error('meta_title') form-input-error @enderror" placeholder="Product name">
                             @error('meta_title') <p class="form-error">{{ $message }}</p> @enderror
                         </div>
                         <div>
                             <label for="meta_description" class="form-label">Meta description</label>
-                            <textarea name="meta_description" id="meta_description" rows="3"
+                            <textarea name="meta_description" id="meta_description" rows="3" maxlength="500"
                                       class="form-input w-full @error('meta_description') form-input-error @enderror"
                                       placeholder="SEO description...">{{ old('meta_description') }}</textarea>
                             @error('meta_description') <p class="form-error">{{ $message }}</p> @enderror
@@ -276,6 +285,16 @@
             };
         }
 
+        // Gallery previews used to be appended from an async FileReader callback, so
+        // the "max 10" guard read a count that was still zero while the loop ran and
+        // a 20-file selection attached all 20. Object URLs are created synchronously,
+        // so the preview list and the FileList that actually gets submitted now grow
+        // in step, the cap bites on the first pick, and a preview's index still
+        // matches its file's index when a tile is removed.
+        const GALLERY_MAX = 10;
+        const IMAGE_MAX_BYTES = 2 * 1024 * 1024;
+        const IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+
         function imageUploader() {
             return {
                 mainPreview: null,
@@ -283,9 +302,12 @@
                 galleryPreviews: [],
                 galleryDragOver: false,
                 galleryFileList: new DataTransfer(),
+                galleryMax: GALLERY_MAX,
                 handleMainImage(file) {
-                    if (!file || !file.type.startsWith('image/')) return;
-                    if (file.size > 2 * 1024 * 1024) { toastr.error(file.name + ' exceeds 2MB.'); return; }
+                    if (!file) return;
+                    // Dropping a file bypasses the input's accept list, so re-check the type.
+                    if (!IMAGE_TYPES.includes(file.type)) { toastr.error(file.name + ' is not a JPG, PNG, WEBP or GIF.'); return; }
+                    if (file.size > IMAGE_MAX_BYTES) { toastr.error(file.name + ' exceeds 2MB.'); return; }
                     const dt = new DataTransfer(); dt.items.add(file);
                     this.$refs.mainFileInput.files = dt.files;
                     const reader = new FileReader();
@@ -294,18 +316,26 @@
                 },
                 removeMainImage() { this.mainPreview = null; this.$refs.mainFileInput.value = ''; },
                 handleGalleryFiles(files) {
+                    let overCap = 0;
                     for (const file of files) {
-                        if (!file.type.startsWith('image/')) continue;
-                        if (file.size > 2 * 1024 * 1024) { toastr.error(file.name + ' exceeds 2MB.'); continue; }
-                        if (this.galleryPreviews.length >= 10) { toastr.error('Max 10 gallery images.'); break; }
+                        if (!IMAGE_TYPES.includes(file.type)) { toastr.error(file.name + ' is not a JPG, PNG, WEBP or GIF.'); continue; }
+                        if (file.size > IMAGE_MAX_BYTES) { toastr.error(file.name + ' exceeds 2MB.'); continue; }
+                        // Count what is attached to the input, not what has been previewed.
+                        if (this.galleryFileList.items.length >= GALLERY_MAX) { overCap++; continue; }
                         this.galleryFileList.items.add(file);
-                        const reader = new FileReader();
-                        reader.onload = (e) => { this.galleryPreviews.push({ url: e.target.result, name: file.name }); };
-                        reader.readAsDataURL(file);
+                        this.galleryPreviews.push({ url: URL.createObjectURL(file), name: file.name });
                     }
                     this.$refs.galleryInput.files = this.galleryFileList.files;
+                    if (overCap > 0) {
+                        toastr.error('Only ' + GALLERY_MAX + ' gallery images allowed - ' + overCap + (overCap === 1 ? ' was' : ' were') + ' left out.');
+                    }
                 },
-                removeGalleryImage(index) { this.galleryPreviews.splice(index, 1); this.galleryFileList.items.remove(index); this.$refs.galleryInput.files = this.galleryFileList.files; }
+                removeGalleryImage(index) {
+                    URL.revokeObjectURL(this.galleryPreviews[index].url);
+                    this.galleryPreviews.splice(index, 1);
+                    this.galleryFileList.items.remove(index);
+                    this.$refs.galleryInput.files = this.galleryFileList.files;
+                }
             };
         }
 
@@ -322,5 +352,7 @@
             ]}
         }).catch(error => console.error(error));
     </script>
+
+    @include('admin.products.partials.price-guard')
     @endpush
 </x-layouts.admin>

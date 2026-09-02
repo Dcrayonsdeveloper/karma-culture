@@ -27,30 +27,35 @@
                 </div>
                 <div style="padding: 1rem; display: flex; flex-direction: column; gap: 1rem;">
                     <div>
-                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Site Logo</label>
+                        {{-- for/id pairs matter beyond accessibility here: the inline validator
+                             names the field from its own <label>, so an unlabelled input reports
+                             "This field is required" instead of "Site Name is required". --}}
+                        <label for="site-logo" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Site Logo</label>
                         @if($settings['site_logo'])
                             <div style="margin-bottom: 0.5rem;">
                                 <img src="{{ asset('storage/' . $settings['site_logo']) }}" alt="Current Logo" style="height: 4rem; object-fit: contain;">
                             </div>
                         @endif
-                        <input type="file" name="site_logo" accept="image/*" class="form-input">
-                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Recommended: PNG with transparent background, 200x60px</p>
+                        {{-- accept lists exactly what the server rule takes. image/* offered SVG,
+                             which is a script container, and the upload was not checked at all. --}}
+                        <input type="file" name="site_logo" id="site-logo" accept="image/jpeg,image/png,image/webp" class="form-input">
+                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">JPG, PNG or WebP. Max 2MB. Recommended: PNG with transparent background, 200x60px</p>
                     </div>
                     <div>
-                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Site Name</label>
-                        <input type="text" name="site_name" value="{{ $settings['site_name'] }}" class="form-input">
+                        <label for="site-name" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Site Name</label>
+                        <input type="text" name="site_name" id="site-name" value="{{ $settings['site_name'] }}" maxlength="100" class="form-input">
                     </div>
                     <div>
-                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Tagline</label>
-                        <input type="text" name="site_tagline" value="{{ $settings['site_tagline'] }}" class="form-input">
+                        <label for="site-tagline" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Tagline</label>
+                        <input type="text" name="site_tagline" id="site-tagline" value="{{ $settings['site_tagline'] }}" maxlength="150" class="form-input">
                     </div>
                     <div>
-                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Site Description</label>
-                        <textarea name="site_description" rows="3" class="form-textarea">{{ $settings['site_description'] }}</textarea>
+                        <label for="site-description" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Site Description</label>
+                        <textarea name="site_description" id="site-description" rows="3" maxlength="500" class="form-textarea">{{ $settings['site_description'] }}</textarea>
                     </div>
                     <div>
-                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Announcement Bar Text</label>
-                        <input type="text" name="announcement_text" value="{{ $settings['announcement_text'] }}" class="form-input" placeholder="e.g. Free Shipping on Orders Over ₹500!">
+                        <label for="announcement-text" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Announcement Bar Text</label>
+                        <input type="text" name="announcement_text" id="announcement-text" value="{{ $settings['announcement_text'] }}" maxlength="255" class="form-input" placeholder="e.g. Free Shipping on Orders Over ₹500!">
                         <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Displayed in the teal bar at the top of every page. Leave empty to hide.</p>
                     </div>
                     {{-- The About Us section shows three videos side by side, so all
@@ -62,7 +67,7 @@
                         ['url' => 'about_us_video_url_3', 'file' => 'about_us_video_file_3', 'label' => 'About Us - Video 3'],
                     ] as $kkAboutVideo)
                     <div style="border-top: 1px solid #e3e3e3; padding-top: 1rem;">
-                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">{{ $kkAboutVideo['label'] }}</label>
+                        <label for="{{ $kkAboutVideo['url'] }}" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">{{ $kkAboutVideo['label'] }}</label>
                         @if($settings[$kkAboutVideo['url']] ?? '')
                             <div style="margin: 0.5rem 0;">
                                 <video src="{{ str_starts_with($settings[$kkAboutVideo['url']], 'http') ? $settings[$kkAboutVideo['url']] : asset($settings[$kkAboutVideo['url']]) }}"
@@ -70,9 +75,15 @@
                                        style="max-width: 100%; max-height: 200px; border-radius: 10px;"></video>
                             </div>
                         @endif
-                        <input type="text" name="{{ $kkAboutVideo['url'] }}" value="{{ $settings[$kkAboutVideo['url']] ?? '' }}" class="form-input" placeholder="https://… or storage/storefront/about/video.mp4">
-                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Paste a video URL above OR upload a file below. Shown in the About Us section on the home page.</p>
-                        <input type="file" name="{{ $kkAboutVideo['file'] }}" accept="video/mp4,video/webm,video/quicktime" class="form-input" style="margin-top: 0.5rem;">
+                        <input type="text" name="{{ $kkAboutVideo['url'] }}" id="{{ $kkAboutVideo['url'] }}"
+                               value="{{ $settings[$kkAboutVideo['url']] ?? '' }}" maxlength="255"
+                               pattern="https?://\S+|[A-Za-z0-9._\-/]+\.(mp4|webm|mov|ogg)"
+                               title="Enter a full https:// address, or a path to an .mp4, .webm or .mov file."
+                               class="form-input" placeholder="https://… or storage/storefront/about/video.mp4">
+                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Paste a video URL above OR upload a file below. MP4, WebM or MOV, max 64MB. Shown in the About Us section on the home page.</p>
+                        <input type="file" name="{{ $kkAboutVideo['file'] }}" id="{{ $kkAboutVideo['file'] }}"
+                               aria-label="{{ $kkAboutVideo['label'] }} upload"
+                               accept="video/mp4,video/webm,video/quicktime" class="form-input" style="margin-top: 0.5rem;">
                     </div>
                     @endforeach
                 </div>
@@ -84,35 +95,28 @@
                     <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Social Media Links</h2>
                 </div>
                 <div style="padding: 1rem; display: flex; flex-direction: column; gap: 1rem;">
-                    {{-- Displayed on the storefront in this order: Instagram, Facebook, Twitter, LinkedIn --}}
-                    <div>
-                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Instagram</label>
-                        <input type="url" name="social_instagram" value="{{ $settings['social_instagram'] }}" class="form-input" placeholder="https://instagram.com/...">
-                    </div>
-                    <div>
-                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Facebook</label>
-                        <input type="url" name="social_facebook" value="{{ $settings['social_facebook'] }}" class="form-input" placeholder="https://facebook.com/...">
-                    </div>
-                    <div>
-                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Twitter / X</label>
-                        <input type="url" name="social_twitter" value="{{ $settings['social_twitter'] }}" class="form-input" placeholder="https://x.com/...">
-                    </div>
-                    <div>
-                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">LinkedIn</label>
-                        <input type="url" name="social_linkedin" value="{{ $settings['social_linkedin'] }}" class="form-input" placeholder="https://linkedin.com/company/...">
-                    </div>
-                    <div>
-                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">YouTube <span style="color:#999;font-weight:400;">(optional)</span></label>
-                        <input type="url" name="social_youtube" value="{{ $settings['social_youtube'] }}" class="form-input" placeholder="https://youtube.com/...">
-                    </div>
-                    <div>
-                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">TikTok</label>
-                        <input type="url" name="social_tiktok" value="{{ $settings['social_tiktok'] }}" class="form-input" placeholder="https://tiktok.com/...">
-                    </div>
-                    <div>
-                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Pinterest</label>
-                        <input type="url" name="social_pinterest" value="{{ $settings['social_pinterest'] }}" class="form-input" placeholder="https://pinterest.com/...">
-                    </div>
+                    {{-- Displayed on the storefront in this order: Instagram, Facebook, Twitter, LinkedIn.
+                         Each is rendered into an href, so the scheme is pinned to http/https on both
+                         sides: type="url" alone would accept javascript: quite happily. --}}
+                    @foreach([
+                        ['key' => 'social_instagram', 'label' => 'Instagram',  'placeholder' => 'https://instagram.com/...'],
+                        ['key' => 'social_facebook',  'label' => 'Facebook',   'placeholder' => 'https://facebook.com/...'],
+                        ['key' => 'social_twitter',   'label' => 'Twitter / X','placeholder' => 'https://x.com/...'],
+                        ['key' => 'social_linkedin',  'label' => 'LinkedIn',   'placeholder' => 'https://linkedin.com/company/...'],
+                        ['key' => 'social_youtube',   'label' => 'YouTube',    'placeholder' => 'https://youtube.com/...'],
+                        ['key' => 'social_tiktok',    'label' => 'TikTok',     'placeholder' => 'https://tiktok.com/...'],
+                        ['key' => 'social_pinterest', 'label' => 'Pinterest',  'placeholder' => 'https://pinterest.com/...'],
+                    ] as $kkSocial)
+                        <div>
+                            <label for="{{ $kkSocial['key'] }}" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">
+                                {{ $kkSocial['label'] }}
+                            </label>
+                            <input type="url" name="{{ $kkSocial['key'] }}" id="{{ $kkSocial['key'] }}"
+                                   value="{{ $settings[$kkSocial['key']] }}" maxlength="255"
+                                   pattern="https?://.+" title="Enter a full web address starting with http:// or https://"
+                                   class="form-input" placeholder="{{ $kkSocial['placeholder'] }}">
+                        </div>
+                    @endforeach
                 </div>
             </div>
 
@@ -123,16 +127,29 @@
                 </div>
                 <div style="padding: 1rem; display: flex; flex-direction: column; gap: 1rem;">
                     <div>
-                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Email</label>
-                        <input type="email" name="contact_email" value="{{ $settings['contact_email'] }}" class="form-input">
+                        <label for="contact-email" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Email</label>
+                        {{-- type="email" on its own accepts "hello@karmaa" - a bare host with no
+                             TLD - which the server rule then rejects. The pattern closes that gap
+                             so the mismatch is caught in the field rather than after submitting. --}}
+                        <input type="email" name="contact_email" id="contact-email" value="{{ $settings['contact_email'] }}"
+                               maxlength="255" autocomplete="email"
+                               pattern=".+@.+\..+" title="Enter a full email address, like hello@example.com"
+                               class="form-input">
                     </div>
                     <div>
-                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Phone</label>
-                        <input type="text" name="contact_phone" value="{{ $settings['contact_phone'] }}" class="form-input">
+                        <label for="contact-phone" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Phone</label>
+                        {{-- Pattern mirrors App\Rules\IndianMobile: an optional +91 or 0 prefix,
+                             then ten digits opening 6-9, spacing and hyphens tolerated. Anything
+                             narrower would reject numbers the server accepts. --}}
+                        <input type="tel" name="contact_phone" id="contact-phone" value="{{ $settings['contact_phone'] }}"
+                               inputmode="numeric" autocomplete="tel" maxlength="20"
+                               pattern="(\+?91[\s\-]?)?0?[6-9][0-9\s\-]{9,}"
+                               title="Enter a 10-digit Indian mobile number starting with 6, 7, 8 or 9."
+                               class="form-input">
                     </div>
                     <div>
-                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Address</label>
-                        <textarea name="contact_address" rows="3" class="form-textarea">{{ $settings['contact_address'] }}</textarea>
+                        <label for="contact-address" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Address</label>
+                        <textarea name="contact_address" id="contact-address" rows="3" maxlength="500" class="form-textarea">{{ $settings['contact_address'] }}</textarea>
                     </div>
                 </div>
             </div>
@@ -144,12 +161,12 @@
                 </div>
                 <div style="padding: 1rem; display: flex; flex-direction: column; gap: 1rem;">
                     <div>
-                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">About Text</label>
-                        <textarea name="footer_about" rows="4" class="form-textarea">{{ $settings['footer_about'] }}</textarea>
+                        <label for="footer-about" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">About Text</label>
+                        <textarea name="footer_about" id="footer-about" rows="4" maxlength="1000" class="form-textarea">{{ $settings['footer_about'] }}</textarea>
                     </div>
                     <div>
-                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Copyright Text</label>
-                        <input type="text" name="footer_copyright" value="{{ $settings['footer_copyright'] }}" class="form-input">
+                        <label for="footer-copyright" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Copyright Text</label>
+                        <input type="text" name="footer_copyright" id="footer-copyright" value="{{ $settings['footer_copyright'] }}" maxlength="255" class="form-input">
                     </div>
                 </div>
             </div>

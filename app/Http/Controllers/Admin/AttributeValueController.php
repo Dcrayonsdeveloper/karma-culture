@@ -5,12 +5,30 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Attribute;
 use App\Models\AttributeValue;
+use App\Rules\ValidationRules as V;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class AttributeValueController extends Controller
 {
+    /**
+     * One shape for both store() and update(), so an edit cannot accept a value
+     * that a create would refuse.
+     *
+     * color_code is varchar(7): a #rrggbb swatch, which is the only thing an
+     * <input type="color"> ever posts. position is a plain INT column, capped
+     * well below its range because it is only ever a sort key.
+     */
+    private function rules(): array
+    {
+        return [
+            'value' => V::text(max: 255),
+            'color_code' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'position' => ['nullable', 'integer', 'min:0', 'max:65535'],
+        ];
+    }
+
     public function create(Attribute $attribute): View
     {
         return view('admin.attributes.values.create', compact('attribute'));
@@ -18,11 +36,7 @@ class AttributeValueController extends Controller
 
     public function store(Request $request, Attribute $attribute): RedirectResponse
     {
-        $validated = $request->validate([
-            'value' => 'required|string|max:255',
-            'color_code' => 'nullable|string|max:7',
-            'position' => 'nullable|integer',
-        ]);
+        $validated = $request->validate($this->rules());
 
         $validated['attribute_id'] = $attribute->id;
 
@@ -38,11 +52,7 @@ class AttributeValueController extends Controller
 
     public function update(Request $request, AttributeValue $value): RedirectResponse
     {
-        $validated = $request->validate([
-            'value' => 'required|string|max:255',
-            'color_code' => 'nullable|string|max:7',
-            'position' => 'nullable|integer',
-        ]);
+        $validated = $request->validate($this->rules());
 
         $value->update($validated);
 

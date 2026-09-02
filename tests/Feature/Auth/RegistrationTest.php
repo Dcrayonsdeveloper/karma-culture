@@ -22,10 +22,12 @@ class RegistrationTest extends TestCase
         $response = $this->post('/register', [
             'full_name' => 'Test User',
             'email' => 'test@example.com',
+            // Both of these are required server-side, so a valid payload has to
+            // carry them: terms is enforced rather than merely marked in the
+            // form, and a mobile number is now mandatory at signup.
+            'phone' => '9876543210',
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
-            // The form has always marked this required; it is now enforced
-            // server-side too, so a valid payload has to carry it.
             'terms' => '1',
         ]);
 
@@ -41,7 +43,7 @@ class RegistrationTest extends TestCase
     {
         $response = $this->post('/register', []);
 
-        $response->assertSessionHasErrors(['full_name', 'email', 'password']);
+        $response->assertSessionHasErrors(['full_name', 'email', 'phone', 'password']);
     }
 
     public function test_registration_fails_with_invalid_email(): void

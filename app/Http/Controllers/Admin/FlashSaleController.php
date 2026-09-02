@@ -4,17 +4,25 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\FlashSale;
+use App\Rules\ValidationRules as V;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class FlashSaleController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $perPage = request()->input('per_page', 10);
-        $flashSales = FlashSale::withCount('products')->latest()->paginate($perPage)->withQueryString();
+        $filters = $request->validate([
+            'per_page' => ['nullable', 'integer', 'min:5', 'max:100'],
+        ]);
+
+        $flashSales = FlashSale::withCount('products')
+            ->latest()
+            ->paginate($filters['per_page'] ?? 10)
+            ->withQueryString();
 
         return view('admin.flash-sales.index', compact('flashSales'));
     }
@@ -24,19 +32,81 @@ class FlashSaleController extends Controller
         return view('admin.flash-sales.create')->with('allProducts', $this->selectableProducts());
     }
 
+    /**
+     * The rule set shared by store() and update().
+     *
+     * The slug is derived from the name and the column is unique, so two sales
+     * called "Weekend Sale" used to collide on insert and surface as a 500
+     * rather than as a message on the field the admin can actually fix. The
+     * closure turns that integrity error back into validation, which is what it
+     * always was.
+     *
+     * @return array<string, mixed>
+     */
+    private function rules(?FlashSale $flashSale = null): array
+    {
+        return [
+            'name' => [
+                ...V::text(max: 255, min: 2),
+                function (string $attribute, mixed $value, \Closure $fail) use ($flashSale): void {
+                    $slug = Str::slug((string) $value);
+
+                    if ($slug === '') {
+                        $fail('The name must contain at least one letter or number.');
+
+                        return;
+                    }
+
+                    $taken = FlashSale::where('slug', $slug)
+                        ->when($flashSale, fn ($q) => $q->whereKeyNot($flashSale->getKey()))
+                        ->exists();
+
+                    if ($taken) {
+                        $fail('Another flash sale already uses this name.');
+                    }
+                },
+            ],
+            'description' => V::textarea(required: false, max: 1000),
+            'starts_at' => V::scheduleStart(current: $flashSale?->starts_at),
+            'ends_at' => V::scheduleEnd('starts_at', current: $flashSale?->ends_at),
+            'is_active' => V::boolean(),
+            'products' => ['nullable', 'array', 'max:200'],
+            'products.*.product_id' => ['nullable', 'integer', Rule::exists('products', 'id')],
+            // decimal(12,2) columns: two places, and a ceiling under the width
+            // so a bad number is rejected rather than truncated by the database.
+            'products.*.sale_price' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999.99'],
+            'products.*.stock_limit' => ['nullable', 'integer', 'min:0', 'max:1000000'],
+        ];
+    }
+
+    private function messages(): array
+    {
+        return [
+            'ends_at.after' => 'The end time must be later than the start time.',
+            'starts_at.date' => 'Enter a valid start date and time.',
+            'ends_at.date' => 'Enter a valid end date and time.',
+        ];
+    }
+
+    /**
+     * Field names as they read in a message.
+     *
+     * Without these the schedule rules produce "The starts at cannot be set in
+     * the past." - the column name, not the label on the form.
+     *
+     * @return array<string, string>
+     */
+    private function attributes(): array
+    {
+        return [
+            'starts_at' => 'start time',
+            'ends_at' => 'end time',
+        ];
+    }
+
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'starts_at' => 'required|date',
-            'ends_at' => 'required|date|after:starts_at',
-            'is_active' => 'boolean',
-            'products' => 'nullable|array',
-            'products.*.product_id' => 'nullable|integer|exists:products,id',
-            'products.*.sale_price' => 'nullable|numeric|min:0',
-            'products.*.stock_limit' => 'nullable|integer|min:0',
-        ]);
+        $validated = $request->validate($this->rules(), $this->messages(), $this->attributes());
 
         $flashSale = FlashSale::create([
             'name' => $validated['name'],
@@ -94,24 +164,12 @@ class FlashSaleController extends Controller
     {
         $flashSale->load('products');
 
-        $flashSale->load('products');
-
         return view('admin.flash-sales.edit', compact('flashSale'))->with('allProducts', $this->selectableProducts());
     }
 
     public function update(Request $request, FlashSale $flashSale): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'starts_at' => 'required|date',
-            'ends_at' => 'required|date|after:starts_at',
-            'is_active' => 'boolean',
-            'products' => 'nullable|array',
-            'products.*.product_id' => 'nullable|integer|exists:products,id',
-            'products.*.sale_price' => 'nullable|numeric|min:0',
-            'products.*.stock_limit' => 'nullable|integer|min:0',
-        ]);
+        $validated = $request->validate($this->rules($flashSale), $this->messages(), $this->attributes());
 
         $flashSale->update([
             'name' => $validated['name'],

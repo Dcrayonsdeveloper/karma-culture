@@ -16,8 +16,9 @@
             <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Attribute Details</h2>
             <div style="display: flex; flex-direction: column; gap: 1rem;">
                 <div>
-                    <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Name <span style="color: #d72c0d;">*</span></label>
-                    <input type="text" name="name" value="{{ old('name') }}" required
+                    <label for="name" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Name <span style="color: #d72c0d;">*</span></label>
+                    <input type="text" name="name" id="name" value="{{ old('name') }}" required
+                           minlength="2" maxlength="100"
                            class="form-input" style="width: 100%;" placeholder="e.g. Size, Color, Material">
                     @error('name')
                         <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
@@ -25,8 +26,8 @@
                 </div>
 
                 <div>
-                    <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Type <span style="color: #d72c0d;">*</span></label>
-                    <select name="type" class="form-select" style="width: 100%;" required>
+                    <label for="type" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Type <span style="color: #d72c0d;">*</span></label>
+                    <select name="type" id="type" class="form-select" style="width: 100%;" required>
                         <option value="select" @selected(old('type') === 'select')>Select (Dropdown)</option>
                         <option value="color" @selected(old('type') === 'color')>Color (Swatch)</option>
                         <option value="text" @selected(old('type') === 'text')>Text (Free Input)</option>

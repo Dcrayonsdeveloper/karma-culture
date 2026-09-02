@@ -25,9 +25,12 @@
                 <form action="{{ route('admin.homepage.navigation.store') }}" method="POST">
                     @csrf
                     <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        {{-- for/id pairs matter beyond accessibility here: the inline validator
+                             names the field from its own <label>, so an unlabelled input reports
+                             "This field is required" instead of "Label is required". --}}
                         <div>
-                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Location <span style="color: #d72c0d;">*</span></label>
-                            <select name="location" class="form-select" required>
+                            <label for="nav-location" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Location <span style="color: #d72c0d;">*</span></label>
+                            <select name="location" id="nav-location" class="form-select" required>
                                 <option value="header">Header Navigation</option>
                                 <option value="footer_col1">Footer - Quick Links</option>
                                 <option value="footer_col2">Footer - Customer Service</option>
@@ -35,12 +38,18 @@
                             </select>
                         </div>
                         <div>
-                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Label <span style="color: #d72c0d;">*</span></label>
-                            <input type="text" name="label" required class="form-input" placeholder="Menu item text">
+                            <label for="nav-label" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Label <span style="color: #d72c0d;">*</span></label>
+                            <input type="text" name="label" id="nav-label" required maxlength="255" class="form-input" placeholder="Menu item text">
                         </div>
                         <div>
-                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">URL <span style="color: #d72c0d;">*</span></label>
-                            <input type="text" name="url" required class="form-input" placeholder="/about or https://...">
+                            <label for="nav-url" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">URL <span style="color: #d72c0d;">*</span></label>
+                            {{-- A relative path, a full http(s) address, mailto:, tel: or a #anchor.
+                                 A menu item is rendered as an href, so `javascript:` here would be
+                                 stored XSS on every page the menu appears on. --}}
+                            <input type="text" name="url" id="nav-url" required maxlength="255"
+                                   pattern="(https?://|mailto:|tel:)\S+|/\S*|#\S*"
+                                   title="Enter a path such as /about, or a full https:// address."
+                                   class="form-input" placeholder="/about or https://...">
                         </div>
                         <button type="submit" class="btn btn-primary" style="font-size: 13px; width: 100%;">Add Menu Item</button>
                     </div>
@@ -74,14 +83,20 @@
                 </div>
             </div>
 
-            @foreach(['footer_col1' => 'Quick Links', 'footer_col2' => 'Customer Service', 'footer_col3' => 'Policies'] as $loc => $label)
+            {{-- The controller passes $footerCol1..3; the loop used to rebuild those
+                 names from the location string and read $$loc, which resolved to
+                 $footer_col1 and threw. Pair each column with its items here. --}}
+            @foreach([
+                ['label' => 'Quick Links', 'items' => $footerCol1],
+                ['label' => 'Customer Service', 'items' => $footerCol2],
+                ['label' => 'Policies', 'items' => $footerCol3],
+            ] as $column)
                 <div class="card">
                     <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;">
-                        <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Footer: {{ $label }}</h2>
+                        <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Footer: {{ $column['label'] }}</h2>
                     </div>
                     <div style="padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                        @php $items = ${str_replace('footer_', 'footerCol', ucfirst(str_replace('footer_col', 'footerCol', $loc)))} ?? collect(); @endphp
-                        @forelse($$loc as $item)
+                        @forelse($column['items'] as $item)
                             <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0.75rem; background: #f6f6f7; border-radius: 0.375rem;">
                                 <div>
                                     <span style="font-size: 13px; font-weight: 500; color: #303030;">{{ $item->label }}</span>

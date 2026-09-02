@@ -18,8 +18,12 @@
                     <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Page Details</h2>
                     <div style="display: flex; flex-direction: column; gap: 1rem;">
                         <div>
-                            <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Title <span style="color: #d72c0d;">*</span></label>
-                            <input type="text" name="title" value="{{ old('title') }}" required
+                            {{-- for/id pairs matter beyond accessibility here: the inline validator
+                                 names the field from its own <label>, so an unlabelled input reports
+                                 "This field is required" instead of "Title is required". --}}
+                            <label for="page-title" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Title <span style="color: #d72c0d;">*</span></label>
+                            <input type="text" name="title" id="page-title" value="{{ old('title') }}" required
+                                   minlength="2" maxlength="255"
                                    class="form-input" style="width: 100%;" placeholder="e.g. About Us">
                             @error('title')
                                 <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
@@ -27,8 +31,10 @@
                         </div>
 
                         <div>
-                            <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Slug</label>
-                            <input type="text" name="slug" value="{{ old('slug') }}"
+                            <label for="page-slug" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Slug</label>
+                            <input type="text" name="slug" id="page-slug" value="{{ old('slug') }}"
+                                   maxlength="255" pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                                   title="Lower-case letters, numbers and single hyphens only, for example shipping-policy."
                                    class="form-input" style="width: 100%;" placeholder="auto-generated-from-title">
                             <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Leave empty to auto-generate from title</p>
                             @error('slug')
@@ -37,7 +43,12 @@
                         </div>
 
                         <div>
-                            <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Content</label>
+                            <label for="page-content" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Content</label>
+                            {{-- No native constraints on this one. CKEditor hides the textarea and
+                                 only writes back into it as the form submits, which is after the
+                                 inline validator has already read it - a `required` here would
+                                 report an empty field the admin can see is full. Length and markup
+                                 are enforced server-side instead. --}}
                             <textarea name="content" id="page-content" rows="12" class="form-textarea" style="width: 100%;" placeholder="Page content...">{{ old('content') }}</textarea>
                             @error('content')
                                 <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
@@ -50,13 +61,14 @@
                     <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">SEO</h2>
                     <div style="display: flex; flex-direction: column; gap: 1rem;">
                         <div>
-                            <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Meta Title</label>
-                            <input type="text" name="seo_data[meta_title]" value="{{ old('seo_data.meta_title') }}"
+                            <label for="page-meta-title" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Meta Title</label>
+                            <input type="text" name="seo_data[meta_title]" id="page-meta-title" value="{{ old('seo_data.meta_title') }}"
+                                   maxlength="255"
                                    class="form-input" style="width: 100%;" placeholder="SEO title">
                         </div>
                         <div>
-                            <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Meta Description</label>
-                            <textarea name="seo_data[meta_description]" rows="2" class="form-textarea" style="width: 100%;"
+                            <label for="page-meta-description" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Meta Description</label>
+                            <textarea name="seo_data[meta_description]" id="page-meta-description" rows="2" maxlength="500" class="form-textarea" style="width: 100%;"
                                       placeholder="SEO description">{{ old('seo_data.meta_description') }}</textarea>
                         </div>
                     </div>

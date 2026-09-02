@@ -52,6 +52,51 @@
                 </div>
             </div>
 
+            <!-- Replies -->
+            @foreach($enquiry->replies as $reply)
+                <div class="card" style="border-left: 4px solid #005bd3;">
+                    <div style="padding: 1rem;">
+                        <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+                            <div style="width: 2rem; height: 2rem; background: #005bd3; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                <span style="font-size: 11px; font-weight: 600; color: white;">{{ strtoupper(substr($reply->user->first_name ?? 'A', 0, 1)) }}</span>
+                            </div>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                                    <span style="font-size: 13px; font-weight: 500; color: #303030;">{{ $reply->user->full_name ?? 'Admin' }}</span>
+                                    <span style="display: inline-block; padding: 0.0625rem 0.375rem; border-radius: 0.25rem; font-size: 10px; font-weight: 500; background: #d4edfc; color: #0064a4;">Staff</span>
+                                    <span style="font-size: 12px; color: #616161;">{{ $reply->created_at->diffForHumans() }}</span>
+                                </div>
+                                <div style="font-size: 13px; color: #303030; line-height: 1.6;">
+                                    {!! nl2br(e($reply->message)) !!}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+
+            <!-- Reply Form -->
+            <div class="card">
+                <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;">
+                    <h3 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Reply to Customer</h3>
+                </div>
+                <form action="{{ route('admin.enquiries.reply', $enquiry) }}" method="POST">
+                    @csrf
+                    <div style="padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                        <textarea name="message" rows="4" required
+                                  class="form-input" style="width: 100%;"
+                                  placeholder="Type your reply to the customer...">{{ old('message') }}</textarea>
+                        @error('message')
+                            <p style="font-size: 13px; color: #d72c0d; margin: 0;">{{ $message }}</p>
+                        @enderror
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+                            <p style="font-size: 12px; color: #616161; margin: 0;">Emailed to {{ $enquiry->email }}</p>
+                            <button type="submit" class="btn btn-primary" style="font-size: 13px;">Send Reply</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
             <!-- Update Status & Notes -->
             <div class="card">
                 <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;">
@@ -152,6 +197,10 @@
                             <span style="font-weight: 500; color: #303030;">{{ $enquiry->read_at->format('M d, Y h:i A') }}</span>
                         </div>
                     @endif
+                    <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                        <span style="color: #616161;">Replies</span>
+                        <span style="font-weight: 500; color: #303030;">{{ $enquiry->replies->count() }}</span>
+                    </div>
                 </div>
             </div>
         </div>

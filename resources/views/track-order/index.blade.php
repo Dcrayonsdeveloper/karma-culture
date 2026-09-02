@@ -59,8 +59,11 @@
                 <form action="{{ route('track-order.track') }}" method="POST" class="p-5 sm:p-6 space-y-4">
                     @csrf
                     <div>
-                        <label class="block text-[13px] font-medium text-neutral-700 mb-1.5">Order Number</label>
-                        <input type="text" name="order_number" value="{{ old('order_number') }}" required
+                        <label for="kk-track-number" class="block text-[13px] font-medium text-neutral-700 mb-1.5">Order Number</label>
+                        <input type="text" name="order_number" id="kk-track-number" value="{{ old('order_number') }}" required
+                               maxlength="30" autocomplete="off" spellcheck="false"
+                               pattern="[A-Za-z0-9\-]+"
+                               title="Order numbers contain only letters, numbers and hyphens, like ORD-20260211-A1B2C3D4."
                                class="w-full px-3.5 py-2.5 text-sm border border-neutral-200 rounded-lg bg-white text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
                                placeholder="e.g., ORD-20260211-A1B2C">
                         @error('order_number')
@@ -70,9 +73,11 @@
 
                     @guest
                         <div>
-                            <label class="block text-[13px] font-medium text-neutral-700 mb-1.5">Mobile Number</label>
-                            <input type="tel" name="phone" value="{{ old('phone') }}" required
-                                   inputmode="numeric" autocomplete="tel"
+                            <label for="kk-track-phone" class="block text-[13px] font-medium text-neutral-700 mb-1.5">Mobile Number</label>
+                            <input type="tel" name="phone" id="kk-track-phone" value="{{ old('phone') }}" required
+                                   maxlength="20" inputmode="numeric" autocomplete="tel"
+                                   pattern="(\+?91[\s\-]?)?0?[6-9][0-9\s\-]{9,}"
+                                   title="Enter a 10-digit Indian mobile number starting with 6, 7, 8 or 9."
                                    class="w-full px-3.5 py-2.5 text-sm border border-neutral-200 rounded-lg bg-white text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
                                    placeholder="Mobile number used for the order">
                             @error('phone')

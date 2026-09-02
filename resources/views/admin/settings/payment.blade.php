@@ -84,7 +84,7 @@
                     </label>
                 </div>
                 <div style="padding: 0 1rem 1rem 1rem; border-top: 1px solid #f0f0f0;" x-show="enabled" x-collapse>
-                    <label class="form-label" style="margin-top: 1rem;">Instructions for Customer <span style="color: #616161; font-weight: 400;">(optional)</span></label>
+                    <label class="form-label" style="margin-top: 1rem;">Instructions for Customer</label>
                     <textarea name="cod_instructions" rows="2" class="form-textarea" placeholder="e.g. Please keep exact change ready at delivery.">{{ old('cod_instructions', $settings['cod_instructions'] ?? '') }}</textarea>
                 </div>
             </div>

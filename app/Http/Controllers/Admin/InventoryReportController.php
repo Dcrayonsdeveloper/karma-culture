@@ -13,6 +13,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class InventoryReportController extends Controller
 {
+    /** Columns the report may be ordered by. Anything else is ignored. */
+    private const SORTABLE = ['name', 'sku', 'stock_quantity', 'price', 'sales_count', 'created_at'];
+
     public function index(Request $request): View
     {
         $query = Product::whereNull('deleted_at')
@@ -39,8 +42,13 @@ class InventoryReportController extends Controller
             });
         }
 
-        $sortBy = $request->input('sort', 'stock_quantity');
-        $sortDir = $request->input('dir', 'asc');
+        // `sort` and `dir` are interpolated straight into the ORDER BY clause -
+        // the query builder does not bind identifiers - so both are matched
+        // against a fixed list rather than passed through.
+        $sortBy = in_array($request->input('sort'), self::SORTABLE, true)
+            ? $request->input('sort')
+            : 'stock_quantity';
+        $sortDir = $request->input('dir') === 'desc' ? 'desc' : 'asc';
         $query->orderBy($sortBy, $sortDir);
 
         $products = $query->paginate(20)->withQueryString();

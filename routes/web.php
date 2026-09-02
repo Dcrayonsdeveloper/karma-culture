@@ -90,6 +90,16 @@ Route::get('/search/suggestions', [App\Http\Controllers\SearchController::class,
 // had no route, which is why /products 404'd and the Shop It Your Way tiles
 // pointed at the home page, where their filters mean nothing.
 Route::get('/shop', [App\Http\Controllers\ProductController::class, 'index'])->name('shop');
+
+// Legacy paths. These still circulate in already-delivered email and in
+// admin-authored page copy, where they 404'd: /orders/{id} predates the move
+// of order pages under /account, /products predates the all-products page
+// moving to /shop, and /returns predates /returns-policy.
+Route::permanentRedirect('/products', '/shop');
+Route::permanentRedirect('/returns', '/returns-policy');
+Route::permanentRedirect('/orders/{order}/track', '/account/orders/{order}/track');
+Route::permanentRedirect('/orders/{order}', '/account/orders/{order}');
+
 Route::get('/deals', [App\Http\Controllers\DealsController::class, 'index'])->name('deals');
 Route::get('/flash-sale/{flashSale:slug}', [App\Http\Controllers\FlashSaleController::class, 'show'])->name('flash-sale.show');
 Route::get('/new-arrivals', [App\Http\Controllers\ProductController::class, 'newArrivals'])->name('new-arrivals');

@@ -190,8 +190,14 @@
                                     <template x-if="!coupon">
                                         <div>
                                             <form @submit.prevent="applyCoupon()" class="flex items-stretch">
+                                                {{-- No pattern: admin can mint a coupon code containing
+                                                     any character up to 50, so anything narrower here
+                                                     would refuse a code the server would have honoured.
+                                                     maxlength matches the coupons.code column. --}}
                                                 <input type="text" x-model="couponCode" placeholder="Enter coupon code"
-                                                       class="flex-1 min-w-0 text-[13px] border border-neutral-200 border-r-0 rounded-l-lg px-3 py-2.5 focus:border-primary-400 focus:outline-none uppercase placeholder:normal-case placeholder:text-neutral-600" required>
+                                                       required maxlength="50" aria-label="Coupon code"
+                                                       autocomplete="off" spellcheck="false"
+                                                       class="flex-1 min-w-0 text-[13px] border border-neutral-200 border-r-0 rounded-l-lg px-3 py-2.5 focus:border-primary-400 focus:outline-none uppercase placeholder:normal-case placeholder:text-neutral-600">
                                                 <button type="submit"
                                                         class="shrink-0 text-[13px] font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-r-lg px-5 py-2.5 transition-colors disabled:opacity-50"
                                                         :disabled="applyingCoupon">

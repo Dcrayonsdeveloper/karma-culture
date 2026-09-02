@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Events\OrderPlaced;
+use App\Events\OrderStatusChanged;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Setting;
@@ -221,7 +222,16 @@ class PayUController extends Controller
             $metadata = $order->metadata ?? [];
             $metadata['payu_mihpayid'] = $mihpayid;
             $metadata['payu_mode'] = $params['mode'] ?? '';
+            $metadata['payment_pending'] = false;
             $order->update(['metadata' => $metadata]);
+
+            // Nothing here used to touch the fulfilment status, so a fully paid
+            // order still sat at "pending" - the customer saw "Paid / Pending"
+            // and warehouse had no signal the order was ready to pick.
+            if ($order->status === 'pending') {
+                $order->updateStatus('confirmed', null, 'Payment received via PayU');
+                OrderStatusChanged::dispatch($order, 'pending', 'confirmed');
+            }
 
             return redirect()->route('checkout.success', $order);
         }
@@ -297,9 +307,11 @@ class PayUController extends Controller
             if ($item->variant_id) {
                 \App\Models\ProductVariant::where('id', $item->variant_id)
                     ->increment('stock_quantity', $item->quantity);
-            } else {
-                \App\Models\Product::where('id', $item->product_id)
-                    ->increment('stock_quantity', $item->quantity);
+            } elseif ($product = \App\Models\Product::find($item->product_id)) {
+                // Incremented on the model, not the query builder: the returned
+                // units have to go back on a warehouse shelf as well as into
+                // the product total, and only a model save says so.
+                $product->increment('stock_quantity', $item->quantity);
             }
 
             \App\Models\Product::where('id', $item->product_id)

@@ -18,7 +18,7 @@ As promised, here is your exclusive discount code:
 
 **Expires:** {{ $coupon->expires_at->format('M d, Y') }}
 
-@component('mail::button', ['url' => url('/products'), 'color' => 'primary'])
+@component('mail::button', ['url' => route('shop'), 'color' => 'primary'])
 Shop Now & Save
 @endcomponent
 

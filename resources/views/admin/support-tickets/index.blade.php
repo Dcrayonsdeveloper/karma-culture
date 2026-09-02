@@ -67,7 +67,7 @@
                        style="flex: 1; border: none; outline: none; font-size: 13px; color: #303030; background: transparent;">
                 {{-- Priority filter inline --}}
                 <select name="priority" onchange="this.form.submit()"
-                        style="border: 1px solid #c9cccf; border-radius: 0.5rem; padding: 0.25rem 0.5rem; font-size: 12px; color: #303030; background: white; cursor: pointer;">
+                        style="border: 1px solid #c9cccf; border-radius: 0.5rem; padding: 0.25rem 2rem 0.25rem 0.5rem; font-size: 12px; color: #303030; background-color: white; cursor: pointer;">
                     <option value="">All Priority</option>
                     <option value="low" @selected(request('priority') === 'low')>Low</option>
                     <option value="normal" @selected(request('priority') === 'normal')>Normal</option>

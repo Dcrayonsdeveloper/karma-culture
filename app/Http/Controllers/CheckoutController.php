@@ -9,6 +9,8 @@ use App\Models\CouponUsage;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Setting;
+use App\Rules\IndianMobile;
+use App\Rules\ValidationRules as V;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +19,25 @@ use Illuminate\View\View;
 
 class CheckoutController extends Controller
 {
+    /**
+     * The states the shipping form offers, and the only values it accepts.
+     *
+     * The list used to live in an inline php block in checkout/index.blade.php
+     * while the server took any string up to 80 characters, so the select was
+     * decoration: a direct POST could ship an order to "state=<anything>". It
+     * lives here now so the rendered options and the Rule::in that validates
+     * them can never drift apart.
+     */
+    public const STATES = [
+        'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat',
+        'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh',
+        'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
+        'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand',
+        'West Bengal', 'Andaman and Nicobar Islands', 'Chandigarh',
+        'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Jammu and Kashmir', 'Ladakh',
+        'Lakshadweep', 'Puducherry',
+    ];
+
     /**
      * Resolve the active cart for the current visitor.
      * Logged-in users are matched by user_id; guests by their session id
@@ -71,25 +92,40 @@ class CheckoutController extends Controller
 
     public function process(Request $request): RedirectResponse
     {
+        // The typed address fields are only mandatory when the customer is not
+        // shipping to one of their saved addresses. Prepending this to the
+        // shared rule set keeps every charset/length rule in place while
+        // swapping 'required' for the conditional form - 'nullable' does not
+        // suppress required_without, which is an implicit rule.
+        $whenTyped = 'required_without:address_id';
+
         $validated = $request->validate([
             // Scoped to the signed-in user so a guessed id cannot ship an order
             // to somebody else's saved address.
             'address_id'     => ['nullable', 'integer', Rule::exists('user_addresses', 'id')
                                     ->where('user_id', $request->user()?->id ?? 0)],
-            'full_name'      => ['required_without:address_id', 'nullable', 'string', 'max:120'],
-            'email'          => ['required', 'email', 'max:160'],
-            'phone'          => ['required_without:address_id', 'nullable', 'regex:/^[6-9]\d{9}$/'],
-            'address_line_1' => ['required_without:address_id', 'nullable', 'string', 'max:200'],
-            'address_line_2' => ['nullable', 'string', 'max:200'],
-            'city'           => ['required_without:address_id', 'nullable', 'string', 'max:80'],
-            'state'          => ['required_without:address_id', 'nullable', 'string', 'max:80'],
-            'postal_code'    => ['required_without:address_id', 'nullable', 'regex:/^\d{6}$/'],
-            'notes'          => ['nullable', 'string', 'max:500'],
-            'payment_method' => ['required', 'in:'.implode(',', self::availablePaymentMethods())],
+            'full_name'      => [$whenTyped, ...V::name(required: false)],
+            // 'email' (not 'email:strict') accepted "chirag@saas" - a domain
+            // with no TLD - and the order confirmation then bounced.
+            'email'          => V::email(max: 160),
+            // Was /^[6-9]\d{9}$/, which rejected the "+91 98765 43210" and
+            // "098765-43210" forms customers actually type. IndianMobile strips
+            // the decoration and the trunk/country prefix before testing the
+            // ten digits, so the client pattern can tolerate them too.
+            'phone'          => [$whenTyped, ...V::mobile(required: false)],
+            'address_line_1' => [$whenTyped, ...V::addressLine(required: false)],
+            'address_line_2' => V::addressLine(required: false),
+            'city'           => [$whenTyped, ...V::text(required: false, max: 100)],
+            // The <select> was decoration until now: the server took any string.
+            'state'          => [$whenTyped, ...V::option(self::STATES, required: false)],
+            // Was /^\d{6}$/, which accepted "012345"; no Indian PIN starts at 0.
+            'postal_code'    => [$whenTyped, ...V::pincode(required: false)],
+            'notes'          => V::textarea(required: false, max: 500),
+            'payment_method' => V::option(self::availablePaymentMethods()),
         ], [
-            'phone.regex'       => 'Please enter a valid 10-digit mobile number.',
-            'postal_code.regex' => 'Please enter a valid 6-digit PIN code.',
             'payment_method.in' => 'Please choose an available payment method.',
+            'state.in'          => 'Please choose a state from the list.',
+            'postal_code.regex' => 'Please enter a valid 6-digit PIN code.',
         ]);
 
         $cart = $this->currentCart(['items.product', 'items.variant', 'coupon']);
@@ -123,7 +159,10 @@ class CheckoutController extends Controller
         ] : [
             'name'           => $validated['full_name'],
             'email'          => $validated['email'],
-            'phone'          => $validated['phone'],
+            // Store the canonical ten digits, not the decorated input, so the
+            // order-tracking lookup and the SMS/Shiprocket handoff all see one
+            // shape. IndianMobile has already proved it normalises.
+            'phone'          => IndianMobile::normalize($validated['phone'] ?? null),
             'address_line_1' => $validated['address_line_1'],
             'address_line_2' => $validated['address_line_2'] ?? null,
             'city'           => $validated['city'],
@@ -134,6 +173,21 @@ class CheckoutController extends Controller
 
         try {
             $order = DB::transaction(function () use ($cart, $addressSnapshot, $savedAddress, $validated, $request) {
+                // Recompute the money from the live product rows before any of
+                // it is copied onto the order. Nothing here has ever been read
+                // from the request, but the cart's stored subtotal/discount are
+                // only as fresh as the last cart mutation, while the order
+                // LINES below re-read each price from the product - so a flash
+                // sale that started or ended while the customer sat on this
+                // page left orders.subtotal disagreeing with the sum of its own
+                // order_items, in whichever direction the timing favoured.
+                // skipAutoApply: an order is not the place to attach a coupon
+                // the customer was never shown; one already on the cart is
+                // still honoured and re-costed.
+                $cart->recalculate(skipAutoApply: true);
+                $cart->refresh();
+                $cart->load(['items.product', 'items.variant', 'coupon']);
+
                 // Re-validate stock inside the transaction with row locks.
                 foreach ($cart->items as $item) {
                     $locked = $item->variant_id
@@ -182,10 +236,16 @@ class CheckoutController extends Controller
                 ]);
 
                 foreach ($cart->items as $item) {
-                    // Re-read price from the product to prevent tampering.
-                    $currentPrice = $item->variant_id
-                        ? ($item->variant->price ?? $item->product->price)
-                        : $item->product->price;
+                    // The line price, re-derived from the product rows moments
+                    // ago by the recalculate() above and never read from the
+                    // request. It is taken from the cart line rather than
+                    // re-read here because repriceItems() applies the running
+                    // flash sale as well as the shelf/variant price: reading
+                    // the shelf price directly wrote the UNDISCOUNTED figure
+                    // onto order_items while orders.subtotal held the
+                    // discounted one, so a flash-sale order's lines did not add
+                    // up to its own total.
+                    $currentPrice = (float) $item->price;
 
                     OrderItem::create([
                         'order_id'     => $order->id,
@@ -258,6 +318,18 @@ class CheckoutController extends Controller
         $recent = session('guest_order_ids', []);
         $recent[] = $order->id;
         session(['guest_order_ids' => array_values(array_slice(array_unique($recent), -10))]);
+
+        // A COD order has nothing left to wait for - there is no gateway to hear
+        // back from - so confirming it is the placement itself. Leaving it
+        // "pending" meant every cash order sat unconfirmed until an admin
+        // noticed and clicked Confirm, and the customer's own order page said
+        // "Pending" next to a payment that was never going to move either.
+        // Prepaid orders stay pending until the PayU callback confirms.
+        // Dispatched before OrderPlaced so the fraud listener can still put a
+        // blocked order on hold on top of this.
+        if ($validated['payment_method'] !== 'online') {
+            $order->updateStatus('confirmed', null, 'Order placed (Cash on Delivery)');
+        }
 
         OrderPlaced::dispatch($order, 'web');
 

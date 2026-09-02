@@ -98,10 +98,17 @@ class ProfileController extends Controller
             // Unchanged policy - V::password() is the same Password::defaults()
             // + confirmed this already used. max:255 is an input bound, and
             // matches RegisterController and ResetPasswordController.
-            'password' => [...V::password(), 'max:255'],
+            //
+            // different:current_password is the one addition. Re-submitting the
+            // password they already have used to report "Password updated
+            // successfully", which tells someone who has just been told to
+            // change it that they have, when nothing changed.
+            'password' => [...V::password(), 'max:255', 'different:current_password'],
         ], [
+            'current_password.required' => 'Please enter your current password.',
             'current_password.current_password' => 'That is not your current password.',
             'password.confirmed' => 'The two passwords do not match.',
+            'password.different' => 'Your new password must be different from your current one.',
         ]);
 
         $request->user()->update([

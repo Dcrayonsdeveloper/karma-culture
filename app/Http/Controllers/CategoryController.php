@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class CategoryController extends Controller
@@ -84,6 +87,12 @@ class CategoryController extends Controller
             });
         }
 
+        // Brand filter. Slugs, not ids, so the URL stays readable and shareable.
+        if ($request->filled('brand')) {
+            $brandSlugs = array_filter((array) $request->input('brand'));
+            $query->whereHas('brand', fn ($q) => $q->whereIn('slug', $brandSlugs));
+        }
+
         if ($request->filled('min_price')) {
             $query->where('price', '>=', $request->min_price);
         }
@@ -145,6 +154,22 @@ class CategoryController extends Controller
             })
             ->values();
 
+        // Brands for the sidebar filter: only the ones actually stocked inside this
+        // category. Listing all 26 brands in the table meant a category holding two
+        // labels still offered every brand in the shop, and picking one of the
+        // others returned nothing. Cached against the shared filter version, which
+        // Product::saved() bumps, so re-filing a product's brand shows up at once.
+        $filterBrands = Cache::remember(
+            "kk_filter_brands_c{$category->id}_v".ProductVariant::filterCacheVersion(),
+            600,
+            fn () => Brand::query()
+                ->where('is_active', true)
+                ->whereHas('products', fn ($q) => $q->where('is_active', true)
+                    ->whereIn('category_id', $isSubPage ? $category->getAllDescendantIds() : $categoryIds))
+                ->orderBy('name')
+                ->get(['id', 'name', 'slug'])
+        );
+
         // Which sub-category checkboxes are active (default to the clicked category).
         $activeSubcategorySlugs = (array) $request->input('subcategory', $isSubPage ? [$category->slug] : []);
 
@@ -155,6 +180,6 @@ class CategoryController extends Controller
         }
         $breadcrumbs[] = ['label' => $category->name, 'url' => null];
 
-        return view('categories.show', compact('category', 'products', 'filterSubcategories', 'subcategories', 'activeSubcategorySlugs', 'breadcrumbs'));
+        return view('categories.show', compact('category', 'products', 'filterSubcategories', 'filterBrands', 'subcategories', 'activeSubcategorySlugs', 'breadcrumbs'));
     }
 }

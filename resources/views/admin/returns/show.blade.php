@@ -187,7 +187,7 @@
                                     <p style="font-size: 12px; color: #616161; margin: 0.25rem 0 0 0;">Store credit will be added to customer's account balance</p>
                                 </div>
                                 <div>
-                                    <label style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Notes (optional)</label>
+                                    <label style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Notes</label>
                                     <textarea name="notes" rows="2" class="form-input" style="width: 100%;" placeholder="Add refund notes..."></textarea>
                                 </div>
                                 <button type="submit" class="btn btn-primary" style="width: 100%;">
@@ -304,46 +304,6 @@
                     </div>
                 </div>
             @endif
-
-            <!-- Customer Info -->
-            <div class="card">
-                <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;">
-                    <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Customer</h2>
-                </div>
-                <div style="padding: 1rem;">
-                    @if($return->order->user ?? null)
-                        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
-                            <div style="width: 2.5rem; height: 2.5rem; background: #d4edfc; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #e3e3e3;">
-                                <span style="font-size: 13px; font-weight: 700; color: #0064a4;">{{ strtoupper(substr($return->order->user->first_name ?? 'G', 0, 1)) }}</span>
-                            </div>
-                            <div>
-                                <p style="font-size: 13px; font-weight: 500; color: #303030; margin: 0;">{{ $return->order->user->full_name }}</p>
-                                <p style="font-size: 13px; color: #616161; margin: 0;">{{ $return->order->user->email }}</p>
-                            </div>
-                        </div>
-                        @if($return->order->user->phone ?? null)
-                            <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 13px; color: #616161; margin-bottom: 0.5rem;">
-                                <svg style="width: 1rem; height: 1rem; color: #616161;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-                                </svg>
-                                {{ $return->order->user->phone }}
-                            </div>
-                        @endif
-                        <a href="{{ route('admin.customers.show', $return->order->user) }}" class="btn btn-secondary" style="width: 100%; text-align: center; margin-top: 0.5rem;">
-                            View Customer
-                        </a>
-                    @else
-                        <div style="display: flex; align-items: center; gap: 0.75rem;">
-                            <div style="width: 2.5rem; height: 2.5rem; background: #f6f6f7; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                                <svg style="width: 1.25rem; height: 1.25rem; color: #616161;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                                </svg>
-                            </div>
-                            <span style="font-size: 13px; color: #616161;">Guest checkout</span>
-                        </div>
-                    @endif
-                </div>
-            </div>
 
             <!-- Photos -->
             @if($return->images && count($return->images))

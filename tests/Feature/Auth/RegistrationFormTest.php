@@ -56,12 +56,31 @@ class RegistrationFormTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'asha@example.test']);
     }
 
-    public function test_signup_works_without_the_optional_phone(): void
+    public function test_signup_requires_a_mobile_number(): void
     {
         $response = $this->post('/register', $this->validPayload(['phone' => '']));
 
+        $response->assertSessionHasErrors('phone');
+        $this->assertSame('Please enter your mobile number.', session('errors')->first('phone'));
+        $this->assertDatabaseMissing('users', ['email' => 'asha@example.test']);
+    }
+
+    public function test_a_number_that_is_not_an_indian_mobile_is_rejected(): void
+    {
+        // Right length, wrong opening digit - landline and 1-5 ranges are not
+        // mobile numbers, which is the whole point of the [6-9] leading digit.
+        $response = $this->post('/register', $this->validPayload(['phone' => '1234567890']));
+
+        $response->assertSessionHasErrors('phone');
+        $this->assertDatabaseMissing('users', ['email' => 'asha@example.test']);
+    }
+
+    public function test_a_mobile_number_is_stored_as_bare_digits_however_it_was_typed(): void
+    {
+        $response = $this->post('/register', $this->validPayload(['phone' => '+91 98765-43210']));
+
         $response->assertSessionHasNoErrors();
-        $this->assertDatabaseHas('users', ['email' => 'asha@example.test', 'phone' => null]);
+        $this->assertDatabaseHas('users', ['email' => 'asha@example.test', 'phone' => '9876543210']);
     }
 
     public function test_mismatched_confirmation_is_rejected(): void
@@ -131,7 +150,8 @@ class RegistrationFormTest extends TestCase
         $response = $this->postJson('/register', [
             'full_name' => 'Modal User',
             'email' => 'modal@example.test',
-            'phone' => '',
+            // The modal collects a mobile number too, now that one is required.
+            'phone' => '9812345678',
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
             'terms' => true,

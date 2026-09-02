@@ -7,8 +7,10 @@
         </div>
     </x-slot>
 
-    <!-- Quick Links -->
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+    {{-- Quick links. auto-fit rather than a fixed 4 columns: there are seven
+         cards now, and a fixed track count squeezed them to unreadable slivers
+         on a laptop-width screen. --}}
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
         <a href="{{ route('admin.homepage.site-settings') }}" class="card" style="padding: 1rem; display: flex; align-items: center; gap: 0.75rem; text-decoration: none; transition: box-shadow 0.15s;">
             <div style="width: 2.5rem; height: 2.5rem; background: #f0f0f0; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center;">
                 <svg style="width: 1.25rem; height: 1.25rem; color: #616161;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -57,35 +59,109 @@
                 <div style="font-size: 12px; color: #616161;">{{ $testimonials->count() }} reviews</div>
             </div>
         </a>
+
+        <a href="{{ route('admin.homepage.shop-filters') }}" class="card" style="padding: 1rem; display: flex; align-items: center; gap: 0.75rem; text-decoration: none; transition: box-shadow 0.15s;">
+            <div style="width: 2.5rem; height: 2.5rem; background: #f0f0f0; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center;">
+                <svg style="width: 1.25rem; height: 1.25rem; color: #616161;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18M6 12h12M10 18h4"/>
+                </svg>
+            </div>
+            <div>
+                <div style="font-size: 13px; font-weight: 600; color: #303030;">Shop Filters</div>
+                <div style="font-size: 12px; color: #616161;">Size, Price, Shade</div>
+            </div>
+        </a>
+
+        <a href="{{ route('admin.homepage.qualities') }}" class="card" style="padding: 1rem; display: flex; align-items: center; gap: 0.75rem; text-decoration: none; transition: box-shadow 0.15s;">
+            <div style="width: 2.5rem; height: 2.5rem; background: #f0f0f0; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center;">
+                <svg style="width: 1.25rem; height: 1.25rem; color: #616161;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3l2.6 6 6.4.6-5 4.6 1.4 6.4L12 17l-5.4 3.6L8 14.2 3 9.6l6.4-.6L12 3z"/>
+                </svg>
+            </div>
+            <div>
+                <div style="font-size: 13px; font-weight: 600; color: #303030;">Our Qualities</div>
+                <div style="font-size: 12px; color: #616161;">Dark section cards</div>
+            </div>
+        </a>
+
+        {{-- The Navigation editor had a route and a full page but nothing anywhere
+             linked to it, so the header and footer menus were only reachable by
+             typing the URL. --}}
+        <a href="{{ route('admin.homepage.navigation') }}" class="card" style="padding: 1rem; display: flex; align-items: center; gap: 0.75rem; text-decoration: none; transition: box-shadow 0.15s;">
+            <div style="width: 2.5rem; height: 2.5rem; background: #f0f0f0; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center;">
+                <svg style="width: 1.25rem; height: 1.25rem; color: #616161;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h10"/>
+                </svg>
+            </div>
+            <div>
+                <div style="font-size: 13px; font-weight: 600; color: #303030;">Navigation</div>
+                <div style="font-size: 12px; color: #616161;">Header &amp; footer menus</div>
+            </div>
+        </a>
     </div>
 
-    <!-- Current Homepage Preview -->
+    {{-- This panel used to be headed "Section Order" and showed a big numbered
+         badge per row, which promised something the site cannot do: the home page
+         is hand-built markup, not a loop over this table, so the `position` column
+         never changed the order of anything a visitor sees. The number was also
+         just `position + 1` carried over from an old seeder, which is why a single
+         remaining section was labelled "11". What the table really holds is the
+         editable wording of a few home page blocks, so that is what it now says. --}}
     <div class="card">
         <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;">
-            <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Section Order</h2>
+            <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Editable Homepage Blocks</h2>
+            <p style="font-size: 12px; color: #616161; margin: 0.25rem 0 0 0;">Wording and visibility of the text blocks on the home page. The order the blocks appear in is fixed by the page design and is not editable here.</p>
         </div>
         <div style="padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
-            @foreach($sections->sortBy('position') as $section)
-                <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; background: #f6f6f7; border-radius: 0.5rem;">
-                    <div style="display: flex; align-items: center; gap: 0.75rem;">
-                        <span style="width: 2rem; height: 2rem; background: white; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 500; color: #616161; border: 1px solid #e3e3e3;">
-                            {{ $section->position + 1 }}
-                        </span>
-                        <div>
-                            <span style="font-size: 13px; font-weight: 500; color: #303030;">{{ $section->title }}</span>
-                            <span style="font-size: 12px; color: #616161; margin-left: 0.5rem;">{{ $section->type }}</span>
+            @forelse($sections as $section)
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.75rem; background: #f6f6f7; border-radius: 0.5rem;">
+                    <div style="min-width: 0;">
+                        <div style="font-size: 13px; font-weight: 500; color: #303030;">{{ $section->title }}</div>
+                        <div style="font-size: 12px; color: #616161; margin-top: 0.125rem;">
+                            @switch($section->key)
+                                @case('about_us')
+                                    Heading, tagline and button of the About Us video block
+                                    @break
+                                @default
+                                    @switch($section->type)
+                                        @case('products')
+                                            Heading of a product slider
+                                            @break
+                                        @case('benefits')
+                                            Feature cards ({{ is_array($section->content) ? count($section->content) : 0 }} items)
+                                            @break
+                                        @case('cta')
+                                            Promotional banner
+                                            @break
+                                        @case('testimonials')
+                                            Heading of the reviews carousel
+                                            @break
+                                        @case('newsletter')
+                                            Heading of the email signup block
+                                            @break
+                                        @case('categories')
+                                            Heading of the category grid
+                                            @break
+                                        @default
+                                            Text block
+                                    @endswitch
+                            @endswitch
                         </div>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
                         @if($section->is_active)
-                            <span style="display: inline-block; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 12px; font-weight: 500; background: #cdfee1; color: #1a7a2e;">Active</span>
+                            <span style="display: inline-block; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 12px; font-weight: 500; background: #cdfee1; color: #1a7a2e;">Visible</span>
                         @else
                             <span style="display: inline-block; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 12px; font-weight: 500; background: #ebebeb; color: #616161;">Hidden</span>
                         @endif
                         <a href="{{ route('admin.homepage.sections.edit', $section) }}" class="btn btn-secondary" style="font-size: 12px; padding: 0.25rem 0.5rem;">Edit</a>
                     </div>
                 </div>
-            @endforeach
+            @empty
+                <div style="padding: 1.5rem 1rem; text-align: center; color: #616161; font-size: 13px;">
+                    No editable text blocks yet. The home page is showing its built-in wording.
+                </div>
+            @endforelse
         </div>
     </div>
 </x-layouts.admin>

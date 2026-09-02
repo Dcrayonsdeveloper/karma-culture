@@ -73,25 +73,6 @@
                         </div>
                     </div>
                 </div>
-
-                @if($store->registers->count())
-                    <div class="card" style="padding: 1.25rem;">
-                        <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">POS Registers ({{ $store->registers->count() }})</h2>
-                        <div>
-                            @foreach($store->registers as $register)
-                                <div style="padding: 0.75rem 0; display: flex; align-items: center; justify-content: space-between;{{ !$loop->last ? ' border-bottom: 1px solid #e3e3e3;' : '' }}">
-                                    <div>
-                                        <p style="font-weight: 500; color: #303030; font-size: 13px; margin: 0;">{{ $register->name }}</p>
-                                        <p style="font-size: 13px; color: #616161; margin: 0;">{{ $register->code ?? '' }}</p>
-                                    </div>
-                                    <span class="badge {{ $register->is_active ? 'badge-success' : 'badge-warning' }}">
-                                        {{ $register->is_active ? 'Active' : 'Inactive' }}
-                                    </span>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                @endif
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 1rem;">
@@ -112,10 +93,6 @@
                         <div style="display: flex; justify-content: space-between;">
                             <span style="color: #616161;">Code</span>
                             <span style="font-weight: 500; font-family: monospace; color: #303030;">{{ $store->code }}</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #616161;">Registers</span>
-                            <span style="font-weight: 500; color: #303030;">{{ $store->registers->count() }}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between;">
                             <span style="color: #616161;">Created</span>

@@ -4,12 +4,17 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Attribute;
+use App\Rules\ValidationRules as V;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class AttributeController extends Controller
 {
+    /** The three shapes an attribute can take, as offered by the form. */
+    public const TYPES = ['select', 'color', 'text'];
+
     public function index(Request $request): View
     {
         $query = Attribute::withCount('values')->with('values');
@@ -33,7 +38,7 @@ class AttributeController extends Controller
             $query->where('is_filterable', $request->filterable === 'yes');
         }
 
-        $perPage = $request->input('per_page', 10);
+        $perPage = min(max((int) $request->input('per_page', 10), 1), 100);
         $attributes = $query->orderBy('name')->paginate($perPage)->withQueryString();
 
         $stats = [
@@ -55,10 +60,10 @@ class AttributeController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:attributes',
-            'type' => 'required|in:select,color,text',
-            'is_filterable' => 'boolean',
-            'is_visible' => 'boolean',
+            'name' => [...V::text(max: 100, min: 2), 'unique:attributes,name'],
+            'type' => V::option(self::TYPES),
+            'is_filterable' => V::boolean(),
+            'is_visible' => V::boolean(),
         ]);
 
         Attribute::create($validated);
@@ -76,10 +81,10 @@ class AttributeController extends Controller
     public function update(Request $request, Attribute $attribute): RedirectResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:attributes,name,' . $attribute->id,
-            'type' => 'required|in:select,color,text',
-            'is_filterable' => 'boolean',
-            'is_visible' => 'boolean',
+            'name' => [...V::text(max: 100, min: 2), Rule::unique('attributes', 'name')->ignore($attribute->id)],
+            'type' => V::option(self::TYPES),
+            'is_filterable' => V::boolean(),
+            'is_visible' => V::boolean(),
         ]);
 
         $attribute->update($validated);

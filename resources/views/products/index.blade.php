@@ -12,11 +12,11 @@
                     : "Shop kids' clothing, dresses, and accessories at " . config('app.name') . ". Browse {$products->total()} products for boys and girls.");
         @endphp
         <meta name="description" content="{{ $metaDesc }}">
-        <link rel="canonical" href="{{ url('/products') }}">
+        <link rel="canonical" href="{{ route('shop') }}">
         <meta property="og:title" content="{{ $metaCat ?? ($metaBrand ?? 'Kids Clothing & Accessories') }} - {{ config('app.name') }}">
         <meta property="og:description" content="{{ $metaDesc }}">
         <meta property="og:type" content="website">
-        <meta property="og:url" content="{{ url('/products') }}">
+        <meta property="og:url" content="{{ route('shop') }}">
         <meta name="twitter:card" content="summary">
         <meta name="twitter:title" content="{{ $metaCat ?? ($metaBrand ?? 'Kids Clothing & Accessories') }} - {{ config('app.name') }}">
         <meta name="twitter:description" content="{{ $metaDesc }}">
@@ -96,7 +96,9 @@
                     Filters
                     @if(request()->hasAny(['category', 'brand', 'size', 'colour', 'min_price', 'max_price', 'rating', 'in_stock', 'on_sale']))
                         <span class="w-5 h-5 bg-[#F8931D] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                            {{ count(array_filter([request('category'), request('brand'), request('min_price'), request('max_price'), request('rating'), request('in_stock'), request('on_sale')])) }}
+                            {{-- brand is multi-value, so it is counted per tick rather than
+                                 as one filter - two brands selected read as "1" before. --}}
+                            {{ count(array_filter((array) request('brand'))) + count(array_filter([request('category'), request('min_price'), request('max_price'), request('rating'), request('in_stock'), request('on_sale')])) }}
                         </span>
                     @endif
                 </button>

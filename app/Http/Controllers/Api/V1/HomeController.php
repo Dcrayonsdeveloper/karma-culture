@@ -19,13 +19,13 @@ class HomeController extends Controller
                 'banners' => Banner::where('is_active', true)
                     ->orderBy('position')
                     ->limit(10)
-                    ->get(['id', 'title', 'image', 'link', 'position']),
+                    ->get(['id', 'title', 'image_url', 'link', 'position']),
 
                 'categories' => Category::whereNull('parent_id')
                     ->where('is_active', true)
                     ->orderBy('position')
                     ->limit(12)
-                    ->get(['id', 'name', 'slug', 'image']),
+                    ->get(['id', 'name', 'slug', 'image_url']),
 
                 'featured' => Product::where('is_active', true)
                     ->where('is_featured', true)
@@ -50,8 +50,8 @@ class HomeController extends Controller
                     ->get(['id', 'name', 'slug', 'price', 'mrp', 'rating', 'sales_count']),
 
                 'flash_sales' => FlashSale::where('is_active', true)
-                    ->where('start_date', '<=', now())
-                    ->where('end_date', '>=', now())
+                    ->where('starts_at', '<=', now())
+                    ->where('ends_at', '>=', now())
                     ->with(['products' => fn ($q) => $q->limit(6)])
                     ->limit(3)
                     ->get(),

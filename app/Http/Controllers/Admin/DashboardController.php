@@ -17,9 +17,20 @@ class DashboardController extends Controller
 {
     public function index(Request $request): View
     {
-        // Date range filter
-        $startDate = $request->filled('start_date') ? Carbon::parse($request->start_date)->startOfDay() : null;
-        $endDate = $request->filled('end_date') ? Carbon::parse($request->end_date)->endOfDay() : null;
+        // Date range filter. The two dates arrive in the query string, where
+        // anything at all can be typed: ?start_date=lastweek used to reach
+        // Carbon::parse() unchecked and come back as a 500 rather than as an
+        // unusable filter, and an end before the start silently returned an
+        // empty report.
+        $filters = $request->validate([
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+        ], [
+            'end_date.after_or_equal' => 'The end date must be on or after the start date.',
+        ]);
+
+        $startDate = empty($filters['start_date']) ? null : Carbon::parse($filters['start_date'])->startOfDay();
+        $endDate = empty($filters['end_date']) ? null : Carbon::parse($filters['end_date'])->endOfDay();
         $hasDateFilter = $startDate && $endDate;
 
         // Helper closure to apply date filter

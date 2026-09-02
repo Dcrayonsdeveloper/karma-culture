@@ -16,8 +16,9 @@
             <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Value Details</h2>
             <div style="display: flex; flex-direction: column; gap: 1rem;">
                 <div>
-                    <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Value <span style="color: #d72c0d;">*</span></label>
-                    <input type="text" name="value" value="{{ old('value') }}" required
+                    <label for="value" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Value <span style="color: #d72c0d;">*</span></label>
+                    <input type="text" name="value" id="value" value="{{ old('value') }}" required
+                           minlength="1" maxlength="255"
                            class="form-input" style="width: 100%;" placeholder="e.g. Red, XL, Cotton">
                     @error('value')
                         <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
@@ -26,9 +27,9 @@
 
                 @if($attribute->type === 'color')
                     <div>
-                        <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Color Code</label>
+                        <label for="color_code" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Color Code</label>
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="color" name="color_code" value="{{ old('color_code', '#000000') }}"
+                            <input type="color" name="color_code" id="color_code" value="{{ old('color_code', '#000000') }}"
                                    style="width: 2.5rem; height: 2.5rem; border-radius: 0.375rem; border: 1px solid #c9cccf; cursor: pointer; padding: 0.125rem;">
                             <input type="text" value="{{ old('color_code', '#000000') }}" readonly
                                    class="form-input" style="flex: 1; background-color: #f6f6f7;" id="color_text">
@@ -40,8 +41,8 @@
                 @endif
 
                 <div>
-                    <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Position</label>
-                    <input type="number" name="position" value="{{ old('position', 0) }}" min="0"
+                    <label for="position" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Position</label>
+                    <input type="number" name="position" id="position" value="{{ old('position', 0) }}" min="0" max="65535" step="1"
                            class="form-input" style="width: 100%;">
                     @error('position')
                         <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>

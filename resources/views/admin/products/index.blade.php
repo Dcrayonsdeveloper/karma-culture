@@ -46,7 +46,7 @@
     <div class="card"
          x-data="{
              selected: [],
-             showFilters: {{ request()->hasAny(['search', 'status', 'category', 'seller', 'stock']) ? 'true' : 'false' }},
+             showFilters: false,
              toggleAll(checked) {
                  this.selected = checked ? {{ json_encode($pageIds) }} : [];
              },
@@ -108,7 +108,7 @@
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
                     <div>
                         <label style="font-size: 13px; font-weight: 500; color: #303030; display: block; margin-bottom: 0.25rem;">Category</label>
-                        <select name="category" style="width: 100%; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; padding: 0.375rem 0.5rem;">
+                        <select name="category" style="width: 100%; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; padding: 0.375rem 2rem 0.375rem 0.5rem;">
                             <option value="">All categories</option>
                             @foreach($categories as $category)
                                 <option value="{{ $category->id }}" {{ request('category') == $category->id ? 'selected' : '' }}>
@@ -119,7 +119,7 @@
                     </div>
                     <div>
                         <label style="font-size: 13px; font-weight: 500; color: #303030; display: block; margin-bottom: 0.25rem;">Vendor</label>
-                        <select name="seller" style="width: 100%; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; padding: 0.375rem 0.5rem;">
+                        <select name="seller" style="width: 100%; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; padding: 0.375rem 2rem 0.375rem 0.5rem;">
                             <option value="">All vendors</option>
                             @foreach($sellers as $seller)
                                 <option value="{{ $seller->id }}" {{ request('seller') == $seller->id ? 'selected' : '' }}>
@@ -130,7 +130,7 @@
                     </div>
                     <div>
                         <label style="font-size: 13px; font-weight: 500; color: #303030; display: block; margin-bottom: 0.25rem;">Stock</label>
-                        <select name="stock" style="width: 100%; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; padding: 0.375rem 0.5rem;">
+                        <select name="stock" style="width: 100%; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; padding: 0.375rem 2rem 0.375rem 0.5rem;">
                             <option value="">All stock</option>
                             <option value="out" {{ request('stock') === 'out' ? 'selected' : '' }}>Out of stock</option>
                             <option value="low" {{ request('stock') === 'low' ? 'selected' : '' }}>Low stock (&le; 10)</option>
@@ -163,7 +163,8 @@
                 @csrf
                 <input type="hidden" name="ids" x-ref="bulkIds" value="">
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <select name="action" x-ref="bulkAction" style="font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; padding: 0.25rem 0.5rem;">
+                    <select name="action" x-ref="bulkAction" required aria-label="Bulk action"
+                            style="font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; padding: 0.25rem 2rem 0.25rem 0.5rem;">
                         <option value="">Select action</option>
                         <option value="activate">Set as active</option>
                         <option value="deactivate">Set as draft</option>

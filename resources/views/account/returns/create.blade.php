@@ -81,7 +81,14 @@
                                             <label @click="selectedOrder = '{{ $order->id }}'; selectedItems = []"
                                                    :class="selectedOrder == '{{ $order->id }}' ? 'border-[#6F9CA2]/50 bg-[#6F9CA2]/5 ring-1 ring-[#6F9CA2]/30' : 'border-neutral-200 hover:border-neutral-300 bg-white'"
                                                    class="flex items-center justify-between p-3.5 rounded-lg border cursor-pointer transition-all">
-                                                <input type="radio" name="order_id" value="{{ $order->id }}" x-model="selectedOrder" class="sr-only">
+                                                {{-- No `required` on purpose: the constraint applies to every
+                                                     radio in the group, so the helper would print the same
+                                                     message under all of them. The step is unreachable anyway
+                                                     - items only appear once an order is picked, and Submit
+                                                     stays disabled until an item is ticked - and the server
+                                                     checks order_id belongs to this customer regardless. --}}
+                                                <input type="radio" name="order_id" value="{{ $order->id }}" x-model="selectedOrder"
+                                                       aria-label="Order {{ $order->order_number }}" class="sr-only">
                                                 <div class="flex items-center gap-3">
                                                     <div :class="selectedOrder == '{{ $order->id }}' ? 'border-[#6F9CA2] bg-[#F8931D]' : 'border-neutral-300'"
                                                          class="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors">
@@ -150,21 +157,23 @@
                                     <h2 class="text-sm font-bold text-neutral-900">Reason for Return</h2>
                                 </div>
                                 <div class="p-5 space-y-3">
-                                    <select name="reason" required class="w-full rounded-lg border border-neutral-200 text-sm px-3 py-2.5 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50">
+                                    {{-- $reasons is ReturnController::REASONS, the list the store
+                                         action validates against, so the options offered here and
+                                         the values accepted there cannot drift apart. --}}
+                                    <select name="reason" id="reason" required aria-label="Reason for return"
+                                            class="w-full rounded-lg border border-neutral-200 text-sm px-3 py-2.5 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50">
                                         <option value="">Select a reason...</option>
-                                        <option value="Defective or damaged product" {{ old('reason') === 'Defective or damaged product' ? 'selected' : '' }}>Defective or damaged product</option>
-                                        <option value="Wrong item received" {{ old('reason') === 'Wrong item received' ? 'selected' : '' }}>Wrong item received</option>
-                                        <option value="Item doesn't match description" {{ old('reason') === "Item doesn't match description" ? 'selected' : '' }}>Item doesn't match description</option>
-                                        <option value="Allergic reaction" {{ old('reason') === 'Allergic reaction' ? 'selected' : '' }}>Allergic reaction</option>
-                                        <option value="Changed my mind" {{ old('reason') === 'Changed my mind' ? 'selected' : '' }}>Changed my mind</option>
-                                        <option value="Better price available" {{ old('reason') === 'Better price available' ? 'selected' : '' }}>Better price available</option>
-                                        <option value="Other" {{ old('reason') === 'Other' ? 'selected' : '' }}>Other</option>
+                                        @foreach ($reasons as $reasonOption)
+                                            <option value="{{ $reasonOption }}" @selected(old('reason') === $reasonOption)>{{ $reasonOption }}</option>
+                                        @endforeach
                                     </select>
                                     @error('reason')
                                         <p class="text-sm text-red-600">{{ $message }}</p>
                                     @enderror
 
-                                    <textarea name="description" rows="2" placeholder="Additional details (optional)"
+                                    <textarea name="description" id="description" rows="2" maxlength="1000"
+                                              aria-label="Additional details"
+                                              placeholder="Additional details"
                                               class="w-full rounded-lg border border-neutral-200 text-sm px-3 py-2.5 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50 resize-none">{{ old('description') }}</textarea>
                                     @error('description')
                                         <p class="text-sm text-red-600">{{ $message }}</p>
@@ -212,9 +221,17 @@
                                                         {{-- Quantity --}}
                                                         <div>
                                                             <label class="block text-xs font-medium text-neutral-600 mb-1">Return Qty</label>
+                                                            {{-- required + step: the box was free to be
+                                                                 emptied or set to 1.5, and only the
+                                                                 server said so. max is the quantity
+                                                                 actually ordered, which the store
+                                                                 action re-checks against the order. --}}
                                                             <input type="number"
                                                                    :name="'items[' + idx + '][quantity]'"
-                                                                   min="1" :max="item.quantity"
+                                                                   min="1" :max="item.quantity" step="1" required
+                                                                   inputmode="numeric"
+                                                                   aria-label="Return quantity"
+                                                                   title="Enter how many of this item you are returning."
                                                                    x-model.number="getSelected(item.id).quantity"
                                                                    :disabled="!isSelected(item.id)"
                                                                    class="w-full rounded-lg border border-neutral-200 text-sm px-3 py-2 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50">
@@ -224,6 +241,8 @@
                                                         <div>
                                                             <label class="block text-xs font-medium text-neutral-600 mb-1">Condition</label>
                                                             <select :name="'items[' + idx + '][condition]'"
+                                                                    required
+                                                                    aria-label="Item condition"
                                                                     x-model="getSelected(item.id).condition"
                                                                     :disabled="!isSelected(item.id)"
                                                                     class="w-full rounded-lg border border-neutral-200 text-sm px-3 py-2 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50">
@@ -235,9 +254,11 @@
 
                                                         {{-- Reason --}}
                                                         <div>
-                                                            <label class="block text-xs font-medium text-neutral-600 mb-1">Item Note <span class="text-neutral-600">(optional)</span></label>
+                                                            <label class="block text-xs font-medium text-neutral-600 mb-1">Item Note</label>
                                                             <input type="text"
                                                                    :name="'items[' + idx + '][reason]'"
+                                                                   maxlength="500"
+                                                                   aria-label="Item note"
                                                                    x-model="getSelected(item.id).reason"
                                                                    :disabled="!isSelected(item.id)"
                                                                    placeholder="Any specific issue?"

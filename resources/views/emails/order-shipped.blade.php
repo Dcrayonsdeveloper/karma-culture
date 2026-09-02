@@ -10,11 +10,11 @@ Exciting news -- your order **#{{ $order->order_number }}** has been shipped and
 
 You can use this tracking number to follow your package's journey.
 
-@component('mail::button', ['url' => url('/orders/' . $order->id . '/track')])
+@component('mail::button', ['url' => route('account.orders.track', $order->id)])
 Track Your Order
 @endcomponent
 @else
-@component('mail::button', ['url' => url('/orders/' . $order->id)])
+@component('mail::button', ['url' => route('account.orders.show', $order->id)])
 View Order Details
 @endcomponent
 @endif

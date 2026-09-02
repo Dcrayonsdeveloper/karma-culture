@@ -140,8 +140,11 @@
 
     <!-- Auth Login/Signup Modal -->
     @guest
+    {{-- items-start + overflow-y-auto (with my-auto on the panel below): the
+         register form outgrows a short viewport, and a centred non-scrolling
+         overlay would clip its top out of reach. --}}
     <div x-show="$store.authModal.isOpen" x-cloak
-         class="fixed inset-0 z-60 flex items-center justify-center p-4"
+         class="fixed inset-0 z-60 flex items-start justify-center p-4 overflow-y-auto overscroll-contain"
          @keydown.escape.window="$store.authModal.close()">
 
         {{-- Backdrop --}}
@@ -153,7 +156,7 @@
              x-transition:leave-start="opacity-100"
              x-transition:leave-end="opacity-0"
              @click="$store.authModal.close()"
-             class="absolute inset-0 bg-black/50"></div>
+             class="fixed inset-0 bg-black/50"></div>
 
         {{-- Modal --}}
         <div x-show="$store.authModal.isOpen"
@@ -163,7 +166,7 @@
              x-transition:leave="transition ease-in duration-150"
              x-transition:leave-start="opacity-100 scale-100"
              x-transition:leave-end="opacity-0 scale-95"
-             class="relative bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden"
+             class="relative my-auto bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden"
              @click.stop>
 
             {{-- Close button --}}

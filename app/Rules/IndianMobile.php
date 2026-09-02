@@ -25,7 +25,7 @@ class IndianMobile implements ValidationRule
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         if (! is_scalar($value) || self::normalize((string) $value) === null) {
-            $fail('The :attribute must be a valid 10-digit Indian mobile number.');
+            $fail('Please enter a valid 10-digit mobile number starting with 6, 7, 8 or 9.');
         }
     }
 

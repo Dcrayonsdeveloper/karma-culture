@@ -4,16 +4,18 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
+use App\Rules\ValidationRules as V;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class BrandController extends Controller
 {
     public function index(): View
     {
-        $perPage = request()->input('per_page', 10);
+        $perPage = min(max((int) request()->input('per_page', 10), 1), 100);
         $brands = Brand::withCount('products')->orderBy('name')->paginate($perPage)->withQueryString();
 
         return view('admin.brands.index', compact('brands'));
@@ -27,11 +29,11 @@ class BrandController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:brands',
-            'description' => 'nullable|string',
-            'logo' => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:2048',
-            'is_active' => 'boolean',
-            'is_featured' => 'boolean',
+            'name' => [...V::text(max: 255, min: 2), 'unique:brands,name'],
+            'description' => V::textarea(required: false, max: 2000),
+            'logo' => V::image(required: false, maxKb: 2048, allowGif: true),
+            'is_active' => V::boolean(),
+            'is_featured' => V::boolean(),
         ]);
 
         $validated['slug'] = Str::slug($validated['name']);
@@ -39,6 +41,8 @@ class BrandController extends Controller
         if ($request->hasFile('logo')) {
             $validated['logo_url'] = $request->file('logo')->store('brands', 'public');
         }
+
+        unset($validated['logo']);
 
         Brand::create($validated);
 
@@ -53,11 +57,11 @@ class BrandController extends Controller
     public function update(Request $request, Brand $brand): RedirectResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:brands,name,' . $brand->id,
-            'description' => 'nullable|string',
-            'logo' => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:2048',
-            'is_active' => 'boolean',
-            'is_featured' => 'boolean',
+            'name' => [...V::text(max: 255, min: 2), Rule::unique('brands', 'name')->ignore($brand->id)],
+            'description' => V::textarea(required: false, max: 2000),
+            'logo' => V::image(required: false, maxKb: 2048, allowGif: true),
+            'is_active' => V::boolean(),
+            'is_featured' => V::boolean(),
         ]);
 
         $validated['slug'] = Str::slug($validated['name']);
@@ -65,6 +69,8 @@ class BrandController extends Controller
         if ($request->hasFile('logo')) {
             $validated['logo_url'] = $request->file('logo')->store('brands', 'public');
         }
+
+        unset($validated['logo']);
 
         $brand->update($validated);
 

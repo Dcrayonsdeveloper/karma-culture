@@ -34,7 +34,7 @@
                             {{-- Optional, as at sign-up: an account registered with a
                                  single-word name has last_name = '', and a required
                                  field here would block every save on that account. --}}
-                            <label for="last_name" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Last Name <span style="color: #616161; font-weight: 400;">(optional)</span></label>
+                            <label for="last_name" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Last Name</label>
                             <input type="text" name="last_name" id="last_name" value="{{ old('last_name', $customer->last_name) }}"
                                    minlength="2" maxlength="50" autocomplete="family-name"
                                    class="form-input" style="width: 100%;">

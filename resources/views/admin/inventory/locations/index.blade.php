@@ -32,7 +32,8 @@
                         <th style="padding: 0.5rem 1rem; text-align: left; font-size: 12px; font-weight: 500; color: #616161; text-transform: uppercase;">Name</th>
                         <th style="padding: 0.5rem 1rem; text-align: left; font-size: 12px; font-weight: 500; color: #616161; text-transform: uppercase;">Code</th>
                         <th style="padding: 0.5rem 1rem; text-align: left; font-size: 12px; font-weight: 500; color: #616161; text-transform: uppercase;">Address</th>
-                        <th style="padding: 0.5rem 1rem; text-align: right; font-size: 12px; font-weight: 500; color: #616161; text-transform: uppercase;">Items</th>
+                        <th style="padding: 0.5rem 1rem; text-align: right; font-size: 12px; font-weight: 500; color: #616161; text-transform: uppercase;">Products</th>
+                        <th style="padding: 0.5rem 1rem; text-align: right; font-size: 12px; font-weight: 500; color: #616161; text-transform: uppercase;">Units</th>
                         <th style="padding: 0.5rem 1rem; text-align: left; font-size: 12px; font-weight: 500; color: #616161; text-transform: uppercase;">Status</th>
                         <th style="padding: 0.5rem 1rem; text-align: right; font-size: 12px; font-weight: 500; color: #616161; text-transform: uppercase;">Actions</th>
                     </tr>
@@ -40,10 +41,15 @@
                 <tbody>
                     @forelse($locations as $location)
                         <tr style="border-bottom: 1px solid #f0f0f0;">
-                            <td style="padding: 0.625rem 1rem; font-weight: 500; color: #303030;">{{ $location->name }}</td>
+                            <td style="padding: 0.625rem 1rem; font-weight: 500; color: #303030;">
+                                <a href="{{ route('admin.inventory.locations.show', $location) }}" style="color: #303030; text-decoration: none;">{{ $location->name }}</a>
+                            </td>
                             <td style="padding: 0.625rem 1rem; color: #616161;">{{ $location->code }}</td>
                             <td style="padding: 0.625rem 1rem; color: #616161; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ $location->address ?? '-' }}</td>
-                            <td style="padding: 0.625rem 1rem; text-align: right; font-weight: 500; color: #303030;">{{ $location->stocks_count }}</td>
+                            <td style="padding: 0.625rem 1rem; text-align: right; font-weight: 500; color: #303030;">
+                                <a href="{{ route('admin.inventory.locations.show', $location) }}" style="color: #005bd3; text-decoration: none;">{{ $location->stocks_count }}</a>
+                            </td>
+                            <td style="padding: 0.625rem 1rem; text-align: right; color: #616161;">{{ (int) $location->units_count }}</td>
                             <td style="padding: 0.625rem 1rem;">
                                 @if($location->is_active)
                                     <span style="display: inline-block; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 12px; font-weight: 500; background: #cdfee1; color: #1a7a2e;">Active</span>
@@ -53,6 +59,7 @@
                             </td>
                             <td style="padding: 0.625rem 1rem; text-align: right;">
                                 <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem;">
+                                    <a href="{{ route('admin.inventory.locations.show', $location) }}" style="color: #005bd3; font-size: 13px; font-weight: 500; text-decoration: none;">Manage stock</a>
                                     <a href="{{ route('admin.inventory.locations.edit', $location) }}" style="color: #005bd3; font-size: 13px; font-weight: 500; text-decoration: none;">Edit</a>
                                     <form action="{{ route('admin.inventory.locations.destroy', $location) }}" method="POST" onsubmit="return confirm('Delete this location?')">
                                         @csrf
@@ -64,7 +71,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" style="padding: 3rem 1rem; text-align: center; color: #616161; font-size: 13px;">
+                            <td colspan="7" style="padding: 3rem 1rem; text-align: center; color: #616161; font-size: 13px;">
                                 No locations found.
                                 <a href="{{ route('admin.inventory.locations.create') }}" style="color: #005bd3; font-weight: 500; text-decoration: none; margin-left: 0.25rem;">Add one now</a>
                             </td>

@@ -87,7 +87,7 @@
                 <svg style="width: 16px; height: 16px; color: #616161; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                 </svg>
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="Search subscribers..."
+                <input type="text" name="search" maxlength="100" aria-label="Search" value="{{ request('search') }}" placeholder="Search subscribers..."
                        style="flex: 1; border: none; outline: none; font-size: 13px; color: #303030; background: transparent;">
                 @if(request('search'))
                     <a href="{{ route('admin.newsletter.index', request()->except('search', 'page')) }}" style="color: #616161; font-size: 12px; text-decoration: none; white-space: nowrap;"
@@ -102,11 +102,19 @@
             <span style="font-size: 13px; font-weight: 500; color: #303030;">
                 <span x-text="selected.length"></span> selected
             </span>
+            {{-- The selection used to be posted as one hidden field holding
+                 JSON.stringify(selected), which the server rule reads as a string and
+                 rejects with "ids must be an array" - the bulk actions could never
+                 succeed. Worse, the submit.prevent handler then called $el.submit(), and the DOM
+                 submit() does not include the button that was clicked, so `action`
+                 never arrived either. One hidden input per selected row fixes both,
+                 and lets the form submit natively so the button's value travels with it. --}}
             <form method="POST" action="{{ route('admin.newsletter.bulk-action') }}"
-                  @submit.prevent="$el.querySelector('input[name=ids]').value = JSON.stringify(selected); $el.submit()"
                   style="display: flex; align-items: center; gap: 0.5rem;">
                 @csrf
-                <input type="hidden" name="ids" value="">
+                <template x-for="id in selected" :key="id">
+                    <input type="hidden" name="ids[]" :value="id">
+                </template>
                 <button type="submit" name="action" value="activate" class="btn btn-sm btn-secondary" style="color: #1a7a2e;">Activate</button>
                 <button type="submit" name="action" value="deactivate" class="btn btn-sm btn-secondary" style="color: #b98900;">Deactivate</button>
                 <button type="submit" name="action" value="delete"

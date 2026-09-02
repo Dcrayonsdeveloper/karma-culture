@@ -31,7 +31,7 @@
     </div>
 
     <!-- Filters -->
-    <div class="card" style="margin-bottom: 1rem;" x-data="{ open: {{ request()->hasAny(['search', 'stock_status', 'category']) ? 'true' : 'false' }} }">
+    <div class="card" style="margin-bottom: 1rem;" x-data="{ open: false }">
         <div style="padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer;" @click="open = !open">
             <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 13px; font-weight: 500; color: #303030;">
                 <svg style="width: 1rem; height: 1rem; color: #616161;" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -4,14 +4,31 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Rules\ValidationRules as V;
+use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class CategoryController extends Controller
 {
+    private const SLUG_RULES = ['nullable', 'string', 'max:255', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/'];
+
+    /** categories.position is an UNSIGNED SMALLINT. */
+    private const POSITION_RULES = ['nullable', 'integer', 'min:0', 'max:65535'];
+
+    private const VIDEO_FILE_RULES = ['nullable', 'file', 'extensions:mp4,webm,mov', 'mimetypes:video/mp4,video/webm,video/quicktime', 'max:51200'];
+
+    /**
+     * Either an absolute http(s) URL or a path under storage/ that this
+     * controller wrote itself. The value is interpolated into a <video src>, so
+     * an unconstrained string is a stored-XSS vector on the home page.
+     */
+    private const VIDEO_URL_RULES = ['nullable', 'string', 'max:500', 'regex:#^(https?://[^\s<>"\']+|storage/[A-Za-z0-9._/-]+)$#'];
+
     public function index(Request $request): View
     {
         $query = Category::withCount('products');
@@ -35,7 +52,7 @@ class CategoryController extends Controller
             }
         }
 
-        $perPage = $request->input('per_page', 10);
+        $perPage = min(max((int) $request->input('per_page', 10), 1), 100);
         $categories = $query->orderBy('position')->orderBy('name')->paginate($perPage)->withQueryString();
 
         $parentCategories = Category::whereNull('parent_id')->orderBy('name')->get();
@@ -63,17 +80,17 @@ class CategoryController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:categories',
-            'description' => 'nullable|string',
-            'parent_id' => 'nullable|exists:categories,id',
-            'position' => 'nullable|integer|min:0',
-            'is_active' => 'boolean',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-            'video_url_text' => 'nullable|string|max:500',
-            'video_file' => 'nullable|file|mimetypes:video/mp4,video/webm,video/quicktime|max:51200',
-            'meta_title' => 'nullable|string|max:255',
-            'meta_description' => 'nullable|string|max:500',
+            'name' => V::text(max: 255, min: 2),
+            'slug' => [...self::SLUG_RULES, 'unique:categories,slug'],
+            'description' => V::textarea(required: false, max: 2000),
+            'parent_id' => V::foreignId('categories', required: false),
+            'position' => self::POSITION_RULES,
+            'is_active' => V::boolean(),
+            'image' => V::image(required: false, maxKb: 2048),
+            'video_url_text' => self::VIDEO_URL_RULES,
+            'video_file' => self::VIDEO_FILE_RULES,
+            'meta_title' => V::text(required: false, max: 255),
+            'meta_description' => V::textarea(required: false, max: 500),
         ]);
 
         $validated['slug'] = $validated['slug'] ?? Str::slug($validated['name']);
@@ -103,7 +120,7 @@ class CategoryController extends Controller
     {
         $category->load(['parent', 'children', 'products']);
 
-        $perPage = request()->input('per_page', 10);
+        $perPage = min(max((int) request()->input('per_page', 10), 1), 100);
         $products = $category->products()
             ->with('seller')
             ->latest()
@@ -126,25 +143,20 @@ class CategoryController extends Controller
     public function update(Request $request, Category $category): RedirectResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:categories,slug,' . $category->id,
-            'description' => 'nullable|string',
-            'parent_id' => 'nullable|exists:categories,id',
-            'position' => 'nullable|integer|min:0',
-            'is_active' => 'boolean',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-            'remove_image' => 'nullable|boolean',
-            'video_url_text' => 'nullable|string|max:500',
-            'video_file' => 'nullable|file|mimetypes:video/mp4,video/webm,video/quicktime|max:51200',
-            'remove_video' => 'nullable|boolean',
-            'meta_title' => 'nullable|string|max:255',
-            'meta_description' => 'nullable|string|max:500',
+            'name' => V::text(max: 255, min: 2),
+            'slug' => [...self::SLUG_RULES, Rule::unique('categories', 'slug')->ignore($category->id)],
+            'description' => V::textarea(required: false, max: 2000),
+            'parent_id' => [...V::foreignId('categories', required: false), $this->notADescendant($category)],
+            'position' => self::POSITION_RULES,
+            'is_active' => V::boolean(),
+            'image' => V::image(required: false, maxKb: 2048),
+            'remove_image' => V::boolean(),
+            'video_url_text' => self::VIDEO_URL_RULES,
+            'video_file' => self::VIDEO_FILE_RULES,
+            'remove_video' => V::boolean(),
+            'meta_title' => V::text(required: false, max: 255),
+            'meta_description' => V::textarea(required: false, max: 500),
         ]);
-
-        // Prevent setting self as parent
-        if ($validated['parent_id'] == $category->id) {
-            $validated['parent_id'] = null;
-        }
 
         $validated['slug'] = $validated['slug'] ?? Str::slug($validated['name']);
         $validated['is_active'] = $request->boolean('is_active');
@@ -212,12 +224,44 @@ class CategoryController extends Controller
         return back()->with('success', "Category {$status} successfully.");
     }
 
+    /**
+     * A category may not be re-parented under itself or under one of its own
+     * descendants: that detaches the whole branch from the tree and makes every
+     * ancestor walk loop for ever. The edit form only offers root categories,
+     * but the posted id is whatever the client sent.
+     */
+    private function notADescendant(Category $category): Closure
+    {
+        return function (string $attribute, mixed $value, Closure $fail) use ($category): void {
+            if ((int) $value === $category->id) {
+                $fail('A category cannot be its own parent.');
+
+                return;
+            }
+
+            // Walk up from the proposed parent; hitting this category means the
+            // proposed parent sits below it. Bounded by the tree's depth, with a
+            // hard stop in case existing data already contains a cycle.
+            $ancestor = Category::find($value);
+
+            for ($depth = 0; $ancestor !== null && $depth < 50; $depth++) {
+                if ($ancestor->id === $category->id) {
+                    $fail('A category cannot be moved under one of its own sub-categories.');
+
+                    return;
+                }
+
+                $ancestor = $ancestor->parent_id ? Category::find($ancestor->parent_id) : null;
+            }
+        };
+    }
+
     public function reorder(Request $request): RedirectResponse
     {
         $request->validate([
-            'categories' => 'required|array',
-            'categories.*.id' => 'required|exists:categories,id',
-            'categories.*.order' => 'required|integer|min:0',
+            'categories' => ['required', 'array', 'max:500'],
+            'categories.*.id' => V::foreignId('categories'),
+            'categories.*.order' => ['required', 'integer', 'min:0', 'max:65535'],
         ]);
 
         foreach ($request->categories as $item) {

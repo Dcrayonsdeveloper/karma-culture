@@ -221,12 +221,16 @@
                     }
                 },
 
-                // Alpine has no `.exact` modifier, so `@keydown.enter.exact` read
-                // "exact" as a second key name and the handler never fired --
-                // Enter just inserted a newline. Match the key by hand instead,
-                // and skip keydowns raised mid-IME composition (Android soft
-                // keyboards fire those with keyCode 229) so a predictive-text
-                // commit is never mistaken for "send".
+                {{-- Alpine has no `.exact` modifier, so `@keydown.enter.exact`
+                     read "exact" as a second key name and the handler never
+                     fired -- Enter just inserted a newline. Match the key by
+                     hand instead, and skip keydowns raised mid-IME composition
+                     (Android soft keyboards fire those with keyCode 229) so a
+                     predictive-text commit is never mistaken for "send".
+
+                     Kept as a Blade comment: as a JS comment it shipped to the
+                     browser, where the words above are indistinguishable from a
+                     live `.exact` binding. --}}
                 composerKeydown(event) {
                     if (event.key !== 'Enter' && event.keyCode !== 13) return;
                     if (event.shiftKey || event.isComposing || event.keyCode === 229) return;

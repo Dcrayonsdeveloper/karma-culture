@@ -30,27 +30,26 @@
     {{-- Single Card --}}
     <div class="card" style="overflow: hidden;">
         {{-- Tab Filters --}}
+        @php
+            $tabs = [
+                ['status' => null, 'label' => 'All', 'count' => $stats['total']],
+                ['status' => 'new', 'label' => 'New', 'count' => $stats['new']],
+                ['status' => 'read', 'label' => 'Read', 'count' => $stats['read']],
+                ['status' => 'replied', 'label' => 'Replied', 'count' => $stats['replied']],
+                ['status' => 'closed', 'label' => 'Closed', 'count' => $stats['closed']],
+            ];
+        @endphp
+        {{-- The active tab's 2px border has to overlap the strip's 1px divider,
+             hence margin-bottom: -1px - without it the underline floats a pixel
+             above the rule and reads as two stacked lines. --}}
         <div style="display: flex; align-items: center; gap: 0; border-bottom: 1px solid #e3e3e3; padding: 0 1rem;">
-            <a href="{{ route('admin.enquiries.index', request()->only('search')) }}"
-               style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ !request('status') ? '#303030' : 'transparent' }}; color: {{ !request('status') ? '#303030' : '#616161' }};">
-                All <span style="color: #616161; font-size: 12px;">({{ $stats['total'] }})</span>
-            </a>
-            <a href="{{ route('admin.enquiries.index', array_merge(request()->only('search'), ['status' => 'new'])) }}"
-               style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('status') === 'new' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'new' ? '#303030' : '#616161' }};">
-                New <span style="color: #616161; font-size: 12px;">({{ $stats['new'] }})</span>
-            </a>
-            <a href="{{ route('admin.enquiries.index', array_merge(request()->only('search'), ['status' => 'read'])) }}"
-               style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('status') === 'read' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'read' ? '#303030' : '#616161' }};">
-                Read <span style="color: #616161; font-size: 12px;">({{ $stats['read'] }})</span>
-            </a>
-            <a href="{{ route('admin.enquiries.index', array_merge(request()->only('search'), ['status' => 'replied'])) }}"
-               style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('status') === 'replied' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'replied' ? '#303030' : '#616161' }};">
-                Replied <span style="color: #616161; font-size: 12px;">({{ $stats['replied'] }})</span>
-            </a>
-            <a href="{{ route('admin.enquiries.index', array_merge(request()->only('search'), ['status' => 'closed'])) }}"
-               style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('status') === 'closed' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'closed' ? '#303030' : '#616161' }};">
-                Closed
-            </a>
+            @foreach($tabs as $tab)
+                @php $active = request('status') === $tab['status'] || (!request('status') && $tab['status'] === null); @endphp
+                <a href="{{ route('admin.enquiries.index', $tab['status'] ? array_merge(request()->only('search'), ['status' => $tab['status']]) : request()->only('search')) }}"
+                   style="display: inline-flex; align-items: center; gap: 0.25rem; white-space: nowrap; padding: 0.625rem 0.75rem; margin-bottom: -1px; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ $active ? '#303030' : 'transparent' }}; color: {{ $active ? '#303030' : '#616161' }};">
+                    {{ $tab['label'] }} <span style="color: #616161; font-size: 12px;">({{ $tab['count'] }})</span>
+                </a>
+            @endforeach
         </div>
 
         {{-- Search Bar --}}

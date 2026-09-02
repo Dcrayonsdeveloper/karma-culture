@@ -3,7 +3,7 @@
 
     @push('meta')
         <meta name="description" content="Returns and exchange policy for {{ config('app.name') }}. Easy returns on kids' clothing within the return window.">
-        <link rel="canonical" href="{{ url('/returns') }}">
+        <link rel="canonical" href="{{ route('returns') }}">
     @endpush
 
     <div class="bg-neutral-50 border-b border-neutral-100">

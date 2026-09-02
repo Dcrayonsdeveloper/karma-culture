@@ -69,7 +69,7 @@
                             <p style="font-size: 11px; color: #616161; margin-top: 2px;">Must match a pickup location name in your Shiprocket dashboard</p>
                         </div>
                         <div>
-                            <label class="form-label">Channel ID (optional)</label>
+                            <label class="form-label">Channel ID</label>
                             <input type="text" name="shiprocket_channel_id" value="{{ old('shiprocket_channel_id', $settings['shiprocket_channel_id'] ?? '') }}" class="form-input" placeholder="e.g. 12345">
                             <p style="font-size: 11px; color: #616161; margin-top: 2px;">Found in Shiprocket Settings → Channels. Leave blank to use default.</p>
                         </div>

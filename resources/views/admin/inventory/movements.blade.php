@@ -32,6 +32,7 @@
                     <tr style="border-bottom: 1px solid #e3e3e3;">
                         <th style="padding: 0.5rem 1rem; text-align: left; font-size: 12px; font-weight: 500; color: #616161; text-transform: uppercase;">Date</th>
                         <th style="padding: 0.5rem 1rem; text-align: left; font-size: 12px; font-weight: 500; color: #616161; text-transform: uppercase;">Product</th>
+                        <th style="padding: 0.5rem 1rem; text-align: left; font-size: 12px; font-weight: 500; color: #616161; text-transform: uppercase;">Location</th>
                         <th style="padding: 0.5rem 1rem; text-align: left; font-size: 12px; font-weight: 500; color: #616161; text-transform: uppercase;">Type</th>
                         <th style="padding: 0.5rem 1rem; text-align: center; font-size: 12px; font-weight: 500; color: #616161; text-transform: uppercase;">Qty</th>
                         <th style="padding: 0.5rem 1rem; text-align: center; font-size: 12px; font-weight: 500; color: #616161; text-transform: uppercase;">Before / After</th>
@@ -52,6 +53,7 @@
                                     <span style="font-size: 12px; font-family: monospace; background: #f6f6f7; color: #616161; padding: 0.125rem 0.375rem; border-radius: 0.25rem;">{{ $movement->product->sku }}</span>
                                 @endif
                             </td>
+                            <td style="padding: 0.625rem 1rem; color: #616161;">{{ $movement->location?->name ?? '-' }}</td>
                             <td style="padding: 0.625rem 1rem;">
                                 @php
                                     $typeBadges = [
@@ -83,7 +85,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" style="padding: 3rem 1rem; text-align: center;">
+                            <td colspan="8" style="padding: 3rem 1rem; text-align: center;">
                                 <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
                                     <div style="width: 48px; height: 48px; background: #f6f6f7; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#616161" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>

@@ -28,8 +28,6 @@ class Banner extends Model
         'overlay_style',
         'priority',
         'is_active',
-        'starts_at',
-        'ends_at',
     ];
 
     protected function casts(): array
@@ -37,23 +35,13 @@ class Banner extends Model
         return [
             'priority' => 'integer',
             'is_active' => 'boolean',
-            'starts_at' => 'datetime',
-            'ends_at' => 'datetime',
         ];
     }
 
     // Scopes
     public function scopeActive($query)
     {
-        return $query->where('is_active', true)
-            ->where(function ($q) {
-                $q->whereNull('starts_at')
-                    ->orWhere('starts_at', '<=', now());
-            })
-            ->where(function ($q) {
-                $q->whereNull('ends_at')
-                    ->orWhere('ends_at', '>=', now());
-            });
+        return $query->where('is_active', true);
     }
 
     public function scopePosition($query, string $position)
@@ -69,19 +57,7 @@ class Banner extends Model
     // Helper methods
     public function isActive(): bool
     {
-        if (!$this->is_active) {
-            return false;
-        }
-
-        if ($this->starts_at && $this->starts_at->isFuture()) {
-            return false;
-        }
-
-        if ($this->ends_at && $this->ends_at->isPast()) {
-            return false;
-        }
-
-        return true;
+        return (bool) $this->is_active;
     }
 
     public function getImageAttribute(): string

@@ -104,7 +104,10 @@
                         </div>
                         <form action="{{ route('account.tickets.reply', $ticket) }}" method="POST" class="p-5">
                             @csrf
-                            <textarea name="message" rows="4" required
+                            {{-- aria-label, so the inline error reads "Reply is required" rather
+                                 than falling back to the placeholder text. --}}
+                            <textarea name="message" id="reply_message" rows="4" required
+                                      minlength="5" maxlength="5000" aria-label="Reply"
                                       class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all resize-none @error('message') border-red-300 @enderror"
                                       placeholder="Type your reply...">{{ old('message') }}</textarea>
                             @error('message')

@@ -20,7 +20,10 @@
         <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
             <svg style="width: 1.25rem; height: 1.25rem; color: #005bd3; flex-shrink: 0; margin-top: 0.125rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             <div style="font-size: 13px; color: #303030;">
-                @switch($section->type)
+                @switch($section->key === 'about_us' ? 'about_us' : $section->type)
+                    @case('about_us')
+                        <strong>About Us Section</strong> - The video block partway down the home page. The title, subtitle and button below are what visitors read; the three videos themselves are set in <a href="{{ route('admin.homepage.site-settings') }}" style="color: #005bd3; text-decoration: underline; font-weight: 500;">Site Settings</a>. Untick "visible" to remove the whole block from the home page.
+                        @break
                     @case('products')
                         <strong>Product Section</strong> - Controls the title and visibility of the "{{ $section->title }}" product slider on the homepage. Products are automatically loaded from the database.
                         @break
@@ -58,23 +61,27 @@
                     <p style="font-size: 12px; color: #616161; margin: 0.25rem 0 0 0;">Type: {{ ucfirst($section->type) }} &middot; Key: {{ $section->key }}</p>
                 </div>
                 <div style="padding: 1rem; display: flex; flex-direction: column; gap: 1rem;">
+                    {{-- for/id pairs matter beyond accessibility here: the inline validator
+                         names the field from its own <label>, so an unlabelled input reports
+                         "This field is required" instead of "Title is required". --}}
                     <div>
-                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Title <span style="color: #d72c0d;">*</span></label>
-                        <input type="text" name="title" value="{{ $section->title }}" required class="form-input">
+                        <label for="section-title" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Title <span style="color: #d72c0d;">*</span></label>
+                        <input type="text" name="title" id="section-title" value="{{ $section->title }}" required minlength="2" maxlength="255" class="form-input">
                     </div>
                     <div>
-                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Subtitle</label>
-                        <textarea name="subtitle" rows="2" class="form-textarea">{{ $section->subtitle }}</textarea>
+                        <label for="section-subtitle" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Subtitle</label>
+                        <textarea name="subtitle" id="section-subtitle" rows="2" maxlength="500" class="form-textarea">{{ $section->subtitle }}</textarea>
                     </div>
                     @if($section->image_url !== null || in_array($section->type, ['cta', 'promo']))
                         <div>
-                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Background Image</label>
+                            <label for="section-image" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Background Image</label>
                             @if($section->image_url)
                                 <div style="margin-bottom: 0.5rem;">
                                     <img src="{{ asset('storage/' . $section->image_url) }}" alt="{{ $section->title }}" style="height: 8rem; object-fit: cover; border-radius: 0.5rem;">
                                 </div>
                             @endif
-                            <input type="file" name="image" accept="image/*" class="form-input">
+                            <input type="file" name="image" id="section-image" accept="image/jpeg,image/png,image/webp,image/gif" class="form-input">
+                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">JPG, PNG, WebP or GIF. Max 5MB.</p>
                         </div>
                     @endif
                 </div>
@@ -86,31 +93,41 @@
                     <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Display Options</h2>
                 </div>
                 <div style="padding: 1rem; display: flex; flex-direction: column; gap: 1rem;">
-                    @if(in_array($section->type, ['products', 'benefits', 'cta']))
+                    {{-- 'content' belongs here: the About Us block on the home page
+                         renders button_text and button_link as its "Our Story" link,
+                         so gating these two fields out of a content section left a
+                         live storefront link with no way to edit it. --}}
+                    @if(in_array($section->type, ['products', 'benefits', 'cta', 'content']))
                         <div>
-                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Button Text</label>
-                            <input type="text" name="button_text" value="{{ $section->button_text }}" class="form-input" placeholder="e.g. View All, Shop Now">
+                            <label for="section-button-text" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Button Text</label>
+                            <input type="text" name="button_text" id="section-button-text" value="{{ $section->button_text }}" maxlength="100" class="form-input" placeholder="e.g. View All, Shop Now">
                         </div>
                         <div>
-                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Button Link</label>
-                            <input type="text" name="button_link" value="{{ $section->button_link }}" class="form-input" placeholder="e.g. /products, /categories/boys">
+                            <label for="section-button-link" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Button Link</label>
+                            {{-- A relative path, a full http(s) address, mailto:, tel: or a #anchor.
+                                 The About Us section renders this straight into an href, so
+                                 `javascript:` here would be stored XSS on the home page. --}}
+                            <input type="text" name="button_link" id="section-button-link" value="{{ $section->button_link }}" maxlength="255"
+                                   pattern="(https?://|mailto:|tel:)\S+|/\S*|#\S*"
+                                   title="Enter a path such as /products, or a full https:// address."
+                                   class="form-input" placeholder="e.g. /products, /categories/boys">
                         </div>
                     @endif
 
                     @if($section->type === 'cta')
                         <div>
-                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Background Color</label>
+                            <label for="section-background-color" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Background Color</label>
                             <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                <input type="color" name="background_color" value="{{ $section->background_color ?? '#6F9CA2' }}" style="width: 2.5rem; height: 2.5rem; border-radius: 0.375rem; border: 1px solid #c9cccf; cursor: pointer; padding: 0.125rem;">
-                                <input type="text" value="{{ $section->background_color ?? '#6F9CA2' }}" class="form-input" style="flex: 1;" readonly>
+                                <input type="color" name="background_color" id="section-background-color" value="{{ $section->background_color ?? '#6F9CA2' }}" style="width: 2.5rem; height: 2.5rem; border-radius: 0.375rem; border: 1px solid #c9cccf; cursor: pointer; padding: 0.125rem;">
+                                <input type="text" value="{{ $section->background_color ?? '#6F9CA2' }}" aria-label="Background colour hex" class="form-input" style="flex: 1;" readonly>
                             </div>
                             <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Used when no background image is set</p>
                         </div>
                         <div>
-                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Text Color</label>
+                            <label for="section-text-color" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Text Color</label>
                             <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                <input type="color" name="text_color" value="{{ $section->text_color ?? '#ffffff' }}" style="width: 2.5rem; height: 2.5rem; border-radius: 0.375rem; border: 1px solid #c9cccf; cursor: pointer; padding: 0.125rem;">
-                                <input type="text" value="{{ $section->text_color ?? '#ffffff' }}" class="form-input" style="flex: 1;" readonly>
+                                <input type="color" name="text_color" id="section-text-color" value="{{ $section->text_color ?? '#ffffff' }}" style="width: 2.5rem; height: 2.5rem; border-radius: 0.375rem; border: 1px solid #c9cccf; cursor: pointer; padding: 0.125rem;">
+                                <input type="text" value="{{ $section->text_color ?? '#ffffff' }}" aria-label="Text colour hex" class="form-input" style="flex: 1;" readonly>
                             </div>
                         </div>
                     @endif
@@ -136,9 +153,16 @@
                                         <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                     </button>
                                     <div style="display: flex; flex-direction: column; gap: 0.5rem; padding-right: 1.5rem;">
-                                        <input type="text" :name="'content['+index+'][title]'" x-model="item.title" class="form-input" placeholder="Title">
-                                        <input type="text" :name="'content['+index+'][description]'" x-model="item.description" class="form-input" placeholder="Description">
-                                        <input type="text" :name="'content['+index+'][icon]'" x-model="item.icon" class="form-input" placeholder="Icon name (e.g. shield, heart)">
+                                        <input type="text" :name="'content['+index+'][title]'" x-model="item.title" maxlength="120"
+                                               aria-label="Benefit title" class="form-input" placeholder="Title">
+                                        <input type="text" :name="'content['+index+'][description]'" x-model="item.description" maxlength="255"
+                                               aria-label="Benefit description" class="form-input" placeholder="Description">
+                                        {{-- The icon name selects a template partial, so it is a key
+                                             rather than free text - keep it to the characters a key
+                                             can have. --}}
+                                        <input type="text" :name="'content['+index+'][icon]'" x-model="item.icon" maxlength="40"
+                                               pattern="[A-Za-z0-9_\-]+" title="Letters, numbers, hyphens and underscores only."
+                                               aria-label="Benefit icon name" class="form-input" placeholder="Icon name (e.g. shield, heart)">
                                     </div>
                                 </div>
                             </template>

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\TracksWarehouseStock;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -14,7 +15,7 @@ use Spatie\Sluggable\SlugOptions;
 
 class Product extends Model
 {
-    use HasSlug, Searchable, SoftDeletes;
+    use HasSlug, Searchable, SoftDeletes, TracksWarehouseStock;
 
     protected $fillable = [
         'uuid',
@@ -191,6 +192,12 @@ class Product extends Model
     public function inventoryStocks(): HasMany
     {
         return $this->hasMany(InventoryStock::class);
+    }
+
+    /** @see TracksWarehouseStock - stock_quantity here is the product's own, not a size's. */
+    public function warehouseStockKey(): array
+    {
+        return [$this->id, null];
     }
 
     public function wishlists(): HasMany

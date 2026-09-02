@@ -3,18 +3,45 @@
 namespace App\Http\Controllers\Account;
 
 use App\Http\Controllers\Controller;
+use App\Models\Order;
 use App\Models\OrderReturn;
 use App\Models\ReturnItem;
 use App\Models\Setting;
+use App\Rules\ValidationRules as V;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ReturnController extends Controller
 {
+    /**
+     * The reasons the form offers.
+     *
+     * The list lived only in the blade, so the server took any string up to 255
+     * characters - including markup - and wrote it to returns.reason, which the
+     * admin queue then renders. The view now renders this constant and the
+     * write validates against it.
+     */
+    public const REASONS = [
+        'Defective or damaged product',
+        'Wrong item received',
+        "Item doesn't match description",
+        'Allergic reaction',
+        'Changed my mind',
+        'Better price available',
+        'Other',
+    ];
+
+    /** The two things a customer can ask for. */
+    public const TYPES = ['return', 'exchange'];
+
+    /** The condition options offered per item. */
+    public const CONDITIONS = ['unopened', 'opened', 'damaged'];
+
     public function index(Request $request): View
     {
-        $returns = OrderReturn::whereHas('order', fn($q) => $q->where('user_id', $request->user()->id))
+        $returns = OrderReturn::whereHas('order', fn ($q) => $q->where('user_id', $request->user()->id))
             ->with(['order:id,order_number', 'items.orderItem.product:id,name,slug'])
             ->latest()
             ->paginate(10);
@@ -27,7 +54,7 @@ class ReturnController extends Controller
         // Get IDs of order items that already have a return request (any status except rejected)
         $returnedItemIds = ReturnItem::whereHas('return', function ($q) use ($request) {
             $q->where('user_id', $request->user()->id)
-              ->where('status', '!=', 'rejected');
+                ->where('status', '!=', 'rejected');
         })->pluck('order_item_id')->toArray();
 
         $returnWindowDays = (int) Setting::get('return_window_days', 7);
@@ -48,26 +75,48 @@ class ReturnController extends Controller
         // Remove orders with no returnable items left
         $orders = $orders->filter(fn ($order) => $order->items->isNotEmpty());
 
-        return view('account.returns.create', compact('orders', 'returnWindowDays', 'returnMinHours'));
+        return view('account.returns.create', [
+            'orders' => $orders,
+            'returnWindowDays' => $returnWindowDays,
+            'returnMinHours' => $returnMinHours,
+            'reasons' => self::REASONS,
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'order_id' => 'required|exists:orders,id',
-            'type' => 'required|in:return,exchange',
-            'reason' => 'required|string|max:255',
-            'description' => 'nullable|string|max:1000',
-            'items' => 'required|array|min:1',
-            'items.*.order_item_id' => 'required|exists:order_items,id',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.reason' => 'nullable|string|max:500',
-            'items.*.condition' => 'required|in:unopened,opened,damaged',
+            // exists alone only proves the order is real. Scoping it to the
+            // signed-in user means someone else's order number fails as a form
+            // error here rather than reaching the query below.
+            'order_id' => [
+                'required',
+                'integer',
+                Rule::exists('orders', 'id')->where('user_id', $request->user()->id),
+            ],
+            'type' => V::option(self::TYPES),
+            // Was a free string: now one of the reasons the select offers.
+            'reason' => V::option(self::REASONS),
+            // NoHtml, so a description later rendered in the admin queue or an
+            // email cannot carry markup.
+            'description' => V::textarea(required: false, max: 1000),
+            // max:50 bounds the array itself - without it a hand-rolled post
+            // could ask the server to validate an unlimited number of items.
+            'items' => 'required|array|min:1|max:50',
+            'items.*.order_item_id' => 'required|integer|exists:order_items,id',
+            'items.*.quantity' => V::quantity(),
+            'items.*.reason' => V::text(required: false, max: 500),
+            'items.*.condition' => V::option(self::CONDITIONS),
+        ], [
+            'order_id.exists' => 'Please choose one of your delivered orders.',
+            'type.in' => 'Please choose whether you want a return or an exchange.',
+            'reason.in' => 'Please choose a reason from the list.',
+            'items.required' => 'Please select at least one item to return.',
         ]);
 
         // Verify the order belongs to the authenticated user
-        $order = \App\Models\Order::where('id', $validated['order_id'])
-            ->where('user_id', auth()->id())
+        $order = Order::where('id', $validated['order_id'])
+            ->where('user_id', $request->user()->id)
             ->where('status', 'delivered')
             ->firstOrFail();
 
@@ -95,7 +144,7 @@ class ReturnController extends Controller
 
         $return = OrderReturn::create([
             'order_id' => $validated['order_id'],
-            'user_id' => auth()->id(),
+            'user_id' => $request->user()->id,
             'type' => $validated['type'],
             'reason' => $validated['reason'],
             'description' => $validated['description'] ?? null,

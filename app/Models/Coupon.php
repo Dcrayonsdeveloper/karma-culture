@@ -2,11 +2,31 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Coupon extends Model
 {
+    public const STATUS_ACTIVE    = 'active';
+    public const STATUS_SCHEDULED = 'scheduled';
+    public const STATUS_EXPIRED   = 'expired';
+    public const STATUS_USED_UP   = 'used_up';
+    public const STATUS_DISABLED  = 'disabled';
+
+    /**
+     * Every state a coupon can be in, keyed for the query string and mapped to
+     * the label the admin sees. Listed in the order the index tabs render them,
+     * which is not the precedence order - that lives in status().
+     */
+    public const STATUSES = [
+        self::STATUS_ACTIVE    => 'Active',
+        self::STATUS_SCHEDULED => 'Scheduled',
+        self::STATUS_EXPIRED   => 'Expired',
+        self::STATUS_USED_UP   => 'Used up',
+        self::STATUS_DISABLED  => 'Disabled',
+    ];
+
     protected $fillable = [
         'seller_id',
         'code',
@@ -51,25 +71,97 @@ class Coupon extends Model
         return $this->hasMany(CouponUsage::class);
     }
 
-    public function isValid(): bool
+    /**
+     * The one reason this coupon is not usable right now, or STATUS_ACTIVE.
+     *
+     * The admin index used to answer this question twice - once in SQL for the
+     * tab filter, once in PHP for the row badge - and the two disagreed. The
+     * SQL weighed only is_active and expires_at, so a coupon that had hit its
+     * usage cap, or had not started yet, was listed under "Active" while its
+     * own badge read "Inactive". Both sides now come from here.
+     *
+     * Precedence is deliberate, and scopeStatus() mirrors it exactly: the two
+     * states a coupon cannot be talked out of come first, so one that is past
+     * its expiry date reports "Expired" even when it was also switched off.
+     * That is the answer the admin is looking for, and it is what keeps the
+     * Expired tab complete.
+     */
+    public function status(): string
     {
-        if (!$this->is_active) {
-            return false;
+        // Not isPast(): a coupon expiring on this exact second is finished, and
+        // the scope's `<=` has to agree or that row falls between two tabs.
+        if ($this->expires_at && ! $this->expires_at->isFuture()) {
+            return self::STATUS_EXPIRED;
+        }
+
+        // `!== null` rather than a truthy test - a limit of 0 is a coupon
+        // nobody may redeem, not a coupon without a limit.
+        if ($this->usage_limit !== null && $this->times_used >= $this->usage_limit) {
+            return self::STATUS_USED_UP;
+        }
+
+        if (! $this->is_active) {
+            return self::STATUS_DISABLED;
         }
 
         if ($this->starts_at && $this->starts_at->isFuture()) {
-            return false;
+            return self::STATUS_SCHEDULED;
         }
 
-        if ($this->expires_at && $this->expires_at->isPast()) {
-            return false;
-        }
+        return self::STATUS_ACTIVE;
+    }
 
-        if ($this->usage_limit && $this->times_used >= $this->usage_limit) {
-            return false;
-        }
+    public function statusLabel(): string
+    {
+        return self::STATUSES[$this->status()];
+    }
 
-        return true;
+    public function isValid(): bool
+    {
+        return $this->status() === self::STATUS_ACTIVE;
+    }
+
+    /** Rows still inside their expiry date. The complement of STATUS_EXPIRED. */
+    public function scopeNotExpired(Builder $query): Builder
+    {
+        return $query->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()));
+    }
+
+    /** Rows still under their redemption cap. The complement of STATUS_USED_UP. */
+    public function scopeNotUsedUp(Builder $query): Builder
+    {
+        return $query->where(fn ($q) => $q->whereNull('usage_limit')->orWhereColumn('times_used', '<', 'usage_limit'));
+    }
+
+    /**
+     * The SQL twin of status(): same order, same boundaries.
+     *
+     * Each arm excludes the states that outrank it, so the five scopes
+     * partition the table - every coupon matches exactly one, which is what
+     * lets the tab counts add up to the total.
+     */
+    public function scopeStatusIs(Builder $query, string $status): Builder
+    {
+        return match ($status) {
+            self::STATUS_EXPIRED => $query
+                ->whereNotNull('expires_at')->where('expires_at', '<=', now()),
+
+            self::STATUS_USED_UP => $query->notExpired()
+                ->whereNotNull('usage_limit')->whereColumn('times_used', '>=', 'usage_limit'),
+
+            self::STATUS_DISABLED => $query->notExpired()->notUsedUp()
+                ->where('is_active', false),
+
+            self::STATUS_SCHEDULED => $query->notExpired()->notUsedUp()
+                ->where('is_active', true)
+                ->whereNotNull('starts_at')->where('starts_at', '>', now()),
+
+            self::STATUS_ACTIVE => $query->notExpired()->notUsedUp()
+                ->where('is_active', true)
+                ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now())),
+
+            default => $query,
+        };
     }
 
     public function canBeUsedBy(User $user): bool
@@ -185,16 +277,8 @@ class Coupon extends Model
      */
     public static function findBestAutoApply(Cart $cart): ?self
     {
-        $coupons = static::where('auto_apply', true)
-            ->where('is_active', true)
-            ->where(function ($q) {
-                $q->whereNull('starts_at')->orWhere('starts_at', '<=', now());
-            })
-            ->where(function ($q) {
-                $q->whereNull('expires_at')->orWhere('expires_at', '>=', now());
-            })
-            ->whereRaw('(usage_limit IS NULL OR times_used < usage_limit)')
-            ->get();
+        // Was a fourth hand-written copy of the validity predicate.
+        $coupons = static::where('auto_apply', true)->statusIs(self::STATUS_ACTIVE)->get();
 
         if ($coupons->isEmpty()) {
             return null;

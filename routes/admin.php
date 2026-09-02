@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\FraudController;
 use App\Http\Controllers\Admin\HomepageController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\InventoryLocationController;
+use App\Http\Controllers\Admin\InventoryLocationStockController;
 use App\Http\Controllers\Admin\InventoryReportController;
 use App\Http\Controllers\Admin\NewsletterController;
 use App\Http\Controllers\Admin\NotificationController;
@@ -77,6 +78,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/', [OrderController::class, 'index'])->name('index');
                 Route::get('/{order}', [OrderController::class, 'show'])->name('show');
                 Route::put('/{order}/status', [OrderController::class, 'updateStatus'])->name('status');
+                Route::put('/{order}/payment', [OrderController::class, 'recordPayment'])->name('payment');
                 Route::post('/{order}/ship', [OrderController::class, 'ship'])->name('ship');
                 Route::get('/{order}/invoice', [OrderController::class, 'invoice'])->name('invoice');
                 Route::get('/{order}/packing-slip', [OrderController::class, 'packingSlip'])->name('packing-slip');
@@ -139,6 +141,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::put('/{product}/stock', [InventoryController::class, 'updateStock'])->name('update-stock');
                 Route::get('/movements', [InventoryController::class, 'movements'])->name('movements');
                 Route::resource('locations', InventoryLocationController::class);
+
+                // What each location stocks
+                Route::post('/locations/{location}/stock', [InventoryLocationStockController::class, 'store'])->name('locations.stock.store');
+                Route::put('/locations/{location}/stock/{stock}', [InventoryLocationStockController::class, 'update'])->name('locations.stock.update');
+                Route::delete('/locations/{location}/stock/{stock}', [InventoryLocationStockController::class, 'destroy'])->name('locations.stock.destroy');
             });
         });
 
@@ -174,7 +181,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Content
         Route::middleware('admin.section:content')->group(function () {
             Route::resource('pages', PageController::class);
+            Route::put('/pages/{page}/toggle-status', [PageController::class, 'toggleStatus'])->name('pages.toggle-status');
+
             Route::resource('blog-posts', BlogPostController::class);
+            Route::put('/blog-posts/{blogPost}/toggle-status', [BlogPostController::class, 'toggleStatus'])->name('blog-posts.toggle-status');
 
             Route::prefix('reviews')->name('reviews.')->group(function () {
                 Route::get('/', [ReviewController::class, 'index'])->name('index');
@@ -199,6 +209,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::prefix('enquiries')->name('enquiries.')->group(function () {
             Route::get('/', [EnquiryController::class, 'index'])->name('index');
             Route::get('/{enquiry}', [EnquiryController::class, 'show'])->name('show');
+            Route::post('/{enquiry}/reply', [EnquiryController::class, 'reply'])->name('reply');
             Route::put('/{enquiry}/toggle-read', [EnquiryController::class, 'toggleRead'])->name('toggle-read');
             Route::put('/{enquiry}/status', [EnquiryController::class, 'updateStatus'])->name('status');
             Route::delete('/{enquiry}', [EnquiryController::class, 'destroy'])->name('destroy');
@@ -294,7 +305,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/sections/{section}', [HomepageController::class, 'editSection'])->name('sections.edit');
                 Route::put('/sections/{section}', [HomepageController::class, 'updateSection'])->name('sections.update');
                 Route::put('/sections/{section}/toggle', [HomepageController::class, 'toggleSection'])->name('sections.toggle');
-                Route::post('/sections/reorder', [HomepageController::class, 'reorderSections'])->name('sections.reorder');
 
                 // Testimonials
                 Route::get('/testimonials', [HomepageController::class, 'testimonials'])->name('testimonials');

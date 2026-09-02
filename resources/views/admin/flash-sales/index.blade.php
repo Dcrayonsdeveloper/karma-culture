@@ -71,7 +71,7 @@
                 @endif
                 <div style="position: relative; flex: 1; max-width: 24rem;">
                     <svg style="position: absolute; left: 0.625rem; top: 50%; transform: translateY(-50%); color: #999; width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search flash sales..."
+                    <input type="text" name="search" maxlength="100" aria-label="Search" value="{{ request('search') }}" placeholder="Search flash sales..."
                            style="padding-left: 2rem; border: 1px solid #c9cccf; border-radius: 0.5rem; font-size: 13px; width: 100%; padding-top: 0.375rem; padding-bottom: 0.375rem;">
                 </div>
             </form>

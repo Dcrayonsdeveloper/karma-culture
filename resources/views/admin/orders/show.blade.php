@@ -211,7 +211,7 @@
                             {{-- Only offer the moves this order can actually make, so an
                                  admin never picks a status the server will reject. --}}
                             @php $kkNext = $order->allowedNextStatuses(); @endphp
-                            <select name="status" x-model="status" @disabled(empty($kkNext)) style="width: 100%; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; padding: 0.375rem 0.5rem;">
+                            <select name="status" x-model="status" @disabled(empty($kkNext)) style="width: 100%; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; padding: 0.375rem 2rem 0.375rem 0.5rem;">
                                 @forelse($kkNext as $kkStatus)
                                     <option value="{{ $kkStatus }}">{{ ucwords(str_replace('_', ' ', $kkStatus)) }}</option>
                                 @empty
@@ -236,7 +236,7 @@
                             <div x-show="status === 'shipped'" x-transition x-cloak style="margin-bottom: 0.75rem;">
                                 <div style="margin-bottom: 0.5rem;">
                                     <label style="font-size: 13px; font-weight: 500; color: #303030; display: block; margin-bottom: 0.25rem;">Carrier</label>
-                                    <select name="carrier" style="width: 100%; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; padding: 0.375rem 0.5rem;">
+                                    <select name="carrier" style="width: 100%; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; padding: 0.375rem 2rem 0.375rem 0.5rem;">
                                         <option value="">Select carrier</option>
                                         <option value="BlueDart">BlueDart</option>
                                         <option value="Delhivery">Delhivery</option>
@@ -255,13 +255,55 @@
                         @endif
 
                         <div style="margin-bottom: 0.75rem;">
-                            <label style="font-size: 13px; font-weight: 500; color: #303030; display: block; margin-bottom: 0.25rem;">Note (optional)</label>
+                            <label style="font-size: 13px; font-weight: 500; color: #303030; display: block; margin-bottom: 0.25rem;">Note</label>
                             <textarea name="comment" rows="2" style="width: 100%; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; padding: 0.375rem 0.5rem; resize: vertical;" placeholder="Add a note..."></textarea>
                         </div>
                         <button type="submit" class="btn btn-primary" @disabled(empty($kkNext)) style="width: 100%; font-size: 13px;">Update status</button>
                     </form>
                 </div>
             </div>
+
+            {{-- Payment --}}
+            {{-- A prepaid order cannot be shipped until the money has landed, so
+                 there has to be a way to say it has. Gateway callbacks get lost
+                 and some customers pay by bank transfer; before this the only
+                 record of payment was PayU's own callback. --}}
+            @if(! in_array($order->payment_status, ['refunded', 'partial_refund'], true))
+                <div class="card">
+                    <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3; display: flex; align-items: center; justify-content: space-between;">
+                        <h2 style="font-size: 13px; font-weight: 600; color: #303030;">Payment</h2>
+                        <span class="badge {{ $payBadge }}">{{ ucfirst($order->payment_status) }}</span>
+                    </div>
+                    <div style="padding: 1rem;">
+                        <div style="font-size: 12px; color: #616161; margin-bottom: 0.75rem;">
+                            {{ $order->isCod() ? 'Cash on delivery' : 'Prepaid' }} &middot;
+                            {{ currency_symbol() }}{{ number_format((float) $order->paid_amount, 2) }} of {{ currency_symbol() }}{{ number_format((float) $order->total, 2) }} received
+                            @if($order->isCod() && $order->payment_status === 'pending')
+                                <br>Collected automatically when this order is marked delivered.
+                            @elseif($order->isPrepaid() && $order->payment_status !== 'paid')
+                                <br><strong style="color: #b98900;">This order cannot be shipped until payment is recorded.</strong>
+                            @endif
+                        </div>
+                        <form action="{{ route('admin.orders.payment', $order) }}" method="POST">
+                            @csrf
+                            @method('PUT')
+                            <div style="margin-bottom: 0.75rem;">
+                                <label style="font-size: 13px; font-weight: 500; color: #303030; display: block; margin-bottom: 0.25rem;">Payment status</label>
+                                <select name="payment_status" class="form-select" style="width: 100%;">
+                                    @foreach(['paid' => 'Paid', 'pending' => 'Pending', 'failed' => 'Failed'] as $kkValue => $kkLabel)
+                                        <option value="{{ $kkValue }}" @selected($order->payment_status === $kkValue)>{{ $kkLabel }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div style="margin-bottom: 0.75rem;">
+                                <label style="font-size: 13px; font-weight: 500; color: #303030; display: block; margin-bottom: 0.25rem;">Note</label>
+                                <input type="text" name="note" maxlength="500" class="form-input" style="width: 100%;" placeholder="e.g. UPI reference">
+                            </div>
+                            <button type="submit" class="btn btn-secondary" style="width: 100%; font-size: 13px;">Record payment</button>
+                        </form>
+                    </div>
+                </div>
+            @endif
 
             {{-- Shiprocket --}}
             @if($shiprocketEnabled)
@@ -361,7 +403,7 @@
                         @endif
                         <form action="{{ route('admin.orders.assign-partner', $order) }}" method="POST">
                             @csrf
-                            <select name="delivery_partner_id" style="width: 100%; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; padding: 0.375rem 0.5rem; margin-bottom: 0.5rem;">
+                            <select name="delivery_partner_id" style="width: 100%; font-size: 13px; border: 1px solid #c9cccf; border-radius: 0.5rem; padding: 0.375rem 2rem 0.375rem 0.5rem; margin-bottom: 0.5rem;">
                                 <option value="">Select partner</option>
                                 @foreach($activePartners as $partner)
                                     <option value="{{ $partner->id }}" @selected($order->delivery_partner_id == $partner->id)>

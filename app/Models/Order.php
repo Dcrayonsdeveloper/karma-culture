@@ -16,6 +16,7 @@ class Order extends Model
      */
     public const STATUS_TRANSITIONS = [
         'pending' => ['confirmed', 'cancelled'],
+        'on_hold' => ['confirmed', 'cancelled'],
         'confirmed' => ['processing', 'cancelled'],
         'processing' => ['packed', 'cancelled'],
         'packed' => ['shipped', 'cancelled'],
@@ -26,15 +27,49 @@ class Order extends Model
         'returned' => [],
     ];
 
+    /**
+     * The steps that hand the goods over. A prepaid order must not reach any of
+     * them while the money is still outstanding.
+     */
+    public const STATUSES_REQUIRING_PAYMENT = ['shipped', 'out_for_delivery', 'delivered'];
+
     /** The statuses this order can legally move to right now. */
     public function allowedNextStatuses(): array
     {
-        return self::STATUS_TRANSITIONS[$this->status] ?? [];
+        return array_values(array_filter(
+            self::STATUS_TRANSITIONS[$this->status] ?? [],
+            fn (string $status) => $this->transitionBlockedReason($status) === null
+        ));
     }
 
     public function canTransitionTo(string $status): bool
     {
-        return in_array($status, $this->allowedNextStatuses(), true);
+        return $this->transitionBlockedReason($status) === null;
+    }
+
+    /**
+     * Why this order may not move to $status, or null if it may. Both the
+     * workflow and the payment rule live here so the admin dropdown, the guard
+     * behind it and the Shiprocket sync cannot disagree about what is legal -
+     * and so the admin gets told which of the two rules stopped them.
+     */
+    public function transitionBlockedReason(string $status): ?string
+    {
+        if (! in_array($status, self::STATUS_TRANSITIONS[$this->status] ?? [], true)) {
+            return "Cannot change status from \"{$this->status}\" to \"{$status}\".";
+        }
+
+        // Shipping a prepaid order that was never paid for is how an order ends
+        // up reading "delivered" next to "payment pending". Cash on delivery is
+        // exempt: for those the money arrives *because* the parcel does.
+        if ($this->isPrepaid()
+            && in_array($status, self::STATUSES_REQUIRING_PAYMENT, true)
+            && $this->payment_status !== 'paid') {
+            return "Payment for this prepaid order is still \"{$this->payment_status}\". "
+                . "Record the payment before marking it \"{$status}\".";
+        }
+
+        return null;
     }
     protected $fillable = [
         'order_number',
@@ -182,9 +217,15 @@ class Order extends Model
         return $this->status === 'pending';
     }
 
+    /**
+     * Confirmed and everything past it. "packed" and "out_for_delivery" were
+     * missing, so getTrackingSteps() un-ticked the "Ordered" step the moment an
+     * order was packed - the timeline showed a later step done and an earlier
+     * one not.
+     */
     public function isConfirmed(): bool
     {
-        return in_array($this->status, ['confirmed', 'processing', 'shipped', 'delivered']);
+        return in_array($this->status, ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'], true);
     }
 
     public function isPacked(): bool
@@ -215,6 +256,32 @@ class Order extends Model
     public function isPaid(): bool
     {
         return $this->payment_status === 'paid';
+    }
+
+    /**
+     * How this order is being paid for. There is no such column - checkout
+     * records it in metadata - but the tracking page and the fraud detail page
+     * both read $order->payment_method, so without this they printed "Not
+     * recorded" / "-" for every order ever placed.
+     */
+    public function getPaymentMethodAttribute(): string
+    {
+        return $this->metadata['payment_method'] ?? 'cod';
+    }
+
+    public function isCod(): bool
+    {
+        return $this->payment_method === 'cod';
+    }
+
+    /**
+     * Anything that is not cash on delivery has to be settled before the parcel
+     * moves. Unknown methods count as prepaid on purpose: guessing "cash" for a
+     * method we do not recognise would auto-mark it paid on delivery below.
+     */
+    public function isPrepaid(): bool
+    {
+        return ! $this->isCod();
     }
 
     public function canBeCancelled(): bool
@@ -261,6 +328,34 @@ class Order extends Model
             'cancelled' => $this->update(['cancelled_at' => now()]),
             default => null,
         };
+
+        $this->settlePaymentFor($status, $userId);
+    }
+
+    /**
+     * Keep payment_status honest as fulfilment moves. Nothing used to write it
+     * back at all outside the PayU callback, so a delivered cash-on-delivery
+     * order read "delivered / payment pending" forever - and since every
+     * revenue figure in admin filters on payment_status = "paid", the cash it
+     * had already taken never showed up anywhere.
+     *
+     * This lives on the model rather than in the admin controller because
+     * Shiprocket's webhook and its polling sync both drive orders to
+     * "delivered" through updateStatus() without going near an admin.
+     */
+    protected function settlePaymentFor(string $status, ?int $userId): void
+    {
+        if ($status !== 'delivered' || ! $this->isCod() || $this->payment_status !== 'pending') {
+            return;
+        }
+
+        $this->update([
+            'payment_status'       => 'paid',
+            'paid_amount'          => $this->total,
+            'payment_collected'    => true,
+            'payment_collected_at' => now(),
+            'payment_collected_by' => $userId,
+        ]);
     }
 
     public function getTrackingSteps(): array

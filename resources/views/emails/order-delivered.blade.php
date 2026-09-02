@@ -26,7 +26,7 @@ We are happy to let you know that your order **#{{ $order->order_number }}** has
 
 Your opinion matters to us. Please take a moment to review the items you received. Your reviews help other shoppers choose with confidence.
 
-@component('mail::button', ['url' => url('/orders/' . $order->id)])
+@component('mail::button', ['url' => route('account.orders.show', $order->id)])
 Review Your Purchase
 @endcomponent
 

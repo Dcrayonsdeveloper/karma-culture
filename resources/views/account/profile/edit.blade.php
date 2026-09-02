@@ -63,7 +63,7 @@
                                 </div>
 
                                 <div>
-                                    <label for="last_name" class="block text-xs font-medium text-neutral-600 mb-1">Last Name <span class="text-neutral-400 font-normal">(optional)</span></label>
+                                    <label for="last_name" class="block text-xs font-medium text-neutral-600 mb-1">Last Name</label>
                                     <input type="text" name="last_name" id="last_name" value="{{ old('last_name', $user->last_name) }}"
                                            minlength="2" maxlength="50" autocomplete="family-name"
                                            title="Enter your last name, 2 to 50 characters."
@@ -80,8 +80,13 @@
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <svg class="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                                     </div>
+                                    {{-- type="email" alone accepts a bare hostname, so "dev@gmail"
+                                         passed here and was then rejected by email:strict on the
+                                         server. The pattern insists on a dot after the @, which is
+                                         what the server means by a valid address. --}}
                                     <input type="email" name="email" id="email" value="{{ old('email', $user->email) }}" required
                                            maxlength="255" autocomplete="email"
+                                           pattern=".+@.+\..+"
                                            title="Enter a valid email address, like you@example.com."
                                            class="w-full rounded-lg border {{ $errors->has('email') ? 'border-red-300' : 'border-neutral-200' }} text-sm pl-9 pr-3 py-2.5 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50">
                                 </div>
@@ -137,6 +142,7 @@
                                     <label for="current_password" class="block text-xs font-medium text-neutral-600 mb-1">Current Password</label>
                                     <div class="relative">
                                         <input :type="showPassword ? 'text' : 'password'" name="current_password" id="current_password" required
+                                               maxlength="255" autocomplete="current-password"
                                                class="w-full rounded-lg border {{ $errors->has('current_password') ? 'border-red-300' : 'border-neutral-200' }} text-sm px-3 py-2.5 pr-10 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50">
                                         <button type="button" @click="showPassword = !showPassword" class="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-600 hover:text-neutral-600">
                                             <svg x-show="!showPassword" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
@@ -151,7 +157,12 @@
                                 <div>
                                     <label for="password" class="block text-xs font-medium text-neutral-600 mb-1">New Password</label>
                                     <div class="relative">
+                                        {{-- minlength 8 is Password::defaults(), the policy the server
+                                             applies; without it the only sign the password was too
+                                             short came back as a page reload. --}}
                                         <input :type="showNew ? 'text' : 'password'" name="password" id="password" required
+                                               minlength="8" maxlength="255" autocomplete="new-password"
+                                               title="Use at least 8 characters, and not your current password."
                                                class="w-full rounded-lg border {{ $errors->has('password') ? 'border-red-300' : 'border-neutral-200' }} text-sm px-3 py-2.5 pr-10 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50">
                                         <button type="button" @click="showNew = !showNew" class="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-600 hover:text-neutral-600">
                                             <svg x-show="!showNew" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
@@ -167,6 +178,7 @@
                                     <label for="password_confirmation" class="block text-xs font-medium text-neutral-600 mb-1">Confirm New Password</label>
                                     <div class="relative">
                                         <input :type="showConfirm ? 'text' : 'password'" name="password_confirmation" id="password_confirmation" required
+                                               minlength="8" maxlength="255" autocomplete="new-password"
                                                class="w-full rounded-lg border border-neutral-200 text-sm px-3 py-2.5 pr-10 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50">
                                         <button type="button" @click="showConfirm = !showConfirm" class="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-600 hover:text-neutral-600">
                                             <svg x-show="!showConfirm" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>

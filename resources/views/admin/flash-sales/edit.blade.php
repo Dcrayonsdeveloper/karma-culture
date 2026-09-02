@@ -24,8 +24,12 @@
                     <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Flash Sale Details</h2>
                     <div style="display: flex; flex-direction: column; gap: 1rem;">
                         <div>
-                            <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Name <span style="color: #d72c0d;">*</span></label>
-                            <input type="text" name="name" value="{{ old('name', $flashSale->name) }}" required
+                            {{-- for/id pairs matter beyond accessibility here: the inline validator
+                                 names the field from its own <label>, so an unlabelled input reports
+                                 "This field is required" instead of "Name is required". --}}
+                            <label for="fs-name" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Name <span style="color: #d72c0d;">*</span></label>
+                            <input type="text" name="name" id="fs-name" value="{{ old('name', $flashSale->name) }}" required
+                                   minlength="2" maxlength="255"
                                    class="form-input" style="width: 100%;">
                             @error('name')
                                 <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
@@ -33,8 +37,8 @@
                         </div>
 
                         <div>
-                            <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Description</label>
-                            <textarea name="description" rows="3" class="form-textarea" style="width: 100%;">{{ old('description', $flashSale->description) }}</textarea>
+                            <label for="fs-description" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Description</label>
+                            <textarea name="description" id="fs-description" rows="3" maxlength="1000" class="form-textarea" style="width: 100%;">{{ old('description', $flashSale->description) }}</textarea>
                             @error('description')
                                 <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
                             @enderror
@@ -68,15 +72,19 @@
                         <template x-for="(r, i) in rows" :key="r.uid">
                             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                                 <select x-bind:name="'products[' + i + '][product_id]'" x-model="r.product_id"
-                                        class="form-select" style="flex: 1 1 200px; font-size: 13px;">
+                                        aria-label="Product" class="form-select" style="flex: 1 1 200px; font-size: 13px;">
                                     <option value="">Choose a product…</option>
                                     @foreach($allProducts as $p)
                                         <option value="{{ $p->id }}">{{ $p->name }} - @price($p->price)</option>
                                     @endforeach
                                 </select>
-                                <input type="number" step="0.01" min="0" x-bind:name="'products[' + i + '][sale_price]'" x-model="r.sale_price"
+                                <input type="number" step="0.01" min="0" max="9999999.99" inputmode="decimal"
+                                       x-bind:name="'products[' + i + '][sale_price]'" x-model="r.sale_price"
+                                       aria-label="Sale price" title="Enter an amount, up to two decimal places."
                                        placeholder="Sale price" class="form-input" style="width: 120px; font-size: 13px;">
-                                <input type="number" min="0" x-bind:name="'products[' + i + '][stock_limit]'" x-model="r.stock_limit"
+                                <input type="number" min="0" max="1000000" step="1" inputmode="numeric"
+                                       x-bind:name="'products[' + i + '][stock_limit]'" x-model="r.stock_limit"
+                                       aria-label="Stock limit" title="Enter a whole number, or leave blank for unlimited."
                                        placeholder="Limit" class="form-input" style="width: 90px; font-size: 13px;">
                                 <span style="font-size: 12px; color: #616161; width: 62px;" x-show="r.sold_count > 0" x-cloak>
                                     <span x-text="r.sold_count"></span> sold
@@ -106,19 +114,34 @@
             <div style="display: flex; flex-direction: column; gap: 1rem;">
                 <div class="card" style="padding: 1.25rem;">
                     <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 1rem;">Schedule</h2>
+                    @php
+                        // A schedule that has already begun stays selectable, so
+                        // editing anything else on this form does not drag its
+                        // dates forward. Only a CHANGED date has to be in the
+                        // future - the rule behind V::scheduleStart() agrees.
+                        $now = now()->format('Y-m-d\TH:i');
+                        $startOriginal = $flashSale->starts_at?->format('Y-m-d\TH:i');
+                        $endOriginal = $flashSale->ends_at?->format('Y-m-d\TH:i');
+                        $startFloor = $startOriginal && $startOriginal < $now ? $startOriginal : $now;
+                        $endFloor = $endOriginal && $endOriginal < $now ? $endOriginal : $now;
+                    @endphp
                     <div style="display: flex; flex-direction: column; gap: 1rem;">
                         <div>
-                            <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Starts At <span style="color: #d72c0d;">*</span></label>
-                            <input type="datetime-local" name="starts_at"
-                                   value="{{ old('starts_at', $flashSale->starts_at->format('Y-m-d\TH:i')) }}" required class="form-input" style="width: 100%;">
+                            <label for="fs-starts-at" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Starts At <span style="color: #d72c0d;">*</span></label>
+                            <input type="datetime-local" name="starts_at" id="fs-starts-at"
+                                   value="{{ old('starts_at', $startOriginal) }}" required
+                                   min="{{ $startFloor }}" data-schedule-start data-schedule-original="{{ $startOriginal }}"
+                                   class="form-input" style="width: 100%;">
                             @error('starts_at')
                                 <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
                             @enderror
                         </div>
                         <div>
-                            <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Ends At <span style="color: #d72c0d;">*</span></label>
-                            <input type="datetime-local" name="ends_at"
-                                   value="{{ old('ends_at', $flashSale->ends_at->format('Y-m-d\TH:i')) }}" required class="form-input" style="width: 100%;">
+                            <label for="fs-ends-at" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Ends At <span style="color: #d72c0d;">*</span></label>
+                            <input type="datetime-local" name="ends_at" id="fs-ends-at"
+                                   value="{{ old('ends_at', $endOriginal) }}" required
+                                   min="{{ $endFloor }}" data-schedule-end="fs-starts-at" data-schedule-original="{{ $endOriginal }}"
+                                   class="form-input" style="width: 100%;">
                             @error('ends_at')
                                 <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
                             @enderror

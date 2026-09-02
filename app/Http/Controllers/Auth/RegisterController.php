@@ -20,6 +20,9 @@ class RegisterController extends Controller
     /** users.first_name and users.last_name are both varchar(50). */
     private const NAME_PART_LIMIT = 50;
 
+    /** What the form asks for, and what the browser reports live. */
+    private const NAME_LIMIT = 30;
+
     public function showRegistrationForm(): RedirectResponse
     {
         return redirect()->route('login', ['mode' => 'register']);
@@ -32,13 +35,19 @@ class RegisterController extends Controller
             // real names use, so "रवि कुमार" and "O'Connor" are accepted while
             // "Ravi123" and a pasted URL are not.
             //
+            // 30 characters, matching the contact form: a full name that runs
+            // longer is a paste, not a name, and the field now says so on the
+            // keystroke that crosses the line rather than after a round trip.
+            //
             // The extra closure is about the database, not the charset: this
             // one field is split on the first space and written into two
             // varchar(50) columns, so "max:101" (the old rule, read as
             // 50 + space + 50) let a 101-character unbroken string through to
-            // a column half its size. Check the halves, not the whole.
+            // a column half its size. Check the halves, not the whole. The
+            // 30-character cap now sits well inside it; the guard stays because
+            // it is the column that has the last word, not the cap.
             'full_name' => [
-                ...V::name(max: 100),
+                ...V::name(max: self::NAME_LIMIT),
                 function (string $attribute, mixed $value, Closure $fail): void {
                     if (! is_string($value)) {
                         return;
@@ -52,10 +61,13 @@ class RegisterController extends Controller
                 },
             ],
 
-            // email:strict is safe to impose here in a way it is not on the
-            // sign-in form: this is where addresses are created, so nothing
-            // already stored can be shut out by it.
-            'email' => [...V::email(), Rule::unique('users', 'email')],
+            // email:strict, and the tighter EmailAddress shape on top of it,
+            // are safe to impose here in a way they are not on the sign-in
+            // form: this is where addresses are created, so nothing already
+            // stored can be shut out by them. strictShape is what refuses
+            // "_asha@example.com" and "asha..menon@example.com", which the RFC
+            // (and therefore email:strict) is perfectly happy with.
+            'email' => [...V::email(strictShape: true), Rule::unique('users', 'email')],
 
             // Required at signup: the store calls and SMSes on every delivery, so
             // an account without a reachable number costs a support cycle later.
@@ -89,7 +101,7 @@ class RegisterController extends Controller
         ], [
             'full_name.required' => 'Please enter your full name.',
             'full_name.min' => 'Please enter your full name.',
-            'full_name.max' => 'Your name must be 100 characters or fewer.',
+            'full_name.max' => 'Please keep your name to 30 characters or fewer.',
             'email.required' => 'Please enter your email address.',
             'email.email' => 'Enter a valid email address, like you@example.com.',
             'email.max' => 'That email address is too long.',

@@ -7,10 +7,13 @@ use App\Models\CartItem;
 use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Product;
+use App\Rules\ValidationRules as V;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class CartController extends Controller
@@ -101,11 +104,16 @@ class CartController extends Controller
     public function add(Request $request): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
-            'product_id' => ['required', 'exists:products,id'],
-            'variant_id' => ['nullable', 'exists:product_variants,id'],
-            'size' => ['nullable', 'string', 'max:50'],
-            'colour' => ['nullable', 'string', 'max:60'],
-            'quantity' => ['required', 'integer', 'min:1', 'max:99'],
+            // is_active matters: ProductController::show 404s an inactive
+            // product, so without it the only way to buy a withdrawn line was
+            // to POST its id straight to this endpoint.
+            'product_id' => ['required', 'integer', Rule::exists('products', 'id')->where('is_active', true)],
+            'variant_id' => ['nullable', 'integer', 'exists:product_variants,id'],
+            // Charset and length only - whether these are OPTIONS THIS PRODUCT
+            // ACTUALLY OFFERS is checked below, once the product is loaded.
+            'size' => V::text(required: false, max: 50),
+            'colour' => V::text(required: false, max: 60),
+            'quantity' => V::quantity(max: 99),
         ]);
 
         $product = Product::findOrFail($validated['product_id']);
@@ -118,10 +126,37 @@ class CartController extends Controller
         // exists:product_variants,id proves the variant exists, not that it
         // belongs to THIS product. A mismatched pair used to make find()
         // return null and the ->stock_quantity read fatal.
-        $variant = $variantId ? $product->variants()->find($variantId) : null;
+        // is_active is part of the same question: the product page only ever
+        // offers active rows, so an inactive one did not come from the page.
+        $variant = $variantId
+            ? $product->variants()->where('is_active', true)->find($variantId)
+            : null;
 
         if ($variantId && ! $variant) {
             $error = 'That option is no longer available for this product.';
+            if ($request->wantsJson()) {
+                return response()->json(['error' => $error], 422);
+            }
+
+            return back()->with('error', $error);
+        }
+
+        // size and colour are free-text POST fields that get written to the
+        // cart line, carried onto order_items and printed on the invoice.
+        // Bounding the charset is not enough - "Size: XXXL" for a product sold
+        // only in S/M, or any string at all, was accepted and shipped. They are
+        // held to the same list the product page renders.
+        $options = $this->offeredOptions($product);
+
+        foreach (['size' => $size, 'colour' => $colour] as $field => $chosen) {
+            if ($chosen === null || $this->offers($options[$field], $chosen)) {
+                continue;
+            }
+
+            $error = $options[$field]->isEmpty()
+                ? 'This product is not sold by '.$field.'.'
+                : 'That '.$field.' is not available for this product.';
+
             if ($request->wantsJson()) {
                 return response()->json(['error' => $error], 422);
             }
@@ -201,6 +236,61 @@ class CartController extends Controller
         return back()->with('success', 'Product added to cart.');
     }
 
+    /**
+     * The sizes and colours a product actually offers.
+     *
+     * Deliberately the same derivation products/show.blade.php uses to render
+     * the size buttons and colour swatches, including both fallbacks, so the
+     * server accepts exactly what the page can offer and nothing else:
+     *  - sizes come from the active "Sizes & pricing" variant rows, falling
+     *    back to a free-text Size attribute on older products;
+     *  - colours come from the product-level Colours attribute, falling back to
+     *    the Colour recorded on the variant rows.
+     *
+     * @return array{size: Collection<int, string>, colour: Collection<int, string>}
+     */
+    private function offeredOptions(Product $product): array
+    {
+        $rows = $product->variants()->where('is_active', true)->get();
+
+        $sizes = $rows->pluck('name')->map(fn ($n) => trim((string) $n))->filter()->unique()->values();
+
+        if ($sizes->isEmpty()) {
+            $sizes = collect($product->attributes ?? [])
+                ->filter(fn ($v, $k) => Str::contains(Str::lower($k), 'size'))
+                ->flatMap(fn ($v) => is_array($v) ? $v : preg_split('/[,\/|]+|\s{2,}/', (string) $v))
+                ->map(fn ($v) => trim((string) $v))
+                ->filter()
+                ->unique()
+                ->values();
+        }
+
+        $colours = collect(data_get($product->attributes, 'Colours', []))
+            ->map(fn ($c) => trim((string) (is_array($c) ? ($c['name'] ?? '') : $c)))
+            ->filter();
+
+        if ($colours->isEmpty()) {
+            $colours = $rows
+                ->map(fn ($v) => trim((string) data_get($v->attributes, 'Colour', '')))
+                ->filter();
+        }
+
+        return ['size' => $sizes, 'colour' => $colours->unique()->values()];
+    }
+
+    /**
+     * Case- and spacing-insensitive membership, so a value that made the round
+     * trip through the page is never rejected over its casing.
+     *
+     * @param  Collection<int, string>  $offered
+     */
+    private function offers(Collection $offered, string $chosen): bool
+    {
+        $needle = Str::lower(trim($chosen));
+
+        return $offered->contains(fn ($option) => Str::lower(trim((string) $option)) === $needle);
+    }
+
     public function update(Request $request, CartItem $cartItem): JsonResponse|RedirectResponse
     {
         // Verify cart ownership
@@ -208,7 +298,7 @@ class CartController extends Controller
         abort_if($cartItem->cart_id !== $cart->id, 403);
 
         $validated = $request->validate([
-            'quantity' => ['required', 'integer', 'min:1', 'max:99'],
+            'quantity' => V::quantity(max: 99),
         ]);
 
         // Check stock
@@ -311,7 +401,11 @@ class CartController extends Controller
     public function applyCoupon(Request $request): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
-            'code' => ['required', 'string'],
+            // Was an unbounded 'string', so a megabyte of text was strtoupper'd
+            // and looked up on every attempt. 50 is the coupons.code column
+            // width and the ceiling Admin\CouponController creates codes under,
+            // so no findable code is excluded.
+            'code' => V::text(max: 50),
         ]);
 
         // Entering a code is a fresh decision: stop suppressing auto-apply.
@@ -330,12 +424,13 @@ class CartController extends Controller
             return back()->with('error', $message);
         }
 
+        // A third hand-written copy of the validity predicate, and this one
+        // forgot the usage cap: a coupon that had been redeemed its maximum
+        // number of times still applied here with a success message, then
+        // silently contributed no discount because Cart::discount and the
+        // checkout both gate on isValid(). The scope checks all four rules.
         $coupon = Coupon::where('code', strtoupper($validated['code']))
-            ->where('is_active', true)
-            ->where(function ($q) {
-                $q->whereNull('starts_at')->orWhere('starts_at', '<=', now());
-            })
-            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>=', now()))
+            ->statusIs(Coupon::STATUS_ACTIVE)
             ->first();
 
         if (! $coupon) {

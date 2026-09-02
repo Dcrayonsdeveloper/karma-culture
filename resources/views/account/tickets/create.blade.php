@@ -60,6 +60,8 @@
                         <div>
                             <label for="subject" class="block text-sm font-medium text-neutral-700 mb-1.5">Subject <span class="text-red-400">*</span></label>
                             <input type="text" name="subject" id="subject" value="{{ old('subject') }}" required
+                                   minlength="3" maxlength="255"
+                                   title="Summarise the issue in a few words."
                                    class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all @error('subject') border-red-300 @enderror"
                                    placeholder="Brief description of your issue">
                             @error('subject')
@@ -69,7 +71,10 @@
 
                         <div>
                             <label for="message" class="block text-sm font-medium text-neutral-700 mb-1.5">Message <span class="text-red-400">*</span></label>
+                            {{-- minlength 10 is the server's own min:10 - previously a one-word
+                                 message was accepted by the box and refused by the controller. --}}
                             <textarea name="message" id="message" rows="6" required
+                                      minlength="10" maxlength="5000"
                                       class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all resize-none @error('message') border-red-300 @enderror"
                                       placeholder="Describe your issue in detail...">{{ old('message') }}</textarea>
                             @error('message')

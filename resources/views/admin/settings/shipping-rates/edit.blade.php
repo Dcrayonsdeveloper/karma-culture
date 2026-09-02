@@ -27,7 +27,7 @@
                 <div>
                     <label style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.375rem;">Rate Type <span style="color: #d72c0d;">*</span></label>
                     <select name="type" required
-                            style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #c9cccf; border-radius: 0.5rem; font-size: 13px; background: #fff;">
+                            style="width: 100%; padding: 0.5rem 2rem 0.5rem 0.75rem; border: 1px solid #c9cccf; border-radius: 0.5rem; font-size: 13px; background-color: #fff;">
                         <option value="flat" {{ old('type', $rate->type) === 'flat' ? 'selected' : '' }}>Flat Rate</option>
                         <option value="weight" {{ old('type', $rate->type) === 'weight' ? 'selected' : '' }}>Weight Based</option>
                         <option value="price" {{ old('type', $rate->type) === 'price' ? 'selected' : '' }}>Price Based</option>

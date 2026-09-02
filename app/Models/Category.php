@@ -154,6 +154,26 @@ class Category extends Model
     }
 
     /**
+     * The same list, minus every category that has children, for the product
+     * form's category picker. Parents like "Men" are shelves rather than
+     * buckets: a product filed straight onto one never appears under any
+     * sub-category shoppers actually browse, so only the bottom level is
+     * offered. $keepId re-admits one category regardless - pass the product's
+     * current category on the edit screen, so an older product sitting on a
+     * parent keeps its value instead of silently reverting to "Select".
+     */
+    public static function assignableOptions(?int $keepId = null)
+    {
+        $parentIds = array_flip(
+            static::whereNotNull('parent_id')->distinct()->pluck('parent_id')->all()
+        );
+
+        return static::optionsWithPath()
+            ->filter(fn ($category) => ! isset($parentIds[$category->id]) || $category->id === $keepId)
+            ->values();
+    }
+
+    /**
      * Browser-ready URL for the category image, or null when none is set.
      * image_url holds a storage-relative path (admin upload), but may also be
      * a full URL or an absolute path - resolve all three like Banner does.

@@ -12,13 +12,28 @@ use Illuminate\View\View;
 
 class OrderController extends Controller
 {
+    /**
+     * The orders.status enum, which is also the list the filter tabs render.
+     *
+     * @see database/migrations/2026_02_11_102051_add_tracking_statuses_to_orders_table.php
+     */
+    public const STATUSES = [
+        'pending', 'confirmed', 'processing', 'packed', 'shipped',
+        'out_for_delivery', 'delivered', 'cancelled', 'returned',
+    ];
+
     public function index(Request $request): View
     {
         $query = $request->user()->orders()->with('items.product');
 
-        // Filter by status
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
+        // Filter by status. The tabs are the only intended source of ?status=,
+        // but the query string belongs to the customer; anything that is not
+        // one of the enum's values shows the unfiltered list instead of being
+        // handed to the where clause.
+        $status = $request->query('status');
+
+        if (is_string($status) && in_array($status, self::STATUSES, true)) {
+            $query->where('status', $status);
         }
 
         $orders = $query->latest()->paginate(10)->withQueryString();

@@ -63,9 +63,13 @@
             flex-wrap: wrap;
             gap: 0.75rem;
         }
-        /* Tab filters: allow horizontal scroll */
+        /* Tab filters: allow horizontal scroll. overflow-y must be pinned to
+           hidden - `auto` is the computed default once overflow-x is set, and
+           the active tab's -1px bottom margin pokes a pixel past the content
+           box, which is enough for a phantom vertical scrollbar. */
         .layout-admin .card > [style*="border-bottom"][style*="display: flex"] {
             overflow-x: auto;
+            overflow-y: hidden;
             -webkit-overflow-scrolling: touch;
             white-space: nowrap;
         }

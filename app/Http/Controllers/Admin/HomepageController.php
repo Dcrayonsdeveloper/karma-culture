@@ -10,9 +10,11 @@ use App\Models\Quality;
 use App\Models\Setting;
 use App\Models\ShopFilterItem;
 use App\Models\Testimonial;
+use App\Rules\ValidationRules as V;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class HomepageController extends Controller
 {
@@ -24,6 +26,50 @@ class HomepageController extends Controller
      * file before this rule can report a readable error.
      */
     private const MAX_VIDEO_KB = 65536;
+
+    /**
+     * A link an admin may point a banner, button or menu item at.
+     *
+     * Every one of these values ends up in an `href` on the storefront. Blade
+     * escapes the text, but escaping does not disarm a scheme: `javascript:...`
+     * in a stored link is a click away from running as the visitor. So the
+     * scheme is allow-listed instead - http, https, mailto and tel - alongside
+     * the two shapes that carry no scheme at all: a site-relative path and a
+     * bare fragment.
+     */
+    private const LINK_REGEX = '/^(?:(?:https?|mailto|tel):\S+|\/\S*|#\S*)$/i';
+
+    /**
+     * A video the About Us section can play: an absolute URL, or a path
+     * relative to the web root such as `storage/storefront/about/reel.mp4`.
+     */
+    private const VIDEO_SRC_REGEX = '/^(?:https?:\/\/\S+|[A-Za-z0-9._\-\/]+\.(?:mp4|webm|mov|ogg))$/i';
+
+    /** A six-digit CSS hex colour - what <input type="color"> submits. */
+    private const HEX_COLOR_REGEX = '/^#[0-9A-Fa-f]{6}$/';
+
+    /** Locations the header and footer partials know how to render. */
+    private const NAV_LOCATIONS = ['header', 'footer_col1', 'footer_col2', 'footer_col3', 'footer_col4'];
+
+    /** Video uploads: extension, sniffed type and size all checked. */
+    private function videoRules(): array
+    {
+        return [
+            'nullable', 'file',
+            'mimes:mp4,webm,mov',
+            'mimetypes:video/mp4,video/webm,video/quicktime',
+            'max:'.self::MAX_VIDEO_KB,
+        ];
+    }
+
+    private function videoMessages(string $field): array
+    {
+        return [
+            "{$field}.mimes" => 'The video must be an MP4, WebM or MOV file.',
+            "{$field}.mimetypes" => 'The video must be an MP4, WebM or MOV file.',
+            "{$field}.max" => 'The video may not be larger than '.(self::MAX_VIDEO_KB / 1024).' MB.',
+        ];
+    }
 
     public function index()
     {
@@ -65,6 +111,43 @@ class HomepageController extends Controller
 
     public function updateSiteSettings(Request $request)
     {
+        // This form had no validation whatsoever, which mattered most for the
+        // four file inputs: the logo and the three About Us clips were stored
+        // straight onto the public disk on trust, so any file at all - a .php
+        // included - could be uploaded and then fetched back through
+        // /storage. Every text field was likewise unbounded and unchecked.
+        $rules = [
+            'site_name' => V::text(required: false, max: 100),
+            'site_tagline' => V::text(required: false, max: 150),
+            'site_description' => V::textarea(required: false, max: 500),
+            'footer_about' => V::textarea(required: false, max: 1000),
+            'footer_copyright' => V::text(required: false, max: 255),
+            'announcement_text' => V::text(required: false, max: 255),
+            'contact_email' => V::email(required: false),
+            'contact_phone' => V::mobile(required: false),
+            'contact_address' => V::addressLine(required: false, max: 500),
+            'site_logo' => V::image(required: false, maxKb: 2048, allowGif: false),
+        ];
+
+        foreach (['facebook', 'instagram', 'twitter', 'linkedin', 'youtube', 'tiktok', 'pinterest'] as $network) {
+            $rules["social_{$network}"] = V::url(required: false, max: 255);
+        }
+
+        $messages = [];
+
+        foreach ([1, 2, 3] as $slot) {
+            $urlField = $slot === 1 ? 'about_us_video_url' : "about_us_video_url_{$slot}";
+            $fileField = $slot === 1 ? 'about_us_video_file' : "about_us_video_file_{$slot}";
+
+            $rules[$urlField] = ['nullable', 'string', 'max:255', 'regex:'.self::VIDEO_SRC_REGEX];
+            $rules[$fileField] = $this->videoRules();
+
+            $messages["{$urlField}.regex"] = 'Enter a full https:// address, or a path to an .mp4, .webm or .mov file.';
+            $messages += $this->videoMessages($fileField);
+        }
+
+        $validated = $request->validate($rules, $messages);
+
         $fields = [
             'site_name', 'site_tagline', 'site_description',
             'footer_about', 'footer_copyright',
@@ -78,7 +161,9 @@ class HomepageController extends Controller
 
         foreach ($fields as $field) {
             if ($request->has($field)) {
-                Setting::set($field, $request->input($field), 'string', 'homepage');
+                // Clearing a field is a legitimate edit, so a validated null is
+                // written back as an empty string rather than skipped.
+                Setting::set($field, $validated[$field] ?? '', 'string', 'homepage');
             }
         }
 
@@ -95,7 +180,7 @@ class HomepageController extends Controller
         ] as $fileField => $urlSetting) {
             if ($request->hasFile($fileField)) {
                 $videoPath = $request->file($fileField)->store('storefront/about', 'public');
-                Setting::set($urlSetting, 'storage/' . $videoPath, 'string', 'homepage');
+                Setting::set($urlSetting, 'storage/'.$videoPath, 'string', 'homepage');
             }
         }
 
@@ -108,27 +193,45 @@ class HomepageController extends Controller
     public function heroBanners()
     {
         $banners = Banner::where('position', 'hero')->ordered()->get();
+
         return view('admin.homepage.hero-banners', compact('banners'));
+    }
+
+    /**
+     * Rules shared by the add and edit hero banner forms.
+     *
+     * @return array<string, mixed>
+     */
+    private function heroBannerRules(bool $mediaRequired): array
+    {
+        return [
+            'name' => V::text(required: false, max: 255),
+            'image' => $mediaRequired
+                ? ['required_without:video', ...V::image(required: false, maxKb: 5120, allowGif: true)]
+                : V::image(required: false, maxKb: 5120, allowGif: true),
+            'video' => $this->videoRules(),
+            'link' => ['nullable', 'string', 'max:255', 'regex:'.self::LINK_REGEX],
+            'title' => V::text(required: false, max: 255),
+            'subtitle' => V::text(required: false, max: 500),
+            'button_text' => V::text(required: false, max: 100),
+            'overlay_style' => V::option(array_keys(Banner::OVERLAY_STYLES), required: false),
+            'remove_video' => V::boolean(),
+        ];
+    }
+
+    private function heroBannerMessages(): array
+    {
+        return [
+            'image.required_without' => 'Upload an image, or a video to use instead.',
+            'link.regex' => 'Enter a path such as /products, or a full https:// address.',
+        ] + $this->videoMessages('video');
     }
 
     public function storeHeroBanner(Request $request)
     {
         // A banner needs a video or an image, not necessarily both. When a video
         // is supplied the image becomes optional and acts as the poster frame.
-        $request->validate([
-            'name' => 'nullable|string|max:255',
-            'image' => 'required_without:video|nullable|image|mimes:jpeg,jpg,png,webp,gif|max:5120',
-            'video' => 'nullable|file|mimetypes:video/mp4,video/webm,video/quicktime|max:'.self::MAX_VIDEO_KB,
-            'link' => 'nullable|string|max:255',
-            'title' => 'nullable|string|max:255',
-            'subtitle' => 'nullable|string|max:500',
-            'button_text' => 'nullable|string|max:100',
-            'overlay_style' => 'nullable|string|in:' . implode(',', array_keys(Banner::OVERLAY_STYLES)),
-        ], [
-            'image.required_without' => 'Upload an image, or a video to use instead.',
-            'video.mimetypes' => 'The video must be an MP4, WebM or MOV file.',
-            'video.max' => 'The video may not be larger than '.(self::MAX_VIDEO_KB / 1024).' MB.',
-        ]);
+        $request->validate($this->heroBannerRules(mediaRequired: true), $this->heroBannerMessages());
 
         Banner::create([
             'name' => $request->name,
@@ -155,19 +258,7 @@ class HomepageController extends Controller
 
     public function updateHeroBanner(Request $request, Banner $banner)
     {
-        $request->validate([
-            'name' => 'nullable|string|max:255',
-            'image' => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:5120',
-            'video' => 'nullable|file|mimetypes:video/mp4,video/webm,video/quicktime|max:'.self::MAX_VIDEO_KB,
-            'link' => 'nullable|string|max:255',
-            'title' => 'nullable|string|max:255',
-            'subtitle' => 'nullable|string|max:500',
-            'button_text' => 'nullable|string|max:100',
-            'overlay_style' => 'nullable|string|in:' . implode(',', array_keys(Banner::OVERLAY_STYLES)),
-        ], [
-            'video.mimetypes' => 'The video must be an MP4, WebM or MOV file.',
-            'video.max' => 'The video may not be larger than '.(self::MAX_VIDEO_KB / 1024).' MB.',
-        ]);
+        $request->validate($this->heroBannerRules(mediaRequired: false), $this->heroBannerMessages());
 
         $data = $request->only(['name', 'title', 'subtitle', 'button_text', 'link', 'overlay_style']);
 
@@ -212,8 +303,8 @@ class HomepageController extends Controller
     public function reorderHeroBanners(Request $request)
     {
         $request->validate([
-            'order' => 'required|array',
-            'order.*' => 'integer|exists:banners,id',
+            'order' => ['required', 'array', 'max:500'],
+            'order.*' => ['integer', Rule::exists('banners', 'id')],
         ]);
 
         foreach ($request->order as $position => $id) {
@@ -229,6 +320,7 @@ class HomepageController extends Controller
     {
         $banner->update(['is_active' => !$banner->is_active]);
         Cache::flush();
+
         return back()->with('success', 'Banner status updated.');
     }
 
@@ -236,6 +328,7 @@ class HomepageController extends Controller
     public function sections()
     {
         $sections = HomepageSection::ordered()->get();
+
         return view('admin.homepage.sections', compact('sections'));
     }
 
@@ -246,27 +339,55 @@ class HomepageController extends Controller
 
     public function updateSection(Request $request, HomepageSection $section)
     {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'subtitle' => 'nullable|string|max:500',
-            'button_text' => 'nullable|string|max:100',
-            'button_link' => 'nullable|string|max:255',
-            'is_active' => 'boolean',
+        // background_color and text_color were written straight through from the
+        // request. They are interpolated into a `style` attribute on the home
+        // page, so an arbitrary string there is CSS injection; a hex colour is
+        // all <input type="color"> can produce anyway. `content` was likewise
+        // stored as whatever array arrived - it is the benefits repeater, and
+        // its three fields are all that belongs in the JSON column.
+        $validated = $request->validate([
+            'title' => V::text(max: 255, min: 2),
+            'subtitle' => V::textarea(required: false, max: 500),
+            'button_text' => V::text(required: false, max: 100),
+            'button_link' => ['nullable', 'string', 'max:255', 'regex:'.self::LINK_REGEX],
+            'background_color' => ['nullable', 'string', 'regex:'.self::HEX_COLOR_REGEX],
+            'text_color' => ['nullable', 'string', 'regex:'.self::HEX_COLOR_REGEX],
+            'image' => V::image(required: false, maxKb: 5120, allowGif: true),
+            'is_active' => V::boolean(),
+            'content' => ['nullable', 'array', 'max:24'],
+            'content.*' => ['array'],
+            'content.*.title' => V::text(required: false, max: 120),
+            'content.*.description' => V::text(required: false, max: 255),
+            'content.*.icon' => ['nullable', 'string', 'max:40', 'regex:/^[A-Za-z0-9_-]+$/'],
+        ], [
+            'button_link.regex' => 'Enter a path such as /products, or a full https:// address.',
+            'background_color.regex' => 'Pick a colour, or enter one as #rrggbb.',
+            'text_color.regex' => 'Pick a colour, or enter one as #rrggbb.',
+            'content.*.icon.regex' => 'An icon name may only contain letters, numbers, hyphens and underscores.',
         ]);
 
-        $data = $request->only(['title', 'subtitle', 'button_text', 'button_link']);
+        $data = [
+            'title' => $validated['title'],
+            'subtitle' => $validated['subtitle'] ?? null,
+            'button_text' => $validated['button_text'] ?? null,
+            'button_link' => $validated['button_link'] ?? null,
+        ];
         $data['is_active'] = $request->boolean('is_active');
 
         if ($request->has('background_color')) {
-            $data['background_color'] = $request->input('background_color');
+            $data['background_color'] = $validated['background_color'] ?? null;
         }
 
         if ($request->has('text_color')) {
-            $data['text_color'] = $request->input('text_color');
+            $data['text_color'] = $validated['text_color'] ?? null;
         }
 
         if ($request->has('content')) {
-            $data['content'] = $request->input('content');
+            $data['content'] = array_values(array_map(fn (array $item): array => [
+                'title' => $item['title'] ?? '',
+                'description' => $item['description'] ?? '',
+                'icon' => $item['icon'] ?? '',
+            ], $validated['content'] ?? []));
         }
 
         if ($request->hasFile('image')) {
@@ -286,43 +407,51 @@ class HomepageController extends Controller
     {
         $section->update(['is_active' => !$section->is_active]);
         Cache::flush();
+
         return back()->with('success', 'Section visibility updated.');
     }
 
-    public function reorderSections(Request $request)
-    {
-        $request->validate([
-            'order' => 'required|array',
-            'order.*' => 'integer|exists:homepage_sections,id',
-        ]);
-
-        foreach ($request->order as $position => $id) {
-            HomepageSection::where('id', $id)->update(['position' => $position]);
-        }
-
-        Cache::flush();
-        return response()->json(['success' => true]);
-    }
+    // There is deliberately no reorderSections endpoint. The home page lays these
+    // blocks out in hand-written markup rather than looping over the table, so
+    // `homepage_sections.position` orders nothing a visitor can see; the endpoint
+    // that used to be here was never called and could only ever have written a
+    // number that no page reads.
 
     // Testimonials
+
+    /** @return array<string, mixed> */
+    private function testimonialRules(): array
+    {
+        return [
+            // A real customer name: O'Connor, Mary-Anne, रवि कुमार all pass,
+            // "346@#$!@fdf sf" does not.
+            'name' => V::name(),
+            'title' => V::text(required: false, max: 255),
+            'content' => V::textarea(max: 1000, min: 3),
+            'rating' => ['required', 'integer', 'min:1', 'max:5'],
+            'product_name' => V::text(required: false, max: 255),
+            'avatar' => V::image(required: false, maxKb: 2048, allowGif: true),
+        ];
+    }
+
     public function testimonials()
     {
         $testimonials = Testimonial::ordered()->get();
+
         return view('admin.homepage.testimonials', compact('testimonials'));
     }
 
     public function storeTestimonial(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'title' => 'nullable|string|max:255',
-            'content' => 'required|string|max:1000',
-            'rating' => 'required|integer|min:1|max:5',
-            'product_name' => 'nullable|string|max:255',
-            'avatar' => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:2048',
-        ]);
+        $validated = $request->validate($this->testimonialRules());
 
-        $data = $request->only(['name', 'title', 'content', 'rating', 'product_name']);
+        $data = [
+            'name' => $validated['name'],
+            'title' => $validated['title'] ?? null,
+            'content' => $validated['content'],
+            'rating' => $validated['rating'],
+            'product_name' => $validated['product_name'] ?? null,
+        ];
         $data['position'] = Testimonial::max('position') + 1;
         $data['is_active'] = true;
 
@@ -337,16 +466,15 @@ class HomepageController extends Controller
 
     public function updateTestimonial(Request $request, Testimonial $testimonial)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'title' => 'nullable|string|max:255',
-            'content' => 'required|string|max:1000',
-            'rating' => 'required|integer|min:1|max:5',
-            'product_name' => 'nullable|string|max:255',
-            'avatar' => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:2048',
-        ]);
+        $validated = $request->validate($this->testimonialRules());
 
-        $data = $request->only(['name', 'title', 'content', 'rating', 'product_name']);
+        $data = [
+            'name' => $validated['name'],
+            'title' => $validated['title'] ?? null,
+            'content' => $validated['content'],
+            'rating' => $validated['rating'],
+            'product_name' => $validated['product_name'] ?? null,
+        ];
 
         if ($request->hasFile('avatar')) {
             if ($testimonial->avatar_url) {
@@ -373,45 +501,67 @@ class HomepageController extends Controller
     public function toggleTestimonial(Testimonial $testimonial)
     {
         $testimonial->update(['is_active' => !$testimonial->is_active]);
+
         return back()->with('success', 'Testimonial visibility updated.');
     }
 
     // ============================================================
     // Shop It Your Way - Size / Price / Shade filter items
     // ============================================================
+
+    /**
+     * shade_hex is interpolated into `style="color: ..."` on the home page.
+     * Blade escapes the value, so the attribute cannot be broken out of, but
+     * anything that is not a colour is still arbitrary CSS in the page. Hex
+     * only - which is all the field was ever meant to hold.
+     *
+     * @return array<string, mixed>
+     */
+    private function shopFilterRules(): array
+    {
+        return [
+            'type' => V::option(ShopFilterItem::TYPES),
+            'label' => V::text(max: 120),
+            'sub_label' => V::text(required: false, max: 120),
+            'shade_hex' => ['nullable', 'string', 'max:9', 'regex:/^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/'],
+            'query_string' => ['nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9_\-=&%.+,\[\]]+$/'],
+        ];
+    }
+
+    private function shopFilterMessages(): array
+    {
+        return [
+            'shade_hex.regex' => 'Enter a hex colour such as #b8895a.',
+            'query_string.regex' => 'Enter a query string such as size=M or price_min=1000&price_max=2000.',
+        ];
+    }
+
     public function shopFilters()
     {
         $items = ShopFilterItem::ordered()->get()->groupBy('type');
+
         return view('admin.homepage.shop-filters', compact('items'));
     }
 
     public function storeShopFilter(Request $request)
     {
-        $data = $request->validate([
-            'type'         => 'required|in:size,price,shade',
-            'label'        => 'required|string|max:120',
-            'sub_label'    => 'nullable|string|max:120',
-            'shade_hex'    => 'nullable|string|max:9',
-            'query_string' => 'nullable|string|max:255',
-        ]);
-        $data['position']  = (ShopFilterItem::where('type', $data['type'])->max('position') ?? 0) + 1;
+        $data = $request->validate($this->shopFilterRules(), $this->shopFilterMessages());
+
+        $data['position'] = (ShopFilterItem::where('type', $data['type'])->max('position') ?? 0) + 1;
         $data['is_active'] = true;
         ShopFilterItem::create($data);
         Cache::flush();
+
         return back()->with('success', 'Filter item added.');
     }
 
     public function updateShopFilter(Request $request, ShopFilterItem $shopFilter)
     {
-        $data = $request->validate([
-            'type'         => 'required|in:size,price,shade',
-            'label'        => 'required|string|max:120',
-            'sub_label'    => 'nullable|string|max:120',
-            'shade_hex'    => 'nullable|string|max:9',
-            'query_string' => 'nullable|string|max:255',
-        ]);
+        $data = $request->validate($this->shopFilterRules(), $this->shopFilterMessages());
+
         $shopFilter->update($data);
         Cache::flush();
+
         return back()->with('success', 'Filter item updated.');
     }
 
@@ -419,6 +569,7 @@ class HomepageController extends Controller
     {
         $shopFilter->update(['is_active' => !$shopFilter->is_active]);
         Cache::flush();
+
         return back()->with('success', 'Filter visibility updated.');
     }
 
@@ -426,6 +577,7 @@ class HomepageController extends Controller
     {
         $shopFilter->delete();
         Cache::flush();
+
         return back()->with('success', 'Filter item deleted.');
     }
 
@@ -435,15 +587,16 @@ class HomepageController extends Controller
     public function qualities()
     {
         $qualities = Quality::ordered()->get();
+
         return view('admin.homepage.qualities', compact('qualities'));
     }
 
     public function storeQuality(Request $request)
     {
         $data = $request->validate([
-            'title'       => 'required|string|max:255',
-            'description' => 'required|string|max:500',
-            'image'       => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:5120',
+            'title' => V::text(max: 255, min: 2),
+            'description' => V::textarea(max: 500, min: 3),
+            'image' => V::image(required: false, maxKb: 5120, allowGif: true),
         ]);
         unset($data['image']);
 
@@ -451,20 +604,21 @@ class HomepageController extends Controller
             $data['image_url'] = $request->file('image')->store('qualities', 'public');
         }
 
-        $data['position']  = (Quality::max('position') ?? 0) + 1;
+        $data['position'] = (Quality::max('position') ?? 0) + 1;
         $data['is_active'] = true;
         Quality::create($data);
         Cache::flush();
+
         return back()->with('success', 'Quality added.');
     }
 
     public function updateQuality(Request $request, Quality $quality)
     {
         $data = $request->validate([
-            'title'        => 'required|string|max:255',
-            'description'  => 'required|string|max:500',
-            'image'        => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:5120',
-            'remove_image' => 'nullable|boolean',
+            'title' => V::text(max: 255, min: 2),
+            'description' => V::textarea(max: 500, min: 3),
+            'image' => V::image(required: false, maxKb: 5120, allowGif: true),
+            'remove_image' => V::boolean(),
         ]);
         unset($data['image'], $data['remove_image']);
 
@@ -483,6 +637,7 @@ class HomepageController extends Controller
 
         $quality->update($data);
         Cache::flush();
+
         return back()->with('success', 'Quality updated.');
     }
 
@@ -490,6 +645,7 @@ class HomepageController extends Controller
     {
         $quality->update(['is_active' => !$quality->is_active]);
         Cache::flush();
+
         return back()->with('success', 'Quality visibility updated.');
     }
 
@@ -500,6 +656,7 @@ class HomepageController extends Controller
         }
         $quality->delete();
         Cache::flush();
+
         return back()->with('success', 'Quality deleted.');
     }
 
@@ -516,19 +673,21 @@ class HomepageController extends Controller
 
     public function storeNavItem(Request $request)
     {
-        $request->validate([
-            'location' => 'required|string',
-            'label' => 'required|string|max:255',
-            'url' => 'required|string|max:255',
-            'parent_id' => 'nullable|exists:navigation_menus,id',
+        $validated = $request->validate([
+            'location' => V::option(self::NAV_LOCATIONS),
+            'label' => V::text(max: 255),
+            'url' => ['required', 'string', 'max:255', 'regex:'.self::LINK_REGEX],
+            'parent_id' => ['nullable', 'integer', Rule::exists('navigation_menus', 'id')],
+        ], [
+            'url.regex' => 'Enter a path such as /about, or a full https:// address.',
         ]);
 
         NavigationMenu::create([
-            'location' => $request->location,
-            'label' => $request->label,
-            'url' => $request->url,
-            'parent_id' => $request->parent_id,
-            'position' => NavigationMenu::where('location', $request->location)->max('position') + 1,
+            'location' => $validated['location'],
+            'label' => $validated['label'],
+            'url' => $validated['url'],
+            'parent_id' => $validated['parent_id'] ?? null,
+            'position' => NavigationMenu::where('location', $validated['location'])->max('position') + 1,
             'is_active' => true,
         ]);
 
@@ -537,12 +696,17 @@ class HomepageController extends Controller
 
     public function updateNavItem(Request $request, NavigationMenu $menu)
     {
-        $request->validate([
-            'label' => 'required|string|max:255',
-            'url' => 'required|string|max:255',
+        $validated = $request->validate([
+            'label' => V::text(max: 255),
+            'url' => ['required', 'string', 'max:255', 'regex:'.self::LINK_REGEX],
+        ], [
+            'url.regex' => 'Enter a path such as /about, or a full https:// address.',
         ]);
 
-        $menu->update($request->only(['label', 'url']));
+        $menu->update([
+            'label' => $validated['label'],
+            'url' => $validated['url'],
+        ]);
 
         return back()->with('success', 'Menu item updated successfully.');
     }
@@ -550,6 +714,7 @@ class HomepageController extends Controller
     public function deleteNavItem(NavigationMenu $menu)
     {
         $menu->delete();
+
         return back()->with('success', 'Menu item deleted successfully.');
     }
 }

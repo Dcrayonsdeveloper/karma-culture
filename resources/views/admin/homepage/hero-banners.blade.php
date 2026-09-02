@@ -25,18 +25,21 @@
                 <form action="{{ route('admin.homepage.hero-banners.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        {{-- for/id pairs matter beyond accessibility here: the inline validator
+                             names the field from its own <label>, so an unlabelled input reports
+                             "This field is required" instead of naming it. --}}
                         <div>
-                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Name</label>
-                            <input type="text" name="name" class="form-input" placeholder="Banner name">
+                            <label for="hero-new-name" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Name</label>
+                            <input type="text" name="name" id="hero-new-name" maxlength="255" class="form-input" placeholder="Banner name">
                         </div>
                         <div>
-                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Image</label>
-                            <input type="file" name="image" accept="image/*" class="form-input">
-                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Recommended: 1920x700px, JPG/PNG &middot; max 5MB</p>
+                            <label for="hero-new-image" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Image</label>
+                            <input type="file" name="image" id="hero-new-image" accept="image/jpeg,image/png,image/webp,image/gif" class="form-input">
+                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Recommended: 1920x700px, JPG/PNG/WebP/GIF &middot; max 5MB</p>
                         </div>
                         <div>
-                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Video</label>
-                            <input type="file" name="video" accept="video/mp4,video/webm,video/quicktime" class="form-input">
+                            <label for="hero-new-video" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Video</label>
+                            <input type="file" name="video" id="hero-new-video" accept="video/mp4,video/webm,video/quicktime" class="form-input">
                             <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">MP4, WebM or MOV &middot; max 64MB. Plays muted and looped, with no controls.</p>
                         </div>
                         <p style="font-size: 12px; color: #616161; margin: -0.35rem 0 0; padding: 0.5rem 0.65rem; background: #f6f6f7; border-radius: 6px; line-height: 1.5;">
@@ -45,24 +48,30 @@
                             cannot autoplay.
                         </p>
                         <div>
-                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Heading Text</label>
-                            <input type="text" name="title" class="form-input" placeholder="Banner heading">
+                            <label for="hero-new-title" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Heading Text</label>
+                            <input type="text" name="title" id="hero-new-title" maxlength="255" class="form-input" placeholder="Banner heading">
                         </div>
                         <div>
-                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Subtitle</label>
-                            <input type="text" name="subtitle" class="form-input" placeholder="Banner subtitle">
+                            <label for="hero-new-subtitle" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Subtitle</label>
+                            <input type="text" name="subtitle" id="hero-new-subtitle" maxlength="500" class="form-input" placeholder="Banner subtitle">
                         </div>
                         <div>
-                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Button Text</label>
-                            <input type="text" name="button_text" class="form-input" placeholder="Shop Now">
+                            <label for="hero-new-button-text" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Button Text</label>
+                            <input type="text" name="button_text" id="hero-new-button-text" maxlength="100" class="form-input" placeholder="Shop Now">
                         </div>
                         <div>
-                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Link URL</label>
-                            <input type="text" name="link" class="form-input" placeholder="/products">
+                            <label for="hero-new-link" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Link URL</label>
+                            {{-- A relative path, a full http(s) address, mailto:, tel: or a #anchor.
+                                 Anything else - javascript: above all - is refused here and on the
+                                 server, because this value is rendered straight into an href. --}}
+                            <input type="text" name="link" id="hero-new-link" maxlength="255"
+                                   pattern="(https?://|mailto:|tel:)\S+|/\S*|#\S*"
+                                   title="Enter a path such as /products, or a full https:// address."
+                                   class="form-input" placeholder="/products">
                         </div>
                         <div>
-                            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Overlay Style</label>
-                            <select name="overlay_style" class="form-select">
+                            <label for="hero-new-overlay" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Overlay Style</label>
+                            <select name="overlay_style" id="hero-new-overlay" class="form-select">
                                 @foreach(\App\Models\Banner::OVERLAY_STYLES as $key => $label)
                                     <option value="{{ $key }}" {{ $key === 'left-dark' ? 'selected' : '' }}>{{ $label }}</option>
                                 @endforeach
@@ -178,41 +187,44 @@
                                 @method('PUT')
                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                                     <div>
-                                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Name</label>
-                                        <input type="text" name="name" value="{{ $banner->name }}" class="form-input">
+                                        <label for="hero-{{ $banner->id }}-name" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Name</label>
+                                        <input type="text" name="name" id="hero-{{ $banner->id }}-name" value="{{ $banner->name }}" maxlength="255" class="form-input">
                                     </div>
                                     <div>
-                                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Link URL</label>
-                                        <input type="text" name="link" value="{{ $banner->link }}" class="form-input" placeholder="/products">
+                                        <label for="hero-{{ $banner->id }}-link" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Link URL</label>
+                                        <input type="text" name="link" id="hero-{{ $banner->id }}-link" value="{{ $banner->link }}" maxlength="255"
+                                               pattern="(https?://|mailto:|tel:)\S+|/\S*|#\S*"
+                                               title="Enter a path such as /products, or a full https:// address."
+                                               class="form-input" placeholder="/products">
                                     </div>
                                     <div>
-                                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Heading Text</label>
-                                        <input type="text" name="title" value="{{ $banner->title }}" class="form-input" placeholder="Banner heading">
+                                        <label for="hero-{{ $banner->id }}-title" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Heading Text</label>
+                                        <input type="text" name="title" id="hero-{{ $banner->id }}-title" value="{{ $banner->title }}" maxlength="255" class="form-input" placeholder="Banner heading">
                                     </div>
                                     <div>
-                                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Subtitle</label>
-                                        <input type="text" name="subtitle" value="{{ $banner->subtitle }}" class="form-input" placeholder="Banner subtitle">
+                                        <label for="hero-{{ $banner->id }}-subtitle" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Subtitle</label>
+                                        <input type="text" name="subtitle" id="hero-{{ $banner->id }}-subtitle" value="{{ $banner->subtitle }}" maxlength="500" class="form-input" placeholder="Banner subtitle">
                                     </div>
                                     <div>
-                                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Button Text</label>
-                                        <input type="text" name="button_text" value="{{ $banner->button_text }}" class="form-input" placeholder="Shop Now">
+                                        <label for="hero-{{ $banner->id }}-button-text" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Button Text</label>
+                                        <input type="text" name="button_text" id="hero-{{ $banner->id }}-button-text" value="{{ $banner->button_text }}" maxlength="100" class="form-input" placeholder="Shop Now">
                                     </div>
                                     <div>
-                                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Overlay Style</label>
-                                        <select name="overlay_style" class="form-select">
+                                        <label for="hero-{{ $banner->id }}-overlay" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Overlay Style</label>
+                                        <select name="overlay_style" id="hero-{{ $banner->id }}-overlay" class="form-select">
                                             @foreach(\App\Models\Banner::OVERLAY_STYLES as $key => $label)
                                                 <option value="{{ $key }}" {{ $banner->overlay_style === $key ? 'selected' : '' }}>{{ $label }}</option>
                                             @endforeach
                                         </select>
                                     </div>
                                     <div>
-                                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Replace Image</label>
-                                        <input type="file" name="image" accept="image/*" class="form-input">
-                                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Leave empty to keep the current image</p>
+                                        <label for="hero-{{ $banner->id }}-image" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Replace Image</label>
+                                        <input type="file" name="image" id="hero-{{ $banner->id }}-image" accept="image/jpeg,image/png,image/webp,image/gif" class="form-input">
+                                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Leave empty to keep the current image. JPG, PNG, WebP or GIF, max 5MB.</p>
                                     </div>
                                     <div>
-                                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Replace Video</label>
-                                        <input type="file" name="video" accept="video/mp4,video/webm,video/quicktime" class="form-input">
+                                        <label for="hero-{{ $banner->id }}-video" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Replace Video</label>
+                                        <input type="file" name="video" id="hero-{{ $banner->id }}-video" accept="video/mp4,video/webm,video/quicktime" class="form-input">
                                         <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
                                             MP4, WebM or MOV &middot; max 64MB.
                                             @if($banner->video_url) Leave empty to keep the current video. @endif

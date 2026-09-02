@@ -18,9 +18,28 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends Controller
 {
+    /** The windows the report selectors offer, in days. */
+    private const PERIODS = [7, 30, 90, 365];
+
+    /**
+     * The reporting window, in days.
+     *
+     * The selector offers a fixed set of lengths, but the value travels in the
+     * query string where anything can be typed. ?period=lastweek reached
+     * now()->subDays() as a string, and ?period=99999999 turned the day-by-day
+     * loop in analytics() into a hang; anything not on the list falls back to
+     * the default the selectors open on.
+     */
+    private function period(Request $request): int
+    {
+        $period = (int) $request->input('period', 30);
+
+        return in_array($period, self::PERIODS, true) ? $period : 30;
+    }
+
     public function sales(Request $request): View
     {
-        $period = $request->input('period', '30');
+        $period = $this->period($request);
         $startDate = now()->subDays($period);
         $excludedStatuses = ['cancelled', 'returned'];
 
@@ -92,7 +111,7 @@ class ReportController extends Controller
 
     public function analytics(Request $request): View
     {
-        $period = $request->input('period', '30');
+        $period = $this->period($request);
         $startDate = now()->subDays($period);
         $excludedStatuses = ['cancelled', 'returned'];
 
@@ -209,7 +228,7 @@ class ReportController extends Controller
 
     public function products(Request $request): View
     {
-        $period = $request->input('period', '30');
+        $period = $this->period($request);
         $startDate = now()->subDays($period);
         $excludedStatuses = ['cancelled', 'returned'];
 
@@ -250,7 +269,7 @@ class ReportController extends Controller
 
     public function customers(Request $request): View
     {
-        $period = $request->input('period', '30');
+        $period = $this->period($request);
         $startDate = now()->subDays($period);
         $excludedStatuses = ['cancelled', 'returned'];
 
@@ -301,7 +320,7 @@ class ReportController extends Controller
 
     public function export(Request $request, string $type): StreamedResponse
     {
-        $period = $request->input('period', '30');
+        $period = $this->period($request);
         $startDate = now()->subDays($period);
         $excludedStatuses = ['cancelled', 'returned'];
 
@@ -370,7 +389,7 @@ class ReportController extends Controller
 
     public function exportExcel(Request $request, string $type): StreamedResponse
     {
-        $period = $request->input('period', '30');
+        $period = $this->period($request);
         $startDate = now()->subDays($period);
         $excludedStatuses = ['cancelled', 'returned'];
         $exportService = new ReportExportService();
