@@ -172,4 +172,91 @@ class ReviewModerationStatusTest extends TestCase
             ->get(route('admin.reviews.index', ['status' => 'nonsense']))
             ->assertSessionHasErrors('status');
     }
+
+    public function test_the_search_box_filters_by_product_and_by_customer(): void
+    {
+        $onThisProduct = $this->review('Review of the test shirt');
+
+        $other = Product::create([
+            'name' => 'Unrelated Trousers',
+            'slug' => 'unrelated-trousers',
+            'sku' => 'UT-001',
+            'price' => 499,
+            'mrp' => 599,
+            'stock_quantity' => 3,
+            'category_id' => $this->product->category_id,
+            'status' => 'approved',
+            'is_active' => true,
+        ]);
+
+        $onOtherProduct = Review::create([
+            'product_id' => $other->id,
+            'guest_name' => 'Zebediah',
+            'guest_email' => 'zeb@example.com',
+            'rating' => 3,
+            'content' => 'Review of the trousers',
+            'is_verified_purchase' => false,
+            'is_approved' => false,
+            'status' => 'pending',
+        ]);
+
+        // By product name.
+        $this->actingAs($this->adminUser, 'admin')
+            ->get(route('admin.reviews.index', ['search' => 'Trousers']))
+            ->assertOk()
+            ->assertSee($onOtherProduct->content)
+            ->assertDontSee($onThisProduct->content);
+
+        // By the guest's name, which is the "customer" for a guest review.
+        $this->actingAs($this->adminUser, 'admin')
+            ->get(route('admin.reviews.index', ['search' => 'Zebediah']))
+            ->assertOk()
+            ->assertSee($onOtherProduct->content)
+            ->assertDontSee($onThisProduct->content);
+    }
+
+    public function test_a_wildcard_in_the_search_term_is_not_treated_as_a_pattern(): void
+    {
+        $this->review('A review that should not be matched by a bare percent');
+
+        // Unescaped, '%' in a LIKE would match every row.
+        $this->actingAs($this->adminUser, 'admin')
+            ->get(route('admin.reviews.index', ['search' => '%']))
+            ->assertOk()
+            ->assertSee('No reviews found');
+    }
+
+    public function test_the_tab_counts_narrow_to_the_search(): void
+    {
+        $this->review('Keepme one');
+        $this->review('Keepme two');
+
+        $html = $this->actingAs($this->adminUser, 'admin')
+            ->get(route('admin.reviews.index', ['search' => 'Test Shirt']))
+            ->assertOk()
+            ->getContent();
+
+        // Both reviews are on the searched product, and both are still pending.
+        $this->assertStringContainsString('All <span style="color: #616161; font-size: 12px;">(2)</span>', $html);
+        $this->assertStringContainsString('Pending <span style="color: #616161; font-size: 12px;">(2)</span>', $html);
+    }
+
+    public function test_the_old_pending_url_still_works(): void
+    {
+        $this->actingAs($this->adminUser, 'admin')
+            ->get(route('admin.reviews.pending'))
+            ->assertRedirect(route('admin.reviews.index', ['status' => 'pending']));
+    }
+
+    public function test_moderating_a_review_whose_product_is_trashed_does_not_blow_up(): void
+    {
+        $review = $this->review('Review of a product that gets removed');
+        $this->product->delete();
+
+        $this->actingAs($this->adminUser, 'admin')
+            ->post(route('admin.reviews.approve', $review))
+            ->assertRedirect();
+
+        $this->assertSame('approved', $review->fresh()->status);
+    }
 }

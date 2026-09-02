@@ -66,7 +66,7 @@ class Review extends Model
     protected static function booted(): void
     {
         static::created(function ($review) {
-            $review->product->updateRating();
+            $review->product?->updateRating();
 
             // Send coupon reward for non-generated reviews
             if (!$review->is_generated) {
@@ -75,11 +75,11 @@ class Review extends Model
         });
 
         static::updated(function ($review) {
-            $review->product->updateRating();
+            $review->product?->updateRating();
         });
 
         static::deleted(function ($review) {
-            $review->product->updateRating();
+            $review->product?->updateRating();
         });
     }
 
