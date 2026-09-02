@@ -9,6 +9,18 @@ return new class extends Migration
      * Admin moderation used to write only is_approved and leave status at its
      * 'pending' default, so the two columns drifted apart. Pull them back
      * together before the screens start trusting status.
+     *
+     * Every repair below resolves a disagreement the same way: is_approved wins.
+     * The old admin screen wrote that column and nothing else, so on a row where
+     * the two disagree the boolean is the moderator's last decision and status is
+     * the stale one. Rewriting status to match therefore preserves what the
+     * moderator actually did, in both directions.
+     *
+     * That also means is_approved is never written here. It is the column
+     * Product::updateRating() aggregates into products.rating and
+     * products.review_count, and those are only recomputed by the Review model's
+     * events - which the query builder does not fire. Leaving the boolean alone
+     * keeps the denormalised totals correct without a rebuild pass.
      */
     public function up(): void
     {
@@ -19,21 +31,22 @@ return new class extends Migration
             ->where('status', 'pending')
             ->update(['status' => 'approved']);
 
-        // The mirror case is a rejection, not a stalled approval. Only two paths
-        // ever wrote status='approved' - the generator and Review::approve() -
-        // and both set is_approved with it. So a row that says 'approved' while
-        // hidden is one the old admin Reject cleared the flag on without moving
-        // status. Publishing it again would undo that decision; record it instead.
+        // The mirror case is a rejection, not a stalled approval: both writers of
+        // status='approved' set is_approved alongside it, so a row that says
+        // approved while hidden is one the old Reject cleared the flag on.
+        // Publishing it again would undo that decision; record it instead.
         DB::table('reviews')
             ->where('status', 'approved')
             ->where('is_approved', false)
             ->update(['status' => 'rejected']);
 
-        // Rejected or flagged reviews must not stay publicly visible.
+        // Same rule once more: a visible review still labelled rejected or
+        // flagged was approved after that label was applied. Clearing the flag
+        // here would silently unpublish it.
         DB::table('reviews')
             ->whereIn('status', ['rejected', 'flagged'])
             ->where('is_approved', true)
-            ->update(['is_approved' => false]);
+            ->update(['status' => 'approved']);
     }
 
     /**
