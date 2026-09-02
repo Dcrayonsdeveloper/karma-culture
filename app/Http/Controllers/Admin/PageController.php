@@ -189,9 +189,10 @@ class PageController extends Controller
 
         $page->update([
             'is_published' => $publish,
-            // Keep the original publication date on a re-publish, and drop it
-            // on a takedown so the Published column cannot show a date against
-            // a row badged Draft.
+            // Dropped on a takedown, so the Published column cannot show a
+            // date against a row badged Draft. The ?? is for rows taken down
+            // before that was the case: those keep the date they went live
+            // with rather than being restamped as new.
             'published_at' => $publish ? ($page->published_at ?? now()) : null,
         ]);
 
