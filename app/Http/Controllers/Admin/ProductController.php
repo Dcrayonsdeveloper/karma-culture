@@ -472,6 +472,23 @@ class ProductController extends Controller
         // optionally in a specific colour, with its own price and stock. Rows
         // without an id are new, rows flagged `delete` are removed.
         if (is_array($variantsData)) {
+            // Every SKU this request spells out. A derived SKU has to dodge
+            // these as well: the rows are written one at a time, so a value a
+            // *later* row claims is not in the table yet when an earlier blank
+            // row derives one. Rows being deleted give theirs up, so they are
+            // not counted.
+            $spokenFor = [];
+            foreach ($variantsData as $row) {
+                if (! is_array($row) || filter_var($row['delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                    continue;
+                }
+
+                $spelled = trim((string) ($row['sku'] ?? ''));
+                if ($spelled !== '') {
+                    $spokenFor[] = $spelled;
+                }
+            }
+
             foreach ($variantsData as $variantData) {
                 $id = $variantData['id'] ?? null;
                 $variant = $id ? $product->variants()->find($id) : null;
@@ -509,9 +526,8 @@ class ProductController extends Controller
                 // sku is NOT NULL and unique, so derive one when left blank.
                 $sku = trim((string) ($variantData['sku'] ?? ''));
                 if ($sku === '') {
-                    $sku = $variant?->sku ?: Str::upper(Str::slug(
-                        ($product->sku ?: 'P' . $product->id) . '-' . $payload['name'] . ($colour !== '' ? '-' . $colour : '')
-                    ));
+                    $sku = $variant?->sku ?: $this->deriveVariantSku($product, $payload['name'], $colour, $spokenFor);
+                    $spokenFor[] = $sku;
                 }
                 $payload['sku'] = $sku;
 
@@ -670,6 +686,53 @@ class ProductController extends Controller
                 $fail("The SKU \"{$value}\" is already used by another size.");
             }
         };
+    }
+
+    /**
+     * A SKU for a size whose field the admin left blank, free across the table.
+     *
+     * "<product sku>-<size>" is not unique on its own. A second row for a size
+     * the product already stocks derives exactly what the first one holds; two
+     * products whose SKUs differ only in punctuation slug down to the same
+     * string; a retired SKU can be reused on a new product. Each of those
+     * reached MySQL as a duplicate-key 500 on save, because a blank field
+     * never gets as far as {@see self::uniqueVariantSku()} - `nullable` drops
+     * a closure rule for an empty value. Suffix until the value is free
+     * instead, so saving a product cannot fail on a SKU nobody typed.
+     *
+     * @param  array<int, string>  $spokenFor  SKUs the same request is placing
+     */
+    private function deriveVariantSku(Product $product, string $size, string $colour, array $spokenFor = []): string
+    {
+        $base = Str::upper(Str::slug(
+            ($product->sku ?: 'P' . $product->id) . '-' . $size . ($colour !== '' ? '-' . $colour : '')
+        ));
+
+        // Str::slug() keeps only [a-z0-9-], so a SKU and a size written wholly
+        // in another script leave nothing to build on.
+        if ($base === '') {
+            $base = 'P' . $product->id;
+        }
+
+        $spokenFor = array_map('mb_strtoupper', $spokenFor);
+
+        for ($n = 1; $n <= 99; $n++) {
+            $suffix = $n === 1 ? '' : '-' . $n;
+            // The column is varchar(50): trim the base, never the suffix that
+            // is doing the work of making it unique.
+            $candidate = Str::limit($base, 50 - strlen($suffix), '') . $suffix;
+
+            // sku is compared under a case-insensitive collation, so the
+            // lookup below is one too - no need to fold the candidate again.
+            if (! in_array($candidate, $spokenFor, true)
+                && ! ProductVariant::where('sku', $candidate)->exists()) {
+                return $candidate;
+            }
+        }
+
+        // 99 taken in a row says the base is worthless, not that the shop
+        // stocks 99 of this size. Anything unique beats failing the save.
+        return Str::limit($base, 41, '') . '-' . Str::upper(Str::random(8));
     }
 
     /**
