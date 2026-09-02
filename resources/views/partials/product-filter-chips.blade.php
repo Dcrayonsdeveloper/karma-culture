@@ -8,11 +8,24 @@
 
     // Drops a single value out of a multi-value filter, so removing "Blue" does
     // not also throw away "Red".
+    //
+    // The hanger alias goes with it. A "Shop It Your Way" tile links to
+    // /shop?shade=Indigo, and ProductController@index merges `shade` into
+    // `colour` before the panel is built - so stripping `colour` alone handed
+    // back a URL that still said `shade=Indigo`, the next request re-derived it,
+    // and the cross on the chip did nothing. Dropping the alias too is what
+    // makes the chip mean what it draws.
     $kkWithout = function (string $param, string $value) {
         $q = request()->except('page');
         $q[$param] = array_values(array_diff((array) request($param, []), [$value]));
         if (! $q[$param]) {
             unset($q[$param]);
+        }
+        // Only the whole filter has an alias, not one of its values: a colour
+        // is dropped from `colour` here, so `shade` can only go once nothing
+        // is left, or removing "Blue" would take "Red" with it.
+        if (! isset($q[$param]) && isset(\App\Support\ProductFilters::ALIASES[$param])) {
+            unset($q[\App\Support\ProductFilters::ALIASES[$param]]);
         }
 
         return request()->url().($q ? '?'.http_build_query($q) : '');
@@ -23,7 +36,11 @@
     // left the shopper stranded on page 3 of it, while the multi-value chips
     // beside it restarted at page one. Same closure shape, minus `page`.
     $kkDrop = function (array|string $params) {
-        $q = request()->except(array_merge(['page'], (array) $params));
+        // allSpellings adds the hanger aliases (price_min/price_max/shade), which
+        // ProductController@index copies into the canonical keys on every /shop
+        // request. Without them the price chip's cross removed min_price and
+        // max_price and left price_min= behind for the next request to restore.
+        $q = request()->except(array_merge(['page'], \App\Support\ProductFilters::allSpellings($params)));
 
         return request()->url().($q ? '?'.http_build_query($q) : '');
     };
@@ -33,7 +50,14 @@
     };
 
     $kkChip = 'inline-flex items-center gap-1 px-2.5 py-1 bg-[#6F9CA2]/5 text-[#5B878D] text-xs font-medium rounded-full border border-[#6F9CA2]/30';
-    $kkHasAny = $kkV['category'] !== null || $kkV['subcategory'] || $kkV['brand'] || $kkV['size'] || $kkV['colour']
+    // A panel that does not own the category facet (the category page, which
+    // passes owns_category => false) leaves `categories` empty and never applies
+    // ?category= at all. The chip used to draw anyway, promising to remove a
+    // filter that was already inert - and "Clear all" beside it then appeared to
+    // change nothing. One flag keeps the chip row honest about what is running.
+    $kkOwnsCategory = $filterPanel['categories']->isNotEmpty();
+    $kkShowCategory = $kkOwnsCategory && $kkV['category'] !== null;
+    $kkHasAny = $kkShowCategory || $kkV['subcategory'] || $kkV['brand'] || $kkV['size'] || $kkV['colour']
         || $kkV['min_price'] !== null || $kkV['max_price'] !== null || $kkV['rating'] !== null
         || $kkV['in_stock'] || $kkV['on_sale'];
 @endphp
@@ -42,7 +66,7 @@
     <div class="flex flex-wrap items-center gap-2 mb-5">
         <span class="text-xs font-medium text-neutral-600 uppercase tracking-wide">Active Filters:</span>
 
-        @if($kkV['category'])
+        @if($kkShowCategory)
             <a href="{{ $kkDrop('category') }}" class="{{ $kkChip }} hover:bg-[#6F9CA2]/10 transition-colors">
                 {{ $kkName($filterPanel['categories'], $kkV['category']) }}
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>

@@ -15,7 +15,11 @@
     // Only what the shopper actually chose. On a sub-category page the
     // sub-category box is ticked for them, so counting it would offer to clear
     // a filter nobody set.
-    $kkNarrowed = $kkV['category'] !== null || $kkV['brand'] || $kkV['size'] || $kkV['colour']
+    // The category value only counts where this panel owns the facet: a category
+    // page passes owns_category => false, so ?category= never reaches its query
+    // and must not be read as the shopper having narrowed anything.
+    $kkNarrowed = ($kkV['category'] !== null && $filterPanel['categories']->isNotEmpty())
+        || $kkV['brand'] || $kkV['size'] || $kkV['colour']
         || $kkV['min_price'] !== null || $kkV['max_price'] !== null || $kkV['rating'] !== null
         || $kkV['in_stock'] || $kkV['on_sale'] || $kkV['subcategory'];
     $kkEmpty = $filterPanel['empty'] ?? [];

@@ -46,6 +46,42 @@ class ProductFilters
     ];
 
     /**
+     * The spellings a "Shop It Your Way" hanger stores, keyed by the sidebar's
+     * own name for the same filter.
+     *
+     * tileAliases() copies these into the canonical keys but leaves the
+     * originals in the request, which is what a hanger URL still carries. Any
+     * code that takes a filter back OFF has to drop both spellings or the next
+     * request simply re-derives it: the Active Filters chips stripped only
+     * `colour` and handed back a URL that still said `shade=Indigo`, so the
+     * cross on a hanger's chip did nothing at all.
+     *
+     * @var array<string, string>
+     */
+    public const ALIASES = [
+        'min_price' => 'price_min',
+        'max_price' => 'price_max',
+        'colour' => 'shade',
+    ];
+
+    /**
+     * Every spelling of the given filters - canonical names plus the hanger
+     * aliases - for handing to `request()->except()`.
+     *
+     * @param  array<int, string>|string  $keys
+     * @return array<int, string>
+     */
+    public static function allSpellings(array|string $keys): array
+    {
+        $keys = (array) $keys;
+
+        return array_values(array_unique(array_merge(
+            $keys,
+            array_values(Arr::only(self::ALIASES, $keys)),
+        )));
+    }
+
+    /**
      * How many values one multi-select filter may carry.
      *
      * A shopper ticks a handful of sizes. A URL carrying five thousand of them
@@ -266,7 +302,7 @@ class ProductFilters
             'sizes' => $this->sizes(),
             'colours' => $this->colours(),
             'brands' => $this->brands(),
-            'show_rating' => $this->options['rating'] ?? true,
+            'show_rating' => ($this->options['rating'] ?? true) && $this->hasRatedProducts(),
         ];
 
         if ($this->options['owns_category'] ?? true) {
@@ -275,6 +311,24 @@ class ProductFilters
         }
 
         return array_merge($panel, $overrides);
+    }
+
+    /**
+     * Whether this listing holds anything a rating filter could match.
+     *
+     * products.rating defaults to 0 and only moves when a review is approved,
+     * so on a catalogue with no reviews yet every one of the five options
+     * returned an empty grid - the section was five ways to break the page. It
+     * excludes its own filter, like the other facets, or picking 4 stars on a
+     * listing whose only rated product is 3-star would take the section away
+     * and leave no way to undo the choice.
+     */
+    private function hasRatedProducts(): bool
+    {
+        return $this->query(['rating'])
+            ->reorder()
+            ->where('products.rating', '>', 0)
+            ->exists();
     }
 
     /**

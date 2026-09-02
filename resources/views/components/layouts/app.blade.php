@@ -326,6 +326,10 @@
     <!-- Header -->
     @include('partials.header')
 
+    {{-- The header Filters button's drawer. Stands down on a listing page,
+         which answers the same event with its own sidebar. --}}
+    @include('partials.global-filter-drawer')
+
     <!-- Mobile Navigation -->
     @include('partials.mobile-nav')
 

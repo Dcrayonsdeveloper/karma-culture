@@ -39,6 +39,39 @@ class ProductController extends Controller
         ]);
     }
 
+    /**
+     * The filter sidebar on its own, scoped to the whole shop.
+     *
+     * The header's Filters button reaches every page now, including the ones
+     * with no listing behind them - the home page, the wishlist, a CMS page. A
+     * panel costs five facet queries to build, so it is fetched here on the
+     * first open instead of being rendered into every page load for a drawer
+     * most visits never touch. Its form posts to /shop, which is where the
+     * shopper is taken.
+     *
+     * Filters already in the URL are honoured: arriving from a "Shop It Your
+     * Way" hanger and opening the drawer shows that hanger's picks ticked
+     * rather than an empty panel.
+     */
+    public function filtersPanel(Request $request): View
+    {
+        $request->merge(ProductFilters::tileAliases($request));
+
+        $filters = ProductFilters::for(
+            $request,
+            fn () => Product::query()->where('is_active', true),
+            ['action' => route('shop'), 'reset' => route('shop')],
+        );
+
+        return view('partials.product-filters', [
+            'filterPanel' => $filters->facets(),
+            // The drawer is one tall scrolling column, same as the listing
+            // pages' slide-over, so Apply pins to the bottom rather than sitting
+            // below eight expanded sections.
+            'kkStickyActions' => true,
+        ]);
+    }
+
     public function show(Product $product): View
     {
         abort_unless($product->is_active, 404);
