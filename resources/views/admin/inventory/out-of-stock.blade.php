@@ -92,7 +92,14 @@
     </div>
 
     <!-- Stock Modal -->
-    <div x-data="{ open: false, productId: null, productName: '', currentStock: 0, byLocation: {}, locationId: '{{ $locations->firstWhere('is_default', true)?->id ?? $locations->first()?->id }}', get heldHere() { return this.byLocation[String(this.locationId)] ?? 0 } }"
+@php
+    // Hoisted out of the dialog's x-data: an arrow inside the tag ends it as
+    // far as any HTML-ish scan is concerned, which hid the whole modal - and
+    // its x-show - from the guard that keeps it centred.
+    $defaultLocationId = $locations->firstWhere('is_default', true)?->id ?? $locations->first()?->id;
+@endphp
+
+    <div x-data="{ open: false, productId: null, productName: '', currentStock: 0, byLocation: {}, locationId: '{{ $defaultLocationId }}', get heldHere() { return this.byLocation[String(this.locationId)] ?? 0 } }"
          x-on:open-stock-modal.window="open = true; productId = $event.detail.id; productName = $event.detail.name; currentStock = $event.detail.stock; byLocation = $event.detail.byLocation || {}"
          x-show="open" x-cloak
          x-transition.opacity.duration.150ms

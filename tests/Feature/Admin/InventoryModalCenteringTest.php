@@ -36,6 +36,7 @@ class InventoryModalCenteringTest extends TestCase
             'admin/inventory/index.blade.php',
             'admin/inventory/low-stock.blade.php',
             'admin/inventory/out-of-stock.blade.php',
+            'admin/inventory/locations/show.blade.php',
             'admin/partials/header.blade.php',
             'admin/partials/sidebar.blade.php',
         ];
@@ -49,6 +50,9 @@ class InventoryModalCenteringTest extends TestCase
             'admin/inventory/index.blade.php',
             'admin/inventory/low-stock.blade.php',
             'admin/inventory/out-of-stock.blade.php',
+            // A warehouse's own page adjusts one line at a time through the
+            // same dialog, so it inherits the same trap.
+            'admin/inventory/locations/show.blade.php',
         ];
 
         return array_combine($paths, array_map(fn ($p) => [$p], $paths));
