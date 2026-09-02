@@ -795,11 +795,29 @@ Alpine.start();
         return field.validationMessage;
     }
 
+    let noteSeq = 0;
+
     function clearError(field) {
         field.classList.remove(INVALID_CLASS);
         field.removeAttribute('aria-invalid');
-        const existing = field.parentNode && field.parentNode.querySelector(':scope > .' + ERROR_CLASS);
-        if (existing) existing.remove();
+
+        // The note is tracked on the field itself rather than looked up among
+        // the field's siblings. showError anchors the message to the field's
+        // WRAPPER when the input is nested inside one, which puts the note in
+        // wrapper.parentNode — somewhere a `field.parentNode` search cannot
+        // reach. That left the stale message on screen after the field was
+        // fixed, and stacked a fresh copy under it on every further attempt.
+        if (field._kkErrorNote) {
+            field._kkErrorNote.remove();
+            field._kkErrorNote = null;
+        }
+
+        // Fallback for a note rendered before this field was tracked.
+        const orphan = field.parentNode && field.parentNode.querySelector(':scope > .' + ERROR_CLASS);
+        if (orphan) orphan.remove();
+
+        const describedBy = field.getAttribute('aria-describedby');
+        if (describedBy && describedBy.startsWith('kk-err-')) field.removeAttribute('aria-describedby');
     }
 
     function showError(field, message) {
@@ -811,12 +829,18 @@ Alpine.start();
         note.className = ERROR_CLASS;
         note.textContent = message;
 
+        // aria-invalid alone tells a screen reader the field is wrong but not
+        // why; pointing at the note is what gets the message read out.
+        note.id = 'kk-err-' + (++noteSeq);
+        if (!field.getAttribute('aria-describedby')) field.setAttribute('aria-describedby', note.id);
+
         // After the field itself, or after its wrapper when the input sits
         // inside a relative box (icon buttons, password eyes) so the message
         // does not land between the input and its own decoration.
         const wrapper = field.closest('.relative, .kk-loginmodal__inputwrap');
         const anchor = wrapper && wrapper.contains(field) && wrapper !== field.parentNode ? wrapper : field;
         anchor.parentNode.insertBefore(note, anchor.nextSibling);
+        field._kkErrorNote = note;
     }
 
     document.addEventListener('submit', function (event) {

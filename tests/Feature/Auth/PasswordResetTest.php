@@ -38,10 +38,42 @@ class PasswordResetTest extends TestCase
         $response->assertSessionHasNoErrors();
     }
 
-    public function test_reset_link_request_fails_for_invalid_email(): void
+    /**
+     * An unknown address must be answered exactly like a known one.
+     *
+     * This test previously asserted the opposite - that an unregistered
+     * address comes back with an error on the email field. That behaviour
+     * turned the form into a membership oracle: submit a list of addresses,
+     * keep the ones that do not error, and you have a confirmed customer list
+     * for phishing or credential stuffing. The controller now returns the same
+     * neutral status either way, so the assertion is inverted to lock that in.
+     */
+    public function test_reset_link_request_does_not_reveal_whether_the_account_exists(): void
+    {
+        $unknown = $this->post('/password/email', [
+            'email' => 'nonexistent@example.com',
+        ]);
+
+        $unknown->assertSessionHasNoErrors();
+
+        $known = $this->post('/password/email', [
+            'email' => 'user@example.com',
+        ]);
+
+        $known->assertSessionHasNoErrors();
+
+        // Same outcome for both, which is the whole point.
+        $this->assertSame(
+            $known->getStatusCode(),
+            $unknown->getStatusCode(),
+            'A known and an unknown address must be answered identically.'
+        );
+    }
+
+    public function test_reset_link_request_still_rejects_a_malformed_email(): void
     {
         $response = $this->post('/password/email', [
-            'email' => 'nonexistent@example.com',
+            'email' => 'not-an-email',
         ]);
 
         $response->assertSessionHasErrors(['email']);
