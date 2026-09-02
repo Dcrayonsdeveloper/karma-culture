@@ -526,10 +526,14 @@
                 {{-- Signup-only: phone --}}
                 <div class="kk-loginmodal__group" x-show="mode === 'signup'">
                     <label class="kk-loginmodal__label" for="kk-auth-phone">Mobile Number</label>
+                    {{-- data-kk-mobile="10" caps the box at ten digits as it is typed
+                         (_capMobile in app.js), stripping a pasted +91 rather than
+                         truncating it. maxlength stays at 20 so that paste survives
+                         the browser long enough to be normalised. --}}
                     <input type="tel" id="kk-auth-phone" class="kk-loginmodal__field"
                            :class="fieldErrors.phone && 'has-error'"
-                           x-model="form.phone" placeholder="98765 43210" autocomplete="tel"
-                           inputmode="numeric" maxlength="20">
+                           x-model="form.phone" placeholder="9876543210" autocomplete="tel"
+                           inputmode="numeric" maxlength="20" data-kk-mobile="10">
                     <p class="kk-loginmodal__fielderror" x-show="fieldErrors.phone" x-text="fieldErrors.phone" x-cloak></p>
                 </div>
 
@@ -637,14 +641,30 @@
                 const e = {};
                 const signup = this.mode === 'signup';
 
-                if (signup && !this.form.full_name.trim()) {
-                    e.full_name = 'Please enter your full name.';
+                if (signup) {
+                    const name = this.form.full_name.trim();
+                    if (!name) {
+                        e.full_name = 'Please enter your full name.';
+                    } else if ([...name].length > 30) {
+                        // The same limit the server holds (RegisterController::NAME_LIMIT)
+                        // and the same sentence, so the modal never posts a name the
+                        // endpoint is about to hand straight back.
+                        e.full_name = 'Please keep your name to 30 characters or fewer.';
+                    }
                 }
 
-                if (!this.form.email.trim()) {
+                const email = this.form.email.trim();
+                if (!email) {
                     e.email = 'Please enter your email address.';
-                } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(this.form.email.trim())) {
+                } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
                     e.email = 'That does not look like a valid email address.';
+                } else if (signup && !/^[A-Za-z0-9]/.test(email)) {
+                    // The two headline checks from App\Rules\EmailAddress, which
+                    // registration adds and sign-in deliberately does not: an address
+                    // stored before that rule existed still has to be able to log in.
+                    e.email = 'An email address must start with a letter or a number.';
+                } else if (signup && email.includes('..')) {
+                    e.email = 'An email address cannot contain two dots in a row.';
                 }
 
                 if (signup) {

@@ -23,35 +23,38 @@ class ShopFilterRailTest extends TestCase
         }
     }
 
-    public function test_the_rail_gives_itself_one_column_per_hanger(): void
+    public function test_the_rail_sizes_itself_from_the_hanger_count(): void
     {
-        // Seven, because that is the count that broke it: the grid was pinned to
-        // six columns, so the seventh hanger wrapped onto a second row.
+        // Seven, because that is the count that broke it: the rail was pinned to
+        // six, so the seventh hanger dropped onto a second row and the overflow
+        // painted over the section below.
         $this->seedSizes(['S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL']);
 
         $this->get('/')
             ->assertOk()
-            ->assertSee('--kk-rail-cols: 7', false);
+            ->assertSee('--kk-rail-count: 7', false)
+            ->assertDontSee('repeat(6, 1fr)', false);
     }
 
-    public function test_six_hangers_still_lay_out_in_six_columns(): void
+    public function test_six_hangers_still_report_six(): void
     {
         $this->seedSizes(['S', 'M', 'L', 'XL', 'XXL', '3XL']);
 
         $this->get('/')
             ->assertOk()
-            ->assertSee('--kk-rail-cols: 6', false);
+            ->assertSee('--kk-rail-count: 6', false);
     }
 
-    public function test_a_long_list_is_capped_rather_than_shrinking_each_hanger(): void
+    public function test_a_long_list_scrolls_sideways_instead_of_wrapping(): void
     {
         $this->seedSizes(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']);
 
-        // Wrapping to a second row is fine now that the stage grows with its
-        // content; twelve slivers in one row would not be.
+        // Twelve stay on one rail and the row scrolls, so the bar still runs
+        // through every hook and nothing wraps out of the section.
         $this->get('/')
             ->assertOk()
-            ->assertSee('--kk-rail-cols: 8', false);
+            ->assertSee('--kk-rail-count: 12', false)
+            ->assertSee('kk-rail-scroll', false);
     }
 
     public function test_the_sub_label_is_printed_as_the_admin_authored_it(): void
@@ -75,5 +78,16 @@ class ShopFilterRailTest extends TestCase
         $this->assertStringNotContainsString('min-height: 420px', $html);
         $this->assertStringNotContainsString('min-height: 560px', $html);
         $this->assertStringContainsString('grid-area: 1 / 1', $html);
+    }
+
+    public function test_an_emptied_tab_does_not_leave_a_bare_rail_hanging(): void
+    {
+        // Price and shade have no rows at all here, so their panels must not
+        // render the bar on its own with nothing hooked over it.
+        $this->seedSizes(['S', 'M']);
+
+        $html = $this->get('/')->assertOk()->getContent();
+
+        $this->assertSame(1, substr_count($html, 'kk-rail-bar"'));
     }
 }

@@ -749,8 +749,8 @@ const _fullNameError = (v) => {
 // The RFC, and therefore email:strict, is far wider than what any provider
 // issues: "_asha@gmail.com" and "!!!@gmail.com" are both legal mail. Signup is
 // where an address is minted rather than matched, so the local part has to open
-// on a letter or a digit and carry only . _ % + - after it.
-const _EMAIL_LOCAL = /^[A-Za-z0-9](?:[A-Za-z0-9._%+\-]*[A-Za-z0-9])?$/;
+// on a letter or a digit and carry only . _ % + - ' after it.
+const _EMAIL_LOCAL = /^[A-Za-z0-9](?:[A-Za-z0-9._%+\-']*[A-Za-z0-9])?$/;
 const _EMAIL_DOMAIN = /^(?:[A-Za-z0-9](?:[A-Za-z0-9\-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$/;
 const _EMAIL_GENERIC = 'Enter a valid email address, like you@example.com.';
 const _EMAIL_STARTS = 'An email address must start with a letter or a number.';
@@ -769,7 +769,7 @@ const _emailError = (v) => {
     // server says the same sentence about it.
     if (!/^[A-Za-z0-9]/.test(local)) return _EMAIL_STARTS;
     if (email.includes('..')) return _EMAIL_DOTS;
-    if (!_EMAIL_LOCAL.test(local)) return 'The part before the @ may only contain letters, numbers and . _ % + -';
+    if (!_EMAIL_LOCAL.test(local)) return "The part before the @ may only contain letters, numbers, and these symbols: . _ % + - '";
     if (!_EMAIL_DOMAIN.test(domain)) return _EMAIL_GENERIC;
     return '';
 };

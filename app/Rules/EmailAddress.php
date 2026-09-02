@@ -18,8 +18,9 @@ use Illuminate\Contracts\Validation\ValidationRule;
  * narrows the shape to the one people are actually given:
  *
  *   - the local part opens on a letter or a digit, never punctuation
- *   - after that it may carry . _ % + - and nothing else, and may not end on
- *     one of them
+ *   - after that it may carry . _ % + - ' and nothing else, and may not end
+ *     on one of them (the apostrophe is there for "o'neil@example.com", which
+ *     the suite already calls a real address)
  *   - no ".." anywhere, on either side of the @
  *   - the domain is dot-separated labels of letters, digits and hyphens, each
  *     opening and closing on a letter or a digit, ending in a 2-63 letter TLD
@@ -34,8 +35,8 @@ use Illuminate\Contracts\Validation\ValidationRule;
  */
 class EmailAddress implements ValidationRule
 {
-    /** Opens and closes on a letter or digit; . _ % + - allowed between. */
-    private const LOCAL = '/^[A-Za-z0-9](?:[A-Za-z0-9._%+\-]*[A-Za-z0-9])?$/';
+    /** Opens and closes on a letter or digit; . _ % + - ' allowed between. */
+    private const LOCAL = "/^[A-Za-z0-9](?:[A-Za-z0-9._%+\-']*[A-Za-z0-9])?$/";
 
     /** One or more hyphen-safe labels, then a letters-only TLD. */
     private const DOMAIN = '/^(?:[A-Za-z0-9](?:[A-Za-z0-9\-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$/';
@@ -79,7 +80,7 @@ class EmailAddress implements ValidationRule
         }
 
         if (! preg_match(self::LOCAL, $local)) {
-            $fail('The part before the @ may only contain letters, numbers and . _ % + -');
+            $fail("The part before the @ may only contain letters, numbers, and these symbols: . _ % + - '");
 
             return;
         }

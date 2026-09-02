@@ -4,6 +4,7 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -174,6 +175,109 @@ class RegistrationFormTest extends TestCase
         $response->assertStatus(422);
         $response->assertJsonValidationErrors('terms');
         $this->assertDatabaseMissing('users', ['email' => 'modal2@example.test']);
+    }
+
+    // ------------------------------------------------------------------
+    // What the form asks for, and what it refuses
+    // ------------------------------------------------------------------
+
+    public function test_a_name_longer_than_thirty_characters_is_rejected(): void
+    {
+        // Alternating letters: a repeated one would trip PersonName's
+        // keyboard-mashing guard and pass this test for the wrong reason.
+        $response = $this->post('/register', $this->validPayload([
+            'full_name' => str_repeat('ab', 16),
+        ]));
+
+        $response->assertSessionHasErrors('full_name');
+        $this->assertSame(
+            'Please keep your name to 30 characters or fewer.',
+            session('errors')->first('full_name')
+        );
+        $this->assertDatabaseMissing('users', ['email' => 'asha@example.test']);
+    }
+
+    public function test_a_thirty_character_name_is_accepted(): void
+    {
+        $response = $this->post('/register', $this->validPayload([
+            'full_name' => str_repeat('ab', 15),
+        ]));
+
+        $response->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('users', ['email' => 'asha@example.test']);
+    }
+
+    /**
+     * All four of these are legal RFC mail, so `email:strict` alone lets them
+     * through. Nobody is issued one.
+     */
+    public static function addressesOpeningOnASymbol(): array
+    {
+        return [
+            'underscore' => ['_asha@example.test'],
+            'dot' => ['.asha@example.test'],
+            'hyphen' => ['-asha@example.test'],
+            'plus' => ['+asha@example.test'],
+        ];
+    }
+
+    #[DataProvider('addressesOpeningOnASymbol')]
+    public function test_an_email_that_opens_on_a_symbol_is_rejected(string $email): void
+    {
+        $response = $this->post('/register', $this->validPayload(['email' => $email]));
+
+        $response->assertSessionHasErrors('email');
+        $this->assertDatabaseMissing('users', ['email' => $email]);
+    }
+
+    public function test_an_email_with_two_dots_in_a_row_is_rejected(): void
+    {
+        $response = $this->post('/register', $this->validPayload([
+            'email' => 'asha..menon@example.test',
+        ]));
+
+        $response->assertSessionHasErrors('email');
+    }
+
+    /**
+     * The other half of the same rule: tightening the shape must not cost the
+     * addresses people actually have.
+     */
+    public function test_an_ordinary_address_still_registers(): void
+    {
+        $response = $this->post('/register', $this->validPayload([
+            'email' => 'asha.menon+shop@mail.example.test',
+        ]));
+
+        $response->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('users', ['email' => 'asha.menon+shop@mail.example.test']);
+    }
+
+    /**
+     * Three layers have to agree that a mobile number is ten digits. This is
+     * the browser's: the value is capped as it is typed, so an eleventh digit
+     * never lands and the shopper cannot submit the fifteen-digit string the
+     * server would then have to explain.
+     */
+    public function test_the_signup_phone_field_is_held_to_ten_digits(): void
+    {
+        $html = $this->get('/login?mode=register')->assertStatus(200)->getContent();
+
+        preg_match('/<input[^>]*id="phone"[^>]*>/', $html, $m);
+        $this->assertNotEmpty($m, 'The mobile number field is missing from the register form.');
+        $this->assertStringContainsString('data-kk-mobile="10"', $m[0],
+            'The mobile field should cap itself at ten digits as it is typed.');
+    }
+
+    public function test_the_confirm_password_field_can_be_revealed_like_the_password_field(): void
+    {
+        $html = $this->get('/login?mode=register')->assertStatus(200)->getContent();
+
+        preg_match('/<input[^>]*id="password_confirmation"[^>]*>/', $html, $m);
+        $this->assertNotEmpty($m, 'The confirm password field is missing from the register form.');
+        $this->assertStringContainsString(':type="show ? \'text\' : \'password\'"', $m[0],
+            'Confirm Password needs the same eye toggle as Password: a typo in a box you '
+            .'cannot read is the whole reason the field exists.');
     }
 
     /**

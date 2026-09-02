@@ -162,6 +162,61 @@ class ValidationRulesTest extends TestCase
         $this->assertRejects(V::email(), $long);
     }
 
+    // ------------------------------------------------------------------
+    // email(strictShape: true) - App\Rules\EmailAddress
+    // ------------------------------------------------------------------
+
+    /**
+     * Every one of these is legal RFC mail that `email:strict` alone accepts,
+     * or a shape it happens to catch anyway. None of them is an address a
+     * provider issues, and signup is where an address is minted.
+     */
+    public static function shapesNoProviderIssues(): array
+    {
+        return [
+            'leading underscore' => ['_asha@example.com'],
+            'leading dot' => ['.asha@example.com'],
+            'leading hyphen' => ['-asha@example.com'],
+            'leading plus' => ['+asha@example.com'],
+            'all symbols' => ['!!!@example.com'],
+            'trailing dot in local' => ['asha.@example.com'],
+            'double dot in local' => ['asha..menon@example.com'],
+            'double dot in domain' => ['asha@example..com'],
+            'hyphen opening a label' => ['asha@-example.com'],
+            'hyphen closing a label' => ['asha@example-.com'],
+            'one letter tld' => ['asha@example.c'],
+            'numeric tld' => ['asha@example.123'],
+            'underscore in domain' => ['asha@exa_mple.com'],
+        ];
+    }
+
+    #[DataProvider('shapesNoProviderIssues')]
+    public function test_strict_shape_rejects_addresses_no_provider_issues(string $email): void
+    {
+        $this->assertRejects(V::email(strictShape: true), $email);
+    }
+
+    /**
+     * The other half: a stricter rule that costs real addresses is worse than
+     * the looseness it fixed, so the whole valid set has to survive it.
+     */
+    #[DataProvider('validEmails')]
+    public function test_strict_shape_keeps_every_real_address(string $email): void
+    {
+        $this->assertAccepts(V::email(strictShape: true), $email);
+    }
+
+    /**
+     * And it stays opt-in. Sign-in matches an address rather than creating one,
+     * so anyone whose stored address predates this rule has to keep being able
+     * to type it.
+     */
+    #[Test]
+    public function the_default_email_rules_are_untouched_by_it(): void
+    {
+        $this->assertAccepts(V::email(), '_asha@example.com', 'sign-in keeps the RFC shape');
+    }
+
     #[Test]
     public function normalize_email_lowercases_and_trims(): void
     {
