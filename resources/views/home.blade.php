@@ -497,16 +497,29 @@
                always did. */
             .kk-about-reels {
                 --kk-reel-gap: 20px;
+                --kk-reel-lead: 40px;   /* clear space wanted above the reels */
+                --kk-reel-shadow: 60px; /* room their drop shadow needs below */
                 container-type: inline-size;
                 position: relative;
                 width: 100%;
-                margin: 40px auto 0;
+                /* The clip would otherwise cut the reels' shadow off flush at
+                   their own edges. The padding gives it somewhere to fall and
+                   the margins take that space back off the section, so the
+                   heading above and the button below sit where they did. */
+                padding: 30px 0 var(--kk-reel-shadow);
+                margin: calc(var(--kk-reel-lead) - 30px) auto calc(-1 * var(--kk-reel-shadow));
+                /* That padding is shadow room, not a target: without this it
+                   would lie over the top of the button underneath and swallow
+                   the click. The track takes the pointer back for itself, and
+                   :hover still reaches this element through it. */
+                pointer-events: none;
                 overflow: hidden;
                 /* Clips fade in and out at the ends instead of being cut off. */
                 -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 5%, #000 95%, transparent 100%);
                 mask-image: linear-gradient(90deg, transparent 0, #000 5%, #000 95%, transparent 100%);
             }
             .kk-about-reels__track {
+                pointer-events: auto;
                 display: flex;
                 gap: var(--kk-reel-gap);
                 width: max-content;
@@ -551,7 +564,7 @@
             .kk-about-cta { margin-top: 36px; }
             @media (max-width: 640px) {
                 .kk-about { padding: 28px 0; }
-                .kk-about-reels { margin-top: 28px; --kk-reel-gap: 10px; }
+                .kk-about-reels { --kk-reel-lead: 28px; --kk-reel-gap: 10px; }
                 /* Three across the phone, as before, rather than one 287px reel
                    filling the screen with the next only half in view. */
                 .kk-about-reel { width: 30vw; border-radius: 8px; }
