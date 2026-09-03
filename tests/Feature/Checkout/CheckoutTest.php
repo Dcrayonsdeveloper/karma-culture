@@ -106,18 +106,24 @@ class CheckoutTest extends TestCase
         $this->assertDatabaseCount('orders', 0);
     }
 
-    public function test_guest_can_add_to_cart(): void
+    /**
+     * A guest used to get a cart of their own, kept against the session and
+     * merged into the account at sign-in. The shop asks for the account first
+     * now, so there is no guest cart to merge - the login page moved from the
+     * end of the journey to the start of it.
+     *
+     * Covered in full by Tests\Feature\Cart\SignInBeforeCartAndWishlistTest;
+     * kept here because this file is where the guest journey is described.
+     */
+    public function test_a_guest_gets_the_login_page_rather_than_a_cart(): void
     {
         $this->post('/cart/add', [
             'product_id' => $this->product->id,
             'quantity' => 1,
-        ]);
+        ])->assertRedirect(route('login'));
 
-        $this->assertDatabaseHas('carts', ['user_id' => null]);
-        $this->assertDatabaseHas('cart_items', [
-            'product_id' => $this->product->id,
-            'quantity' => 1,
-        ]);
+        $this->assertDatabaseCount('carts', 0);
+        $this->assertDatabaseCount('cart_items', 0);
     }
 
     public function test_checkout_page_loads_for_authenticated_user(): void

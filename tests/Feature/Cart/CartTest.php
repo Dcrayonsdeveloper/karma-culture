@@ -59,14 +59,43 @@ class CartTest extends TestCase
         $response->assertRedirect();
     }
 
-    public function test_add_product_to_cart_as_guest(): void
+    /**
+     * A guest used to get a cart of their own, merged into the account on
+     * sign-in. The store owner asked for an account up front instead: a guest
+     * basket is one nobody can be contacted about, and checkout has required an
+     * account throughout, so the guest half of the journey only ever ended at
+     * this same login page - later, with more typed in and more to lose.
+     */
+    public function test_a_guest_is_sent_to_the_login_page_instead_of_getting_a_cart(): void
     {
         $response = $this->post('/cart/add', [
             'product_id' => $this->product->id,
             'quantity' => 1,
         ]);
 
-        $response->assertRedirect();
+        $response->assertRedirect(route('login'));
+        $this->assertDatabaseCount('cart_items', 0);
+    }
+
+    /**
+     * The button redirects before it ever asks, so a request that does arrive
+     * from a guest is a stale tab or a script. Those get a 401 rather than a
+     * redirect to HTML, which is what the front end turns back into a trip to
+     * the login page.
+     */
+    public function test_a_guests_background_request_is_refused_with_a_401(): void
+    {
+        $this->postJson('/cart/add', [
+            'product_id' => $this->product->id,
+            'quantity' => 1,
+        ])->assertStatus(401);
+    }
+
+    /** Reading stays open: a guest's cart answers, and answers empty. */
+    public function test_a_guest_can_still_read_an_empty_cart(): void
+    {
+        $this->get('/cart')->assertStatus(200);
+        $this->getJson('/cart/data')->assertStatus(200)->assertJsonPath('cart_count', 0);
     }
 
     public function test_get_cart_data(): void

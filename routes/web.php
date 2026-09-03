@@ -121,15 +121,28 @@ Route::prefix('cart')->name('cart.')->group(function () {
     // literal route being swallowed the same way.
     Route::get('/data', [App\Http\Controllers\CartController::class, 'data'])->name('data');
     Route::get('/recommendations', [App\Http\Controllers\CartController::class, 'recommendations'])->name('recommendations');
-    Route::post('/add', [App\Http\Controllers\CartController::class, 'add'])->name('add');
-    Route::post('/apply-coupon', [App\Http\Controllers\CartController::class, 'applyCoupon'])->middleware('throttle:10,1')->name('apply-coupon');
-    Route::delete('/remove-coupon', [App\Http\Controllers\CartController::class, 'removeCoupon'])->name('remove-coupon');
-
     Route::get('/', [App\Http\Controllers\CartController::class, 'index'])->name('index');
-    Route::delete('/', [App\Http\Controllers\CartController::class, 'clear'])->name('clear');
 
-    Route::put('/{cartItem}', [App\Http\Controllers\CartController::class, 'update'])->whereNumber('cartItem')->name('update');
-    Route::delete('/{cartItem}', [App\Http\Controllers\CartController::class, 'destroy'])->whereNumber('cartItem')->name('destroy');
+    // Putting something in a cart takes an account. The store owner asked for
+    // it: a guest cart is a basket nobody can be contacted about, and the guest
+    // half of the flow only ever ended at the login page anyway - checkout has
+    // required an account since long before this.
+    //
+    // Reading stays open. The header count, the drawer and /cart all answer for
+    // a guest, and answer "empty", which is the truth for one.
+    //
+    // The button gets there first: it sends the customer to /login?next=<page>
+    // before any request is made, so this gate is the backstop for a stale tab
+    // or a script - and for those it is a 401, which the front end turns into
+    // the same trip to the login page.
+    Route::middleware('auth')->group(function () {
+        Route::post('/add', [App\Http\Controllers\CartController::class, 'add'])->name('add');
+        Route::post('/apply-coupon', [App\Http\Controllers\CartController::class, 'applyCoupon'])->middleware('throttle:10,1')->name('apply-coupon');
+        Route::delete('/remove-coupon', [App\Http\Controllers\CartController::class, 'removeCoupon'])->name('remove-coupon');
+        Route::delete('/', [App\Http\Controllers\CartController::class, 'clear'])->name('clear');
+        Route::put('/{cartItem}', [App\Http\Controllers\CartController::class, 'update'])->whereNumber('cartItem')->name('update');
+        Route::delete('/{cartItem}', [App\Http\Controllers\CartController::class, 'destroy'])->whereNumber('cartItem')->name('destroy');
+    });
 });
 
 // Checkout requires an account. Placing the order is the only step that is

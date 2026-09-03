@@ -118,6 +118,57 @@ Alpine.store('toast', {
 });
 
 /**
+ * The cart and the wishlist take an account.
+ *
+ * Both are asynchronous, so a signed-out customer pressing either used to get
+ * a request, a failure and a red toast - or, before the routes were gated, a
+ * basket the shop could never contact anybody about. Now the button never
+ * makes the request: it hands the browser to the login page and names the page
+ * it was pressed on, so signing in comes back to the product rather than to a
+ * dashboard with the thread lost.
+ *
+ * The signal is `data-authenticated` on <body>, which the layout has always
+ * rendered. Reading it per press rather than once at boot matters: a session
+ * that expires in an open tab flips nothing in JS, and the 401 handler below
+ * is what catches that case.
+ *
+ * Returns true when the caller may go ahead.
+ */
+function kkRequireLogin() {
+    if (document.body.dataset.authenticated === 'true') return true;
+
+    kkGoToLogin();
+
+    return false;
+}
+
+/** The trip to the login page, carrying where to come back to. */
+function kkGoToLogin() {
+    // Path only, never the absolute URL: this becomes url.intended server-side,
+    // and a full URL there is one bad validation away from an open redirect.
+    const next = window.location.pathname + window.location.search;
+
+    window.location.assign('/login?next=' + encodeURIComponent(next));
+}
+
+/**
+ * The stale-tab case: signed in when the page loaded, signed out by the time
+ * the button was pressed. The gate on the routes answers 401, and this turns
+ * that into the same trip to the login page rather than a red toast reading
+ * "Failed to add to cart".
+ */
+axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response && error.response.status === 401) {
+            kkGoToLogin();
+        }
+
+        return Promise.reject(error);
+    }
+);
+
+/**
  * Cart store
  */
 Alpine.store('cart', {
@@ -157,6 +208,12 @@ Alpine.store('cart', {
     // it is about to navigate to checkout, so opening the drawer only flashes it
     // on screen for a frame. Returns whether the item actually made it in.
     async add(productId, quantity = 1, variantId = null, size = null, colour = null, { reveal = true } = {}) {
+        // A cart takes an account. Sent to the login page from here rather than
+        // after a round trip, so the customer is not told "added" by a toast and
+        // then handed an empty cart, and so the page they were shopping on is
+        // still on screen to name as where to come back to.
+        if (!kkRequireLogin()) return false;
+
         this.isLoading = true;
         try {
             const response = await axios.post('/cart/add', {
@@ -294,6 +351,11 @@ Alpine.store('wishlist', {
     },
 
     async toggle(productId) {
+        // Both halves, not just adding: a wishlist that takes an account to
+        // fill but not to empty is a wishlist a signed-out browser can still
+        // quietly rearrange.
+        if (!kkRequireLogin()) return;
+
         productId = parseInt(productId, 10);
         if (this.has(productId)) {
             this.remove(productId);
@@ -303,6 +365,8 @@ Alpine.store('wishlist', {
     },
 
     async add(productId) {
+        if (!kkRequireLogin()) return;
+
         productId = parseInt(productId, 10);
         if (this.has(productId)) return;
 

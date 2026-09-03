@@ -25,8 +25,28 @@ class LoginController extends Controller
      */
     private const CREDENTIALS_FAILED = 'The provided credentials do not match our records.';
 
-    public function showLoginForm(): View
+    /**
+     * ?next= brings a customer back to the page they were sent here from.
+     *
+     * The cart and wishlist buttons are asynchronous, so the `auth` middleware
+     * never sees a page request to record - it sees a POST from a script, and
+     * an intended URL of /cart/add would send the customer to a route that
+     * does not answer GET. The button therefore names the page it was pressed
+     * on, and it lands in the same session key the middleware uses.
+     *
+     * Only a root-relative path is accepted, and safeIntendedUrl() checks the
+     * value again on the way out - an open redirect off the login page is the
+     * exact shape a credential phishing chain needs, so it is refused at both
+     * ends rather than either.
+     */
+    public function showLoginForm(Request $request): View
     {
+        $next = $request->query('next');
+
+        if (is_string($next) && str_starts_with($next, '/') && ! str_starts_with(str_replace('\\', '/', $next), '//')) {
+            $request->session()->put('url.intended', $next);
+        }
+
         return view('auth.login');
     }
 
