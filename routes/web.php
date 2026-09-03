@@ -97,14 +97,25 @@ Route::get('/shop', [App\Http\Controllers\ProductController::class, 'index'])->n
 // most visits never open it.
 Route::get('/shop/filters', [App\Http\Controllers\ProductController::class, 'filtersPanel'])->name('shop.filters');
 
-// Legacy paths. These still circulate in already-delivered email and in
-// admin-authored page copy, where they 404'd: /orders/{id} predates the move
-// of order pages under /account, /products predates the all-products page
-// moving to /shop, and /returns predates /returns-policy.
-Route::permanentRedirect('/products', '/shop');
-Route::permanentRedirect('/returns', '/returns-policy');
-Route::permanentRedirect('/orders/{order}/track', '/account/orders/{order}/track');
-Route::permanentRedirect('/orders/{order}', '/account/orders/{order}');
+// The paths that used to live here - /products, /returns, /orders/{id} and
+// /orders/{id}/track - are deliberately not registered.
+//
+// They were 301s to /shop, /returns-policy and the /account order pages, on the
+// theory that forwarding an old link is kinder than refusing it. It is not.
+// Typing /products put a visitor on /shop having never asked to go there, with
+// nothing to tell them the address they held is dead; and whoever wrote the bad
+// link never found out it was bad, because the site covered for them silently
+// and forever. The redirect also quietly dropped query strings - a Laravel
+// redirect route forwards path parameters only - so /products?category=kurtas
+// landed on an unfiltered /shop, which is a wrong page rather than a slow one.
+//
+// A path this site does not serve now answers with the 404 page. Nothing on the
+// site asks for these: every internal link goes through route(), and the stored
+// links and page copy that still named an old path were repointed at the real
+// pages by 2026_09_03_120000_repoint_legacy_storefront_links.
+//
+// tests/Feature/NotFoundUrlsTest.php holds the line, including a check that no
+// route anywhere answers a path with a redirect to another page on this site.
 
 Route::get('/deals', [App\Http\Controllers\DealsController::class, 'index'])->name('deals');
 Route::get('/flash-sale/{flashSale:slug}', [App\Http\Controllers\FlashSaleController::class, 'show'])->name('flash-sale.show');

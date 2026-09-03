@@ -123,8 +123,8 @@
                                  server, because this value is rendered straight into an href. --}}
                             <input type="text" name="link" id="hero-new-link" maxlength="255"
                                    pattern="(https?://|mailto:|tel:)\S+|/(?!/)\S*|#\S*"
-                                   title="Enter a path such as /products, or a full https:// address."
-                                   class="form-input" placeholder="/products">
+                                   title="Enter a path such as /shop, or a full https:// address."
+                                   class="form-input" placeholder="/shop">
                         </div>
                         <div>
                             <label for="hero-new-overlay" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Overlay Style</label>
@@ -307,8 +307,8 @@
                                         <label for="hero-{{ $banner->id }}-link" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Link URL</label>
                                         <input type="text" name="link" id="hero-{{ $banner->id }}-link" value="{{ $banner->link }}" maxlength="255"
                                                pattern="(https?://|mailto:|tel:)\S+|/(?!/)\S*|#\S*"
-                                               title="Enter a path such as /products, or a full https:// address."
-                                               class="form-input" placeholder="/products">
+                                               title="Enter a path such as /shop, or a full https:// address."
+                                               class="form-input" placeholder="/shop">
                                     </div>
                                     <div>
                                         <label for="hero-{{ $banner->id }}-title" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Heading Text</label>
