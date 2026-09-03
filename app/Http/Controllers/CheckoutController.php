@@ -82,6 +82,21 @@ class CheckoutController extends Controller
             return redirect()->route('cart.index')->with('error', 'Your cart is empty.');
         }
 
+        // Bring the stored totals up to date before quoting them.
+        //
+        // This screen rendered $cart->shipping, $cart->tax and $cart->subtotal
+        // straight off the row, and nothing here refreshed them - so a cart
+        // built before delivery charging was switched on carried shipping = 0
+        // and the summary said FREE however the shipping settings were filled
+        // in. Any settings change after the customer last touched their cart
+        // had the same effect: prices, tax and delivery all quoted from
+        // whenever the cart was last written.
+        //
+        // The cart page has always done this on load; this is the same rule on
+        // the last screen that quotes a total.
+        $cart->recalculate();
+        $cart->refresh()->load(['items.product', 'items.variant', 'coupon']);
+
         $user = request()->user();
 
         // Both checkout routes are auth-gated, so this is the point at which a
