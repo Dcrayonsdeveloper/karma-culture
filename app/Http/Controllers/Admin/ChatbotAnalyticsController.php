@@ -9,8 +9,10 @@ use App\Models\ChatbotProductClick;
 use App\Models\Lead;
 use App\Models\Product;
 use App\Support\ReportRange;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ChatbotAnalyticsController extends Controller
@@ -130,6 +132,24 @@ class ChatbotAnalyticsController extends Controller
             ->groupBy('conversation_id');
 
         return view('admin.chatbot.leads', compact('conversations', 'products', 'clicks'));
+    }
+
+    /**
+     * Move one lead along the follow-up track. The bot's own read of the chat
+     * (is_lead, last_intent) is left alone - this is the team's column.
+     */
+    public function updateLeadStatus(Request $request, ChatbotConversation $conversation): RedirectResponse
+    {
+        $validated = $request->validate([
+            'lead_status' => ['required', Rule::in(array_keys(ChatbotConversation::LEAD_STATUSES))],
+        ]);
+
+        $conversation->update(['lead_status' => $validated['lead_status']]);
+
+        $name = $conversation->user?->full_name ?? 'Lead';
+        $label = ChatbotConversation::LEAD_STATUSES[$validated['lead_status']];
+
+        return back()->with('success', "{$name} marked as {$label}");
     }
 
     public function show(ChatbotConversation $conversation): View

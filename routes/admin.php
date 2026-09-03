@@ -102,6 +102,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('chatbot/analytics', [App\Http\Controllers\Admin\ChatbotAnalyticsController::class, 'index'])->name('chatbot.analytics');
             Route::get('chatbot/leads', [App\Http\Controllers\Admin\ChatbotAnalyticsController::class, 'leads'])->name('chatbot.leads');
             Route::get('chatbot/conversations/{conversation}', [App\Http\Controllers\Admin\ChatbotAnalyticsController::class, 'show'])->name('chatbot.conversation');
+            Route::put('chatbot/conversations/{conversation}/lead-status', [App\Http\Controllers\Admin\ChatbotAnalyticsController::class, 'updateLeadStatus'])->name('chatbot.lead-status');
         });
 
         // Catalog
