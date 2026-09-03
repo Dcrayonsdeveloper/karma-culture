@@ -184,6 +184,189 @@
                         </div>
                     </div>
 
+                    @php
+                        // A failed save bounces back to this page, so the table redraws from
+                        // what was posted. Without this the admin loses every size they just
+                        // typed because one of them tripped a rule.
+                        $kkSizeRows = collect(old('variants', []))
+                            ->filter(fn ($v) => is_array($v))
+                            ->map(fn ($v) => [
+                                'name' => (string) ($v['name'] ?? ''),
+                                'price' => (string) ($v['price'] ?? ''),
+                                'mrp' => (string) ($v['mrp'] ?? ''),
+                                'stock_quantity' => (string) ($v['stock_quantity'] ?? '0'),
+                                'sku' => (string) ($v['sku'] ?? ''),
+                                'measurements' => (string) ($v['measurements'] ?? ''),
+                                'is_active' => filter_var($v['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN),
+                            ])
+                            ->values();
+                        // Row-level rules fail under keys like `variants.2.sku`, which no
+                        // single @error can catch - so the save bounced back silently and
+                        // the page looked like it had simply ignored the button.
+                        $kkSizeErrors = collect($errors->getMessages())
+                            ->filter(fn ($messages, $key) => str_starts_with($key, 'variants.'))
+                            ->flatten();
+                    @endphp
+                    <!-- Sizes & pricing -->
+                    <div class="card p-5" x-data="kkSizes()">
+                        <div class="flex items-center justify-between mb-1">
+                            <h2 class="text-[13px] font-semibold" style="color: #303030;">Sizes &amp; pricing</h2>
+                            <button type="button" @click="add()" class="btn btn-secondary" style="font-size:12px; padding:4px 10px;">+ Add size</button>
+                        </div>
+                        <p class="text-xs mb-4" style="color: #616161;">Each row is one size a customer can buy. Leave Price or MRP blank and the row uses the product&rsquo;s. Measurements are optional and let the assistant advise on fit. Leave SKU blank and one is generated. Colours are set separately below.</p>
+
+                        @if($kkSizeErrors->isNotEmpty())
+                            <div class="mb-3">
+                                @foreach($kkSizeErrors as $kkSizeError)
+                                    <p class="form-error">{{ $kkSizeError }}</p>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        <p class="text-xs" style="color:#616161; padding:10px 0;" x-show="rows.length === 0" x-cloak>No sizes yet - click &ldquo;Add size&rdquo;.</p>
+
+                        <div style="overflow-x:auto;" x-show="rows.length > 0" x-cloak>
+                            <table style="width:100%; font-size:13px; border-collapse:collapse;">
+                                <thead>
+                                    <tr style="border-bottom:1px solid #e3e3e3;">
+                                        <th style="text-align:left;padding:.5rem;font-weight:500;color:#616161;">Size</th>
+                                        <th style="text-align:right;padding:.5rem;font-weight:500;color:#616161;">Price</th>
+                                        <th style="text-align:right;padding:.5rem;font-weight:500;color:#616161;">MRP</th>
+                                        <th style="text-align:right;padding:.5rem;font-weight:500;color:#616161;">Stock</th>
+                                        <th style="text-align:left;padding:.5rem;font-weight:500;color:#616161;">Measurements</th>
+                                        <th style="text-align:left;padding:.5rem;font-weight:500;color:#616161;">SKU</th>
+                                        <th style="text-align:center;padding:.5rem;font-weight:500;color:#616161;">Active</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="(r, i) in rows" :key="r.uid">
+                                        <tr style="border-bottom:1px solid #f1f1f1;">
+                                            <td style="padding:.4rem;">
+                                                <input type="text" x-bind:name="'variants[' + i + '][name]'" x-model="r.name" placeholder="M-40"
+                                                       maxlength="100" aria-label="Size"
+                                                       style="width:92px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;">
+                                            </td>
+                                            <td style="padding:.4rem;text-align:right;">
+                                                <input type="number" step="0.01" min="0" max="9999999.99" x-bind:name="'variants[' + i + '][price]'" x-model="r.price"
+                                                       aria-label="Size price"
+                                                       style="width:88px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;text-align:right;">
+                                            </td>
+                                            <td style="padding:.4rem;text-align:right;">
+                                                <input type="number" step="0.01" min="0" max="9999999.99" x-bind:name="'variants[' + i + '][mrp]'" x-model="r.mrp"
+                                                       aria-label="Size MRP"
+                                                       style="width:88px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;text-align:right;">
+                                            </td>
+                                            <td style="padding:.4rem;text-align:right;">
+                                                <input type="number" min="0" max="1000000" step="1" x-bind:name="'variants[' + i + '][stock_quantity]'" x-model="r.stock_quantity"
+                                                       aria-label="Size stock"
+                                                       style="width:68px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;text-align:right;">
+                                            </td>
+                                            <td style="padding:.4rem;">
+                                                <input type="text" x-bind:name="'variants[' + i + '][measurements]'" x-model="r.measurements"
+                                                       placeholder="Chest 40in, Length 28in" maxlength="160" aria-label="Measurements"
+                                                       style="width:170px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;">
+                                            </td>
+                                            <td style="padding:.4rem;">
+                                                <input type="text" x-bind:name="'variants[' + i + '][sku]'" x-model="r.sku" placeholder="auto"
+                                                       maxlength="50" pattern="[A-Za-z0-9._/\-]+" aria-label="Size SKU"
+                                                       title="Letters, digits and . _ / - only, up to 50 characters. Leave blank to generate one."
+                                                       style="width:104px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;">
+                                            </td>
+                                            <td style="padding:.4rem;text-align:center;">
+                                                <input type="hidden" x-bind:name="'variants[' + i + '][is_active]'" value="0">
+                                                <input type="checkbox" x-bind:name="'variants[' + i + '][is_active]'" value="1" x-model="r.is_active" class="form-checkbox">
+                                            </td>
+                                            <td style="padding:.4rem;text-align:center;">
+                                                <button type="button" @click="rows.splice(i, 1)" title="Remove"
+                                                        style="color:#d72c0d;background:none;border:0;cursor:pointer;font-size:16px;line-height:1;">&times;</button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <script>
+                        {{-- Nothing is saved yet, so a removed row is simply dropped: there is
+                             no id to post back and no `delete` flag for the server to act on. --}}
+                        function kkSizes() {
+                            return {
+                                seq: 0,
+                                rows: [],
+                                init() {
+                                    this.rows = (@json($kkSizeRows)).map(r => ({ ...r, uid: ++this.seq }));
+                                },
+                                add() {
+                                    this.rows.push({
+                                        uid: ++this.seq, name: '', price: '', mrp: '',
+                                        stock_quantity: '0', sku: '', measurements: '', is_active: true,
+                                    });
+                                },
+                            };
+                        }
+                    </script>
+
+                    <!-- Colours -->
+                    @php
+                        // Colours live on the product, not on a size row, so a product can
+                        // offer any colour in any size without one row per combination.
+                        $kkColourRows = collect(old('colours', []))
+                            ->filter(fn ($c) => is_array($c))
+                            ->map(fn ($c) => [
+                                'name' => (string) ($c['name'] ?? ''),
+                                'hex' => (string) ($c['hex'] ?? '') ?: '#000000',
+                            ])
+                            ->filter(fn ($c) => $c['name'] !== '')
+                            ->values();
+                        $kkColourErrors = collect($errors->getMessages())
+                            ->filter(fn ($messages, $key) => str_starts_with($key, 'colours.'))
+                            ->flatten();
+                    @endphp
+                    <div class="card p-5" x-data="kkColours()">
+                        <div class="flex items-center justify-between mb-1">
+                            <h2 class="text-[13px] font-semibold" style="color: #303030;">Colours</h2>
+                            <button type="button" @click="add()" class="btn btn-secondary" style="font-size:12px; padding:4px 10px;">+ Add colour</button>
+                        </div>
+                        <p class="text-xs mb-4" style="color: #616161;">The colours this product comes in. They show as swatches on the product page, under the sizes.</p>
+
+                        @if($kkColourErrors->isNotEmpty())
+                            <div class="mb-3">
+                                @foreach($kkColourErrors as $kkColourError)
+                                    <p class="form-error">{{ $kkColourError }}</p>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        <p class="text-xs" style="color:#616161; padding:6px 0;" x-show="rows.length === 0" x-cloak>No colours yet - click &ldquo;Add colour&rdquo;.</p>
+
+                        <div x-show="rows.length > 0" x-cloak style="display:flex;flex-direction:column;gap:8px;">
+                            <template x-for="(c, i) in rows" :key="c.uid">
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <input type="color" x-bind:name="'colours[' + i + '][hex]'" x-model="c.hex" aria-label="Colour swatch"
+                                           style="width:34px;height:32px;border:1px solid #d4d4d4;border-radius:.375rem;padding:0;background:none;flex:0 0 auto;">
+                                    <input type="text" x-bind:name="'colours[' + i + '][name]'" x-model="c.name" placeholder="Navy"
+                                           maxlength="60" aria-label="Colour name"
+                                           style="flex:1 1 auto;max-width:240px;font-size:13px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.4rem .6rem;">
+                                    <button type="button" @click="rows.splice(i, 1)" title="Remove"
+                                            style="color:#d72c0d;background:none;border:0;cursor:pointer;font-size:16px;line-height:1;">&times;</button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    <script>
+                        function kkColours() {
+                            return {
+                                seq: 0,
+                                rows: [],
+                                init() {
+                                    this.rows = (@json($kkColourRows)).map(c => ({ ...c, uid: ++this.seq }));
+                                },
+                                add() { this.rows.push({ uid: ++this.seq, name: '', hex: '#000000' }); },
+                            };
+                        }
+                    </script>
+
                 </div>
 
                 <!-- RIGHT COLUMN (1/3) - Sidebar -->

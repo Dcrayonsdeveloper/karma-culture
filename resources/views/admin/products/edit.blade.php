@@ -312,6 +312,12 @@
                             'measurements' => data_get($v->attributes, 'measurements', ''),
                             'is_active' => (bool) $v->is_active,
                         ])->values();
+                        // Row-level rules fail under keys like `variants.2.sku`, which no
+                        // single @error can catch - so the save bounced back silently and
+                        // the page looked like it had simply ignored the button.
+                        $kkSizeErrors = collect($errors->getMessages())
+                            ->filter(fn ($messages, $key) => str_starts_with($key, 'variants.'))
+                            ->flatten();
                     @endphp
                     <!-- Sizes & pricing -->
                     <div class="card p-5" x-data="kkSizes()">
@@ -320,6 +326,14 @@
                             <button type="button" @click="add()" class="btn btn-secondary" style="font-size:12px; padding:4px 10px;">+ Add size</button>
                         </div>
                         <p class="text-xs mb-4" style="color: #616161;">Each row is one size a customer can buy, with its own price and stock. Measurements are optional and let the assistant advise on fit. Leave SKU blank and one is generated. Colours are set separately below.</p>
+
+                        @if($kkSizeErrors->isNotEmpty())
+                            <div class="mb-3">
+                                @foreach($kkSizeErrors as $kkSizeError)
+                                    <p class="form-error">{{ $kkSizeError }}</p>
+                                @endforeach
+                            </div>
+                        @endif
 
                         <p class="text-xs" style="color:#616161; padding:10px 0;" x-show="visibleCount() === 0" x-cloak>No sizes yet - click &ldquo;Add size&rdquo;.</p>
 
@@ -432,6 +446,9 @@
                                 : ['name' => (string) $c, 'hex' => '#000000'])
                             ->filter(fn ($c) => $c['name'] !== '')
                             ->values();
+                        $kkColourErrors = collect($errors->getMessages())
+                            ->filter(fn ($messages, $key) => str_starts_with($key, 'colours.'))
+                            ->flatten();
                     @endphp
                     <div class="card p-5" x-data="kkColours()">
                         <div class="flex items-center justify-between mb-1">
@@ -439,6 +456,14 @@
                             <button type="button" @click="add()" class="btn btn-secondary" style="font-size:12px; padding:4px 10px;">+ Add colour</button>
                         </div>
                         <p class="text-xs mb-4" style="color: #616161;">The colours this product comes in. They show as swatches on the product page, under the sizes.</p>
+
+                        @if($kkColourErrors->isNotEmpty())
+                            <div class="mb-3">
+                                @foreach($kkColourErrors as $kkColourError)
+                                    <p class="form-error">{{ $kkColourError }}</p>
+                                @endforeach
+                            </div>
+                        @endif
 
                         <p class="text-xs" style="color:#616161; padding:6px 0;" x-show="rows.length === 0" x-cloak>No colours yet - click &ldquo;Add colour&rdquo;.</p>
 
