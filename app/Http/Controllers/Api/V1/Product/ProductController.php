@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Product;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Support\ProductFilters;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -24,12 +25,29 @@ class ProductController extends Controller
             $query->whereHas('brand', fn($q) => $q->where('slug', $request->brand));
         }
 
-        if ($request->has('min_price')) {
-            $query->where('price', '>=', $request->min_price);
+        // The same wrong-way-round pair the storefront sidebar corrects: min
+        // 1000 with max 0 is `price >= 1000 AND price <= 0`, a range nothing
+        // can be in, so the endpoint answered an empty page for what the caller
+        // plainly meant as 0-1000. Ordered through the shop's own rule, so both
+        // surfaces answer the same question.
+        //
+        // has() also let a bound that is not a number reach the comparison:
+        // `?max_price=` compared price against the empty string, and
+        // `?min_price[]=1` handed an array to the query builder and 500'd.
+        $bound = function (string $key) use ($request): ?float {
+            $value = $request->input($key);
+
+            return is_numeric($value) ? (float) $value : null;
+        };
+
+        [$minPrice, $maxPrice] = ProductFilters::orderedRange($bound('min_price'), $bound('max_price'));
+
+        if ($minPrice !== null) {
+            $query->where('price', '>=', $minPrice);
         }
 
-        if ($request->has('max_price')) {
-            $query->where('price', '<=', $request->max_price);
+        if ($maxPrice !== null) {
+            $query->where('price', '<=', $maxPrice);
         }
 
         // Sold-out products sort to the back of the page, whatever sort was

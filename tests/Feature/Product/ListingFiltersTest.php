@@ -147,6 +147,67 @@ class ListingFiltersTest extends TestCase
         );
     }
 
+    /**
+     * The two price boxes filled in the wrong order.
+     *
+     * Min 1000 with Max 0 asks for `price >= 1000 AND price <= 0`, a range
+     * nothing can be in, so the shop answered "0 products found" under a chip
+     * reading "₹1,000 - ₹0" and said nothing about why. The pair still names one
+     * range, so it is put back in order and the grid answers it.
+     */
+    public function test_a_backwards_price_range_is_put_back_in_order(): void
+    {
+        $response = $this->get('/products?min_price=1000&max_price=0')->assertOk();
+
+        $this->assertSame(
+            ['Oxford Shirt'],
+            $response->viewData('products')->pluck('name')->all()
+        );
+    }
+
+    /**
+     * And the sidebar and the chip redraw as the corrected range - which is the
+     * only thing that tells the shopper their two numbers were reordered.
+     */
+    public function test_a_backwards_price_range_is_shown_the_right_way_round(): void
+    {
+        $response = $this->get('/products?min_price=1000&max_price=0')->assertOk();
+
+        $values = $response->viewData('filterPanel')['values'];
+
+        $this->assertSame(0.0, $values['min_price']);
+        $this->assertSame(1000.0, $values['max_price']);
+
+        $response->assertSee('₹0 - ₹1,000', false)
+            ->assertDontSee('₹1,000 - ₹0', false);
+    }
+
+    /**
+     * A hanger an admin typed backwards is the same range arriving by a name
+     * the form never uses, so it is corrected at the same place rather than in
+     * the two boxes.
+     */
+    public function test_a_backwards_hanger_price_range_is_put_back_in_order(): void
+    {
+        $response = $this->get('/products?price_min=2000&price_max=1000')->assertOk();
+
+        $this->assertSame(
+            ['Linen Shirt'],
+            $response->viewData('products')->pluck('name')->all()
+        );
+    }
+
+    /** An exact-price range is a real filter, not a mistake, so it stands. */
+    public function test_an_equal_price_range_is_left_alone(): void
+    {
+        $response = $this->get('/products?min_price=799&max_price=799')->assertOk();
+
+        $this->assertSame(
+            ['Oxford Shirt'],
+            $response->viewData('products')->pluck('name')->all()
+        );
+    }
+
     /** The deals page has no On Sale box, because everything on it is on sale. */
     public function test_deals_hides_the_redundant_on_sale_box(): void
     {

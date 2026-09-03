@@ -81,4 +81,30 @@ class ProductApiTest extends TestCase
 
         $response->assertStatus(404);
     }
+
+    /**
+     * The same wrong-way-round pair the storefront sidebar corrects: min 1500
+     * with max 500 is `price >= 1500 AND price <= 500`, a range nothing can be
+     * in, so the endpoint answered an empty page for what the caller plainly
+     * meant as 500-1500.
+     */
+    public function test_a_backwards_price_range_is_put_back_in_order(): void
+    {
+        $response = $this->getJson('/api/v1/products?min_price=1500&max_price=500');
+
+        $response->assertStatus(200);
+        $this->assertSame(['Building Blocks'], array_column($response->json('data'), 'name'));
+    }
+
+    /**
+     * A bound that is not a number is not a bound. `?max_price=` compared price
+     * against the empty string and `?min_price[]=1` handed an array to the query
+     * builder, which 500'd the endpoint.
+     */
+    public function test_a_price_bound_that_is_not_a_number_is_ignored(): void
+    {
+        $this->getJson('/api/v1/products?min_price[]=1&max_price=')
+            ->assertStatus(200)
+            ->assertJsonCount(1, 'data');
+    }
 }
