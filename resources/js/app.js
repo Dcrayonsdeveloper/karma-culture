@@ -1670,6 +1670,43 @@ Alpine.start();
         return field;
     }
 
+    // A note dropped into a NON-WRAPPING flex row has nowhere to go.
+    //
+    // .kk-field-error carries flex-basis: 100%, which is what keeps it under
+    // the field rather than beside it - but that only works if the row can
+    // wrap. The newsletter pill cannot:
+    //
+    //     .kk-newsletter-form { display: flex }          <- no flex-wrap
+    //     .kk-newsletter-form input { flex: 1; min-width: 0 }
+    //
+    // so the note claimed the full width, the input shrank to zero against it,
+    // and the customer was told to enter an email address with nowhere left to
+    // type one. Stepping out puts the message under the whole control.
+    //
+    // Only nowrap ROWS. A wrapping row already breaks the note onto its own
+    // line, and a flex COLUMN is the ordinary stack of fields - moving the
+    // message out of one would carry it away from the field it belongs to.
+    const ROW_MAX_DEPTH = 3;
+
+    function rowAwareAnchor(anchor) {
+        for (let depth = 0; depth < ROW_MAX_DEPTH; depth++) {
+            const parent = anchor.parentElement;
+            // Not 'form': on the newsletter pill the FORM is the flex row, so
+            // stopping at it left the note inside the very row that squeezes it.
+            if (!parent || parent.matches('body')) break;
+
+            const style = getComputedStyle(parent);
+            const isFlex = style.display === 'flex' || style.display === 'inline-flex';
+            if (!isFlex) break;
+            if (style.flexDirection.indexOf('column') === 0) break;
+            if (style.flexWrap !== 'nowrap') break;
+
+            anchor = parent;
+        }
+
+        return anchor;
+    }
+
     function showError(field, message) {
         clearError(field);
         field.classList.add(INVALID_CLASS);
@@ -1700,7 +1737,7 @@ Alpine.start();
         // The previous rule only stepped out to the wrapper when it was NOT the
         // field's direct parent, which is the rarer arrangement; in the common
         // one it anchored to the input and inserted the note inside the box.
-        const anchor = wrapperFor(field);
+        const anchor = rowAwareAnchor(wrapperFor(field));
         anchor.parentNode.insertBefore(note, anchor.nextSibling);
         field._kkErrorNote = note;
     }
