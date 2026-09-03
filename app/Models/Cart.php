@@ -119,11 +119,16 @@ class Cart extends Model
             $this->coupon_id = null;
         }
 
-        $tax = $this->items->sum(function ($item) {
-            return $item->product->is_taxable
-                ? ($item->total * $item->product->tax_rate / 100)
-                : 0;
-        });
+        // Settings -> Tax -> Enable Taxes. The sum below has always been
+        // computed and stored, but nothing read the switch, so turning taxes
+        // OFF would not have stopped them once anything started charging them.
+        $tax = (bool) Setting::get('tax_enabled', false)
+            ? $this->items->sum(function ($item) {
+                return $item->product->is_taxable
+                    ? ($item->total * $item->product->tax_rate / 100)
+                    : 0;
+            })
+            : 0;
 
         // Delivery, from Settings -> Shipping. `shipping` was only ever read
         // here and never written, so it sat at the column default of 0 and the

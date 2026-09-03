@@ -235,8 +235,11 @@ class CheckoutController extends Controller
                     // configured delivery charge was shown at checkout (once the
                     // view stopped saying FREE) and then not billed.
                     'shipping_cost'            => $cart->shipping,
-                    'tax'                      => 0,
-                    'total'                    => $cart->subtotal - $cart->discount + $cart->shipping,
+                    // Hardcoded to 0 with the total ignoring it, so tax was
+                    // worked out on the cart, shown to nobody and billed to
+                    // nobody - the same shape the shipping charge was in.
+                    'tax'                      => $cart->tax,
+                    'total'                    => $cart->subtotal - $cart->discount + $cart->shipping + $cart->tax,
                     'coupon_id'                => $cart->coupon_id,
                     'shipping_address_id'      => $savedAddress?->id,
                     'billing_address_id'       => $savedAddress?->id,

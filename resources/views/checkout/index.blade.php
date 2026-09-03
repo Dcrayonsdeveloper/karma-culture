@@ -351,6 +351,7 @@
                                     @php
                                         $kkFreeShip = (float) \App\Models\Setting::get('free_shipping_threshold', 0);
                                         $kkShipping = (float) $cart->shipping;
+                                        $kkTax = (float) $cart->tax;
                                     @endphp
                                     <div class="flex items-center justify-between text-[13px]">
                                         <span class="text-neutral-600">
@@ -365,13 +366,25 @@
                                             <span class="text-success-600 font-semibold">FREE</span>
                                         @endif
                                     </div>
+
+                                    {{-- Tax. The cart has always worked this out and stored it;
+                                         the summary never showed it and the total never added
+                                         it, so an 18% rate on every product reached neither the
+                                         customer nor the order. Shown only when there is some:
+                                         a zero line on a tax-free shop is noise. --}}
+                                    @if($kkTax > 0)
+                                        <div class="flex items-center justify-between text-[13px]">
+                                            <span class="text-neutral-600">Tax</span>
+                                            <span class="font-medium text-neutral-900">@price($kkTax)</span>
+                                        </div>
+                                    @endif
                                 </div>
 
                                 <div class="border-t border-dashed border-neutral-200 my-3"></div>
 
                                 <div class="flex items-center justify-between">
                                     <span class="text-sm font-bold text-neutral-900">Total Amount</span>
-                                    <span class="text-sm font-bold text-neutral-900">@price($cart->subtotal - $cart->discount + $cart->shipping)</span>
+                                    <span class="text-sm font-bold text-neutral-900">@price($cart->subtotal - $cart->discount + $cart->shipping + $cart->tax)</span>
                                 </div>
 
                                 @if($cart->discount > 0)
