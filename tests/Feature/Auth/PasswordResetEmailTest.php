@@ -5,8 +5,11 @@ namespace Tests\Feature\Auth;
 use App\Models\User;
 use App\Notifications\ResetPasswordNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -226,6 +229,121 @@ class PasswordResetEmailTest extends TestCase
             Hash::check(self::NEW_PASSWORD, $this->user->password),
             'The second use of a spent token changed the password anyway.'
         );
+    }
+
+    /**
+     * The reset link must point at us, whatever the caller claims the host is.
+     *
+     * The app trusts proxies with `at: '*'` and honours X-Forwarded-Host, and
+     * registers no trusted-host list, so url() would build the link from a
+     * header an unauthenticated attacker controls - emailing the victim a valid
+     * token on the attacker's domain.
+     */
+    public function test_the_reset_link_ignores_a_spoofed_forwarded_host(): void
+    {
+        Notification::fake();
+
+        $this->withServerVariables(['HTTP_X_FORWARDED_HOST' => 'attacker.invalid'])
+            ->post('/password/email', ['email' => 'shopper@example.com']);
+
+        $url = $this->capturedResetUrl();
+
+        $this->assertStringStartsWith(
+            rtrim((string) config('app.url'), '/'),
+            $url,
+            'The reset link was built from a caller-supplied host.'
+        );
+
+        $this->assertStringNotContainsString('attacker.invalid', $url);
+    }
+
+    /**
+     * A successful reset has to actually say so.
+     *
+     * The controller flashed this under 'status', which the login page does not
+     * render - so the last step of the whole flow silently showed a blank sign-in
+     * form and the customer had no way to tell the reset from a no-op.
+     */
+    public function test_a_successful_reset_confirms_itself_on_the_login_page(): void
+    {
+        Notification::fake();
+
+        $this->post('/password/email', ['email' => 'shopper@example.com']);
+
+        $response = $this->post('/password/reset', [
+            'token' => $this->capturedResetToken(),
+            'email' => 'shopper@example.com',
+            'password' => self::NEW_PASSWORD,
+            'password_confirmation' => self::NEW_PASSWORD,
+        ]);
+
+        $response->assertRedirect(route('login'));
+
+        $this->followRedirects($response)->assertSee('Your password has been reset', false);
+    }
+
+    /**
+     * Resetting has to end the account's other live sessions.
+     *
+     * Rotating remember_token only clears remember-me cookies. Sessions are
+     * stored in the database, so without an explicit sweep the intruder whose
+     * access prompted the reset simply stayed signed in.
+     */
+    public function test_resetting_signs_out_the_accounts_other_sessions(): void
+    {
+        Notification::fake();
+
+        DB::table('sessions')->insert([
+            'id' => 'session-belonging-to-an-intruder',
+            'user_id' => $this->user->id,
+            'ip_address' => '203.0.113.9',
+            'user_agent' => 'stolen',
+            'payload' => base64_encode('x'),
+            'last_activity' => time(),
+        ]);
+
+        $this->post('/password/email', ['email' => 'shopper@example.com']);
+
+        $this->post('/password/reset', [
+            'token' => $this->capturedResetToken(),
+            'email' => 'shopper@example.com',
+            'password' => self::NEW_PASSWORD,
+            'password_confirmation' => self::NEW_PASSWORD,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseMissing('sessions', [
+            'id' => 'session-belonging-to-an-intruder',
+        ]);
+    }
+
+    /**
+     * An impatient customer must not throttle themselves into silence.
+     *
+     * The broker keeps its own 60-second window and returns RESET_THROTTLED
+     * without sending. Those used to be charged to the per-address bucket, so
+     * three quick submissions spent the whole quota while posting one letter,
+     * then bought fifteen minutes of nothing - each attempt still answering
+     * "check your inbox".
+     */
+    public function test_broker_throttled_retries_do_not_spend_the_per_address_quota(): void
+    {
+        Notification::fake();
+
+        for ($i = 0; $i < 3; $i++) {
+            $this->post('/password/email', ['email' => 'shopper@example.com'])
+                ->assertSessionHasNoErrors();
+        }
+
+        $key = 'password-reset-address:'.sha1(Str::lower(trim('shopper@example.com')));
+
+        $this->assertSame(
+            1,
+            RateLimiter::attempts($key),
+            'Retries the broker refused to send were still charged to the customer.'
+        );
+
+        // Only the first submission produced mail, which is the broker's doing.
+        Notification::assertSentToTimes($this->user, ResetPasswordNotification::class, 1);
     }
 
     /**

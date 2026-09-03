@@ -7,6 +7,7 @@ use App\Rules\ValidationRules as V;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
@@ -70,12 +71,27 @@ class ResetPasswordController extends Controller
                     'remember_token' => Str::random(60),
                 ])->save();
 
+                // Rotating remember_token only kills remember-me cookies; the
+                // session store is separate, and sessions live in the database
+                // with a rolling lifetime. Without this, someone who had got
+                // into the account kept their signed-in session through the
+                // reset — which is the one thing a customer resetting after a
+                // compromise believes they are stopping.
+                DB::table('sessions')->where('user_id', $user->id)->delete();
+
                 event(new PasswordReset($user));
             }
         );
 
         if ($status === Password::PASSWORD_RESET) {
-            return redirect()->route('login')->with('status', __($status));
+            // 'success', not 'status'. The login page renders session('success')
+            // and session('error') and nothing else, so the confirmation this
+            // line has always produced was flashed and then silently dropped:
+            // the customer chose a new password, pressed the button, and landed
+            // on a blank sign-in form with no acknowledgement that anything had
+            // happened. ('status' is read on the forgot-password page, which is
+            // where that key came from.)
+            return redirect()->route('login')->with('success', __($status));
         }
 
         $message = in_array($status, [Password::INVALID_USER, Password::INVALID_TOKEN], true)

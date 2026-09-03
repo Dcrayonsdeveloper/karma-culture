@@ -45,16 +45,27 @@ class ResetPasswordNotification extends Notification
     }
 
     /**
-     * Built the same way the framework builds it, so the link keeps matching
-     * the password.reset route: the token in the path and the address in the
-     * query string, both of which the reset form posts back.
+     * The token in the path and the address in the query string, matching the
+     * password.reset route — but anchored to the configured site address.
+     *
+     * The framework builds this with url(), which resolves against the *incoming
+     * request's* host. This app trusts proxies with `at: '*'` and accepts
+     * X-Forwarded-Host (bootstrap/app.php), and registers no trusted-host list,
+     * so that host is whatever the caller says it is. Anyone could post this
+     * shop's own forgot-password form with `X-Forwarded-Host: example.invalid`
+     * and the victim would be emailed a genuine, working reset token pointing at
+     * the attacker's domain — a real account takeover from an unauthenticated
+     * request, and the mail would be from us. config('app.url') is set on the
+     * server and no header can move it.
      */
     private function resetUrl(object $notifiable): string
     {
-        return url(route('password.reset', [
+        $path = route('password.reset', [
             'token' => $this->token,
             'email' => $notifiable->getEmailForPasswordReset(),
-        ], false));
+        ], false);
+
+        return rtrim((string) config('app.url'), '/').$path;
     }
 
     /**
