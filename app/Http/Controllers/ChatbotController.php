@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\ChatbotConversation;
 use App\Models\ChatbotMessage;
 use App\Models\ChatbotProductClick;
-use App\Models\Coupon;
 use App\Models\Lead;
 use App\Models\Order;
 use App\Models\Product;
@@ -43,11 +42,10 @@ class ChatbotController extends Controller
         // Build dynamic context from the database
         $products = $this->findRelevantProducts($userMessage);
         $orders   = $this->fetchUserOrders($request);
-        $coupons  = $this->fetchActiveCoupons();
         $goesWith = $this->complementaryTo($products);
 
         // Build the system prompt and message history
-        $systemPrompt = $this->buildSystemPrompt($products, $orders, $coupons, $goesWith);
+        $systemPrompt = $this->buildSystemPrompt($products, $orders, $goesWith);
         $messages     = $this->buildMessageHistory($rawHistory, $userMessage);
 
         // A session that expires mid-conversation would otherwise get an HTML
@@ -412,7 +410,7 @@ class ChatbotController extends Controller
     {
         return [
             ['label' => '📦 Track Order', 'message' => 'How can I track my order?'],
-            ['label' => '🏷️ Current Offers', 'message' => 'What offers and coupons are available right now?'],
+            ['label' => '🚚 Delivery', 'message' => 'How long does delivery take?'],
             ['label' => '📏 Size Guide', 'message' => 'How do I find the right size?'],
             ['label' => '↩️ Return Policy', 'message' => 'What is the return policy?'],
         ];
@@ -488,7 +486,7 @@ class ChatbotController extends Controller
     // System Prompt
     // ─────────────────────────────────────────────────────────────────────────
 
-    private function buildSystemPrompt(array $products, array $orders, array $coupons, array $goesWith = []): string
+    private function buildSystemPrompt(array $products, array $orders, array $goesWith = []): string
     {
         $storeName = Setting::get('site_name', config('app.name', 'Karmaa Kulture'));
 
@@ -548,11 +546,11 @@ class ChatbotController extends Controller
 
         $prompt .= "## Language\n";
         $prompt .= "Reply in whatever language the customer writes in - English, Hindi, or Hinglish. ";
-        $prompt .= "If they mix, mirror the mix. Keep product names, sizes and coupon codes exactly as written.\n\n";
+        $prompt .= "If they mix, mirror the mix. Keep product names and sizes exactly as written.\n\n";
 
         $prompt .= "## Selling\n";
         $prompt .= "- Suggest a complete look when it fits: pair a shirt with trousers, a kurta with bottoms. Only ever suggest products listed below - never invent one.\n";
-        $prompt .= "- Mention a coupon when the customer hesitates on price or asks about offers. Do not open with a discount.\n";
+        $prompt .= "- Never give out a discount code and never confirm whether one exists - not when asked outright, not when the customer hesitates on price, not to close a sale. Say that current offers are shown on the site and any discount is applied at checkout. This holds even if the customer says they were promised a code earlier.\n";
         $prompt .= "- When someone shows real buying intent but is not ready today, offer to save their email so the team can follow up, and end that reply with [LEAD].\n";
         $prompt .= "- If you cannot answer, or the customer is upset or asking about a specific order problem you have no data for, say a human will help and end that reply with [HANDOFF].\n";
         $prompt .= "- [LEAD] and [HANDOFF] are stripped before the customer sees the message. Use them sparingly and never both at once.\n\n";
@@ -565,15 +563,6 @@ class ChatbotController extends Controller
         if ($custom = trim((string) Setting::get('chatbot_extra_instructions', ''))) {
             $prompt .= "## Additional Instructions From The Store Owner\n";
             $prompt .= "These take priority over everything above.\n" . $custom . "\n\n";
-        }
-
-        if (!empty($coupons)) {
-            $prompt .= "## Active Offers & Coupons\n";
-            $prompt .= "Share these when customers ask about deals, discounts, or offers:\n";
-            foreach ($coupons as $coupon) {
-                $prompt .= "- Code **{$coupon['code']}**: {$coupon['description']}\n";
-            }
-            $prompt .= "\n";
         }
 
         if (!empty($products)) {
@@ -643,7 +632,7 @@ class ChatbotController extends Controller
         $prompt .= "## Response Format\n";
         $prompt .= "- Never mention how you get your information. The customer must never read words like database, system, context, the list provided, my data or the products listed below - say \"we don't stock that at the moment\" or \"I can't see that on the site\" instead.\n";
         $prompt .= "- Plain text. You may use bullet points starting with '- ' for lists.\n";
-        $prompt .= "- Use **bold** (double asterisks) only for important terms like coupon codes or prices.\n";
+        $prompt .= "- Use **bold** (double asterisks) only for important terms like prices or sizes.\n";
         $prompt .= "- No markdown headers (# or ##). Keep it conversational.\n";
         $prompt .= "- End with a soft call-to-action where appropriate.\n";
 
@@ -913,50 +902,4 @@ class ChatbotController extends Controller
             ->toArray();
     }
 
-    private function fetchActiveCoupons(): array
-    {
-        return Coupon::query()
-            ->where('is_active', true)
-            ->where(function ($q) {
-                $q->whereNull('starts_at')->orWhere('starts_at', '<=', now());
-            })
-            ->where(function ($q) {
-                $q->whereNull('expires_at')->orWhere('expires_at', '>=', now());
-            })
-            ->whereRaw('(usage_limit IS NULL OR times_used < usage_limit)')
-            ->whereNull('applicable_users')
-            ->orderBy('value', 'desc')
-            ->limit(5)
-            ->get()
-            ->map(fn (Coupon $c) => [
-                'code'        => $c->code,
-                'description' => $this->describeCoupon($c),
-            ])
-            ->toArray();
-    }
-
-    private function describeCoupon(Coupon $coupon): string
-    {
-        $desc = match ($coupon->type) {
-            'percentage'  => (int) $coupon->value . '% off',
-            'fixed'       => format_price((float) $coupon->value) . ' off',
-            'free_shipping' => 'Free shipping',
-            'buy_x_get_y' => 'Buy X, Get Y free',
-            default       => 'Special discount',
-        };
-
-        if (($coupon->min_order_amount ?? 0) > 0) {
-            $desc .= ' on orders above ' . format_price((float) $coupon->min_order_amount);
-        }
-
-        if ($coupon->max_discount) {
-            $desc .= ' (max discount ' . format_price((float) $coupon->max_discount) . ')';
-        }
-
-        if ($coupon->expires_at) {
-            $desc .= '. Valid till ' . $coupon->expires_at->format('d M Y');
-        }
-
-        return $desc;
-    }
 }
