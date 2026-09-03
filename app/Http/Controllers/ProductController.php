@@ -6,6 +6,7 @@ use App\Models\BackInStockSubscription;
 use App\Models\Coupon;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\ProductCollection;
 use App\Models\ProductQuestion;
 use App\Models\ProductView;
 use App\Services\RecommendationService;
@@ -281,9 +282,20 @@ class ProductController extends Controller
      */
     private function curated(Request $request, string $view, string $routeName, string $defaultSort, array $empty): View
     {
+        // Hand-picked wins over computed, per page. Tick products into the
+        // "New In" or "Bestsellers" collection on the product form and this
+        // page shows those instead of the whole catalogue in date or sales
+        // order; untick them all and it goes back to computing itself.
+        $handles = ['new-arrivals' => 'new_in', 'bestsellers' => 'bestsellers'];
+        $picked = isset($handles[$routeName])
+            ? ProductCollection::pickedProductIds($handles[$routeName])
+            : [];
+
         $filters = ProductFilters::for(
             $request,
-            fn () => Product::query()->where('is_active', true),
+            fn () => $picked === []
+                ? Product::query()->where('is_active', true)
+                : Product::query()->where('is_active', true)->whereIn('products.id', $picked),
             [
                 'action' => route($routeName),
                 'reset' => route($routeName),

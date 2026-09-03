@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\ProductCollection;
 use App\Support\ProductFilters;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -13,12 +14,20 @@ class DealsController extends Controller
     {
         // The storefront lists on is_active alone. Requiring status=approved
         // here emptied the page: every live product is status=draft.
+        // Hand-picked wins over computed: tick products into the
+        // "Introductory Offer" collection and they are what this page lists,
+        // discount or not. With nothing ticked it keeps finding the reductions
+        // by itself.
+        $picked = ProductCollection::pickedProductIds('deals');
+
         $filters = ProductFilters::for(
             $request,
-            fn () => Product::query()
-                ->where('is_active', true)
-                ->whereNotNull('products.mrp')
-                ->whereColumn('products.price', '<', 'products.mrp'),
+            fn () => $picked !== []
+                ? Product::query()->where('is_active', true)->whereIn('products.id', $picked)
+                : Product::query()
+                    ->where('is_active', true)
+                    ->whereNotNull('products.mrp')
+                    ->whereColumn('products.price', '<', 'products.mrp'),
             [
                 'action' => route('deals'),
                 'reset' => route('deals'),

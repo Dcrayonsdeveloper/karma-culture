@@ -40,6 +40,19 @@ class CollectionsTest extends TestCase
         $this->category = Category::create(['name' => 'Shirts', 'slug' => 'shirts', 'is_active' => true]);
     }
 
+    /**
+     * The admin-made collections only.
+     *
+     * Three system rows - New In, Bestsellers, Introductory Offer - are seeded
+     * by migration so the built-in pages can be hand-picked for, so "the first
+     * collection" and "how many are there" are no longer the same question as
+     * "the one this test just made".
+     */
+    private function made()
+    {
+        return ProductCollection::where('is_system', false);
+    }
+
     /** @param array<string, mixed> $overrides */
     private function collectionPayload(array $overrides = []): array
     {
@@ -101,7 +114,7 @@ class CollectionsTest extends TestCase
             ->assertSessionHasNoErrors()
             ->assertRedirect(route('admin.collections.index'));
 
-        $collection = ProductCollection::firstOrFail();
+        $collection = $this->made()->firstOrFail();
 
         $this->assertSame('Summer Picks', $collection->name);
         $this->assertSame('summer-picks', $collection->slug, 'The URL should be derived from the name.');
@@ -118,7 +131,7 @@ class CollectionsTest extends TestCase
             ->post(route('admin.collections.store'), $this->collectionPayload(['slug' => 'bestsellers']))
             ->assertSessionHasErrors('slug');
 
-        $this->assertSame(0, ProductCollection::count());
+        $this->assertSame(0, $this->made()->count());
     }
 
     /**
@@ -133,13 +146,13 @@ class CollectionsTest extends TestCase
             ->post(route('admin.collections.store'), $this->collectionPayload())
             ->assertSessionHasErrors('name');
 
-        $this->assertSame(1, ProductCollection::count());
+        $this->assertSame(1, $this->made()->count());
     }
 
     public function test_a_product_can_be_ticked_into_a_collection(): void
     {
         $this->actingAs($this->adminUser, 'admin')->post(route('admin.collections.store'), $this->collectionPayload());
-        $collection = ProductCollection::firstOrFail();
+        $collection = $this->made()->firstOrFail();
         $product = $this->makeProduct();
 
         $this->actingAs($this->adminUser, 'admin')

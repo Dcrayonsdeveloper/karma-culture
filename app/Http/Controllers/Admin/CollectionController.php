@@ -122,6 +122,17 @@ class CollectionController extends Controller
     {
         $validated = $this->prepare($request, $request->validate($this->rules($collection), $this->messages()));
 
+        // Name and URL are fixed on the built-ins: the product form and the
+        // header both name them, and the page they feed is found by handle
+        // rather than by either of those. Everything else stays editable.
+        if ($collection->is_system) {
+            unset($validated['name'], $validated['slug']);
+
+            $collection->update($validated);
+
+            return redirect()->route('admin.collections.index')->with('success', 'Collection updated');
+        }
+
         if ($this->slugTaken($validated['slug'], $collection->id)) {
             return back()->withInput()->withErrors([
                 'name' => 'Another collection already uses this name. Change it, or set the URL by hand.',
@@ -135,6 +146,12 @@ class CollectionController extends Controller
 
     public function destroy(ProductCollection $collection): RedirectResponse
     {
+        // The built-in three are wired to pages by handle. Deleting one would
+        // not remove the page, only the ability to hand-pick for it again.
+        if ($collection->is_system) {
+            return back()->with('error', 'The built-in collections cannot be deleted. Untick their products instead - the page goes back to filling itself.');
+        }
+
         $collection->delete();
 
         return redirect()->route('admin.collections.index')->with('success', 'Collection deleted');
