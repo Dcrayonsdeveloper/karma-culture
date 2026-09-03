@@ -206,24 +206,33 @@ class SeedFashionSubcategories extends Command
     }
 
     /**
-     * One 4:3 tile: a toned gradient, the name, and the wordmark.
+     * One 4:5 tile: a toned gradient and the wordmark. Deliberately no name.
      *
-     * 4:3 because that is the frame /categories reserves. The tile is drawn to
-     * fit rather than relying on the frame to crop it - the frame shows an image
-     * whole over a blurred copy of itself, so anything drawn to a different
-     * shape would sit in a band of its own blur.
+     * 4:5 because that is the only frame these are actually seen in. The
+     * /categories grid reserved 4:3, but that page was removed in favour of the
+     * navbar dropdown, so the live surface is the home page's MEN and WOMEN
+     * rails - and those are 4/5. A 4:3 drawing in a 4/5 frame is shown whole
+     * over a blurred copy of itself, so it would sit in a band of its own blur
+     * rather than filling the tile.
+     *
+     * No name drawn on it because that rail already lays the name over every
+     * tile in a pill. Drawing it as well puts the word on the tile twice.
+     *
+     * The hue comes from the name rather than from the loop counter, so a
+     * category keeps the same colour whenever it is redrawn, whatever order the
+     * shelves were created in.
      */
     private function drawTile(string $name, string $path, int $index, ?string $font): bool
     {
         $w = 800;
-        $h = 600;
+        $h = 1000;
 
         $im = imagecreatetruecolor($w, $h);
 
-        // Each tile is nudged around the brand hue so a grid of them reads as a
-        // set rather than as one colour repeated twelve times.
+        // Each tile is nudged around the brand hue so a rail of them reads as a
+        // set rather than as one colour repeated ten times.
         [$r, $g, $b] = self::BRAND;
-        $shift = (($index * 37) % 60) - 30;
+        $shift = (int) (crc32($name) % 61) - 30;
         $top = $this->shade($r, $g, $b, $shift, 1.18);
         $bottom = $this->shade($r, $g, $b, $shift, 0.62);
 
@@ -238,41 +247,42 @@ class SeedFashionSubcategories extends Command
             imageline($im, 0, $y, $w, $y, $line);
         }
 
-        $white = imagecolorallocate($im, 255, 255, 255);
-        $veil = imagecolorallocatealpha($im, 255, 255, 255, 118);
+        $veil = imagecolorallocatealpha($im, 255, 255, 255, 108);
+        $ghost = imagecolorallocatealpha($im, 255, 255, 255, 116);
+        $faint = imagecolorallocatealpha($im, 255, 255, 255, 124);
 
-        // A thin inset rule, so the tile has an edge of its own inside the
-        // card's border rather than bleeding to it.
-        imagesetthickness($im, 2);
-        imagerectangle($im, 28, 28, $w - 29, $h - 29, $veil);
-
-        if ($font) {
-            $size = 62;
-            // Shrink until it fits the rule with a margin - "Co-ord Sets" and
-            // "Ethnic Wear" overrun the frame at the opening size.
-            do {
-                $box = imagettfbbox($size, 0, $font, $name);
-                $textWidth = $box[2] - $box[0];
-                $size -= 2;
-            } while ($textWidth > $w - 160 && $size > 18);
-
-            $box = imagettfbbox($size, 0, $font, $name);
-            $textWidth = $box[2] - $box[0];
-            $textHeight = $box[1] - $box[7];
-
-            imagettftext($im, $size, 0, (int) (($w - $textWidth) / 2), (int) (($h + $textHeight) / 2) - 18,
-                $white, $font, $name);
-
-            imagettftext($im, 15, 0, (int) (($w - imagettfbbox(15, 0, $font, 'KARMAA KULTURE')[2]) / 2), $h - 74,
-                $veil, $font, 'KARMAA KULTURE');
-        } else {
-            // No TrueType anywhere: still produce a labelled tile rather than a
-            // blank gradient, just in the built-in bitmap face.
-            $label = strtoupper($name);
-            imagestring($im, 5, (int) (($w - imagefontwidth(5) * strlen($label)) / 2), (int) ($h / 2) - 14, $label, $white);
+        // A nest of arches. Enough shape that a rail of ten tiles is not ten
+        // flat rectangles, faint enough that the name pill the rail lays over
+        // the bottom still reads cleanly against it.
+        imagesetthickness($im, 3);
+        foreach ([[620, 620], [640, 840], [670, 1060], [700, 1280]] as $n => [$cy, $d]) {
+            imagearc($im, (int) ($w / 2), $cy, $d, (int) ($d * 1.15), 195, 345, $n % 2 ? $faint : $ghost);
         }
 
-        imagefilledrectangle($im, (int) ($w / 2) - 46, $h - 130, (int) ($w / 2) + 46, $h - 128, $veil);
+        // A soft floor line the arches stand on.
+        imagesetthickness($im, 2);
+        imageline($im, 96, 700, $w - 96, 700, $faint);
+
+        // A thin inset rule, so the tile has an edge of its own inside the
+        // card rather than bleeding to it.
+        imagesetthickness($im, 2);
+        imagerectangle($im, 30, 30, $w - 31, $h - 31, $veil);
+
+        // The wordmark sits high: the rail's overlay darkens the lower third
+        // and puts the category name there, so the top is the only part of the
+        // tile that is reliably its own.
+        if ($font) {
+            $mark = 'KARMAA KULTURE';
+            $box = imagettfbbox(19, 0, $font, $mark);
+            imagettftext($im, 19, 0, (int) (($w - ($box[2] - $box[0])) / 2), 112, $veil, $font, $mark);
+        } else {
+            // No TrueType anywhere: the built-in bitmap face, so the tile is
+            // still marked rather than a bare gradient.
+            $mark = 'KARMAA KULTURE';
+            imagestring($im, 4, (int) (($w - imagefontwidth(4) * strlen($mark)) / 2), 98, $mark, $veil);
+        }
+
+        imagefilledrectangle($im, (int) ($w / 2) - 44, 146, (int) ($w / 2) + 44, 148, $veil);
 
         // No imagedestroy: since PHP 8 the handle is a GdImage object freed by
         // the collector, and the call is deprecated.

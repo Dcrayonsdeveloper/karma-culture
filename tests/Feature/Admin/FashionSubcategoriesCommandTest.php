@@ -102,8 +102,30 @@ class FashionSubcategoriesCommandTest extends TestCase
             $this->assertStringNotContainsString('://', $category->image_url);
             $this->assertStringNotContainsString('storage/', $category->image_url);
 
-            Storage::disk('public')->assertExists($category->image_url);
+            $this->assertTrue(
+                Storage::disk('public')->exists($category->image_url),
+                $category->image_url.' was recorded but not written',
+            );
         }
+    }
+
+    /**
+     * The home page MEN and WOMEN rails are the only place these are seen -
+     * /categories was removed in favour of the navbar dropdown - and .kk-tile
+     * is aspect-ratio 4/5. The frame contains rather than crops, so a tile of
+     * any other shape sits in a band of its own blur instead of filling it.
+     */
+    public function test_tiles_are_drawn_to_the_four_by_five_the_rail_reserves(): void
+    {
+        Storage::fake('public');
+        $this->roots(2, 1);
+
+        $this->artisan('categories:fashion-subcategories')->assertSuccessful();
+
+        $category = Category::whereNotNull('image_url')->first();
+        [$width, $height] = getimagesize(Storage::disk('public')->path($category->image_url));
+
+        $this->assertSame(4 / 5, $width / $height, 'the rail frame is 4/5');
     }
 
     public function test_it_does_not_overwrite_an_uploaded_image(): void
