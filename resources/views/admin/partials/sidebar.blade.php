@@ -42,7 +42,8 @@
 </style>
 
 <!-- Mobile sidebar backdrop -->
-<div x-show="sidebarOpen"
+<div x-cloak
+     x-show="sidebarOpen"
      x-transition:enter="transition-opacity ease-out duration-300"
      x-transition:enter-start="opacity-0"
      x-transition:enter-end="opacity-100"
@@ -53,8 +54,15 @@
      class="fixed inset-0 bg-black/50 z-20 lg:hidden"></div>
 
 <!-- Sidebar -->
-<aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-       class="fixed inset-y-0 left-0 z-30 w-60 flex flex-col transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0"
+{{-- The closed position is a real class in `class`, not only in `:class`, so the
+     drawer is already off-canvas at first paint. Vite ships Alpine as a module
+     script, which runs after the first paint, so a binding-only closed state let
+     the drawer paint open and then animate shut on every admin page load — most
+     obvious on mobile when paging through a list. `:class` uses the object form
+     because that is the only one Alpine will use to remove a class it did not
+     add itself; with the ternary the static `-translate-x-full` would stick. --}}
+<aside :class="{ 'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen }"
+       class="fixed inset-y-0 left-0 z-30 w-60 flex flex-col transform -translate-x-full transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0"
        style="background: #1a1a1a;">
 
     <!-- Store name + logo -->

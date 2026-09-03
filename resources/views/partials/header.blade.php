@@ -79,7 +79,7 @@
                 {{-- Logo: centered (absolute) only below sm, where the search bar is
                      collapsed to an icon. From sm up it must sit in normal flow on the
                      left, otherwise the inline search bar overlaps it on tablets. --}}
-                <a href="{{ url('/') }}" class="absolute inset-0 flex items-center justify-center pointer-events-none sm:static sm:inset-auto sm:justify-start sm:pointer-events-auto shrink-0 sm:mr-3 lg:mr-8">
+                <a href="{{ url('/') }}" class="absolute inset-0 flex items-center justify-center pointer-events-none sm:static sm:inset-auto sm:justify-start sm:pointer-events-auto shrink-0 sm:mr-3 lg:mr-4 xl:mr-8">
                     @php $siteLogo = \App\Models\Setting::get('site_logo', ''); @endphp
                     @if($siteLogo)
                         {{-- A custom logo whose file has gone missing used to leave a hole
@@ -96,8 +96,8 @@
                          and until now nothing in the header, the mobile drawer or the
                          footer pointed at it: a shopper reached it by failing a search
                          or by clicking a home page hanger that may not exist. --}}
-                    <a href="{{ route('shop') }}" class="px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">Shop All</a>
-                    <a href="{{ route('new-arrivals') }}" class="px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">New In</a>
+                    <a href="{{ route('shop') }}" class="px-2 xl:px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">Shop All</a>
+                    <a href="{{ route('new-arrivals') }}" class="px-2 xl:px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">New In</a>
 
                     {{-- Categories: hover-triggered mega menu - clean text layout, data from admin --}}
                     @php
@@ -117,7 +117,7 @@
                          @mouseenter="clearTimeout(closeT); open = true"
                          @mouseleave="closeT = setTimeout(() => open = false, 120)">
                         <button type="button" @click="open = !open"
-                                class="px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap inline-flex items-center gap-1 cursor-pointer bg-transparent border-0">
+                                class="px-2 xl:px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap inline-flex items-center gap-1 cursor-pointer bg-transparent border-0">
                             Categories
                             <svg class="w-3 h-3 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
@@ -145,7 +145,7 @@
                         </div>
                     </div>
 
-                    <a href="{{ route('bestsellers') }}" class="px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">Bestsellers</a>
+                    <a href="{{ route('bestsellers') }}" class="px-2 xl:px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">Bestsellers</a>
                     <a href="{{ route('deals') }}" class="px-2.5 py-2 text-[12px] text-kk-tan-dark hover:text-kk-brown font-semibold transition-colors tracking-widest uppercase whitespace-nowrap">Introductory Offer</a>
                 </nav>
 
@@ -206,7 +206,7 @@
                 <!-- Desktop Navigation (Right side) -->
                 <nav class="hidden lg:flex items-center gap-1 mr-2">
                     @if(config('app.wholesale_enabled'))
-                        <a href="{{ route('wholesale') }}" class="px-3 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.18em] uppercase">Wholesale</a>
+                        <a href="{{ route('wholesale') }}" class="px-2 xl:px-3 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.18em] uppercase">Wholesale</a>
                     @endif
                     {{-- Online Store > Navigation has always saved header menu items and
                          no template read them back, so anything added there never
@@ -214,7 +214,7 @@
                     @foreach(\App\Models\NavigationMenu::getByLocation('header') as $kkNavItem)
                         <a href="{{ $kkNavItem->url }}"
                            @if($kkNavItem->open_in_new_tab) target="_blank" rel="noopener" @endif
-                           class="px-3 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.18em] uppercase">{{ $kkNavItem->label }}</a>
+                           class="px-2 xl:px-3 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.18em] uppercase">{{ $kkNavItem->label }}</a>
                     @endforeach
                 </nav>
 
@@ -232,7 +232,7 @@
                 </button>
 
                 <!-- Inline Search Bar with Typewriter + Mic (hidden on mobile) -->
-                <div class="relative hidden sm:block flex-1 min-w-0 max-w-xs lg:max-w-sm mx-1 lg:mx-3"
+                <div class="relative hidden sm:block flex-1 min-w-0 max-w-xs xl:max-w-sm mx-1 xl:mx-3"
                      x-data="searchBar()"
                      @click.outside="showResults = false">
                     <form action="{{ route('search') }}" method="GET" class="relative flex items-center">
@@ -327,7 +327,7 @@
                      is already sitting there in full. --}}
                 <button type="button"
                         @click="$dispatch('open-global-filters')"
-                        class="relative p-2 text-kk-brown hover:text-kk-tan-dark transition-colors kk-filters-btn"
+                        class="relative p-2 lg:p-1.5 xl:p-2 text-kk-brown hover:text-kk-tan-dark transition-colors kk-filters-btn"
                         aria-label="Filters" title="Filters">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
@@ -358,7 +358,7 @@
                     </button>
                 @else
                 <div class="relative hidden lg:block" x-data="dropdown()">
-                    <button @click="toggle()" class="p-2 text-kk-brown hover:text-kk-tan-dark transition-colors" aria-label="Account">
+                    <button @click="toggle()" class="p-2 lg:p-1.5 xl:p-2 text-kk-brown hover:text-kk-tan-dark transition-colors" aria-label="Account">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                         </svg>
@@ -386,7 +386,7 @@
                 @endguest
 
                 <!-- Cart -->
-                <a href="{{ route('cart.index') }}" class="relative p-2 text-kk-brown hover:text-kk-tan-dark transition-colors" aria-label="Cart">
+                <a href="{{ route('cart.index') }}" class="relative p-2 lg:p-1.5 xl:p-2 text-kk-brown hover:text-kk-tan-dark transition-colors" aria-label="Cart">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                     </svg>

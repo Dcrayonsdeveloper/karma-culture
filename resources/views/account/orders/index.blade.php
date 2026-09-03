@@ -31,16 +31,9 @@
 
                     {{-- Status Filter Tabs --}}
                     @php
-                        $statuses = [
-                            '' => 'All',
-                            'confirmed' => 'Confirmed',
-                            'processing' => 'Processing',
-                            'packed' => 'Packed',
-                            'shipped' => 'Shipped',
-                            'out_for_delivery' => 'Out for Delivery',
-                            'delivered' => 'Delivered',
-                            'cancelled' => 'Cancelled',
-                        ];
+                        // Built in the controller from the status enum, so a tab can
+                        // never again go missing for a status orders actually reach.
+                        $statuses = $statusTabs;
                         $currentStatus = request('status', '');
                     @endphp
                     <div class="flex items-center gap-1.5 mb-5 overflow-x-auto pb-1 -mx-1 px-1">
@@ -58,6 +51,7 @@
                         @php
                             $statusColors = [
                                 'pending' => 'bg-amber-50 text-amber-700 border-amber-200',
+                                'on_hold' => 'bg-amber-50 text-amber-700 border-amber-200',
                                 'confirmed' => 'bg-[#6F9CA2]/5 text-[#5B878D] border-[#6F9CA2]/30',
                                 'processing' => 'bg-[#6F9CA2]/5 text-[#5B878D] border-[#6F9CA2]/30',
                                 'packed' => 'bg-[#6F9CA2]/10 text-[#5B878D] border-[#6F9CA2]/30',
