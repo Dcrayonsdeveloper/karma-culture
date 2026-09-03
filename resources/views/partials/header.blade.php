@@ -208,6 +208,15 @@
                     @if(config('app.wholesale_enabled'))
                         <a href="{{ route('wholesale') }}" class="px-2 xl:px-3 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.18em] uppercase">Wholesale</a>
                     @endif
+                    {{-- Collections the admin ticked "show in header". Listed even
+                         when empty: the link was configured on purpose, and the
+                         collection page says it is empty rather than the menu
+                         quietly disagreeing with the screen that manages it. --}}
+                    @foreach(\App\Models\ProductCollection::forHeader() as $kkCollection)
+                        <a href="{{ route('collection.show', $kkCollection) }}"
+                           class="px-2 xl:px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">{{ $kkCollection->name }}</a>
+                    @endforeach
+
                     {{-- Online Store > Navigation has always saved header menu items and
                          no template read them back, so anything added there never
                          appeared anywhere on the site. --}}

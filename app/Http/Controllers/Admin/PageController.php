@@ -26,7 +26,11 @@ class PageController extends Controller
      * storefront actually renders; there is no sidebar menu to offer.
      */
     private const NAV_LOCATIONS = [
-        'header' => 'Header menu',
+        // The header is deliberately not offered. It is a short, ordered bar of
+        // shopping destinations, and a CMS page dropped into it pushes those
+        // out; policy and information pages belong in the footer columns. A
+        // header link to a page is still possible by hand under Online Store ->
+        // Homepage -> Navigation, which is where menu order is managed anyway.
         'footer_col1' => 'Footer - Quick Links',
         'footer_col2' => 'Footer - Customer Service',
         'footer_col3' => 'Footer - Policies',

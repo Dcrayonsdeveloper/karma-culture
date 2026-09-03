@@ -163,6 +163,18 @@ class Product extends Model
     }
 
     /**
+     * The hand-picked collections this product has been ticked into.
+     *
+     * Unrelated to categories: a category is what the product is, a collection
+     * is a shelf someone assembled. A product can be in several or none, and
+     * being in one says nothing about what it is.
+     */
+    public function collections(): BelongsToMany
+    {
+        return $this->belongsToMany(ProductCollection::class, 'collection_product', 'product_id', 'collection_id');
+    }
+
+    /**
      * Products displayed under any of these categories.
      *
      * A subquery rather than a join: joining the pivot returns one row per

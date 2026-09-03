@@ -555,6 +555,30 @@
                             </p>
                         </div>
                         <div>
+                            {{-- Categories say what the product is; a collection is a shelf
+                                 someone assembled - Summer Picks, Festive Edit. The built-in
+                                 New In / Bestsellers / Introductory Offer pages fill
+                                 themselves from the catalogue and are not listed here
+                                 because there is no list to add to. --}}
+                            <label class="form-label">Collections</label>
+                            <div style="max-height: 150px; overflow-y: auto; border: 1px solid #e3e3e3; border-radius: 0.5rem; padding: 0.5rem;">
+                                @forelse($collections as $collection)
+                                    <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0; font-size: 13px; cursor: pointer;">
+                                        <input type="checkbox" name="collection_ids[]" value="{{ $collection->id }}"
+                                               style="width: 0.9rem; height: 0.9rem; accent-color: #303030;"
+                                               @checked(in_array($collection->id, old('collection_ids', $selectedCollectionIds ?? [])))>
+                                        <span>{{ $collection->name }}@unless($collection->is_active) <span style="color:#8a8a8a;">(hidden)</span>@endunless</span>
+                                    </label>
+                                @empty
+                                    <p style="font-size: 12px; color: #616161;">
+                                        No collections yet. Create one under Products &rarr; Collections.
+                                    </p>
+                                @endforelse
+                            </div>
+                            @error('collection_ids') <p class="form-error">{{ $message }}</p> @enderror
+                            @error('collection_ids.*') <p class="form-error">{{ $message }}</p> @enderror
+                        </div>
+                        <div>
                             <label for="brand_id" class="form-label">Brand</label>
                             <select name="brand_id" id="brand_id" class="form-input w-full @error('brand_id') form-input-error @enderror">
                                 <option value="">Select</option>

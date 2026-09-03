@@ -18,8 +18,10 @@ use Tests\TestCase;
  * you had to remember. Nothing kept the two in step afterwards either: rename
  * the slug and the hand-made link 404s.
  *
- * The form now offers the four locations the storefront renders, and the link
- * is generated, moved and removed with the page.
+ * The form offers the three footer columns and the link is generated, moved
+ * and removed with the page. The header is deliberately not among them: it is
+ * a short, ordered bar of shopping destinations, and a policy page dropped in
+ * pushes those out.
  */
 class PageMenuPlacementTest extends TestCase
 {
@@ -90,16 +92,16 @@ class PageMenuPlacementTest extends TestCase
         $this->post(route('admin.pages.store'), $this->payload(['nav_location' => 'footer_col3']));
         $page = Page::firstOrFail();
 
-        $this->put(route('admin.pages.update', $page), $this->payload(['nav_location' => 'header']))
+        $this->put(route('admin.pages.update', $page), $this->payload(['nav_location' => 'footer_col1']))
             ->assertSessionHasNoErrors();
 
         $this->assertDatabaseCount('navigation_menus', 1);
-        $this->assertSame('header', NavigationMenu::firstOrFail()->location);
+        $this->assertSame('footer_col1', NavigationMenu::firstOrFail()->location);
     }
 
     public function test_clearing_the_placement_takes_the_link_out_of_the_menus(): void
     {
-        $this->post(route('admin.pages.store'), $this->payload(['nav_location' => 'header']));
+        $this->post(route('admin.pages.store'), $this->payload(['nav_location' => 'footer_col1']));
         $page = Page::firstOrFail();
 
         $this->put(route('admin.pages.update', $page), $this->payload(['nav_location' => '']))
@@ -132,17 +134,17 @@ class PageMenuPlacementTest extends TestCase
     {
         $this->post(route('admin.pages.store'), $this->payload([
             'is_published' => 0,
-            'nav_location' => 'header',
+            'nav_location' => 'footer_col1',
         ]));
 
         $this->assertFalse(NavigationMenu::firstOrFail()->is_active);
-        $this->assertCount(0, NavigationMenu::getByLocation('header'));
+        $this->assertCount(0, NavigationMenu::getByLocation('footer_col1'));
 
         $page = Page::firstOrFail();
-        $this->put(route('admin.pages.update', $page), $this->payload(['nav_location' => 'header']));
+        $this->put(route('admin.pages.update', $page), $this->payload(['nav_location' => 'footer_col1']));
 
         $this->assertTrue(NavigationMenu::firstOrFail()->fresh()->is_active);
-        $this->assertCount(1, NavigationMenu::getByLocation('header'));
+        $this->assertCount(1, NavigationMenu::getByLocation('footer_col1'));
     }
 
     /**
@@ -183,7 +185,7 @@ class PageMenuPlacementTest extends TestCase
 
     public function test_deleting_the_page_removes_its_link(): void
     {
-        $this->post(route('admin.pages.store'), $this->payload(['nav_location' => 'header']));
+        $this->post(route('admin.pages.store'), $this->payload(['nav_location' => 'footer_col1']));
 
         $this->delete(route('admin.pages.destroy', Page::firstOrFail()));
 

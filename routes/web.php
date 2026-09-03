@@ -302,6 +302,10 @@ Route::get('/cookie-policy', [App\Http\Controllers\PageController::class, 'cooki
 Route::get('/gdpr', [App\Http\Controllers\PageController::class, 'gdpr'])->name('gdpr');
 Route::get('/page/{page:slug}', [App\Http\Controllers\PageController::class, 'show'])->name('page.show');
 
+// Admin-made collections. Kept under its own prefix so a collection can never
+// collide with a category slug or one of the built-in listings.
+Route::get('/collection/{collection}', [App\Http\Controllers\CollectionController::class, 'show'])->name('collection.show');
+
 // PayU Payment Callbacks (outside auth - PayU POSTs here after payment)
 Route::post('/payu/success', [App\Http\Controllers\PayUController::class, 'success'])->name('payu.success');
 Route::post('/payu/failure', [App\Http\Controllers\PayUController::class, 'failure'])->name('payu.failure');
