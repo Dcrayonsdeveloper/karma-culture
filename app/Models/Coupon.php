@@ -117,22 +117,73 @@ class Coupon extends Model
     }
 
     /**
-     * The badge class the admin screens paint this status with.
+     * The badge class the admin screens paint a status with.
      *
      * Lives here rather than in the blades because the index row and the edit
      * header both draw this badge, and the map was copied into both - which is
-     * how the two screens came to disagree in the first place. No default arm:
-     * a status with no colour should fail loudly, not paint the wrong one.
+     * how the two screens came to disagree in the first place. Static so a
+     * badge can also name the colour of the status it is about to turn into,
+     * without this map being copied a third time into JavaScript. No default
+     * arm: a status with no colour should fail loudly, not paint the wrong one.
      */
-    public function statusBadgeClass(): string
+    public static function badgeClassFor(string $status): string
     {
-        return match ($this->status()) {
+        return match ($status) {
             self::STATUS_ACTIVE    => 'badge-success',
             self::STATUS_SCHEDULED => 'badge-info',
             self::STATUS_EXPIRED   => 'badge-error',
             self::STATUS_USED_UP   => 'badge-warning',
             self::STATUS_DISABLED  => 'badge-neutral',
         };
+    }
+
+    public function statusBadgeClass(): string
+    {
+        return self::badgeClassFor($this->status());
+    }
+
+    /**
+     * The next status the clock alone moves this coupon to, and when.
+     *
+     * status() answers for the instant the page was built, and nothing tells
+     * an open tab that time has moved on. So a coupon whose start arrives two
+     * minutes after the screen rendered still reads "Scheduled", and an admin
+     * watching it reasonably concludes the schedule is broken - the badge is
+     * the only thing that is stale, but it is the only thing being read. The
+     * blades hand this to the browser so the badge can catch itself up.
+     *
+     * Only two boundaries move a status with nobody touching the record: a
+     * scheduled coupon reaching its start, and any coupon reaching its expiry.
+     * Redemptions and the Active switch arrive on a request, and a request
+     * brings a fresh render with it.
+     *
+     * @return array{at: \Illuminate\Support\Carbon, status: string}|null
+     */
+    public function statusTransition(): ?array
+    {
+        $status = $this->status();
+
+        // Expired outranks every other state, so nothing follows it.
+        if ($status === self::STATUS_EXPIRED) {
+            return null;
+        }
+
+        $expiry = $this->expires_at?->isFuture()
+            ? ['at' => $this->expires_at, 'status' => self::STATUS_EXPIRED]
+            : null;
+
+        if ($status === self::STATUS_SCHEDULED) {
+            // Reaching the start makes it active: the three states that
+            // outrank ACTIVE were all ruled out to arrive here, and only the
+            // clock is moving. Rows written before the form required the
+            // expiry to follow the start can still expire first, so take
+            // whichever boundary comes first rather than assuming it is this.
+            $start = ['at' => $this->starts_at, 'status' => self::STATUS_ACTIVE];
+
+            return $expiry && $expiry['at'] <= $start['at'] ? $expiry : $start;
+        }
+
+        return $expiry;
     }
 
     public function isValid(): bool

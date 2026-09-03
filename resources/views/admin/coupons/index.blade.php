@@ -117,7 +117,7 @@
                                          the tab that listed the row always agree.
                                          "Inactive" used to cover three different
                                          reasons a coupon was not running. --}}
-                                    <span class="badge {{ $coupon->statusBadgeClass() }}">{{ $coupon->statusLabel() }}</span>
+                                    <x-admin.coupon-status :coupon="$coupon" />
                                     @if($coupon->auto_apply)
                                         <span class="badge badge-neutral">Auto</span>
                                     @endif
