@@ -181,7 +181,14 @@ class Product extends Model
 
     public function approvedReviews(): HasMany
     {
-        return $this->hasMany(Review::class)->where('is_approved', true);
+        // The user is loaded with the row because ReviewSchemaService reads the
+        // byline off every one of these to build the product page's JSON-LD.
+        // While user_id was NULL on every review that was a free null-FK check;
+        // now that reviews carry an author it would be a query per review on the
+        // busiest page on the site.
+        return $this->hasMany(Review::class)
+            ->where('is_approved', true)
+            ->with('user:id,first_name,last_name');
     }
 
     public function questions(): HasMany

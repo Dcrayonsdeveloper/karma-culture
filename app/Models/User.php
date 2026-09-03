@@ -128,6 +128,24 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Review::class);
     }
 
+    /**
+     * Whether this account has taken delivery of a product - what earns a review
+     * its "Verified Buyer" badge.
+     *
+     * Written out three times across the two review controllers before this, so
+     * the guest form and the account form could drift on what "verified" means.
+     * Note it reads the ORDER's status, not the line item's: a partly delivered
+     * order verifies every product on it. That is the behaviour the account form
+     * has always had, and this only moves it, it does not change it.
+     */
+    public function hasPurchased(Product $product): bool
+    {
+        return $this->orders()
+            ->where('status', 'delivered')
+            ->whereHas('items', fn ($q) => $q->where('product_id', $product->id))
+            ->exists();
+    }
+
     public function supportTickets(): HasMany
     {
         return $this->hasMany(SupportTicket::class);

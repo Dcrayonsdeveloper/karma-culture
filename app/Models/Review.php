@@ -45,22 +45,34 @@ class Review extends Model
         ];
     }
 
+    /**
+     * guest_name comes first, not the account name.
+     *
+     * Rows written before reviews carried a user_id have both: the name the
+     * reviewer typed and published under, and - once the backfill matched their
+     * address to an account - a user. Preferring the account there would quietly
+     * rename reviews that are already live on the product page. A signed-in
+     * reviewer is never asked for a name, so their row has no guest_name and
+     * falls through to the account's own.
+     */
     public function getReviewerNameAttribute(): string
     {
-        if ($this->user) {
-            return $this->user->full_name;
+        if (filled($this->guest_name)) {
+            return $this->guest_name;
         }
 
-        return $this->guest_name ?? 'Anonymous';
+        // full_name concatenates first and last, so it is " " for an account
+        // with no surname rather than empty.
+        if ($this->user && filled(trim($this->user->full_name))) {
+            return trim($this->user->full_name);
+        }
+
+        return 'Anonymous';
     }
 
     public function getReviewerInitialAttribute(): string
     {
-        if ($this->user) {
-            return strtoupper(substr($this->user->first_name, 0, 1));
-        }
-
-        return strtoupper(substr($this->guest_name ?? 'A', 0, 1));
+        return strtoupper(mb_substr($this->reviewer_name, 0, 1));
     }
 
     protected static function booted(): void

@@ -39,15 +39,25 @@
                     @forelse($reviews as $review)
                         <div class="bg-white rounded-xl border border-neutral-200 mb-3 overflow-hidden">
                             <div class="p-4 sm:p-5">
+                                @php
+                                    // Products soft-delete but their reviews stay, and the
+                                    // controller loads them withTrashed so this row can still
+                                    // name what it is about. A withdrawn product has no page to
+                                    // send anyone to, so it renders as plain text instead.
+                                    $productLink = $review->product && ! $review->product->trashed()
+                                        ? route('product.show', $review->product)
+                                        : null;
+                                    $productName = $review->product?->name ?? 'Product no longer available';
+                                @endphp
                                 <div class="flex gap-4">
                                     {{-- Product Image --}}
-                                    <a href="{{ route('product.show', $review->product) }}" class="shrink-0">
+                                    <a @if($productLink) href="{{ $productLink }}" @endif class="shrink-0">
                                         {{-- Contained: the reviewer needs to recognise the product they are
                                              being asked about, and src fell back to an empty string when the
                                              product row was gone, which drew a blank grey square. --}}
                                         <div class="kk-media kk-media--thumb w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden">
                                             <img class="kk-media__fill" src="{{ $review->product->primary_image_url ?? $placeholder }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
-                                            <img src="{{ $review->product->primary_image_url ?? $placeholder }}" alt="{{ $review->product->name }}"
+                                            <img src="{{ $review->product->primary_image_url ?? $placeholder }}" alt="{{ $productName }}"
                                                  data-fallback="{{ $placeholder }}" loading="lazy" decoding="async">
                                             <span class="kk-media__fallback" aria-hidden="true">
                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -62,9 +72,13 @@
                                     <div class="flex-1 min-w-0">
                                         {{-- Top row: product name + status --}}
                                         <div class="flex items-start justify-between gap-2 mb-1.5">
-                                            <a href="{{ route('product.show', $review->product) }}" class="text-sm font-semibold text-neutral-900 hover:text-[#6F9CA2] transition-colors line-clamp-1">
-                                                {{ $review->product->name }}
-                                            </a>
+                                            @if($productLink)
+                                                <a href="{{ $productLink }}" class="text-sm font-semibold text-neutral-900 hover:text-[#6F9CA2] transition-colors line-clamp-1">
+                                                    {{ $productName }}
+                                                </a>
+                                            @else
+                                                <span class="text-sm font-semibold text-neutral-500 line-clamp-1">{{ $productName }}</span>
+                                            @endif
                                             @php
                                                 $statusColors = [
                                                     'approved' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -130,7 +144,10 @@
                                 </svg>
                             </div>
                             <h3 class="text-base font-semibold text-neutral-900 mb-1">No reviews yet</h3>
-                            <p class="text-sm text-neutral-600 mb-5">Share your experience with products you've purchased.</p>
+                            {{-- This listed only purchases before, which read as a rule about
+                                 what belongs here. Every review written from this account shows
+                                 up, on any product, bought or not. --}}
+                            <p class="text-sm text-neutral-600 mb-5">Any review you write from a product page will appear here.</p>
                             <a href="{{ route('account.orders.index') }}" class="inline-flex items-center gap-2 bg-[#F8931D] hover:bg-[#E07E0A] text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors">
                                 View Orders
                             </a>

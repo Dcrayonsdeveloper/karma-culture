@@ -15,8 +15,15 @@ class ReviewController extends Controller
 {
     public function index(Request $request): View
     {
+        // Every review written from this account, whatever its moderation state
+        // and whether or not the product was ever ordered - reviews() is a plain
+        // hasMany on user_id, so nothing here narrows to purchases.
+        //
+        // withTrashed because products soft-delete while their reviews stay:
+        // without it the relation resolves to null and the page cannot render
+        // the row it is holding.
         $reviews = $request->user()->reviews()
-            ->with('product')
+            ->with(['product' => fn ($q) => $q->withTrashed()])
             ->latest()
             ->paginate(10);
 
@@ -26,12 +33,7 @@ class ReviewController extends Controller
     public function create(Request $request, Product $product): View
     {
         // Check if user has purchased this product
-        $hasPurchased = $request->user()->orders()
-            ->where('status', 'delivered')
-            ->whereHas('items', function ($q) use ($product) {
-                $q->where('product_id', $product->id);
-            })
-            ->exists();
+        $hasPurchased = $request->user()->hasPurchased($product);
 
         // Check if user already reviewed this product
         $existingReview = $request->user()->reviews()
@@ -51,10 +53,7 @@ class ReviewController extends Controller
             return back()->with('error', 'You have already reviewed this product.');
         }
 
-        $hasPurchased = $request->user()->orders()
-            ->where('status', 'delivered')
-            ->whereHas('items', fn ($q) => $q->where('product_id', $product->id))
-            ->exists();
+        $hasPurchased = $request->user()->hasPurchased($product);
 
         $validated = $request->validate([
             'rating' => 'required|integer|min:1|max:5',
