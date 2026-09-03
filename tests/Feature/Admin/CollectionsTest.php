@@ -166,6 +166,14 @@ class CollectionsTest extends TestCase
                 'category_id' => $this->category->id,
                 'is_active' => 1,
                 'collection_ids' => [$collection->id],
+                // Saving a product now means saying what sizes and colours it
+                // comes in, whatever else the save is about.
+                'variants' => [
+                    ['name' => 'M', 'price' => 999, 'stock_quantity' => 5, 'sku' => '', 'is_active' => 1],
+                ],
+                'colours' => [
+                    ['name' => 'Navy', 'hex' => '#001f3f'],
+                ],
             ])
             ->assertSessionHasNoErrors();
 

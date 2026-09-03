@@ -177,6 +177,14 @@ class ProductPricingFieldTest extends TestCase
             'price' => 1500,
             'stock_quantity' => 3,
             'category_id' => $this->category->id,
+            // Both forms require a size and a colour, so a payload without them
+            // fails before the pricing rules being checked here are reached.
+            'variants' => [
+                ['name' => 'M', 'price' => '', 'mrp' => '', 'stock_quantity' => 3, 'sku' => '', 'is_active' => 1],
+            ],
+            'colours' => [
+                ['name' => 'Navy', 'hex' => '#001f3f'],
+            ],
         ], $overrides);
     }
 }

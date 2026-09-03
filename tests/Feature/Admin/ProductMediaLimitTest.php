@@ -311,6 +311,14 @@ class ProductMediaLimitTest extends TestCase
             // so omitting them raises "Undefined array key" and returns a 500.
             'seller_id' => '',
             'brand_id' => '',
+            // Both forms require a size and a colour, so a payload without them
+            // never reaches the media rules being checked here.
+            'variants' => [
+                ['name' => 'M', 'price' => 1500, 'stock_quantity' => 3, 'sku' => '', 'is_active' => 1],
+            ],
+            'colours' => [
+                ['name' => 'Navy', 'hex' => '#001f3f'],
+            ],
         ], $overrides);
     }
 }

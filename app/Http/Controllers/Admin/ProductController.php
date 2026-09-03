@@ -42,7 +42,19 @@ class ProductController extends Controller
     private const STOCK_RULES = ['required', 'integer', 'min:0', 'max:1000000'];
 
     /** A #rrggbb swatch, which is all <input type="color"> ever posts. */
-    private const HEX_RULES = ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'];
+    private const HEX_RULES = ['string', 'regex:/^#[0-9A-Fa-f]{6}$/'];
+
+    /**
+     * Sizes and colours are the two things a customer picks before Add to cart,
+     * so neither form saves a product without them. The wording is shared so the
+     * create and edit screens explain the rule the same way.
+     */
+    private const CHOICE_MESSAGES = [
+        'variants.required' => 'Add at least one size - a product with no sizes gives a customer nothing to add to their cart.',
+        'colours.required' => 'Add at least one colour - a product has to say which colours it comes in.',
+        'colours.*.name.required' => 'Name every colour, or remove the empty row.',
+        'colours.*.hex.required' => 'Pick a swatch for every colour - one is no longer filled in for you.',
+    ];
 
     /**
      * `extensions` checks the filename and `mimetypes` sniffs the bytes; both
@@ -219,10 +231,12 @@ class ProductController extends Controller
             ...$this->variantRules($request),
             // Read straight off the request further down, so it has to be
             // validated here or it reaches the JSON column unchecked.
-            'colours' => ['nullable', 'array', 'max:50'],
-            'colours.*.name' => ['nullable', 'string', 'max:60', new NoHtml],
-            'colours.*.hex' => self::HEX_RULES,
-        ]);
+            'colours' => ['bail', 'required', 'array', 'max:50'],
+            'colours.*.name' => ['required', 'string', 'max:60', new NoHtml],
+            // Required, and no longer defaulted: a swatch the admin never picked
+            // used to be stored as black, a colour nobody chose.
+            'colours.*.hex' => ['required', ...self::HEX_RULES],
+        ], self::CHOICE_MESSAGES);
 
         $validated['slug'] = $validated['slug'] ?? Str::slug($validated['name']);
         $validated['is_active'] = $request->boolean('is_active');
@@ -249,9 +263,11 @@ class ProductController extends Controller
         $colours = collect($request->input('colours', []))
             ->map(fn ($c) => [
                 'name' => trim((string) ($c['name'] ?? '')),
-                'hex' => trim((string) ($c['hex'] ?? '')) ?: '#000000',
+                // Whatever the admin picked, and nothing when they picked nothing:
+                // the rules above have already refused a colour without a swatch.
+                'hex' => trim((string) ($c['hex'] ?? '')),
             ])
-            ->filter(fn ($c) => $c['name'] !== '')
+            ->filter(fn ($c) => $c['name'] !== '' && $c['hex'] !== '')
             ->unique('name')
             ->values()
             ->all();
@@ -414,10 +430,12 @@ class ProductController extends Controller
             'product_attributes.*.*' => ['nullable', 'string', 'max:255', new NoHtml],
             ...$this->variantRules($request, $product),
             // Colours are a product-level list, not a per-size value, so one
-            // colour is entered once instead of on every size row.
-            'colours' => ['nullable', 'array', 'max:50'],
-            'colours.*.name' => ['nullable', 'string', 'max:60', new NoHtml],
-            'colours.*.hex' => self::HEX_RULES,
+            // colour is entered once instead of on every size row. Required here
+            // too: a colour the create form insists on may not be dropped a
+            // minute later on the edit screen.
+            'colours' => ['bail', 'required', 'array', 'max:50'],
+            'colours.*.name' => ['required', 'string', 'max:60', new NoHtml],
+            'colours.*.hex' => ['required', ...self::HEX_RULES],
             // Both models land on the PUBLIC disk, so the extension has to be
             // pinned: `file|max:10240` alone accepted a .php upload into a
             // web-served directory.
@@ -425,7 +443,7 @@ class ProductController extends Controller
             'model_usdz' => ['nullable', 'file', 'extensions:usdz', 'mimetypes:model/vnd.usdz+zip,application/zip,application/octet-stream', 'max:10240'],
             'delete_model_glb' => ['nullable', 'boolean'],
             'delete_model_usdz' => ['nullable', 'boolean'],
-        ]);
+        ], self::CHOICE_MESSAGES);
 
         $validated['slug'] = $validated['slug'] ?? Str::slug($validated['name']);
         $validated['is_active'] = $request->boolean('is_active');
@@ -450,9 +468,11 @@ class ProductController extends Controller
         $colours = collect($request->input('colours', []))
             ->map(fn ($c) => [
                 'name' => trim((string) ($c['name'] ?? '')),
-                'hex' => trim((string) ($c['hex'] ?? '')) ?: '#000000',
+                // Whatever the admin picked, and nothing when they picked nothing:
+                // the rules above have already refused a colour without a swatch.
+                'hex' => trim((string) ($c['hex'] ?? '')),
             ])
-            ->filter(fn ($c) => $c['name'] !== '')
+            ->filter(fn ($c) => $c['name'] !== '' && $c['hex'] !== '')
             ->unique('name')
             ->values()
             ->all();
@@ -622,11 +642,14 @@ class ProductController extends Controller
     private function variantRules(Request $request, ?Product $product = null): array
     {
         $rules = [
-            'variants' => ['nullable', 'array', 'max:100'],
+            // A product ships in at least one size: the storefront has no
+            // one-size-fits-all fallback, so a product without one offers the
+            // customer no size to choose and no row to price.
+            'variants' => ['bail', 'required', 'array', 'max:100', $this->atLeastOneSize($product)],
             'variants.*.name' => ['nullable', 'string', 'max:100', new NoHtml],
             'variants.*.measurements' => ['nullable', 'string', 'max:160', new NoHtml],
             'variants.*.colour' => ['nullable', 'string', 'max:60', new NoHtml],
-            'variants.*.colour_hex' => self::HEX_RULES,
+            'variants.*.colour_hex' => ['nullable', ...self::HEX_RULES],
             // product_variants.sku is UNIQUE. Without this a duplicate reached
             // MySQL and blew up with a 500 instead of a field error.
             'variants.*.sku' => [...self::SKU_RULES, 'nullable', 'distinct:ignore_case', $this->uniqueVariantSku($request)],
@@ -737,6 +760,40 @@ class ProductController extends Controller
                 $product->variants()->create($payload);
             }
         }
+    }
+
+    /**
+     * A product has to keep at least one size. Rows the admin blanked out or
+     * flagged for deletion do not count, so emptying the table on the edit screen
+     * is refused the same way as never filling it in on create.
+     *
+     * `id` and `delete` count for something only while editing - create() has no
+     * rule for either and strips both, so a `delete` flag posted there belongs to
+     * no row the writer will ever see and a row carrying one is simply a new
+     * size. While editing, a row with an id counts even with a blank name:
+     * syncVariants() leaves the size's stored name in place rather than drop it.
+     */
+    private function atLeastOneSize(?Product $product): Closure
+    {
+        return function (string $attribute, mixed $value, Closure $fail) use ($product): void {
+            $kept = collect(is_array($value) ? $value : [])
+                ->filter(function ($row) use ($product) {
+                    if (! is_array($row)) {
+                        return false;
+                    }
+
+                    if ($product && filter_var($row['delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                        return false;
+                    }
+
+                    return trim((string) ($row['name'] ?? '')) !== ''
+                        || ($product && ! empty($row['id']));
+                });
+
+            if ($kept->isEmpty()) {
+                $fail(self::CHOICE_MESSAGES['variants.required']);
+            }
+        };
     }
 
     /**

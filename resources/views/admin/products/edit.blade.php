@@ -299,33 +299,50 @@
 
                     <!-- Variants -->
                     @php
-                        // Existing sizes, shaped for the Alpine table above.
-                        $kkSizeRows = $product->variants->map(fn ($v) => [
-                            'id' => $v->id,
-                            'name' => $v->name,
-                            'colour' => data_get($v->attributes, 'Colour', ''),
-                            'colour_hex' => data_get($v->attributes, 'colour_hex', '#000000'),
-                            'price' => (string) $v->price,
-                            'mrp' => (string) $v->mrp,
-                            'stock_quantity' => (int) $v->stock_quantity,
-                            'sku' => $v->sku,
-                            'measurements' => data_get($v->attributes, 'measurements', ''),
-                            'is_active' => (bool) $v->is_active,
-                        ])->values();
+                        // Existing sizes, shaped for the Alpine table above - or, when a save
+                        // bounced back, the rows the admin had just typed. Redrawing from the
+                        // database there would throw away their work on the way to showing
+                        // them the error.
+                        $kkSizeRows = old('variants') !== null
+                            ? collect(old('variants'))
+                                ->filter(fn ($v) => is_array($v))
+                                ->map(fn ($v) => [
+                                    'id' => ($v['id'] ?? '') !== '' ? (int) $v['id'] : null,
+                                    'name' => (string) ($v['name'] ?? ''),
+                                    'price' => (string) ($v['price'] ?? ''),
+                                    'mrp' => (string) ($v['mrp'] ?? ''),
+                                    'stock_quantity' => (string) ($v['stock_quantity'] ?? '0'),
+                                    'sku' => (string) ($v['sku'] ?? ''),
+                                    'measurements' => (string) ($v['measurements'] ?? ''),
+                                    'is_active' => filter_var($v['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN),
+                                    'remove' => filter_var($v['delete'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                                ])
+                                ->values()
+                            : $product->variants->map(fn ($v) => [
+                                'id' => $v->id,
+                                'name' => $v->name,
+                                'price' => (string) $v->price,
+                                'mrp' => (string) $v->mrp,
+                                'stock_quantity' => (int) $v->stock_quantity,
+                                'sku' => $v->sku,
+                                'measurements' => data_get($v->attributes, 'measurements', ''),
+                                'is_active' => (bool) $v->is_active,
+                                'remove' => false,
+                            ])->values();
                         // Row-level rules fail under keys like `variants.2.sku`, which no
                         // single @error can catch - so the save bounced back silently and
                         // the page looked like it had simply ignored the button.
                         $kkSizeErrors = collect($errors->getMessages())
-                            ->filter(fn ($messages, $key) => str_starts_with($key, 'variants.'))
+                            ->filter(fn ($messages, $key) => $key === 'variants' || str_starts_with($key, 'variants.'))
                             ->flatten();
                     @endphp
                     <!-- Sizes & pricing -->
                     <div class="card p-5" x-data="kkSizes()">
                         <div class="flex items-center justify-between mb-1">
-                            <h2 class="text-[13px] font-semibold" style="color: #303030;">Sizes &amp; pricing</h2>
+                            <h2 class="text-[13px] font-semibold form-label-required" style="color: #303030;">Sizes &amp; pricing</h2>
                             <button type="button" @click="add()" class="btn btn-secondary" style="font-size:12px; padding:4px 10px;">+ Add size</button>
                         </div>
-                        <p class="text-xs mb-4" style="color: #616161;">Each row is one size a customer can buy, with its own price and stock. Measurements are optional and let the assistant advise on fit. Leave SKU blank and one is generated. Colours are set separately below.</p>
+                        <p class="text-xs mb-4" style="color: #616161;">Every product needs at least one size. Each row is one size a customer can buy, with its own price and stock. Measurements are optional and let the assistant advise on fit. Leave SKU blank and one is generated. Colours are set separately below.</p>
 
                         @if($kkSizeErrors->isNotEmpty())
                             <div class="mb-3">
@@ -335,7 +352,7 @@
                             </div>
                         @endif
 
-                        <p class="text-xs" style="color:#616161; padding:10px 0;" x-show="visibleCount() === 0" x-cloak>No sizes yet - click &ldquo;Add size&rdquo;.</p>
+                        <p class="text-xs" style="color:#616161; padding:10px 0;" x-show="visibleCount() === 0" x-cloak>At least one size is required - click &ldquo;Add size&rdquo;.</p>
 
                         <div style="overflow-x:auto;" x-show="visibleCount() > 0" x-cloak>
                             <table style="width:100%; font-size:13px; border-collapse:collapse;">
@@ -419,12 +436,15 @@
                                 seq: 0,
                                 rows: [],
                                 init() {
-                                    this.rows = (@json($kkSizeRows)).map(r => ({ ...r, uid: ++this.seq, remove: false }));
+                                    this.rows = (@json($kkSizeRows)).map(r => ({ ...r, uid: ++this.seq, remove: !!r.remove }));
+                                    // A size is required, so a product that has none opens on a
+                                    // row to fill in rather than on a button to find.
+                                    if (this.visibleCount() === 0) { this.add(); }
                                 },
                                 visibleCount() { return this.rows.filter(r => !r.remove).length; },
                                 add() {
                                     this.rows.push({
-                                        uid: ++this.seq, id: null, name: '', colour: '', colour_hex: '#000000',
+                                        uid: ++this.seq, id: null, name: '',
                                         price: @json((string) $product->price), mrp: @json((string) $product->mrp),
                                         stock_quantity: 0, sku: '', measurements: '', is_active: true, remove: false,
                                     });
@@ -440,22 +460,25 @@
                     @php
                         // Colours live on the product, not on a size row, so a product can
                         // offer any colour in any size without one row per combination.
-                        $kkColourRows = collect(data_get($product->attributes, 'Colours', []))
+                        // The colours the admin just typed when a save bounced back, otherwise
+                        // the ones on the product. A colour stored as a bare name has no
+                        // swatch: it comes back unpicked, so the admin chooses one rather
+                        // than the page inventing a black for it.
+                        $kkColourRows = collect(old('colours', data_get($product->attributes, 'Colours', [])))
                             ->map(fn ($c) => is_array($c)
-                                ? ['name' => $c['name'] ?? '', 'hex' => $c['hex'] ?? '#000000']
-                                : ['name' => (string) $c, 'hex' => '#000000'])
-                            ->filter(fn ($c) => $c['name'] !== '')
+                                ? ['name' => (string) ($c['name'] ?? ''), 'hex' => trim((string) ($c['hex'] ?? ''))]
+                                : ['name' => (string) $c, 'hex' => ''])
                             ->values();
                         $kkColourErrors = collect($errors->getMessages())
-                            ->filter(fn ($messages, $key) => str_starts_with($key, 'colours.'))
+                            ->filter(fn ($messages, $key) => $key === 'colours' || str_starts_with($key, 'colours.'))
                             ->flatten();
                     @endphp
                     <div class="card p-5" x-data="kkColours()">
                         <div class="flex items-center justify-between mb-1">
-                            <h2 class="text-[13px] font-semibold" style="color: #303030;">Colours</h2>
+                            <h2 class="text-[13px] font-semibold form-label-required" style="color: #303030;">Colours</h2>
                             <button type="button" @click="add()" class="btn btn-secondary" style="font-size:12px; padding:4px 10px;">+ Add colour</button>
                         </div>
-                        <p class="text-xs mb-4" style="color: #616161;">The colours this product comes in. They show as swatches on the product page, under the sizes.</p>
+                        <p class="text-xs mb-4" style="color: #616161;">Every product needs at least one colour, each with a name and a swatch you pick. They show as swatches on the product page, under the sizes.</p>
 
                         @if($kkColourErrors->isNotEmpty())
                             <div class="mb-3">
@@ -465,13 +488,27 @@
                             </div>
                         @endif
 
-                        <p class="text-xs" style="color:#616161; padding:6px 0;" x-show="rows.length === 0" x-cloak>No colours yet - click &ldquo;Add colour&rdquo;.</p>
+                        <p class="text-xs" style="color:#616161; padding:6px 0;" x-show="rows.length === 0" x-cloak>At least one colour is required - click &ldquo;Add colour&rdquo;.</p>
 
                         <div x-show="rows.length > 0" x-cloak style="display:flex;flex-direction:column;gap:8px;">
                             <template x-for="(c, i) in rows" :key="c.uid">
                                 <div style="display:flex;align-items:center;gap:8px;">
-                                    <input type="color" x-bind:name="'colours[' + i + '][hex]'" x-model="c.hex" aria-label="Colour swatch"
-                                           style="width:34px;height:32px;border:1px solid #d4d4d4;border-radius:.375rem;padding:0;background:none;flex:0 0 auto;">
+                                    {{-- An unpicked row posts no hex at all, so no colour is ever
+                                         saved with a swatch nobody chose. The picker sits
+                                         invisibly over the placeholder, so one click on it opens
+                                         the browser's colour picker. --}}
+                                    <span style="position:relative;display:inline-flex;width:34px;height:32px;flex:0 0 auto;">
+                                        <span x-show="!c.picked" aria-hidden="true"
+                                              style="position:absolute;inset:0;border:1px dashed #8a8a8a;border-radius:.375rem;display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1;color:#616161;background:repeating-linear-gradient(45deg,#fff,#fff 4px,#f1f1f1 4px,#f1f1f1 8px);">+</span>
+                                        <input type="color" x-model="c.hex"
+                                               @input="c.picked = true" @change="c.picked = true"
+                                               x-bind:name="c.picked ? 'colours[' + i + '][hex]' : false"
+                                               x-bind:title="c.picked ? 'Change this colour&rsquo;s swatch' : 'Pick this colour&rsquo;s swatch'"
+                                               aria-label="Colour swatch"
+                                               x-bind:style="c.picked
+                                                   ? 'width:34px;height:32px;border:1px solid #d4d4d4;border-radius:.375rem;padding:0;background:none;cursor:pointer;'
+                                                   : 'position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;'">
+                                    </span>
                                     <input type="text" x-bind:name="'colours[' + i + '][name]'" x-model="c.name" placeholder="Navy"
                                            maxlength="60" aria-label="Colour name"
                                            style="flex:1 1 auto;max-width:240px;font-size:13px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.4rem .6rem;">
@@ -482,14 +519,27 @@
                         </div>
                     </div>
                     <script>
+                        // The browser's colour picker has to open on some colour. This off-grey
+                        // is deliberately one nobody lands on by accident, so picking any real
+                        // colour - black included - registers as a change and marks the row as
+                        // chosen. Until then the row posts no hex and nothing is saved for it.
+                        const KK_UNPICKED_SWATCH = '#7f7f81';
                         function kkColours() {
                             return {
                                 seq: 0,
                                 rows: [],
                                 init() {
-                                    this.rows = (@json($kkColourRows)).map(c => ({ ...c, uid: ++this.seq }));
+                                    this.rows = (@json($kkColourRows)).map(c => ({
+                                        ...c,
+                                        uid: ++this.seq,
+                                        picked: !!c.hex,
+                                        hex: c.hex || KK_UNPICKED_SWATCH,
+                                    }));
+                                    // A colour is required, so a product that has none opens on
+                                    // a row to fill in.
+                                    if (this.rows.length === 0) { this.add(); }
                                 },
-                                add() { this.rows.push({ uid: ++this.seq, name: '', hex: '#000000' }); },
+                                add() { this.rows.push({ uid: ++this.seq, name: '', hex: KK_UNPICKED_SWATCH, picked: false }); },
                             };
                         }
                     </script>

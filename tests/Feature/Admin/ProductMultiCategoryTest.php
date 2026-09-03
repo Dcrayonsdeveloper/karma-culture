@@ -65,6 +65,14 @@ class ProductMultiCategoryTest extends TestCase
             'stock_quantity' => 10,
             'category_id' => $this->menShirts->id,
             'is_active' => 1,
+            // Both forms require a size and a colour, so a payload without them
+            // never gets as far as the shelves being checked here.
+            'variants' => [
+                ['name' => 'M', 'price' => 1499, 'stock_quantity' => 10, 'sku' => '', 'is_active' => 1],
+            ],
+            'colours' => [
+                ['name' => 'Navy', 'hex' => '#001f3f'],
+            ],
         ], $overrides);
     }
 
