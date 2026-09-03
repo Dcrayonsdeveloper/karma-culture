@@ -60,6 +60,18 @@
             </div>
         </a>
 
+        <a href="{{ route('admin.homepage.about-reels') }}" class="card" style="padding: 1rem; display: flex; align-items: center; gap: 0.75rem; text-decoration: none; transition: box-shadow 0.15s;">
+            <div style="width: 2.5rem; height: 2.5rem; background: #f0f0f0; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center;">
+                <svg style="width: 1.25rem; height: 1.25rem; color: #616161;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16v12H4zM10 9.5l5 2.5-5 2.5z"/>
+                </svg>
+            </div>
+            <div>
+                <div style="font-size: 13px; font-weight: 600; color: #303030;">About Us Reels</div>
+                <div style="font-size: 12px; color: #616161;">{{ \App\Models\AboutReel::active()->count() }} on the home page</div>
+            </div>
+        </a>
+
         <a href="{{ route('admin.homepage.qualities') }}" class="card" style="padding: 1rem; display: flex; align-items: center; gap: 0.75rem; text-decoration: none; transition: box-shadow 0.15s;">
             <div style="width: 2.5rem; height: 2.5rem; background: #f0f0f0; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center;">
                 <svg style="width: 1.25rem; height: 1.25rem; color: #616161;" fill="none" stroke="currentColor" viewBox="0 0 24 24">

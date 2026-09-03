@@ -60,54 +60,19 @@
                         <input type="text" name="announcement_text" id="announcement-text" value="{{ old('announcement_text', $settings['announcement_text']) }}" maxlength="255" class="form-input" placeholder="e.g. Free Shipping on Orders Over ₹500!">
                         <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Displayed in the teal bar at the top of every page. Leave empty to hide.</p>
                     </div>
-                    {{-- The About Us section shows three videos side by side, so all
-                         three are editable here. Only the first used to be, which left
-                         two cards that could never be filled from the admin. --}}
-                    @foreach([
-                        ['url' => 'about_us_video_url',   'file' => 'about_us_video_file',   'remove' => 'about_us_video_remove',   'label' => 'About Us - Video 1'],
-                        ['url' => 'about_us_video_url_2', 'file' => 'about_us_video_file_2', 'remove' => 'about_us_video_remove_2', 'label' => 'About Us - Video 2'],
-                        ['url' => 'about_us_video_url_3', 'file' => 'about_us_video_file_3', 'remove' => 'about_us_video_remove_3', 'label' => 'About Us - Video 3'],
-                    ] as $kkAboutVideo)
+                    {{-- The About Us clips used to be three fixed slots on this
+                         screen, which is why the section could only ever hold three.
+                         They are a list of their own now - Homepage > About Reels -
+                         where one can be added, deleted or reordered. Leaving the
+                         slots here as well would mean two screens editing the same
+                         strip, and only one of them would be read. --}}
                     <div style="border-top: 1px solid #e3e3e3; padding-top: 1rem;">
-                        <label for="{{ $kkAboutVideo['url'] }}" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">{{ $kkAboutVideo['label'] }}</label>
-                        @if($settings[$kkAboutVideo['url']] ?? '')
-                            <div style="margin: 0.5rem 0;">
-                                <video src="{{ str_starts_with($settings[$kkAboutVideo['url']], 'http') ? $settings[$kkAboutVideo['url']] : asset_v($settings[$kkAboutVideo['url']]) }}"
-                                       controls muted controlsList="nodownload noplaybackrate noremoteplayback" disablepictureinpicture
-                                       style="max-width: 100%; max-height: 200px; border-radius: 10px;"></video>
-                            </div>
-                        @endif
-                        {{-- The path is written by the upload below, never typed: a hand-edited
-                             one only ever pointed at a file that was not there. Still submitted
-                             (readonly inputs are), so an unchanged slot round-trips as-is. --}}
-                        <input type="text" name="{{ $kkAboutVideo['url'] }}" id="{{ $kkAboutVideo['url'] }}"
-                               value="{{ old($kkAboutVideo['url'], $settings[$kkAboutVideo['url']] ?? '') }}" maxlength="255"
-                               readonly
-                               class="form-input" placeholder="No video yet - upload one below"
-                               style="background-color: #f7f7f7; color: #616161;">
-                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Set by the upload below. MP4, WebM or MOV, max 64MB. Shown in the About Us section on the home page.</p>
-                        <input type="file" name="{{ $kkAboutVideo['file'] }}" id="{{ $kkAboutVideo['file'] }}"
-                               aria-label="{{ $kkAboutVideo['label'] }} upload"
-                               accept="video/mp4,video/webm,video/quicktime" class="form-input" style="margin-top: 0.5rem;">
-
-                        {{-- The path above is readonly, so before this there was no way to
-                             take a clip down at all - only to replace it with another.
-                             A removed slot leaves the row behind holding an empty value,
-                             which is how the home page knows the admin cleared it rather
-                             than never having set it. --}}
-                        @if($settings[$kkAboutVideo['url']] ?? '')
-                            <label style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.6rem; font-size: 13px; color: #303030; cursor: pointer;">
-                                <input type="checkbox" name="{{ $kkAboutVideo['remove'] }}" value="1"
-                                       style="width: 0.9rem; height: 0.9rem; accent-color: #d72c0d;">
-                                Remove this video
-                            </label>
-                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
-                                The card disappears from the home page and the file is deleted.
-                                Choosing a new file above replaces it instead.
-                            </p>
-                        @endif
+                        <label class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">About Us Reels</label>
+                        <p style="font-size: 12px; color: #616161; margin: 0.25rem 0 0.5rem;">
+                            The clip strip in the "Crafted to Last" section. Moved to its own screen so it can hold any number of reels.
+                        </p>
+                        <a href="{{ route('admin.homepage.about-reels') }}" class="btn btn-secondary" style="font-size: 12px;">Manage About Us Reels</a>
                     </div>
-                    @endforeach
                 </div>
             </div>
 

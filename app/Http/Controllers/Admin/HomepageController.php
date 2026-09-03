@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AboutReel;
 use App\Models\Banner;
 use App\Models\HomepageSection;
 use App\Models\NavigationMenu;
@@ -124,9 +125,6 @@ class HomepageController extends Controller
             'whatsapp_number' => Setting::get('whatsapp_number', ''),
             'contact_address' => Setting::get('contact_address', ''),
             'announcement_text' => Setting::get('announcement_text', ''),
-            'about_us_video_url' => Setting::get('about_us_video_url', ''),
-            'about_us_video_url_2' => Setting::get('about_us_video_url_2', ''),
-            'about_us_video_url_3' => Setting::get('about_us_video_url_3', ''),
         ];
 
         return view('admin.homepage.site-settings', compact('settings'));
@@ -164,21 +162,11 @@ class HomepageController extends Controller
             $rules["social_{$network}"] = V::url(required: false, max: 255);
         }
 
-        $messages = [];
-
-        foreach ([1, 2, 3] as $slot) {
-            $urlField = $slot === 1 ? 'about_us_video_url' : "about_us_video_url_{$slot}";
-            $fileField = $slot === 1 ? 'about_us_video_file' : "about_us_video_file_{$slot}";
-
-            $rules[$urlField] = ['nullable', 'string', 'max:255', 'regex:'.self::VIDEO_SRC_REGEX];
-            $rules[$fileField] = $this->videoRules();
-            $rules[$slot === 1 ? 'about_us_video_remove' : "about_us_video_remove_{$slot}"] = V::boolean();
-
-            $messages["{$urlField}.regex"] = 'Enter a full https:// address, or a path to an .mp4, .webm or .mov file.';
-            $messages += $this->videoMessages($fileField);
-        }
-
-        $validated = $request->validate($rules, $messages);
+        // The three about_us_video_* slots used to be validated and stored here.
+        // The About Us strip is a list of its own now (Homepage > About Reels),
+        // so this screen no longer accepts them: a field on two screens is a
+        // field whose value depends on which one you saved last.
+        $validated = $request->validate($rules);
 
         $fields = [
             'site_name', 'site_tagline', 'site_description',
@@ -187,8 +175,6 @@ class HomepageController extends Controller
             'social_youtube', 'social_tiktok', 'social_pinterest',
             'contact_email', 'contact_phone', 'whatsapp_number', 'contact_address',
             'announcement_text',
-            // The About Us section renders three videos; all three are editable.
-            'about_us_video_url', 'about_us_video_url_2', 'about_us_video_url_3',
         ];
 
         foreach ($fields as $field) {
@@ -209,49 +195,6 @@ class HomepageController extends Controller
 
             if ($previousLogo && $previousLogo !== $path && ! str_starts_with($previousLogo, 'http')) {
                 Storage::disk('public')->delete($previousLogo);
-            }
-        }
-
-        // About Us video uploads - an uploaded file overrides that slot's URL field.
-        foreach ([
-            'about_us_video_file' => 'about_us_video_url',
-            'about_us_video_file_2' => 'about_us_video_url_2',
-            'about_us_video_file_3' => 'about_us_video_url_3',
-        ] as $fileField => $urlSetting) {
-            if ($request->hasFile($fileField)) {
-                $previous = (string) Setting::get($urlSetting, '');
-                $videoPath = $request->file($fileField)->store('storefront/about', 'public');
-                Setting::set($urlSetting, 'storage/'.$videoPath, 'string', 'homepage');
-
-                // These clips run to tens of megabytes each; leaving the replaced
-                // one behind on every re-upload filled the disk for no purpose.
-                if ($previous && str_starts_with($previous, 'storage/')) {
-                    Storage::disk('public')->delete(substr($previous, strlen('storage/')));
-                }
-            }
-        }
-
-        // Removals, after the uploads: ticking remove and choosing a new file in
-        // the same save is a replacement, and the upload is the clearer intent.
-        //
-        // The setting is written as an empty string rather than deleted, because
-        // the home page tells "the admin cleared this slot" from "nobody has ever
-        // set it" by whether the row exists - a deleted row would bring the
-        // bundled default clip back.
-        foreach ([1, 2, 3] as $slot) {
-            $removeField = $slot === 1 ? 'about_us_video_remove' : "about_us_video_remove_{$slot}";
-            $urlSetting = $slot === 1 ? 'about_us_video_url' : "about_us_video_url_{$slot}";
-            $fileField = $slot === 1 ? 'about_us_video_file' : "about_us_video_file_{$slot}";
-
-            if (! $request->boolean($removeField) || $request->hasFile($fileField)) {
-                continue;
-            }
-
-            $previous = (string) Setting::get($urlSetting, '');
-            Setting::set($urlSetting, '', 'string', 'homepage');
-
-            if ($previous && str_starts_with($previous, 'storage/')) {
-                Storage::disk('public')->delete(substr($previous, strlen('storage/')));
             }
         }
 
@@ -732,6 +675,104 @@ class HomepageController extends Controller
         Cache::flush();
 
         return back()->with('success', 'Filter item deleted.');
+    }
+
+    // ============================================================
+    // About Us reels - the clip strip under "Crafted to Last"
+    // ============================================================
+
+    /**
+     * The strip used to be three fixed settings keys, so it could only ever
+     * hold three clips: a store with one left two empty cards' worth of
+     * scaffolding behind, and a fourth clip had nowhere to go. Reels are rows
+     * now - add one, delete one, reorder them, hide one without losing it.
+     */
+    public function aboutReels()
+    {
+        $reels = AboutReel::ordered()->get();
+
+        return view('admin.homepage.about-reels', compact('reels'));
+    }
+
+    public function storeAboutReel(Request $request)
+    {
+        $request->validate(
+            [
+                // required_without nothing: a reel IS its clip, so unlike a hero
+                // banner there is no second medium that could stand in for it.
+                'video' => ['required', ...$this->videoRules()],
+            ],
+            $this->videoMessages('video') + ['video.required' => 'Choose a video file to add as a reel.'],
+        );
+
+        AboutReel::create([
+            'video_path' => 'storage/'.$request->file('video')->store('storefront/about', 'public'),
+            'position' => (AboutReel::max('position') ?? 0) + 1,
+            'is_active' => true,
+        ]);
+        Cache::flush();
+
+        return back()->with('success', 'Reel added.');
+    }
+
+    /** Swap a reel's clip for another, keeping its place in the strip. */
+    public function updateAboutReel(Request $request, AboutReel $aboutReel)
+    {
+        $request->validate(
+            ['video' => ['required', ...$this->videoRules()]],
+            $this->videoMessages('video') + ['video.required' => 'Choose the video file to replace this reel with.'],
+        );
+
+        // Only a file this row owns: a bundled clip ships with the repo and is
+        // not ours to delete just because one reel was pointed elsewhere.
+        $previous = $aboutReel->ownsFile() ? $aboutReel->storagePath() : null;
+
+        $aboutReel->update([
+            'video_path' => 'storage/'.$request->file('video')->store('storefront/about', 'public'),
+        ]);
+
+        // These clips run to tens of megabytes; leaving the replaced one behind
+        // on every re-upload fills the disk for no purpose.
+        if ($previous) {
+            Storage::disk('public')->delete($previous);
+        }
+
+        Cache::flush();
+
+        return back()->with('success', 'Reel updated.');
+    }
+
+    public function toggleAboutReel(AboutReel $aboutReel)
+    {
+        $aboutReel->update(['is_active' => ! $aboutReel->is_active]);
+        Cache::flush();
+
+        return back()->with('success', 'Reel visibility updated.');
+    }
+
+    public function moveAboutReel(Request $request, AboutReel $aboutReel)
+    {
+        $validated = $request->validate(['direction' => V::option(['up', 'down'])]);
+
+        $this->swapPosition($aboutReel, AboutReel::query(), $validated['direction']);
+        Cache::flush();
+
+        return back()->with('success', 'Reel order updated.');
+    }
+
+    public function deleteAboutReel(AboutReel $aboutReel)
+    {
+        // Only a file this row owns. A bundled clip is shipped with the repo and
+        // an https:// link is somebody else's server - deleting either because a
+        // card was taken off the home page would be well beyond what was asked.
+        if ($aboutReel->ownsFile()) {
+            Storage::disk('public')->delete($aboutReel->storagePath());
+        }
+
+        $aboutReel->delete();
+        Cache::flush();
+
+        return back()->with('success', 'Reel deleted.');
     }
 
     // ============================================================

@@ -478,15 +478,27 @@
             .kk-about { background: var(--kk-cream); padding: 40px 0; text-align: center; }
             .kk-about p.intro { max-width: 480px; margin: 14px auto 0; color: var(--kk-text-muted); font-size: 15px; line-height: 1.65; }
             /* Three reel-style (9:16) videos, Instagram-reels grid */
+            /* A wrapping, centred row rather than three fixed columns. The strip
+               used to be exactly three clips because three settings keys held it;
+               it is a list now, so it has to look right at one, two, four or eight.
+               `repeat(3, 1fr)` left a single reel stretched across a third of the
+               section and hugging the left edge with two empty columns beside it.
+
+               287px is what a column measured before (900px, three tracks, two
+               20px gaps), and shrinking is still allowed, so three reels land
+               pixel-for-pixel where they always did and the phone layout - three
+               narrow reels across - is unchanged. */
             .kk-about-reels {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
                 gap: 20px;
                 width: 100%;
                 max-width: 900px;
                 margin: 40px auto 0;
             }
             .kk-about-reel {
+                flex: 0 1 287px;
                 position: relative;
                 aspect-ratio: 9 / 16;
                 border-radius: 14px;
@@ -1430,25 +1442,16 @@
             $aboutLink  = ($aboutSection->button_link ?? null);
             $aboutLink  = ($aboutLink && $aboutLink !== '#') ? $aboutLink : route('about');
             $aboutButton = ($aboutSection->button_text ?? null) ?: 'Our Story';
-            // Three reel-style videos, each admin-configurable (Site Settings).
-            // Falls back to numbered default paths so the section works pre-config.
-            $aboutVideoKeys     = ['about_us_video_url', 'about_us_video_url_2', 'about_us_video_url_3'];
-            $aboutVideoDefaults = ['videos/karmaa-about.mp4', 'videos/karmaa-about-2.mp4', 'videos/karmaa-about-3.mp4'];
-            // A slot the admin has cleared holds a row with an empty value; one
-            // nobody has ever set has no row at all. Only the second falls back to
-            // the bundled clip - otherwise Remove would put the default straight
-            // back and the card could never be taken down.
-            $aboutConfigured = \App\Models\Setting::whereIn('key', $aboutVideoKeys)->pluck('key')->all();
-            $aboutVideos = [];
-            foreach ($aboutVideoKeys as $ai => $ak) {
-                $val = (string) \App\Models\Setting::get($ak, '');
-
-                if ($val !== '') {
-                    $aboutVideos[] = str_starts_with($val, 'http') ? $val : asset_v($val);
-                } elseif (! in_array($ak, $aboutConfigured, true)) {
-                    $aboutVideos[] = asset_v($aboutVideoDefaults[$ai]);
-                }
-            }
+            // The reel strip, in the order the admin set (Homepage > About Reels).
+            //
+            // This was three fixed settings keys - about_us_video_url, _2, _3 -
+            // so the strip could only ever be three clips long and a fourth had
+            // nowhere to go. Rows carry no such limit: one reel or eight, and one
+            // can be taken out of the middle without shuffling files between
+            // slots. The migration that created the table carried the three
+            // configured clips (and the bundled defaults, where a slot had never
+            // been touched) across, so the strip renders as it did before.
+            $aboutReels = \App\Models\AboutReel::active()->ordered()->get();
         @endphp
         @if($aboutVisible)
         <section class="kk-about">
@@ -1457,15 +1460,15 @@
                 <h2 class="kk-section-title kk-section-title--lg" style="margin-top:8px;">{{ $aboutTitle }}</h2>
                 <p class="intro">{{ is_string($aboutText) ? $aboutText : '' }}</p>
 
-                {{-- Hidden entirely once every slot is cleared, rather than leaving
-                     an empty grid where three cards used to be. --}}
-                @if($aboutVideos !== [])
+                {{-- Hidden entirely once the last reel is deleted or hidden, rather
+                     than leaving an empty grid where the strip used to be. --}}
+                @if($aboutReels->isNotEmpty())
                 <div class="kk-about-reels">
-                    @foreach($aboutVideos as $aboutVideo)
+                    @foreach($aboutReels as $aboutReel)
                         {{-- Admin-set clips of any ratio, so they are shown whole: a
                              landscape capture used to be cropped to a ribbon of its
                              middle by the 9/16 reel. --}}
-                        <x-media class="kk-about-reel" :src="$aboutVideo" video dark />
+                        <x-media class="kk-about-reel" :src="$aboutReel->url" video dark />
                     @endforeach
                 </div>
                 @endif

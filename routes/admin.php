@@ -337,6 +337,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::put('/shop-filters/{shopFilter}/move', [HomepageController::class, 'moveShopFilter'])->name('shop-filters.move');
                 Route::delete('/shop-filters/{shopFilter}', [HomepageController::class, 'deleteShopFilter'])->name('shop-filters.destroy');
 
+                // About Us reels - the clip strip under "Crafted to Last"
+                Route::get('/about-reels', [HomepageController::class, 'aboutReels'])->name('about-reels');
+                Route::post('/about-reels', [HomepageController::class, 'storeAboutReel'])->name('about-reels.store');
+                Route::put('/about-reels/{aboutReel}', [HomepageController::class, 'updateAboutReel'])->name('about-reels.update');
+                Route::put('/about-reels/{aboutReel}/toggle', [HomepageController::class, 'toggleAboutReel'])->name('about-reels.toggle');
+                Route::put('/about-reels/{aboutReel}/move', [HomepageController::class, 'moveAboutReel'])->name('about-reels.move');
+                Route::delete('/about-reels/{aboutReel}', [HomepageController::class, 'deleteAboutReel'])->name('about-reels.destroy');
+
                 // Our Qualities cards
                 Route::get('/qualities', [HomepageController::class, 'qualities'])->name('qualities');
                 Route::post('/qualities', [HomepageController::class, 'storeQuality'])->name('qualities.store');
