@@ -7,7 +7,7 @@
         </div>
     </x-slot>
 
-    {{-- Quick links. auto-fit rather than a fixed 4 columns: there are seven
+    {{-- Quick links. auto-fit rather than a fixed 4 columns: there are six
          cards now, and a fixed track count squeezed them to unreadable slivers
          on a laptop-width screen. --}}
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
@@ -45,18 +45,6 @@
             <div>
                 <div style="font-size: 13px; font-weight: 600; color: #303030;">Sections</div>
                 <div style="font-size: 12px; color: #616161;">{{ $sections->where('is_active', true)->count() }} active</div>
-            </div>
-        </a>
-
-        <a href="{{ route('admin.homepage.testimonials') }}" class="card" style="padding: 1rem; display: flex; align-items: center; gap: 0.75rem; text-decoration: none; transition: box-shadow 0.15s;">
-            <div style="width: 2.5rem; height: 2.5rem; background: #f0f0f0; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center;">
-                <svg style="width: 1.25rem; height: 1.25rem; color: #616161;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-                </svg>
-            </div>
-            <div>
-                <div style="font-size: 13px; font-weight: 600; color: #303030;">Testimonials</div>
-                <div style="font-size: 12px; color: #616161;">{{ $testimonials->count() }} reviews</div>
             </div>
         </a>
 
@@ -132,9 +120,6 @@
                                             @break
                                         @case('cta')
                                             Promotional banner
-                                            @break
-                                        @case('testimonials')
-                                            Heading of the reviews carousel
                                             @break
                                         @case('newsletter')
                                             Heading of the email signup block

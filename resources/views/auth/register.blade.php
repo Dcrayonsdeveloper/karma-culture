@@ -64,14 +64,14 @@
         <div>
             <label for="password" class="block text-sm font-medium text-neutral-700 mb-1">Password</label>
             <input type="password" name="password" id="password"
-                   required autocomplete="new-password" minlength="8" maxlength="255"
+                   required autocomplete="new-password" minlength="10" maxlength="255"
                    class="form-input w-full @error('password') border-error-300 @enderror"
                    placeholder="Create a strong password">
             @error('password')
                 <p class="mt-1 text-sm text-error-600">{{ $message }}</p>
             @enderror
             <p class="mt-1 text-xs text-neutral-600">
-                At least 8 characters, including an uppercase and a lowercase letter,
+                At least 10 characters, including an uppercase and a lowercase letter,
                 a number and a special character.
             </p>
         </div>

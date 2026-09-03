@@ -95,9 +95,9 @@ class ProfileController extends Controller
     {
         $validated = $this->validateSection($request, 'change-password', [
             'current_password' => 'required|current_password',
-            // Unchanged policy - V::password() is the same Password::defaults()
-            // + confirmed this already used. max:255 is an input bound, and
-            // matches RegisterController and ResetPasswordController.
+            // V::password() is Password::defaults() + confirmed - the site-wide
+            // policy, defined once in AppServiceProvider. max:255 is an input
+            // bound, and matches RegisterController and ResetPasswordController.
             //
             // different:current_password is the one addition. Re-submitting the
             // password they already have used to report "Password updated
@@ -109,6 +109,8 @@ class ProfileController extends Controller
             'current_password.current_password' => 'That is not your current password.',
             'password.confirmed' => 'The two passwords do not match.',
             'password.different' => 'Your new password must be different from your current one.',
+            // The same sentences the box says while the password is being typed.
+            ...V::passwordMessages(),
         ]);
 
         $request->user()->update([

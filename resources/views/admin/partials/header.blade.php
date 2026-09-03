@@ -2,10 +2,12 @@
     <!-- Left side -->
     <div class="flex items-center gap-3">
         <!-- Mobile menu toggle -->
-        <button @click="sidebarOpen = !sidebarOpen"
-                :aria-expanded="sidebarOpen ? 'true' : 'false'"
+        <button type="button"
+                @click="sidebarOpen = !sidebarOpen"
+                class="lg:hidden p-1.5 -ml-1 text-neutral-600 hover:text-neutral-900 rounded-lg hover:bg-neutral-100"
                 aria-controls="admin-sidebar"
-                class="lg:hidden p-1.5 -ml-1 text-neutral-600 hover:text-neutral-900 rounded-lg hover:bg-neutral-100" aria-label="Toggle menu">
+                :aria-expanded="sidebarOpen ? 'true' : 'false'"
+                aria-label="Toggle menu">
             <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
             </svg>
@@ -185,9 +187,18 @@
                     <a href="{{ route('admin.profile') }}" class="block px-4 py-2 text-sm hover:bg-neutral-50 transition-colors" style="color: #303030;">
                         Profile Settings
                     </a>
-                    <a href="{{ route('admin.stores.index') }}" class="block px-4 py-2 text-sm hover:bg-neutral-50 transition-colors" style="color: #303030;">
-                        View Store
-                    </a>
+                    {{-- This is the Stores module's only entry point anywhere in
+                         the admin, and its route sits inside the
+                         admin.section:settings group - which no staff role is
+                         granted by default (User::getDefaultStaffPermissions).
+                         Unguarded, it offered every staff admin a menu item that
+                         answered with a hard 403. Every sidebar section is
+                         guarded the same way. --}}
+                    @if($adminUser->canAccessSection('settings'))
+                        <a href="{{ route('admin.stores.index') }}" class="block px-4 py-2 text-sm hover:bg-neutral-50 transition-colors" style="color: #303030;">
+                            View Store
+                        </a>
+                    @endif
                 </div>
                 <div style="border-top: 1px solid #f0f0f0;">
                     <form action="{{ route('admin.logout') }}" method="POST">

@@ -536,13 +536,23 @@ class ValidationRulesTest extends TestCase
             ['password' => 'Correct-Horse1', 'password_confirmation' => 'Correct-Horse1'],
             $rules
         );
-        $this->assertFalse($ok->fails(), 'Eight or more characters with all four classes should pass');
+        $this->assertFalse($ok->fails(), 'Ten or more characters with all four classes should pass');
 
         $short = Validator::make(
             ['password' => 'Ab1!', 'password_confirmation' => 'Ab1!'],
             $rules
         );
-        $this->assertTrue($short->fails(), 'Fewer than 8 characters should fail');
+        $this->assertTrue($short->fails(), 'Fewer than 10 characters should fail');
+
+        // Nine characters with all four classes: the case that separates the
+        // ten-character minimum from the eight it replaced, and the one that
+        // would silently pass again if the callback in AppServiceProvider were
+        // ever dropped and Password::defaults() fell back to Laravel's own.
+        $nine = Validator::make(
+            ['password' => 'Ab1!defgh', 'password_confirmation' => 'Ab1!defgh'],
+            $rules
+        );
+        $this->assertTrue($nine->fails(), 'Nine characters should fail the ten-character minimum');
 
         $mismatch = Validator::make(
             ['password' => 'Correct-Horse1', 'password_confirmation' => 'Battery-Staple2'],

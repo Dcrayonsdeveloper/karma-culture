@@ -90,8 +90,9 @@ class RegisterController extends Controller
                 },
             ],
 
-            // Password::defaults() — the app's existing policy, unchanged
-            // (8 characters). max:255 is an input bound, not a policy change.
+            // Password::defaults() — the site-wide policy, defined once in
+            // AppServiceProvider (ten characters, mixed case, a number and a
+            // symbol). max:255 is an input bound, not a policy change.
             'password' => [...V::password(), 'max:255'],
 
             // The form has always marked this required, but nothing enforced it
@@ -111,18 +112,12 @@ class RegisterController extends Controller
             'password.required' => 'Please choose a password.',
             'password.confirmed' => 'The two passwords do not match.',
             'password.max' => 'Your password must be 255 characters or fewer.',
-            // Password::defaults() (AppServiceProvider) reports each unmet
-            // requirement separately; these replace the framework wording with
-            // one consistent sentence per rule.
-            //
-            // The doubled 'password.password.*' keys are not a typo. The Password
-            // rule reports its own failures via addFailure($attribute, 'password.mixed'),
-            // so the lookup key is "{attribute}.{rule}" = password.password.mixed.
-            // Only 'min' comes from an ordinary rule and takes the short key.
-            'password.min' => 'Your password must be at least 8 characters long.',
-            'password.password.mixed' => 'Your password must include both an uppercase and a lowercase letter.',
-            'password.password.numbers' => 'Your password must include at least one number.',
-            'password.password.symbols' => 'Your password must include at least one special character, such as @ # ! or ?.',
+            // Password::defaults() reports each unmet requirement separately;
+            // V::passwordMessages() replaces the framework wording with the
+            // sentences the box itself uses while the password is being typed.
+            // It is shared with every other form that mints a password, which
+            // is why it is not spelled out here.
+            ...V::passwordMessages(),
             'terms.accepted' => 'Please accept the Terms and Privacy Policy to continue.',
         ]);
 

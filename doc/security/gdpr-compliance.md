@@ -265,7 +265,7 @@ class RegisterRequest extends FormRequest
     {
         return [
             'email' => ['required', 'email', 'unique:users'],
-            'password' => ['required', 'min:8'],
+            'password' => ['required', Password::defaults()], // min 10, mixed case, number, symbol
             'first_name' => ['required', 'string', 'max:50'],
             'last_name' => ['required', 'string', 'max:50'],
             // Only optional fields that are needed

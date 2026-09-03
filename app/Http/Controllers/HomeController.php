@@ -10,7 +10,6 @@ use App\Models\Product;
 use App\Models\Quality;
 use App\Models\Setting;
 use App\Models\ShopFilterItem;
-use App\Models\Testimonial;
 use Illuminate\View\View;
 
 class HomeController extends Controller
@@ -103,9 +102,6 @@ class HomeController extends Controller
         // can only do if the switched-off row is present to be inspected.
         $sections = HomepageSection::ordered()->get()->keyBy('key');
 
-        // Testimonials
-        $testimonials = Testimonial::active()->ordered()->take(6)->get();
-
         // Active flash sale for popup
         $flashSale = FlashSale::active()
             ->withCount('products')
@@ -141,7 +137,6 @@ class HomeController extends Controller
             'categories',
             'banners',
             'sections',
-            'testimonials',
             'siteSettings',
             'flashSale',
             'shopFilters',

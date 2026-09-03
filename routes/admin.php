@@ -104,6 +104,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('chatbot/analytics', [App\Http\Controllers\Admin\ChatbotAnalyticsController::class, 'index'])->name('chatbot.analytics');
             Route::get('chatbot/leads', [App\Http\Controllers\Admin\ChatbotAnalyticsController::class, 'leads'])->name('chatbot.leads');
             Route::get('chatbot/conversations/{conversation}', [App\Http\Controllers\Admin\ChatbotAnalyticsController::class, 'show'])->name('chatbot.conversation');
+            Route::put('chatbot/conversations/{conversation}/lead-status', [App\Http\Controllers\Admin\ChatbotAnalyticsController::class, 'updateLeadStatus'])->name('chatbot.lead-status');
         });
 
         // Catalog
@@ -290,8 +291,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::resource('roles', RoleController::class)->except(['show']);
             });
 
-            // Stores (POS)
-            Route::resource('stores', StoreController::class);
+            // Stores (POS). except('show') because StoreController has no
+            // show() - the row click and the action link both go to edit, so
+            // the only way to reach GET /admin/stores/{id} was by typing it,
+            // and it answered with a 500 rather than a 404.
+            Route::resource('stores', StoreController::class)->except(['show']);
         });
 
         // Storefront / Homepage Manager
@@ -316,14 +320,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/sections/{section}', [HomepageController::class, 'editSection'])->name('sections.edit');
                 Route::put('/sections/{section}', [HomepageController::class, 'updateSection'])->name('sections.update');
                 Route::put('/sections/{section}/toggle', [HomepageController::class, 'toggleSection'])->name('sections.toggle');
-
-                // Testimonials
-                Route::get('/testimonials', [HomepageController::class, 'testimonials'])->name('testimonials');
-                Route::post('/testimonials', [HomepageController::class, 'storeTestimonial'])->name('testimonials.store');
-                Route::put('/testimonials/{testimonial}', [HomepageController::class, 'updateTestimonial'])->name('testimonials.update');
-                Route::put('/testimonials/{testimonial}/toggle', [HomepageController::class, 'toggleTestimonial'])->name('testimonials.toggle');
-                Route::put('/testimonials/{testimonial}/move', [HomepageController::class, 'moveTestimonial'])->name('testimonials.move');
-                Route::delete('/testimonials/{testimonial}', [HomepageController::class, 'deleteTestimonial'])->name('testimonials.destroy');
 
                 // Shop It Your Way filter items
                 Route::get('/shop-filters', [HomepageController::class, 'shopFilters'])->name('shop-filters');

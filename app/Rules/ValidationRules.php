@@ -43,6 +43,17 @@ use Illuminate\Validation\Rules\Password;
 final class ValidationRules
 {
     /**
+     * The shortest a new password may be.
+     *
+     * The one place the number lives on the server: AppServiceProvider builds
+     * Password::defaults() from it and passwordMessages() prints it, so the
+     * rule and the sentence explaining the rule cannot drift apart. Its
+     * counterparts in the browser are _PASSWORD_MIN in resources/js/app.js and
+     * the minlength="10" on each new-password box.
+     */
+    public const PASSWORD_MIN = 10;
+
+    /**
      * A person's name - Unicode, 2-100 characters.
      *
      * `lettersOnly` drops the hyphen, apostrophe and period from the charset,
@@ -326,19 +337,26 @@ final class ValidationRules
     /**
      * A new password.
      *
-     * This is the app's EXISTING policy, unchanged: Password::defaults(), which
-     * has no custom callback registered anywhere, so it resolves to Laravel's
-     * built-in minimum of 8 characters. Auth\RegisterController,
-     * Auth\ResetPasswordController, Account\ProfileController and the API
-     * controllers all already use exactly this; Admin\StaffController and
-     * Admin\ProfileController use the equivalent 'min:8|confirmed'.
+     * The site-wide policy: Password::defaults(), whose callback is registered
+     * in AppServiceProvider::boot() and reads
+     *   Password::min(10)->mixedCase()->numbers()->symbols()
+     * so a new password is at least ten characters and carries an uppercase
+     * letter, a lowercase letter, a number and a special character.
      *
-     * To tighten the policy site-wide, register a callback with
-     * Password::defaults() in AppServiceProvider::boot() - every caller of this
-     * method then follows automatically. Do not tighten it here.
+     * Every form that sets a password goes through here - Auth\RegisterController,
+     * Auth\ResetPasswordController, Account\ProfileController, Admin\StaffController,
+     * Admin\ProfileController and the API controllers - so the policy has exactly
+     * one definition and there is nothing to keep in sync per form.
      *
-     * Client-side counterpart:
-     *   type="password" required minlength="8" autocomplete="new-password"
+     * To change the policy site-wide, edit that callback. Do not tighten it here:
+     * a rule added in this method would apply to the forms and silently not to
+     * the API, which is how the two drifted apart before.
+     *
+     * Client-side counterpart, which mirrors it message for message:
+     *   type="password" required minlength="10" maxlength="255"
+     *   autocomplete="new-password"
+     * plus the live keystroke check in resources/js/app.js (_passwordError and
+     * the "new password" module beside the inline validator).
      */
     public static function password(bool $required = true, bool $confirmed = true): array
     {
@@ -347,6 +365,33 @@ final class ValidationRules
             $confirmed ? 'confirmed' : null,
             Password::defaults(),
         ]));
+    }
+
+    /**
+     * The sentences a failed password produces, ready to spread into the
+     * $messages argument of $request->validate().
+     *
+     * Laravel's own wording ("The password field must be at least 10
+     * characters.") is accurate, but it is not what the box says while the
+     * password is being typed - _passwordError() in resources/js/app.js - and a
+     * complaint that changes words on its way from the browser to the server
+     * reads as a second, different complaint about the same password. Defining
+     * them once here is what keeps the seven surfaces that mint a password
+     * saying one thing.
+     *
+     * The doubled 'password.password.*' keys are not a typo. The Password rule
+     * reports its own failures via addFailure($attribute, 'password.mixed'), so
+     * the lookup key is "{attribute}.{rule}" = password.password.mixed. Only
+     * 'min' comes from an ordinary rule and takes the short key.
+     */
+    public static function passwordMessages(string $attribute = 'password'): array
+    {
+        return [
+            "{$attribute}.min" => 'Your password must be at least ' . self::PASSWORD_MIN . ' characters long.',
+            "{$attribute}.password.mixed" => 'Your password must include both an uppercase and a lowercase letter.',
+            "{$attribute}.password.numbers" => 'Your password must include at least one number.',
+            "{$attribute}.password.symbols" => 'Your password must include at least one special character, such as @ # ! or ?.',
+        ];
     }
 
     /**

@@ -64,6 +64,11 @@ found=()
 for artisan in "$HOME"/domains/*/*/artisan "$HOME"/domains/*/artisan "$HOME"/*/artisan; do
     dir="$(dirname "$artisan")"
     [ -f "$dir/.env" ] || continue
+    # A deploy pulls with git on the server, so a directory without .git can
+    # never be the target — see the "not a git repository" bail-out further
+    # down. Requiring it here too stops a test harness or an FTP-uploaded copy
+    # from making the search ambiguous and blocking the deploy outright.
+    [ -d "$dir/.git" ] || continue
     if grep -qi 'karmaa' "$dir/.env" 2>/dev/null; then
         found+=("$dir")
     fi

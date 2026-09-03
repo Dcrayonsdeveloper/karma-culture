@@ -73,7 +73,7 @@ Create a new customer account.
 | `last_name` | string | Yes | max:50 |
 | `email` | string | Yes | valid email, unique |
 | `phone` | string | No | max:20, unique |
-| `password` | string | Yes | confirmed, min:8 |
+| `password` | string | Yes | confirmed, min:10, mixed case, a number and a symbol |
 | `password_confirmation` | string | Yes | must match password |
 
 **Response** `201 Created`

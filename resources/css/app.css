@@ -2290,3 +2290,326 @@ body:not(.layout-admin) main table { max-width: 100%; }
     /* Wide content tables (size guide, legal pages) scroll instead of cutting off. */
     body:not(.layout-admin) main table { display: block; overflow-x: auto; }
 }
+
+/* ==========================================================================
+   kk-select — the dropdown list, drawn by us instead of the operating system
+   --------------------------------------------------------------------------
+   A native select paints its open list with the OS: square corners, a
+   system-blue highlight and the system font, and CSS cannot reach inside it.
+   resources/js/kk-select.js stops that list opening and puts this one up in
+   its place, anchored to the control and appended to <body> so it clears the
+   admin shell's nested overflow clips, .kk-modal__card's scrollport and the
+   cookie bar's z-[100].
+
+   The <select> itself is untouched and still visible — it is the trigger, so
+   every rule already written for .form-select and .layout-admin select keeps
+   styling it and there is nothing to keep in sync here.
+   ========================================================================== */
+
+/* Set from JS, never from markup: without the script the control has to stay a
+   working select. This is what makes the OS list unopenable by pointer on
+   every browser, iOS included. */
+select[data-kk-select] {
+    pointer-events: none;
+}
+
+/* :hover cannot match an element the pointer passes through, so the two tells
+   it would have given are put back by hand — the cursor on whatever element is
+   taking the hit, and the admin's border on the control. */
+.kk-select-hovering {
+    cursor: pointer;
+}
+.layout-admin select.kk-select-hover:not(:disabled),
+.layout-admin .form-select.kk-select-hover:not(:disabled) {
+    border-color: #8c9196;
+}
+
+/* While the list is up the control reads as pressed, the way a focused select
+   with an open popup does. */
+select.kk-select-open {
+    border-color: var(--color-kk-tan, #b8895a);
+}
+.layout-admin select.kk-select-open {
+    border-color: #005bd3;
+}
+
+/* --- The panel ---------------------------------------------------------- */
+
+.kk-sel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    box-sizing: border-box;
+    padding: 6px;
+    background: var(--kk-cream-lighter, #fbf5e8);
+    border: 1px solid var(--kk-cream-dark, #e3d2b3);
+    border-radius: 16px;
+    box-shadow: 0 12px 32px -8px rgb(45 24 16 / 0.28), 0 2px 8px rgb(45 24 16 / 0.10);
+    color: var(--kk-text, #2d1810);
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: opacity 130ms ease-out, transform 130ms ease-out;
+}
+.kk-sel.is-up {
+    transform: translateY(6px);
+}
+.kk-sel.is-in {
+    opacity: 1;
+    transform: none;
+}
+
+.kk-sel__list {
+    position: relative;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    max-height: 320px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+.kk-sel__opt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    line-height: 1.35;
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Wraps rather than scrolling sideways. The panel is still as wide as its
+   longest option wants to be - max-content ignores wrapping - so this only
+   bites once the viewport cap is reached, on the admin's hierarchical category
+   paths and IANA timezone list. */
+.kk-sel__label {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* Reserved whether or not it is showing, so the rows do not shift width as the
+   choice moves down the list. */
+.kk-sel__tick {
+    flex: 0 0 auto;
+    display: inline-flex;
+    width: 15px;
+    height: 15px;
+    opacity: 0;
+}
+.kk-sel__tick svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* The chosen value and the row the keyboard is on are two different things.
+   The tick marks what the control holds; the tint marks where you are. */
+/* No font-weight here: the storefront sets `font-weight: 700 !important` on
+   every li and span outside the admin (app.css:215-232), so the rows are
+   already bolder than any value this could ask for. The tick and the colour
+   carry the distinction instead, and .kk-sel--admin adds the weight where the
+   blanket rule does not reach. */
+.kk-sel__opt.is-chosen {
+    color: var(--kk-brown, #4a2d1a);
+}
+.kk-sel__opt.is-chosen .kk-sel__tick {
+    opacity: 1;
+    color: var(--kk-tan-dark, #8c5c34);
+}
+.kk-sel__opt.is-active {
+    background: var(--kk-cream, #efe2cb);
+    color: var(--kk-tan-dark, #8c5c34);
+}
+.kk-sel__opt.is-disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.kk-sel__group {
+    padding: 8px 12px 4px;
+    font-size: 0.75em;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--kk-text-muted, #7a6555);
+}
+.kk-sel__empty {
+    padding: 12px;
+    color: var(--kk-text-muted, #7a6555);
+}
+
+/* --- Admin: the Shopify-ish surface the rest of that panel uses ---------- */
+
+.kk-sel--admin {
+    padding: 5px;
+    background: #fff;
+    border: 1px solid #c9cccf;
+    border-radius: 12px;
+    box-shadow: 0 10px 28px -8px rgb(0 0 0 / 0.22), 0 1px 3px rgb(0 0 0 / 0.08);
+    color: #303030;
+}
+.kk-sel--admin .kk-sel__opt {
+    padding: 7px 10px;
+    border-radius: 8px;
+}
+.kk-sel--admin .kk-sel__opt.is-chosen {
+    font-weight: 600;
+    color: #005bd3;
+}
+.kk-sel--admin .kk-sel__opt.is-chosen .kk-sel__tick {
+    color: #005bd3;
+}
+.kk-sel--admin .kk-sel__opt.is-active {
+    background: #f1f2f3;
+    color: #303030;
+}
+.kk-sel--admin .kk-sel__opt.is-chosen.is-active {
+    background: #eaf1fb;
+    color: #005bd3;
+}
+.kk-sel--admin .kk-sel__group,
+.kk-sel--admin .kk-sel__empty {
+    color: #616161;
+}
+
+/* --- Phones: a sheet, not a menu ---------------------------------------- */
+
+@media (max-width: 639.98px) {
+    .kk-sel {
+        top: auto;
+        right: 0;
+        bottom: 0;
+        left: 0 !important;
+        width: 100%;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
+        border-width: 1px 0 0;
+        border-radius: 22px 22px 0 0;
+        transform: translateY(100%);
+    }
+    .kk-sel.is-up {
+        transform: translateY(100%);
+    }
+    .kk-sel.is-in {
+        transform: none;
+    }
+    .kk-sel__list {
+        max-height: min(62vh, 62svh) !important;
+    }
+    /* Apple asks for 44px of hit area, Material for 48dp. The rows the rest of
+       the site uses are ~30px, which is a menu you have to aim at. */
+    .kk-sel__opt {
+        min-height: 48px;
+        padding: 12px 14px;
+        border-radius: 14px;
+    }
+    .kk-sel__grip {
+        width: 40px;
+        height: 4px;
+        margin: 2px auto 8px;
+        border-radius: 999px;
+        background: var(--kk-cream-dark, #e3d2b3);
+    }
+    .kk-sel--admin .kk-sel__grip {
+        background: #c9cccf;
+    }
+    .kk-sel__title {
+        padding: 0 14px 8px;
+        font-size: 0.8125em;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--kk-text-muted, #7a6555);
+    }
+    .kk-sel--admin .kk-sel__title {
+        color: #616161;
+    }
+}
+
+.kk-sel__backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgb(31 17 9 / 0.42);
+    touch-action: none;
+}
+
+/* Plain overflow:hidden does not stop iOS rubber-banding the page behind a
+   sheet; fixing the scroll position does. */
+html.kk-sel-locked,
+html.kk-sel-locked body {
+    overflow: hidden;
+    overscroll-behavior: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .kk-sel {
+        transition: none;
+        transform: none;
+    }
+    .kk-sel.is-up,
+    .kk-sel.is-in {
+        transform: none;
+    }
+}
+
+/* The panel is transient chrome. A print started with one open should get the
+   page, and the control prints its own selected option either way. */
+@media print {
+    .kk-sel,
+    .kk-sel__backdrop {
+        display: none !important;
+    }
+}
+
+/* ==========================================================================
+   .kk-select-pill — the storefront's visible dropdown control
+   --------------------------------------------------------------------------
+   For the dropdowns a shopper reads as a control rather than a form field (the
+   listing sort bar), so it sits in the same cream-and-brown pill language as
+   .kk-btn-brown and the wishlist/share buttons. Form-field selects on checkout
+   and the account pages keep .form-select's 8px, which is what the text inputs
+   beside them use.
+   ========================================================================== */
+.kk-select-pill {
+    appearance: none;
+    -webkit-appearance: none;
+    max-width: 100%;
+    padding: 7px 34px 7px 14px;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--kk-text, #2d1810);
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3e%3cpath stroke='%238c5c34' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 12px center;
+    background-repeat: no-repeat;
+    background-size: 14px 14px;
+    border: 1px solid var(--kk-cream-dark, #e3d2b3);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+.kk-select-pill:hover:not(:disabled),
+.kk-select-pill.kk-select-hover:not(:disabled) {
+    border-color: var(--kk-tan, #b8895a);
+}
+.kk-select-pill.kk-select-open {
+    border-color: var(--kk-tan-dark, #8c5c34);
+    background-color: var(--kk-cream-lighter, #fbf5e8);
+}
+
+/* The control used to carry Tailwind's focus:border-[#6F9CA2], which is what
+   stood in for the ring that app.css:527-546 kills with !important on every
+   select. The ring has to be reclaimed the same way; the border needs no
+   !important because that reset does not touch border-color. :focus-visible
+   only, so a pointer press - which focuses the control by hand - does not
+   leave a ring behind. */
+.kk-select-pill:focus-visible {
+    outline: 2px solid var(--kk-tan-dark, #8c5c34) !important;
+    outline-offset: 2px !important;
+    border-color: var(--kk-tan-dark, #8c5c34);
+}

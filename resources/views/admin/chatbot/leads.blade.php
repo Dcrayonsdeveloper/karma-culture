@@ -28,6 +28,9 @@
                     $shownIds = $c->messages->pluck('product_ids')->filter()->flatten()->unique();
                     $clicked = ($clicks[$c->id] ?? collect())->pluck('product_id')->unique();
                     $questions = $c->messages->where('role', 'user')->pluck('content');
+                    // Where the team has put this lead, as opposed to what the bot guessed.
+                    $statusKey = $c->leadStatusKey();
+                    [$statusBg, $statusFg] = $c->leadStatusColour();
                 @endphp
                 <div class="card" style="padding: 1rem;">
 
@@ -49,7 +52,21 @@
                                 &middot; {{ $c->last_message_at?->diffForHumans() ?? '-' }}
                             </div>
                         </div>
-                        <div style="display: flex; gap: 0.5rem; flex-shrink: 0;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0;">
+                            {{-- Set by a person, unlike the two badges above, which the bot writes. --}}
+                            <form method="POST" action="{{ route('admin.chatbot.lead-status', $c) }}" style="margin: 0;">
+                                @csrf
+                                @method('PUT')
+                                <select name="lead_status" onchange="this.form.submit()"
+                                        aria-label="Follow-up status for {{ $c->user?->full_name ?? 'this lead' }}"
+                                        style="font-size: 12px; font-weight: 500; padding: 0.25rem 1.75rem 0.25rem 0.55rem; border-radius: 0.5rem; border: 1px solid {{ $statusFg }}40; background-color: {{ $statusBg }}; color: {{ $statusFg }};">
+                                    @foreach(\App\Models\ChatbotConversation::LEAD_STATUSES as $value => $label)
+                                        <option value="{{ $value }}" @selected($statusKey === $value)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                                {{-- onchange carries the change when scripting is on; this is the fallback. --}}
+                                <noscript><button type="submit" class="btn btn-secondary" style="font-size: 11px; padding: 0.2rem 0.45rem;">Save</button></noscript>
+                            </form>
                             @if($c->user)
                                 <a href="{{ route('admin.customers.show', $c->user) }}" style="font-size: 12px; color: #005bd3; text-decoration: none; padding: 0.5rem 0; margin: -0.5rem 0;">Customer</a>
                             @endif

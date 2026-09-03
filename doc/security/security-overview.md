@@ -20,41 +20,46 @@ This document defines security measures across the platform.
 
 ### Password Policy
 
+**As implemented.** The policy has exactly one definition, the `Password::defaults()`
+callback registered in `AppServiceProvider::boot()`:
+
 ```php
-// config/auth.php
+// app/Providers/AppServiceProvider.php
+Password::defaults(fn () => Password::min(10)->mixedCase()->numbers()->symbols());
+```
+
+A new password is therefore at least **10 characters** and carries an uppercase
+letter, a lowercase letter, a number and a special character. Every form that
+mints one - registration, password reset, the customer's own profile, the admin
+staff screens, the admin's own profile, the API, and the `admin:credentials`
+console command - reaches it through `ValidationRules::password()`, so there is
+nothing to keep in sync per form. Sign-in forms are deliberately *not* held to
+it: an account created under the previous eight-character policy still has to be
+able to log in.
+
+The browser mirrors the same rule, message for message, and reports it on the
+keystroke rather than on submit - `_passwordError()` and the new-password module
+in `resources/js/app.js`, plus `minlength="10"` on the field itself.
+
+**Not implemented** (the sketch below is a design note, not code that exists):
+common-password blocklists, personal-data checks and password history.
+
+```php
+// SKETCH ONLY - no such config key or rule class exists in this codebase.
 'password' => [
-    'min_length' => 8,
-    'require_uppercase' => true,
-    'require_lowercase' => true,
-    'require_numbers' => true,
-    'require_symbols' => false,
     'prevent_common' => true,
     'prevent_personal' => true,  // No name, email in password
     'history_count' => 5,        // Prevent reuse of last 5
 ],
 
-// app/Rules/StrongPassword.php
 class StrongPassword implements ValidationRule
 {
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
+        // Length and the four character classes are already enforced by
+        // Password::defaults() above; this rule would only add what that
+        // cannot express.
         $config = config('auth.password');
-
-        if (strlen($value) < $config['min_length']) {
-            $fail("Password must be at least {$config['min_length']} characters.");
-        }
-
-        if ($config['require_uppercase'] && !preg_match('/[A-Z]/', $value)) {
-            $fail('Password must contain at least one uppercase letter.');
-        }
-
-        if ($config['require_lowercase'] && !preg_match('/[a-z]/', $value)) {
-            $fail('Password must contain at least one lowercase letter.');
-        }
-
-        if ($config['require_numbers'] && !preg_match('/[0-9]/', $value)) {
-            $fail('Password must contain at least one number.');
-        }
 
         if ($config['prevent_common'] && $this->isCommonPassword($value)) {
             $fail('This password is too common. Please choose a stronger password.');

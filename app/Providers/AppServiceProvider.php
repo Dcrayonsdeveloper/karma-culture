@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\Category;
 use App\Models\Setting;
 use App\Models\UserAddress;
+use App\Rules\ValidationRules;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Blade;
@@ -93,12 +94,19 @@ class AppServiceProvider extends ServiceProvider
         //
         // Deliberately expressed as Laravel's composable rules rather than the
         // equivalent regex. A pattern such as
-        //   ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$
+        //   ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{10,}$
         // enforces the same four classes but also *closes the character set*: it
         // rejects '#', '_', '-', '~' and spaces, which throws out stronger
         // passwords than it admits and breaks password managers that generate
         // them. ->symbols() asks for at least one symbol without limiting which.
-        Password::defaults(fn () => Password::min(8)->mixedCase()->numbers()->symbols());
+        //
+        // The minimum is ten, raised from Laravel's default of eight. Only the
+        // LENGTH moved: mixedCase(), numbers() and symbols() were already the
+        // policy, so a password that satisfied the old rule and is ten
+        // characters long still satisfies this one. Nothing re-checks a stored
+        // hash, so existing accounts keep working and are held to the new
+        // minimum only the next time they set a password.
+        Password::defaults(fn () => Password::min(ValidationRules::PASSWORD_MIN)->mixedCase()->numbers()->symbols());
 
         // Named limiters, one bucket each.
         //

@@ -8,6 +8,10 @@ import focus from '@alpinejs/focus';
 import collapse from '@alpinejs/collapse';
 import intersect from '@alpinejs/intersect';
 
+// Site-wide dropdown: draws every <select>'s option list itself instead of
+// letting the operating system paint it.
+import './kk-select';
+
 // Register plugins
 Alpine.plugin(focus);
 Alpine.plugin(collapse);
@@ -840,16 +844,23 @@ const _mobileError = (v) => {
     return '';
 };
 
-// Mirrors Password::min(8)->mixedCase()->numbers()->symbols() from
+// Mirrors Password::min(10)->mixedCase()->numbers()->symbols() from
 // AppServiceProvider. Laravel tests those with Unicode properties rather than
 // ASCII classes, so this does too - an accented capital still counts as one.
 // Only the first unmet requirement is shown; the hint under the field already
 // lists all four.
+//
+// Length is counted in code points, the way Laravel's Str::length() counts it,
+// so an emoji or an astral-plane letter is worth one on both sides. Counting
+// UTF-16 units instead would make the browser call a nine-character password
+// long enough and the server hand it straight back.
+const _PASSWORD_MIN = 10;
 const _passwordError = (v) => {
     const pw = v || '';
     if (!pw) return 'Please choose a password.';
-    if (pw.length < 8) return 'Your password must be at least 8 characters long.';
-    if (pw.length > 255) return 'Your password must be 255 characters or fewer.';
+    const len = [...pw].length;
+    if (len < _PASSWORD_MIN) return `Your password must be at least ${_PASSWORD_MIN} characters long.`;
+    if (len > 255) return 'Your password must be 255 characters or fewer.';
     if (!/\p{Lu}/u.test(pw) || !/\p{Ll}/u.test(pw)) return 'Your password must include both an uppercase and a lowercase letter.';
     if (!/\p{N}/u.test(pw)) return 'Your password must include at least one number.';
     if (!/[\p{Z}\p{S}\p{P}]/u.test(pw)) return 'Your password must include at least one special character, such as @ # ! or ?.';
@@ -942,6 +953,20 @@ Alpine.data('kkRegisterForm', (serverErrors = {}) => ({
     // so the first one to appear marks the field touched and takes over from
     // there like any other message.
     input(field) {
+        // A password is the exception to waiting for blur. Its rule has four
+        // parts and its characters are dots on the screen, so being told after
+        // the fact that the password just invented is a character short means
+        // inventing another one; said on the keystroke, the message counts down
+        // as it is typed and disappears the moment the rule is met.
+        //
+        // The first CHARACTER promotes the field, not the first keystroke: a
+        // shopper who focuses the box and tabs straight out of it has been told
+        // nothing, which is the restraint every other field here observes.
+        if (field === 'password' || field === 'password_confirmation') {
+            const box = this.$refs[field];
+            if (box && box.value) this.touched[field] = true;
+        }
+
         if (this.touched[field]) {
             this.check(field);
         } else {
@@ -1880,6 +1905,157 @@ Alpine.start();
 
         field.value = capped;
         try { field.setSelectionRange(kept, kept); } catch (e) { /* unsupported on some types */ }
+    }, true);
+
+    // A password being CHOSEN, judged on the keystroke rather than on the way
+    // out of the box.
+    //
+    // Everything else here waits for blur, and for good reason: half an email
+    // address is unfinished, not wrong. A password is the one field where that
+    // reasoning fails. Its rule has four separate parts, what is on screen is a
+    // row of dots, and a password is invented rather than recalled - so being
+    // told at the end that the thing you just made up is a character short means
+    // making up another one. Checked live, the message counts down as it is
+    // typed and vanishes the moment the rule is satisfied.
+    //
+    // WHICH boxes, and it is the whole of the care in this module:
+    //
+    //   * a sign-in box is never judged. An account created under the old
+    //     eight-character policy has a password that fails this one, and a sign-in
+    //     form that refuses to accept it locks that customer out of the only
+    //     screen they could fix it from.
+    //   * an admin settings box is never judged either. An SMTP password, a
+    //     gateway salt, a webhook secret and an API key are all somebody else's
+    //     credential, already minted, and whatever they say it is.
+    //
+    // They are told apart the way the browser's own password manager tells them
+    // apart - autocomplete="new-password" against "current-password" - read
+    // together with the field's NAME, because the settings screens label their
+    // API keys new-password too (so autofill does not offer the admin their own
+    // password into a webhook secret), and the name is what separates
+    // `password` from `mail_password` and `shiprocket_password`.
+    //
+    // data-kk-password overrides both, following data-kk-chars next door:
+    //   data-kk-password="new"     - judge it, whatever it is called
+    //   data-kk-password="confirm" - match it against the box it repeats
+    //   data-kk-password="off"     - hands off; a form with its own validator
+    //                                (kkRegisterForm) says this, so the message
+    //                                is not printed twice under one box.
+    const NEW_PASSWORD_NAMES = new Set([
+        'password', 'password_confirmation',
+        'new_password', 'new_password_confirmation',
+    ]);
+
+    function passwordRole(field) {
+        if (!field || typeof field.value !== 'string' || !field.getAttribute) return null;
+
+        const named = field.getAttribute('data-kk-password');
+        if (named === 'off') return null;
+        if (named === 'new' || named === 'confirm') return named;
+
+        // A token list - "section-blue new-password" is legal - and the field
+        // type is always the last token, as in charPolicy() above.
+        const auto = (field.getAttribute('autocomplete') || '').trim().toLowerCase();
+        if (!auto || auto.split(/\s+/).pop() !== 'new-password') return null;
+
+        const name = (field.getAttribute('name') || '').toLowerCase();
+        if (!NEW_PASSWORD_NAMES.has(name)) return null;
+
+        return name.endsWith('_confirmation') ? 'confirm' : 'new';
+    }
+
+    // The box a confirmation repeats: same form, same name without the suffix.
+    // Falls back to plain `password` for a field named by data-kk-password
+    // rather than by convention.
+    function passwordPartner(field) {
+        const form = field.form;
+        if (!form) return null;
+
+        const name = (field.getAttribute('name') || '');
+        const base = name ? name.replace(/_confirmation$/, '') : 'password';
+        if (!base || base === name) return form.querySelector('[name="password"]');
+
+        return form.querySelector('[name="' + base + '"]');
+    }
+
+    function checkPassword(field, live) {
+        const role = passwordRole(field);
+        if (!role) return;
+
+        const form = field.form;
+        if (form && form.hasAttribute('data-no-validate')) return;
+
+        const value = field.value || '';
+        let message = '';
+
+        if (role === 'new') {
+            // An empty box is not wrong yet. `required` is what says a password
+            // is missing, and on the forms where it is optional - "leave blank
+            // to keep current" - nothing is wrong with an empty box at all.
+            message = value === '' ? '' : _passwordError(value);
+        } else {
+            const partner = passwordPartner(field);
+            const pw = partner ? (partner.value || '') : '';
+
+            if (value !== '') {
+                message = value === pw ? '' : 'The two passwords do not match.';
+            } else {
+                // Empty. While the customer is still typing that is unfinished
+                // rather than wrong, so nothing is said. On the way into a
+                // submit it IS wrong once the password box has something in it,
+                // and saying so is the difference between catching it here and
+                // catching it on a reloaded page - the admin staff form leaves
+                // both boxes optional, so `required` does not cover this.
+                message = (!live && pw !== '') ? 'Please confirm your password.' : '';
+            }
+        }
+
+        // setCustomValidity is the join between this and everything above it:
+        // it stops the submit, and messageFor() reads it back for the blur,
+        // submit and invalid handlers, so the live message and the one printed
+        // on submit are the same sentence and can never contradict each other.
+        field.setCustomValidity(message);
+
+        if (!live) return;
+        if (message) showError(field, message);
+        else if (field.checkValidity()) clearError(field);
+    }
+
+    document.addEventListener('input', function (event) {
+        const field = event.target;
+        checkPassword(field, true);
+
+        // Editing the password moves the goalposts for the confirmation, so a
+        // confirmation already filled in is re-judged rather than left showing a
+        // mismatch that the keystroke has just resolved.
+        if (passwordRole(field) === 'new' && field.form) {
+            const name = field.getAttribute('name') || 'password';
+            const confirm = field.form.querySelector('[name="' + name + '_confirmation"]');
+            if (confirm && confirm.value) checkPassword(confirm, true);
+        }
+    }, true);
+
+    // A password box the customer never typed in has no custom validity set, so
+    // a password filled in by the browser's own manager would reach the submit
+    // unjudged. Setting it on blur and again on the way into a submit closes
+    // that, without printing anything early.
+    //
+    // Both are bound to WINDOW rather than to the document, and that is load
+    // bearing. The submit handler further up this file is document-capture and
+    // was registered before anything here, so a document-capture listener added
+    // at this point would run after it: it would call checkValidity() while the
+    // custom validity is still one event stale and wave through a password this
+    // module is about to mark invalid. Capture descends window before document,
+    // so binding a step further out puts these ahead of it whatever the
+    // registration order - and the same for the blur handler below.
+    window.addEventListener('blur', function (event) {
+        checkPassword(event.target, false);
+    }, true);
+
+    window.addEventListener('submit', function (event) {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        Array.from(form.elements).forEach(function (el) { checkPassword(el, false); });
     }, true);
 
     // Report a field the moment the customer leaves it, instead of saving every
