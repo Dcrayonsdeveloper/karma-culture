@@ -250,7 +250,7 @@
                                 <dl class="space-y-2.5">
                                     <div class="flex justify-between text-[13px]">
                                         <dt class="text-neutral-600">Order Date</dt>
-                                        <dd class="font-medium text-neutral-700">{{ $order->created_at->format('d M Y') }}</dd>
+                                        <dd class="font-medium text-neutral-700">{{ format_date($order->created_at) }}</dd>
                                     </div>
                                     <div class="flex justify-between text-[13px]">
                                         <dt class="text-neutral-600">Payment</dt>
@@ -278,19 +278,19 @@
                                     @if($order->packed_at)
                                         <div class="flex justify-between text-[13px]">
                                             <dt class="text-neutral-600">Packed</dt>
-                                            <dd class="font-medium text-neutral-700">{{ $order->packed_at->format('d M Y') }}</dd>
+                                            <dd class="font-medium text-neutral-700">{{ format_date($order->packed_at) }}</dd>
                                         </div>
                                     @endif
                                     @if($order->shipped_at)
                                         <div class="flex justify-between text-[13px]">
                                             <dt class="text-neutral-600">Shipped</dt>
-                                            <dd class="font-medium text-neutral-700">{{ $order->shipped_at->format('d M Y') }}</dd>
+                                            <dd class="font-medium text-neutral-700">{{ format_date($order->shipped_at) }}</dd>
                                         </div>
                                     @endif
                                     @if($order->delivered_at)
                                         <div class="flex justify-between text-[13px]">
                                             <dt class="text-neutral-600">Delivered</dt>
-                                            <dd class="font-medium text-neutral-700">{{ $order->delivered_at->format('d M Y') }}</dd>
+                                            <dd class="font-medium text-neutral-700">{{ format_date($order->delivered_at) }}</dd>
                                         </div>
                                     @endif
                                     @if($order->expected_delivery_date && !$order->delivered_at && !in_array($order->status, ['cancelled', 'returned']))

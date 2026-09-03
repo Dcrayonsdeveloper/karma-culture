@@ -76,7 +76,7 @@
                                     </span>
                                 </div>
                                 <div class="flex items-center gap-3 text-xs text-neutral-600">
-                                    <span>{{ $order->created_at->format('M d, Y') }}</span>
+                                    <span>{{ format_date($order->created_at) }}</span>
                                     <span class="text-sm font-bold text-neutral-900">@price($order->total)</span>
                                 </div>
                             </div>

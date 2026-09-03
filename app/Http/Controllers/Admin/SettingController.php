@@ -17,9 +17,38 @@ use Illuminate\View\View;
 
 class SettingController extends Controller
 {
+    /**
+     * The keys this screen owns, and the ONE key each field really writes.
+     *
+     * The contact three are the reason this list exists. This screen used to
+     * save site_email / site_phone / site_address, which nothing on the
+     * storefront reads - the footer, the contact page and the WhatsApp button
+     * all read contact_email / contact_phone / contact_address, which are
+     * written by Online Store -> Site Settings. So filling this form in changed
+     * nothing a customer could see, and the two screens disagreed in silence.
+     */
+    private const GENERAL_KEYS = [
+        'site_name' => 'site_name',
+        'site_tagline' => 'site_tagline',
+        'site_email' => 'contact_email',
+        'site_phone' => 'contact_phone',
+        'site_address' => 'contact_address',
+        'timezone' => 'timezone',
+        'date_format' => 'date_format',
+        'currency' => 'currency',
+        'currency_symbol' => 'currency_symbol',
+        'currency_position' => 'currency_position',
+    ];
+
     public function general(): View
     {
-        $settings = Setting::whereIn('group', ['general', 'store'])->pluck('value', 'key');
+        // By key, not by group. site_name is written by the other settings
+        // screen under group "homepage", so a group query came back without it
+        // and the field rendered empty next to a storefront that was already
+        // showing the name - which reads as "the setting is not saved".
+        $settings = collect(self::GENERAL_KEYS)
+            ->map(fn ($key) => Setting::get($key, ''))
+            ->all();
 
         return view('admin.settings.general', compact('settings'));
     }
@@ -39,14 +68,24 @@ class SettingController extends Controller
             'currency_position' => 'required|in:before,after',
         ]);
 
-        foreach ($validated as $key => $value) {
+        foreach ($validated as $field => $value) {
+            // The field name is the form's; the setting key is the site's.
+            $key = self::GENERAL_KEYS[$field] ?? $field;
+
             Setting::updateOrCreate(
                 ['key' => $key],
                 ['value' => $value, 'group' => 'general']
             );
             Cache::forget("setting.{$key}");
         }
+
         Cache::forget('currency_config');
+
+        // The footer, the header and the assistant all read these through
+        // Setting::get(), which caches per key for an hour, and the group
+        // caches are keyed separately again.
+        Cache::forget('settings.group.general');
+        Cache::forget('settings.group.homepage');
 
         return back()->with('success', 'General settings updated successfully.');
     }

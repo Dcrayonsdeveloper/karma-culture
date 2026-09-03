@@ -34,6 +34,33 @@ if (!function_exists('format_price')) {
     }
 }
 
+if (!function_exists('format_date')) {
+    /**
+     * A date in the format the admin picked under Settings -> General.
+     *
+     * date_format was a required field on that screen that nothing read, so
+     * choosing "d/m/Y" changed nothing anywhere. Dates are rendered through
+     * this now, and the setting means what it says.
+     *
+     * Null in, empty string out: an order that has not shipped has no shipped
+     * date, and the caller should not have to guard every one of them.
+     */
+    function format_date($date, ?string $fallback = null): string
+    {
+        if (empty($date)) {
+            return '';
+        }
+
+        if (! $date instanceof DateTimeInterface) {
+            $date = new DateTimeImmutable((string) $date);
+        }
+
+        $format = $fallback ?: (string) Setting::get('date_format', 'M d, Y');
+
+        return $date->format($format ?: 'M d, Y');
+    }
+}
+
 if (!function_exists('currency_config')) {
     function currency_config(?string $key = null): mixed
     {
