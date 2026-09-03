@@ -15,9 +15,13 @@
                  is Latin-only: it rejects "रवि कुमार" and "山田太郎" outright, and it also
                  rejects "O'Connor" and "Mary-Anne". The App\Rules\PersonName rule
                  behind this field allows any script plus those four separators,
-                 and a client pattern must never be stricter than the server. --}}
+                 and a client pattern must never be stricter than the server.
+
+                 maxlength is the 30 the server asks for (RegisterController::NAME_LIMIT),
+                 not a looser hard bound above it, so the box stops at the 30th
+                 character instead of taking a name it is about to hand back. --}}
             <input type="text" name="full_name" id="full_name" value="{{ old('full_name') }}"
-                   required autofocus autocomplete="name" minlength="2" maxlength="100"
+                   required autofocus autocomplete="name" minlength="2" maxlength="30"
                    class="form-input w-full @error('full_name') border-error-300 @enderror"
                    placeholder="e.g. Priya Sharma">
             @error('full_name')

@@ -270,13 +270,14 @@
                                      even sent. App\Rules\PersonName does the charset work server-side,
                                      in every script.
 
-                                     maxlength is the field's hard bound, NOT the limit being asked for.
-                                     The limit is 30 (RegisterController::NAME_LIMIT), and it is reported
-                                     as a message on the keystroke that crosses it - maxlength="30" would
-                                     swallow the 31st character in silence and leave the shopper wondering
-                                     why the box stopped taking letters. --}}
+                                     maxlength IS the limit being asked for: 30, the same number the
+                                     server holds as RegisterController::NAME_LIMIT. The box stops at
+                                     the 30th character rather than letting a longer name be typed out
+                                     in full and handed back on submit. _instantError()'s >30 message
+                                     stays as the backstop - maxlength does not police a value set from
+                                     script, and autofill arrives that way. --}}
                                 <input type="text" name="full_name" id="full_name" value="{{ old('full_name') }}"
-                                       required autocomplete="name" minlength="2" maxlength="100"
+                                       required autocomplete="name" minlength="2" maxlength="30"
                                        x-ref="full_name" @blur="blur('full_name')" @input="input('full_name')"
                                        class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all"
                                        :class="errors.full_name && 'border-red-300 bg-red-50'"

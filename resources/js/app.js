@@ -945,6 +945,11 @@ const _instantError = (field, value) => {
     if (!trimmed) return '';
 
     if (field === 'full_name') {
+        // Every name box on the site now carries maxlength="30", so a shopper
+        // cannot type or paste their way past this. It stays because maxlength
+        // is a UI bound and not a value bound: autofill, a password manager and
+        // anything else that assigns to .value land a longer name in the field
+        // without ever passing it.
         if ([...trimmed].length > 30) return 'Please keep your name to 30 characters or fewer.';
         // A digit or a symbol in a name is wrong the moment it appears. The
         // rest of _fullNameError (too short, reads as a URL) is not: both can

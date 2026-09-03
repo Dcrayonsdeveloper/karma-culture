@@ -518,8 +518,15 @@
                 {{-- Signup-only: full name --}}
                 <div class="kk-loginmodal__group" x-show="mode === 'signup'">
                     <label class="kk-loginmodal__label" for="kk-auth-name">Full Name</label>
+                    {{-- maxlength is the 30 the server asks for (RegisterController::NAME_LIMIT),
+                         so the box stops at the 30th character instead of taking a name the
+                         endpoint is about to hand back. novalidate does not affect it: maxlength
+                         blocks the keystroke and the paste, it is not a submit-time check. The
+                         >30 branch in validate() below stays, because a value set from script -
+                         autofill, a password manager - reaches x-model without passing it. --}}
                     <input type="text" id="kk-auth-name" class="kk-loginmodal__field"
                            :class="fieldErrors.full_name && 'has-error'"
+                           maxlength="30"
                            x-model="form.full_name" placeholder="Enter your full name" autocomplete="name">
                     <p class="kk-loginmodal__fielderror" x-show="fieldErrors.full_name" x-text="fieldErrors.full_name" x-cloak></p>
                 </div>

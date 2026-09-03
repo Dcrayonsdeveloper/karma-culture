@@ -269,6 +269,44 @@ class RegistrationFormTest extends TestCase
             'The mobile field should cap itself at ten digits as it is typed.');
     }
 
+    /**
+     * The 30 is a hard stop in the browser, not a message after the fact.
+     *
+     * These boxes used to carry maxlength="100" deliberately, so a 31st
+     * character was reported rather than swallowed. The field is now capped at
+     * the number the server actually enforces: the box stops taking letters at
+     * 30 instead of letting a longer name be typed out in full, submitted, and
+     * handed straight back. All four places the signup name renders have to
+     * agree, or a shopper meets a different rule depending on which one the
+     * page happened to show them.
+     */
+    public function test_the_signup_name_field_stops_at_thirty_characters(): void
+    {
+        $html = $this->get('/login?mode=register')->assertStatus(200)->getContent();
+
+        preg_match('/<input[^>]*name="full_name"[^>]*>/', $html, $m);
+        $this->assertNotEmpty($m, 'The full name field is missing from the register form.');
+        $this->assertStringContainsString('maxlength="30"', $m[0],
+            'The signup name box must stop at 30 characters, the same limit '
+            .'RegisterController::NAME_LIMIT holds.');
+
+        // The storefront carries two more signup boxes - the header's login
+        // modal and the layout's own - and neither is on /login, which renders
+        // through the guest layout. A cap on this form alone would leave a
+        // shopper who signs up from the header still able to type 40.
+        $storefront = $this->get('/')->assertStatus(200)->getContent();
+
+        preg_match('/<input[^>]*id="kk-auth-name"[^>]*>/s', $storefront, $header);
+        $this->assertNotEmpty($header, 'The header login modal has no name field.');
+        $this->assertStringContainsString('maxlength="30"', $header[0],
+            'The header modal name box must be capped at 30 too.');
+
+        preg_match('/<input[^>]*x-model="name"[^>]*>/s', $storefront, $layout);
+        $this->assertNotEmpty($layout, 'The layout auth modal has no name field.');
+        $this->assertStringContainsString('maxlength="30"', $layout[0],
+            'The layout auth modal name box must be capped at 30 too.');
+    }
+
     public function test_the_confirm_password_field_can_be_revealed_like_the_password_field(): void
     {
         $html = $this->get('/login?mode=register')->assertStatus(200)->getContent();
