@@ -343,10 +343,27 @@
                                         </div>
                                     @endif
 
-                                    @php $kkFreeShip = (int) \App\Models\Setting::get('free_shipping_threshold', 999); @endphp
+                                    {{-- The amount, not the word. This printed FREE whatever the
+                                         cart said, so a shop that had configured a delivery charge
+                                         showed the customer nothing and then billed them nothing.
+                                         The threshold note only appears when there is a charge to
+                                         be spared - "free over X" beside a free order is noise. --}}
+                                    @php
+                                        $kkFreeShip = (float) \App\Models\Setting::get('free_shipping_threshold', 0);
+                                        $kkShipping = (float) $cart->shipping;
+                                    @endphp
                                     <div class="flex items-center justify-between text-[13px]">
-                                        <span class="text-neutral-600">Shipping <span class="text-neutral-400">(free over ₹{{ number_format($kkFreeShip) }})</span></span>
-                                        <span class="text-success-600 font-semibold">FREE</span>
+                                        <span class="text-neutral-600">
+                                            Shipping
+                                            @if($kkShipping > 0 && $kkFreeShip > 0)
+                                                <span class="text-neutral-400">(free over @price($kkFreeShip))</span>
+                                            @endif
+                                        </span>
+                                        @if($kkShipping > 0)
+                                            <span class="font-semibold text-neutral-900">@price($kkShipping)</span>
+                                        @else
+                                            <span class="text-success-600 font-semibold">FREE</span>
+                                        @endif
                                     </div>
                                 </div>
 
@@ -354,7 +371,7 @@
 
                                 <div class="flex items-center justify-between">
                                     <span class="text-sm font-bold text-neutral-900">Total Amount</span>
-                                    <span class="text-sm font-bold text-neutral-900">@price($cart->subtotal - $cart->discount)</span>
+                                    <span class="text-sm font-bold text-neutral-900">@price($cart->subtotal - $cart->discount + $cart->shipping)</span>
                                 </div>
 
                                 @if($cart->discount > 0)

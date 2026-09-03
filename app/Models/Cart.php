@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\ShippingCharge;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -124,12 +125,22 @@ class Cart extends Model
                 : 0;
         });
 
+        // Delivery, from Settings -> Shipping. `shipping` was only ever read
+        // here and never written, so it sat at the column default of 0 and the
+        // total below could not include a charge however the admin configured
+        // one. Set on the cart itself so every reader - the drawer, the cart
+        // page, checkout and the order - agrees without each recomputing it.
+        $this->setAttribute('subtotal', $subtotal);
+        $this->setAttribute('discount', $discount);
+        $shipping = ShippingCharge::for($this);
+
         $this->update([
             'coupon_id' => $this->coupon_id,
             'subtotal' => $subtotal,
             'discount' => $discount,
             'tax' => $tax,
-            'total' => $subtotal - $discount + $tax + $this->shipping,
+            'shipping' => $shipping,
+            'total' => $subtotal - $discount + $tax + $shipping,
         ]);
     }
 
