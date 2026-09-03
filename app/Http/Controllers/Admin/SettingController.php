@@ -10,8 +10,6 @@ use App\Support\PopupSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
@@ -92,54 +90,6 @@ class SettingController extends Controller
         Cache::forget('settings.group.homepage');
 
         return back()->with('success', 'General settings updated successfully.');
-    }
-
-    public function payment(): View
-    {
-        $settings = Setting::where('group', 'payment')->pluck('value', 'key');
-
-        return view('admin.settings.payment', compact('settings'));
-    }
-
-    public function updatePayment(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
-            'payu_merchant_key'   => 'nullable|string|max:255',
-            'payu_merchant_salt'  => 'nullable|string|max:255',
-            'payu_mode'           => 'nullable|in:test,live',
-            'cod_instructions'    => 'nullable|string|max:1000',
-        ]);
-
-        // Boolean toggles - use request->boolean() so unchecked checkboxes save '0'
-        foreach (['payu_enabled', 'cod_enabled'] as $key) {
-            Setting::updateOrCreate(
-                ['key' => $key],
-                ['value' => $request->boolean($key) ? '1' : '0', 'group' => 'payment']
-            );
-            // Setting::get() caches each key for an hour; without this forget
-            // the storefront kept offering stale payment methods after saving.
-            Cache::forget("setting.{$key}");
-        }
-
-        // Credential / text fields
-        foreach ($validated as $key => $value) {
-            // The salt field is deliberately rendered empty, so a blank submit
-            // means "unchanged". Without this, opening the page and pressing
-            // Save wiped the salt - and checkout drops online payment entirely
-            // once it is empty.
-            if ($key === 'payu_merchant_salt' && ! $request->filled('payu_merchant_salt')) {
-                continue;
-            }
-
-            Setting::updateOrCreate(
-                ['key' => $key],
-                ['value' => $value ?? '', 'group' => 'payment']
-            );
-            Cache::forget("setting.{$key}");
-        }
-        Cache::forget('settings.group.payment');
-
-        return back()->with('success', 'Payment settings updated successfully.');
     }
 
     public function shipping(): View
@@ -248,83 +198,6 @@ class SettingController extends Controller
         return back()->with('success', 'Tax settings updated successfully.');
     }
 
-    public function email(): View
-    {
-        $settings = Setting::where('group', 'email')->pluck('value', 'key');
-
-        return view('admin.settings.email', compact('settings'));
-    }
-
-    public function updateEmail(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
-            'mail_driver' => 'required|in:smtp,sendmail,log',
-            'mail_host' => 'nullable|string',
-            'mail_port' => 'nullable|integer|min:1|max:65535',
-            'mail_username' => 'nullable|string',
-            'mail_password' => 'nullable|string',
-            'mail_encryption' => 'nullable|in:tls,ssl',
-            'mail_from_address' => 'required|email',
-            'mail_from_name' => 'required|string|max:255',
-        ]);
-
-        foreach ($validated as $key => $value) {
-            // Same as the PayU salt: the password box renders empty, so a blank
-            // submit must leave the stored password alone.
-            if ($key === 'mail_password' && ! $request->filled('mail_password')) {
-                continue;
-            }
-
-            Setting::updateOrCreate(
-                ['key' => $key],
-                ['value' => $value ?? '', 'group' => 'email']
-            );
-            Cache::forget("setting.{$key}");
-        }
-        Cache::forget('settings.group.email');
-
-        return back()->with('success', 'Email settings updated successfully.');
-    }
-
-    /**
-     * Send a test message using the saved mail settings.
-     *
-     * The button used to call a JS alert() that said a test email "would" be
-     * sent, which told an admin nothing about whether their SMTP details
-     * actually work. This sends a real message to the signed-in admin and
-     * surfaces the transport error verbatim when it fails - that error text is
-     * the whole point of a test button.
-     */
-    public function testEmail(Request $request): RedirectResponse
-    {
-        // The admin area authenticates on the 'admin' guard; the default 'web'
-        // guard resolves to null in here.
-        $recipient = $request->user('admin')?->email;
-
-        if (! $recipient) {
-            return back()->with('error', 'Your admin account has no email address to send a test to.');
-        }
-
-        try {
-            Mail::raw(
-                "This is a test message from {$this->siteName()}.\n\n"
-                .'If you are reading it, the mail settings saved in Settings > Email are working.',
-                fn ($message) => $message->to($recipient)->subject('Test email from '.$this->siteName())
-            );
-        } catch (\Throwable $e) {
-            Log::warning('Admin test email failed', ['error' => $e->getMessage()]);
-
-            return back()->with('error', 'Could not send the test email: '.$e->getMessage());
-        }
-
-        return back()->with('success', "Test email sent to {$recipient}.");
-    }
-
-    private function siteName(): string
-    {
-        return (string) (Setting::get('site_name') ?: config('app.name'));
-    }
-
     public function seo(): View
     {
         $settings = Setting::where('group', 'seo')->pluck('value', 'key');
@@ -400,55 +273,6 @@ class SettingController extends Controller
         }
 
         return back()->with('success', 'SEO settings updated successfully.');
-    }
-
-    public function integrations(): View
-    {
-        $settings = Setting::where('group', 'integrations')->pluck('value', 'key');
-
-        return view('admin.settings.integrations', compact('settings'));
-    }
-
-    public function updateIntegrations(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
-            // Razorpay Webhook
-            'razorpay_webhook_secret'            => 'nullable|string|max:255',
-
-            // WhatsApp Business API (Meta)
-            'whatsapp_phone_number_id'           => ['nullable', 'string', 'max:30', 'regex:/^[0-9]*$/'],
-            'whatsapp_verify_token'              => 'nullable|string|max:255',
-            'whatsapp_page_access_token'         => 'nullable|string|max:500',
-            'whatsapp_app_secret'                => 'nullable|string|max:255',
-
-            // SMS Gateway
-            'sms_provider'                       => 'nullable|in:msg91,twilio,none',
-            'sms_api_key'                        => 'nullable|string|max:255',
-            'sms_sender_id'                      => ['nullable', 'string', 'max:20', 'regex:/^[A-Za-z0-9_-]*$/'],
-            'sms_dlt_template_id'                => ['nullable', 'string', 'max:50', 'regex:/^[0-9]*$/'],
-
-            // AI Chatbot
-            'anthropic_api_key'                  => ['nullable', 'string', 'max:500', 'regex:/^(sk-ant-[A-Za-z0-9\-_]*)?$/'],
-            'anthropic_model'                    => 'nullable|in:claude-haiku-4-5,claude-sonnet-5,claude-opus-5',
-            'ai_provider'                        => 'nullable|in:anthropic,gemini',
-            // Google issues more than one key format (AIza... and AQ....), so accept
-            // any plausible token rather than rejecting a valid key on its prefix.
-            'gemini_api_key'                     => ['nullable', 'string', 'max:500', 'regex:/^[A-Za-z0-9._\-]*$/'],
-            'gemini_model'                       => 'nullable|in:gemini-3.6-flash,gemini-3.5-flash,gemini-3.1-flash-lite',
-            'chatbot_brand_voice'                => 'nullable|string|max:2000',
-            'chatbot_extra_instructions'         => 'nullable|string|max:4000',
-        ]);
-
-        foreach ($validated as $key => $value) {
-            Setting::updateOrCreate(
-                ['key' => $key],
-                ['value' => $value ?? '', 'group' => 'integrations']
-            );
-            Cache::forget("setting.{$key}");
-        }
-        Cache::forget('settings.group.integrations');
-
-        return back()->with('success', 'Integration settings updated successfully.');
     }
 
     /**

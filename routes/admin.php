@@ -255,18 +255,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/general', [SettingController::class, 'general'])->name('general');
                 Route::put('/general', [SettingController::class, 'updateGeneral'])->name('general.update');
 
-                Route::get('/payment', [SettingController::class, 'payment'])->name('payment');
-                Route::put('/payment', [SettingController::class, 'updatePayment'])->name('payment.update');
-
                 Route::get('/shipping', [SettingController::class, 'shipping'])->name('shipping');
                 Route::put('/shipping', [SettingController::class, 'updateShipping'])->name('shipping.update');
 
                 Route::get('/tax', [SettingController::class, 'tax'])->name('tax');
                 Route::put('/tax', [SettingController::class, 'updateTax'])->name('tax.update');
-
-                Route::get('/email', [SettingController::class, 'email'])->name('email');
-                Route::put('/email', [SettingController::class, 'updateEmail'])->name('email.update');
-                Route::post('/email/test', [SettingController::class, 'testEmail'])->name('email.test');
 
                 Route::get('/seo', [SettingController::class, 'seo'])->name('seo');
                 Route::put('/seo', [SettingController::class, 'updateSeo'])->name('seo.update');
@@ -276,9 +269,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
                 Route::get('/popups', [SettingController::class, 'popups'])->name('popups');
                 Route::put('/popups', [SettingController::class, 'updatePopups'])->name('popups.update');
-
-                Route::get('/integrations', [SettingController::class, 'integrations'])->name('integrations');
-                Route::put('/integrations', [SettingController::class, 'updateIntegrations'])->name('integrations.update');
 
                 // Tax Rates
                 Route::resource('tax-rates', TaxRateController::class)->except(['show']);
