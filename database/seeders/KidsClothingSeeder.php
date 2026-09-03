@@ -9,7 +9,6 @@ use App\Models\HomepageSection;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\Setting;
-use App\Models\Testimonial;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -36,9 +35,6 @@ class KidsClothingSeeder extends Seeder
         $this->command->info('Seeding homepage sections...');
         $this->seedHomepageSections();
 
-        $this->command->info('Seeding testimonials...');
-        $this->seedTestimonials();
-
         $this->command->info('Done! Kids clothing data seeded successfully.');
     }
 
@@ -49,7 +45,6 @@ class KidsClothingSeeder extends Seeder
         Product::withTrashed()->forceDelete();
         Category::truncate();
         Brand::truncate();
-        Testimonial::truncate();
         HomepageSection::truncate();
         Banner::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
@@ -292,31 +287,12 @@ class KidsClothingSeeder extends Seeder
             ['key' => 'bestsellers', 'title' => 'Bestsellers', 'subtitle' => 'Most-loved outfits that parents keep coming back for', 'type' => 'products', 'position' => 4, 'button_text' => 'View All', 'button_link' => '/bestsellers'],
             ['key' => 'new_arrivals', 'title' => 'New Arrivals', 'subtitle' => 'Fresh styles just dropped this week', 'type' => 'products', 'position' => 5, 'button_text' => 'View All', 'button_link' => '/new-arrivals'],
             ['key' => 'deals', 'title' => "Today's Deals", 'subtitle' => 'Grab these offers before they are gone', 'type' => 'products', 'position' => 6],
-            ['key' => 'testimonials', 'title' => 'Happy Parents', 'subtitle' => 'Real reviews from real families', 'type' => 'testimonials', 'position' => 7],
             ['key' => 'newsletter', 'title' => 'Join the ForeverKids Family', 'subtitle' => 'Get 15% off your first order plus weekly style picks', 'type' => 'newsletter', 'position' => 8],
             ['key' => 'instagram', 'title' => 'Follow @ForeverKids', 'subtitle' => 'Tag us with #ForeverKids and get featured', 'type' => 'content', 'position' => 9],
         ];
 
         foreach ($sections as $s) {
             HomepageSection::create(array_merge($s, ['is_active' => true]));
-        }
-    }
-
-    private function seedTestimonials(): void
-    {
-        $testimonials = [
-            ['name' => 'Priya Sharma', 'title' => 'Mom of Two Girls', 'content' => 'The cotton frocks are incredibly soft and my daughters love the floral prints! We have bought 5 dresses so far and every single one has held up beautifully after dozens of washes. Truly great quality for the price.', 'rating' => 5, 'product_name' => 'Floral Print Cotton Frock', 'position' => 1],
-            ['name' => 'Rahul Verma', 'title' => 'Father of a 6-Year-Old', 'content' => 'Bought the chikankari kurta set for my son\'s birthday party - he looked absolutely dashing! The embroidery is detailed and the fabric feels premium. We got so many compliments. Already ordered the sherwani for the upcoming wedding.', 'rating' => 5, 'product_name' => 'Chikankari Kurta Pajama', 'position' => 2],
-            ['name' => 'Sneha Patel', 'title' => 'New Mom', 'content' => 'The organic cotton rompers are a lifesaver! So gentle on my baby\'s sensitive skin. The snap closures make diaper changes quick and the fabric gets even softer after washing. Best baby clothing brand we have tried.', 'rating' => 5, 'product_name' => 'Organic Cotton Romper', 'position' => 3],
-            ['name' => 'Ananya Reddy', 'title' => 'Regular Customer', 'content' => 'My daughter\'s lehenga from ForeverKids stole the show at our family wedding! The embroidery is gorgeous and she was comfortable wearing it all day. The quality rivals brands that charge 3x more.', 'rating' => 5, 'product_name' => 'Embroidered Lehenga Choli', 'position' => 4],
-            ['name' => 'Vikram Singh', 'title' => 'Dad Who Shops Online', 'content' => 'The superhero t-shirt pack is amazing value - three high-quality tees with vibrant prints that my son absolutely loves. The cotton is thick but breathable and the colors haven\'t faded even after many washes.', 'rating' => 5, 'product_name' => 'Superhero Graphic Tee Pack', 'position' => 5],
-            ['name' => 'Meera Iyer', 'title' => 'Fashion-Loving Mom', 'content' => 'ForeverKids has become our go-to store for all kids\' clothing. From everyday t-shirts to festive lehengas, everything is well-made and reasonably priced. The sharara set for my daughter\'s dance recital was absolutely stunning!', 'rating' => 5, 'product_name' => 'Printed Sharara Set', 'position' => 6],
-            ['name' => 'Deepak Joshi', 'title' => 'Proud Father', 'content' => 'The jogger jeans are my son\'s new favorite pants - he literally wants to wear them every day! They look like proper jeans but are as comfortable as track pants. Brilliant concept and great quality stitching.', 'rating' => 4, 'product_name' => 'Slim Fit Jogger Jeans', 'position' => 7],
-            ['name' => 'Kavita Nair', 'title' => 'Grandmother', 'content' => 'Ordered the knitted baby sweater set as a gift for my new grandchild. The packaging was beautiful and the quality is exceptional - so soft and delicate. The little booties and cap are absolutely adorable. A perfect gift set!', 'rating' => 5, 'product_name' => 'Knitted Baby Sweater Set', 'position' => 8],
-        ];
-
-        foreach ($testimonials as $t) {
-            Testimonial::create(array_merge($t, ['is_active' => true]));
         }
     }
 }

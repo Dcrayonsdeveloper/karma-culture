@@ -52,11 +52,6 @@ class NameFieldCharsetTest extends TestCase
             // Published under the review on the product page, so junk here is
             // junk on the storefront.
             'guest review name' => ['products/show.blade.php', 'name', 'guest_name'],
-            // Identified by the blade expression itself: the edit form is inside
-            // a loop, so its id is only literal in the source, and both
-            // testimonial boxes share name="name".
-            'testimonial name (new)' => ['admin/homepage/testimonials.blade.php', 'id', 'testimonial-name'],
-            'testimonial name (edit)' => ['admin/homepage/testimonials.blade.php', 'id', 't{{ $testimonial->id }}-name'],
             'admin profile first name' => ['admin/profile/edit.blade.php', 'name', 'first_name'],
             'admin profile last name' => ['admin/profile/edit.blade.php', 'name', 'last_name'],
         ];

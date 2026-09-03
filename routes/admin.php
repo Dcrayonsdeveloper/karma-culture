@@ -318,14 +318,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::put('/sections/{section}', [HomepageController::class, 'updateSection'])->name('sections.update');
                 Route::put('/sections/{section}/toggle', [HomepageController::class, 'toggleSection'])->name('sections.toggle');
 
-                // Testimonials
-                Route::get('/testimonials', [HomepageController::class, 'testimonials'])->name('testimonials');
-                Route::post('/testimonials', [HomepageController::class, 'storeTestimonial'])->name('testimonials.store');
-                Route::put('/testimonials/{testimonial}', [HomepageController::class, 'updateTestimonial'])->name('testimonials.update');
-                Route::put('/testimonials/{testimonial}/toggle', [HomepageController::class, 'toggleTestimonial'])->name('testimonials.toggle');
-                Route::put('/testimonials/{testimonial}/move', [HomepageController::class, 'moveTestimonial'])->name('testimonials.move');
-                Route::delete('/testimonials/{testimonial}', [HomepageController::class, 'deleteTestimonial'])->name('testimonials.destroy');
-
                 // Shop It Your Way filter items
                 Route::get('/shop-filters', [HomepageController::class, 'shopFilters'])->name('shop-filters');
                 Route::post('/shop-filters', [HomepageController::class, 'storeShopFilter'])->name('shop-filters.store');

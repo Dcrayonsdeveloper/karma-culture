@@ -9,7 +9,6 @@ use App\Models\NavigationMenu;
 use App\Models\Quality;
 use App\Models\Setting;
 use App\Models\ShopFilterItem;
-use App\Models\Testimonial;
 use App\Rules\ValidationRules as V;
 use App\Support\ShopFilterTiles;
 use Illuminate\Http\Request;
@@ -63,6 +62,18 @@ class HomepageController extends Controller
      */
     private const NAV_LOCATIONS = ['header', 'footer_col1', 'footer_col2', 'footer_col3'];
 
+    /**
+     * Section rows the homepage no longer has any markup for.
+     *
+     * The testimonials block was taken off the home page, so its
+     * homepage_sections row now titles nothing a visitor can see. The row stays
+     * in the table - whatever heading an admin typed for it is still there if
+     * the block ever comes back - but it is kept off the screens that offer a
+     * section as editable. A heading and a Visible switch that change nothing
+     * read as broken, which is worse than not being offered at all.
+     */
+    private const RETIRED_SECTION_KEYS = ['testimonials'];
+
     /** Video uploads: extension, sniffed type and size all checked. */
     private function videoRules(): array
     {
@@ -85,11 +96,10 @@ class HomepageController extends Controller
 
     public function index()
     {
-        $sections = HomepageSection::ordered()->get();
+        $sections = HomepageSection::whereNotIn('key', self::RETIRED_SECTION_KEYS)->ordered()->get();
         $banners = Banner::where('position', 'hero')->ordered()->get();
-        $testimonials = Testimonial::ordered()->get();
 
-        return view('admin.homepage.index', compact('sections', 'banners', 'testimonials'));
+        return view('admin.homepage.index', compact('sections', 'banners'));
     }
 
     // Site Settings (Logo, Brand Name, etc.)
@@ -421,21 +431,37 @@ class HomepageController extends Controller
         return back()->with('success', 'Banner status updated.');
     }
 
+    /**
+     * A section listed in RETIRED_SECTION_KEYS is not offered for editing.
+     *
+     * Nothing links to it any more, so this only catches a bookmarked or
+     * hand-typed URL - but the row is still in the table and the edit form
+     * would happily save a heading that no page reads.
+     */
+    private function abortIfRetired(HomepageSection $section): void
+    {
+        abort_if(in_array($section->key, self::RETIRED_SECTION_KEYS, true), 404);
+    }
+
     // Homepage Sections
     public function sections()
     {
-        $sections = HomepageSection::ordered()->get();
+        $sections = HomepageSection::whereNotIn('key', self::RETIRED_SECTION_KEYS)->ordered()->get();
 
         return view('admin.homepage.sections', compact('sections'));
     }
 
     public function editSection(HomepageSection $section)
     {
+        $this->abortIfRetired($section);
+
         return view('admin.homepage.edit-section', compact('section'));
     }
 
     public function updateSection(Request $request, HomepageSection $section)
     {
+        $this->abortIfRetired($section);
+
         // background_color and text_color were written straight through from the
         // request. They are interpolated into a `style` attribute on the home
         // page, so an arbitrary string there is CSS injection; a hex colour is
@@ -508,6 +534,8 @@ class HomepageController extends Controller
 
     public function toggleSection(HomepageSection $section)
     {
+        $this->abortIfRetired($section);
+
         $section->update(['is_active' => !$section->is_active]);
         Cache::flush();
 
@@ -520,124 +548,14 @@ class HomepageController extends Controller
     // that used to be here was never called and could only ever have written a
     // number that no page reads.
 
-    // Testimonials
-
-    /** @return array<string, mixed> */
-    private function testimonialRules(): array
-    {
-        return [
-            // A real customer name: O'Connor, Mary-Anne, रवि कुमार all pass,
-            // "346@#$!@fdf sf" does not.
-            'name' => V::name(),
-            'title' => V::text(required: false, max: 255),
-            'content' => V::textarea(max: 1000, min: 3),
-            'rating' => ['required', 'integer', 'min:1', 'max:5'],
-            'product_name' => V::text(required: false, max: 255),
-            'avatar' => V::image(required: false, maxKb: 2048, allowGif: true),
-        ];
-    }
-
-    public function testimonials()
-    {
-        $testimonials = Testimonial::ordered()->get();
-
-        return view('admin.homepage.testimonials', compact('testimonials'));
-    }
-
-    public function storeTestimonial(Request $request)
-    {
-        $validated = $request->validate($this->testimonialRules());
-
-        $data = [
-            'name' => $validated['name'],
-            'title' => $validated['title'] ?? null,
-            'content' => $validated['content'],
-            'rating' => $validated['rating'],
-            'product_name' => $validated['product_name'] ?? null,
-        ];
-        $data['position'] = Testimonial::max('position') + 1;
-        $data['is_active'] = true;
-
-        if ($request->hasFile('avatar')) {
-            $data['avatar_url'] = $request->file('avatar')->store('testimonials', 'public');
-        }
-
-        Testimonial::create($data);
-        Cache::flush();
-
-        return back()->with('success', 'Testimonial added successfully.');
-    }
-
-    public function updateTestimonial(Request $request, Testimonial $testimonial)
-    {
-        $validated = $request->validate($this->testimonialRules());
-
-        $data = [
-            'name' => $validated['name'],
-            'title' => $validated['title'] ?? null,
-            'content' => $validated['content'],
-            'rating' => $validated['rating'],
-            'product_name' => $validated['product_name'] ?? null,
-        ];
-
-        if ($request->hasFile('avatar')) {
-            if ($testimonial->avatar_url) {
-                Storage::disk('public')->delete($testimonial->avatar_url);
-            }
-            $data['avatar_url'] = $request->file('avatar')->store('testimonials', 'public');
-        }
-
-        $testimonial->update($data);
-        Cache::flush();
-
-        return back()->with('success', 'Testimonial updated successfully.');
-    }
-
-    public function deleteTestimonial(Testimonial $testimonial)
-    {
-        if ($testimonial->avatar_url) {
-            Storage::disk('public')->delete($testimonial->avatar_url);
-        }
-        $testimonial->delete();
-        Cache::flush();
-
-        return back()->with('success', 'Testimonial deleted successfully.');
-    }
-
-    public function toggleTestimonial(Testimonial $testimonial)
-    {
-        $testimonial->update(['is_active' => !$testimonial->is_active]);
-        Cache::flush();
-
-        return back()->with('success', 'Testimonial visibility updated.');
-    }
-
-    /**
-     * Swap a testimonial with its neighbour.
-     *
-     * `position` was stamped once at creation and there was no way to change it
-     * afterwards, so the order reviews appear in was decided by the order they
-     * happened to be typed in. Swapping with the adjacent row keeps the numbers
-     * contiguous without needing a drag surface.
-     */
-    public function moveTestimonial(Request $request, Testimonial $testimonial)
-    {
-        $validated = $request->validate(['direction' => V::option(['up', 'down'])]);
-
-        $this->swapPosition($testimonial, Testimonial::query(), $validated['direction']);
-        Cache::flush();
-
-        return back()->with('success', 'Testimonial order updated.');
-    }
-
     /**
      * Move a row one place up or down within $scope by swapping `position` with
      * its nearest neighbour.
      *
-     * Three lists on this controller - testimonials, qualities and shop filter
-     * items - all stamp `position` once at creation and had no way to change it
-     * afterwards, so each ran in creation order permanently. Swapping with the
-     * adjacent row keeps the numbers contiguous and needs no drag surface.
+     * The two lists on this controller - qualities and shop filter items - both
+     * stamp `position` once at creation and had no way to change it afterwards,
+     * so each ran in creation order permanently. Swapping with the adjacent row
+     * keeps the numbers contiguous and needs no drag surface.
      *
      * @param  \Illuminate\Database\Eloquent\Model  $row
      * @param  \Illuminate\Database\Eloquent\Builder  $scope  the list $row belongs to
