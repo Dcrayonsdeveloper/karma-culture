@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Admin;
 use App\Models\User;
+use App\Rules\ValidationRules;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -57,7 +58,8 @@ class SetAdminCredentials extends Command
                 // otherwise the documented way to rotate the production
                 // password is also the one way to get under it.
                 'password' => ['required', 'string', 'max:255', Password::defaults()],
-            ]
+            ],
+            ValidationRules::passwordMessages()
         );
 
         if ($check->fails()) {
@@ -141,7 +143,7 @@ class SetAdminCredentials extends Command
         foreach (range(1, 20) as $ignored) {
             $candidate = Str::password(20);
 
-            if (Validator::make(['password' => $candidate], ['password' => Password::defaults()])->passes()) {
+            if (Validator::make(['password' => $candidate], ['password' => [Password::defaults()]])->passes()) {
                 return $candidate;
             }
         }

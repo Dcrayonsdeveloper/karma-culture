@@ -55,13 +55,8 @@ class ResetPasswordController extends Controller
             'password.max' => 'Your password must be 255 characters or fewer.',
             // Word for word what the box already said while the password was
             // being typed (_passwordError in app.js), so the same complaint
-            // arriving from the server does not read as a different one. The
-            // doubled 'password.password.*' keys are how the Password rule
-            // reports itself - RegisterController has the long explanation.
-            'password.min' => 'Your password must be at least 10 characters long.',
-            'password.password.mixed' => 'Your password must include both an uppercase and a lowercase letter.',
-            'password.password.numbers' => 'Your password must include at least one number.',
-            'password.password.symbols' => 'Your password must include at least one special character, such as @ # ! or ?.',
+            // arriving from the server does not read as a different one.
+            ...V::passwordMessages(),
         ]);
 
         $status = Password::reset(

@@ -47,7 +47,7 @@ class StaffController extends Controller
             'is_active' => 'boolean',
             'permissions' => 'nullable|array',
             'permissions.*' => 'string|in:dashboard,orders,catalog,customers,sellers,staff,marketing,storefront,content,reports,settings',
-        ]);
+        ], V::passwordMessages());
 
         $user = User::create([
             'first_name' => $validated['first_name'],
@@ -95,7 +95,7 @@ class StaffController extends Controller
             'is_active' => 'boolean',
             'permissions' => 'nullable|array',
             'permissions.*' => 'string|in:dashboard,orders,catalog,customers,sellers,staff,marketing,storefront,content,reports,settings',
-        ]);
+        ], V::passwordMessages());
 
         $staff->user->update([
             'first_name' => $validated['first_name'],

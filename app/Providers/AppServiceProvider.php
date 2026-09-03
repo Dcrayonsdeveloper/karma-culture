@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\Category;
 use App\Models\Setting;
 use App\Models\UserAddress;
+use App\Rules\ValidationRules;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Blade;
@@ -105,7 +106,7 @@ class AppServiceProvider extends ServiceProvider
         // characters long still satisfies this one. Nothing re-checks a stored
         // hash, so existing accounts keep working and are held to the new
         // minimum only the next time they set a password.
-        Password::defaults(fn () => Password::min(10)->mixedCase()->numbers()->symbols());
+        Password::defaults(fn () => Password::min(ValidationRules::PASSWORD_MIN)->mixedCase()->numbers()->symbols());
 
         // Named limiters, one bucket each.
         //

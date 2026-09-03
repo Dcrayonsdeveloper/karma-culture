@@ -37,7 +37,7 @@ class ProfileController extends Controller
             // any; V::password() is the site-wide policy every other form
             // already applies.
             'password' => [...V::password(required: false), 'max:255'],
-        ]);
+        ], V::passwordMessages());
 
         $user->first_name = $validated['first_name'];
         $user->last_name = $validated['last_name'];

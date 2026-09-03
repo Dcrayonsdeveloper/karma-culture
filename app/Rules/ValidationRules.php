@@ -43,6 +43,17 @@ use Illuminate\Validation\Rules\Password;
 final class ValidationRules
 {
     /**
+     * The shortest a new password may be.
+     *
+     * The one place the number lives on the server: AppServiceProvider builds
+     * Password::defaults() from it and passwordMessages() prints it, so the
+     * rule and the sentence explaining the rule cannot drift apart. Its
+     * counterparts in the browser are _PASSWORD_MIN in resources/js/app.js and
+     * the minlength="10" on each new-password box.
+     */
+    public const PASSWORD_MIN = 10;
+
+    /**
      * A person's name - Unicode, 2-100 characters.
      *
      * `lettersOnly` drops the hyphen, apostrophe and period from the charset,
@@ -354,6 +365,33 @@ final class ValidationRules
             $confirmed ? 'confirmed' : null,
             Password::defaults(),
         ]));
+    }
+
+    /**
+     * The sentences a failed password produces, ready to spread into the
+     * $messages argument of $request->validate().
+     *
+     * Laravel's own wording ("The password field must be at least 10
+     * characters.") is accurate, but it is not what the box says while the
+     * password is being typed - _passwordError() in resources/js/app.js - and a
+     * complaint that changes words on its way from the browser to the server
+     * reads as a second, different complaint about the same password. Defining
+     * them once here is what keeps the seven surfaces that mint a password
+     * saying one thing.
+     *
+     * The doubled 'password.password.*' keys are not a typo. The Password rule
+     * reports its own failures via addFailure($attribute, 'password.mixed'), so
+     * the lookup key is "{attribute}.{rule}" = password.password.mixed. Only
+     * 'min' comes from an ordinary rule and takes the short key.
+     */
+    public static function passwordMessages(string $attribute = 'password'): array
+    {
+        return [
+            "{$attribute}.min" => 'Your password must be at least ' . self::PASSWORD_MIN . ' characters long.',
+            "{$attribute}.password.mixed" => 'Your password must include both an uppercase and a lowercase letter.',
+            "{$attribute}.password.numbers" => 'Your password must include at least one number.',
+            "{$attribute}.password.symbols" => 'Your password must include at least one special character, such as @ # ! or ?.',
+        ];
     }
 
     /**

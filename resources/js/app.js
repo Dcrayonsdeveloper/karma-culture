@@ -1992,7 +1992,18 @@ Alpine.start();
         } else {
             const partner = passwordPartner(field);
             const pw = partner ? (partner.value || '') : '';
-            message = (value === '' || value === pw) ? '' : 'The two passwords do not match.';
+
+            if (value !== '') {
+                message = value === pw ? '' : 'The two passwords do not match.';
+            } else {
+                // Empty. While the customer is still typing that is unfinished
+                // rather than wrong, so nothing is said. On the way into a
+                // submit it IS wrong once the password box has something in it,
+                // and saying so is the difference between catching it here and
+                // catching it on a reloaded page - the admin staff form leaves
+                // both boxes optional, so `required` does not cover this.
+                message = (!live && pw !== '') ? 'Please confirm your password.' : '';
+            }
         }
 
         // setCustomValidity is the join between this and everything above it:
