@@ -13,6 +13,21 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         apiPrefix: 'api',
     )
+    // Listeners are registered once, by App\Providers\EventServiceProvider's
+    // $listen map, and never discovered.
+    //
+    // Laravel registers its own EventServiceProvider as well as ours, and that
+    // one auto-discovers every handle* method in app/Listeners - so each
+    // listener was registered twice over: once as [Class::class, 'method'] from
+    // our map and once as "Class@method" from discovery. Every listener then
+    // ran twice on every order: two "New Order" rows in the admin bell and two
+    // in the customer's, two on cancellation, the fraud check run twice, the
+    // analytics counted twice, two review invitations.
+    //
+    // Discovery off rather than the map deleted: the map is explicit about what
+    // listens to what, and a listener whose method is renamed fails loudly
+    // instead of silently unhooking itself.
+    ->withEvents(discover: false)
     ->withMiddleware(function (Middleware $middleware): void {
         // The site runs behind Hostinger's proxy. Without this, request()->ip()
         // is the proxy's address for every visitor — so per-IP rate limiters
