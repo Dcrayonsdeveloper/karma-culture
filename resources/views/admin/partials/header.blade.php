@@ -114,7 +114,7 @@
                  id="admin-notifications-panel"
                  role="region"
                  aria-labelledby="admin-notifications-heading"
-                 class="admin-dropdown-panel fixed left-3 right-3 top-14 mt-2 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:w-80 flex flex-col max-h-[calc(100vh-5rem)] overflow-hidden bg-white rounded-xl" style="border: 1px solid #e3e3e3; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+                 class="fixed left-3 right-3 top-14 mt-2 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:w-80 flex flex-col max-h-[calc(100vh-5rem)] overflow-hidden bg-white rounded-xl z-50" style="border: 1px solid #e3e3e3; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
                 <div class="px-4 py-3 shrink-0 flex items-center justify-between" style="border-bottom: 1px solid #e3e3e3;">
                     <h3 id="admin-notifications-heading" class="text-sm font-semibold" style="color: #303030;">Notifications</h3>
                     @if($unreadCount > 0)
@@ -178,7 +178,7 @@
                  id="admin-user-menu"
                  role="region"
                  aria-labelledby="admin-user-menu-name"
-                 class="admin-dropdown-panel absolute right-0 mt-2 w-52 bg-white rounded-xl" style="border: 1px solid #e3e3e3; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+                 class="absolute right-0 mt-2 w-52 bg-white rounded-xl z-50" style="border: 1px solid #e3e3e3; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
                 <div class="px-4 py-3" style="border-bottom: 1px solid #f0f0f0;">
                     <div id="admin-user-menu-name" class="text-sm font-medium" style="color: #303030; overflow-wrap: anywhere;">{{ $adminUser?->full_name }}</div>
                     <div class="text-xs" style="color: #999; overflow-wrap: anywhere;">{{ $adminUser?->email }}</div>

@@ -121,14 +121,6 @@
             #toast-container { top: 62px !important; right: 8px !important; left: 8px !important; }
             #toast-container > div { width: auto !important; min-width: 0; max-width: none; }
         }
-
-        /* The header dropdowns have to clear the toast. toastr's stylesheet is a CDN
-           file we do not control and it pins #toast-container at z-index 999999;
-           below 640px the toast is pinned to top 62px across the full width, which is
-           exactly where the fixed notification panel sits, so a flash message landed
-           on top of the open panel and swallowed every tap on it. Raising the panels
-           is the fix that does not depend on someone else's stylesheet. */
-        .layout-admin .admin-dropdown-panel { z-index: 1000000; }
     </style>
     <script>
         toastr.options = {
