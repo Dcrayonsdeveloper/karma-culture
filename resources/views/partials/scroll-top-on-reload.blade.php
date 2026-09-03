@@ -22,6 +22,24 @@
      up as a visible jump. --}}
 <script>
     (function () {
+        // A reload the page asks for itself is not the shopper asking to start
+        // over: signing in from the header modal, or claiming an offer on the
+        // cart, reloads only to pick the new state up, and the shopper must
+        // come back to the row they were looking at. Those callers set this
+        // flag through window.kkReload() below, and it survives exactly one
+        // load. sessionStorage throws in some privacy modes, hence the guards.
+        var KEEP = 'kk_keep_scroll';
+        var keepScroll = false;
+        try {
+            keepScroll = sessionStorage.getItem(KEEP) === '1';
+            if (keepScroll) sessionStorage.removeItem(KEEP);
+        } catch (e) {}
+
+        window.kkReload = function () {
+            try { sessionStorage.setItem(KEEP, '1'); } catch (e) {}
+            window.location.reload();
+        };
+
         var entry = (window.performance && performance.getEntriesByType)
             ? performance.getEntriesByType('navigation')[0]
             : null;
@@ -34,13 +52,23 @@
             navType = performance.navigation.type === 2 ? 'back_forward' : 'navigate';
         }
 
-        if (navType === 'back_forward') return;
+        if (keepScroll || navType === 'back_forward') return;
 
-        if ('scrollRestoration' in history) {
-            history.scrollRestoration = 'manual';
+        var supported = 'scrollRestoration' in history;
+        if (supported) history.scrollRestoration = 'manual';
+
+        // 'manual' is stored on this history entry, not on the tab, so leaving
+        // it set would kill the restore when the shopper returns here with the
+        // back button later. Hand it back as soon as there is nothing left to
+        // restore - and again on the way out, because a shopper who clicks a
+        // link before this document finished loading would otherwise leave the
+        // entry stuck on 'manual' for good.
+        function release() {
+            if (supported) history.scrollRestoration = 'auto';
         }
+        window.addEventListener('pagehide', release);
 
-        if (window.location.hash) return;
+        if (window.location.hash) { release(); return; }
 
         function toTop() {
             // Never scroll when already at the top. Beyond being pointless it
@@ -64,16 +92,9 @@
             // Images and fonts settle after load and can drag the offset back
             // down with them, so correct once more on the next frame.
             if (window.requestAnimationFrame) {
-                window.requestAnimationFrame(function () {
-                    toTop();
-                    // 'manual' is stored on this history entry, not on the tab,
-                    // so leaving it set would also kill the restore when the
-                    // shopper returns here with the back button later. By now
-                    // the document has loaded and nothing is left to restore.
-                    if ('scrollRestoration' in history) history.scrollRestoration = 'auto';
-                });
-            } else if ('scrollRestoration' in history) {
-                history.scrollRestoration = 'auto';
+                window.requestAnimationFrame(function () { toTop(); release(); });
+            } else {
+                release();
             }
         });
     })();

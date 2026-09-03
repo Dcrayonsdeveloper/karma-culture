@@ -437,7 +437,9 @@ Alpine.store('authModal', {
                 remember: remember
             });
             this.close();
-            window.location.reload();
+            // Signing in mid-listing must not also throw the shopper back to the
+            // top: kkReload() refreshes without the reload-scrolls-to-top rule.
+            window.kkReload ? window.kkReload() : window.location.reload();
         } catch (error) {
             if (error.response && error.response.status === 422) {
                 this.errors = error.response.data.errors || {};
@@ -464,7 +466,9 @@ Alpine.store('authModal', {
                 terms: true
             });
             this.close();
-            window.location.reload();
+            // Signing in mid-listing must not also throw the shopper back to the
+            // top: kkReload() refreshes without the reload-scrolls-to-top rule.
+            window.kkReload ? window.kkReload() : window.location.reload();
         } catch (error) {
             if (error.response && error.response.status === 422) {
                 this.errors = error.response.data.errors || {};
@@ -1529,7 +1533,9 @@ Alpine.data('exitPopup', (code = 'KARMAA10', minutes = 10, accountEmail = '') =>
     close() {
         this.open = false;
         if (this._tick) window.clearInterval(this._tick);
-        if (this._reloadHost) window.location.reload();
+        // The host page reloads to show the claimed discount, so it has to come
+        // back where it was rather than at the top.
+        if (this._reloadHost) { window.kkReload ? window.kkReload() : window.location.reload(); }
     },
     async claim() {
         this.error = '';

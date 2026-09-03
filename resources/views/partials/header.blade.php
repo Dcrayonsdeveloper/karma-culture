@@ -826,7 +826,9 @@
                             this.form.password = '';
                             this.form.password_confirmation = '';
                         } else {
-                            window.location.reload();
+                            // Keep the shopper on the row they signed in from; the
+                            // reload is only here to pick the session up.
+                            window.kkReload ? window.kkReload() : window.location.reload();
                         }
                     } else if (data.errors) {
                         // Laravel keys its errors by field, so they land under the
