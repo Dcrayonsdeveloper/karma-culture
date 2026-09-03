@@ -102,19 +102,88 @@ class SendOrderNotification
         ], new OrderDeliveredMail($order));
     }
 
+    /**
+     * What the customer is told at each step of fulfilment.
+     *
+     * Only cancellation used to be here, and the event that would have carried
+     * it was never dispatched - so in practice a customer heard nothing between
+     * placing an order and its delivery mail. Every status the shop actually
+     * moves an order through now has a line.
+     *
+     * @var array<string, array{0: string, 1: string}>
+     */
+    private const CUSTOMER_UPDATES = [
+        'on_hold' => ['Order On Hold', 'is on hold - we will be in touch.'],
+        'confirmed' => ['Order Confirmed', 'is confirmed and being prepared.'],
+        'processing' => ['Order Being Prepared', 'is being prepared.'],
+        'packed' => ['Order Packed', 'is packed and waiting to be collected by the carrier.'],
+        'out_for_delivery' => ['Out For Delivery', 'is out for delivery today.'],
+        'cancelled' => ['Order Cancelled', 'has been cancelled.'],
+        'returned' => ['Return Received', 'has been marked returned.'],
+    ];
+
+    // No pickup line: orders.status is an enum of pending, on_hold, confirmed,
+    // processing, packed, shipped, out_for_delivery, delivered, cancelled and
+    // returned. There is no ready_for_pickup to notify about - adding in-store
+    // collection means adding the status first, which is a schema change and a
+    // fulfilment flow, not a notification.
+    //
+    // Refunds are not a status here either; they arrive as RefundProcessed and
+    // are handled by handleRefundProcessed() below.
+
+    /**
+     * Statuses the shop needs to hear about, not just the customer.
+     *
+     * Placement already notifies admins from handleOrderPlaced. These are the
+     * ones that happen afterwards and that somebody has to act on.
+     */
+    private const ADMIN_ALERTS = [
+        'cancelled' => 'Order Cancelled',
+        'returned' => 'Order Returned',
+        'on_hold' => 'Order On Hold',
+    ];
+
     public function handleOrderStatusChanged(OrderStatusChanged $event): void
     {
         $order = $event->order;
+
+        // Shipped and delivered have their own events, with their own mail, so
+        // announcing them here as well would tell the customer twice.
+        if (in_array($event->newStatus, ['shipped', 'delivered'], true)) {
+            return;
+        }
+
+        if ($alert = self::ADMIN_ALERTS[$event->newStatus] ?? null) {
+            try {
+                $this->notificationService->notifyAdmins(
+                    'order_'.$event->newStatus,
+                    $alert,
+                    "Order #{$order->order_number} is now {$event->newStatus} (".$this->customerName($order).').',
+                    ['order_id' => $order->id, 'order_number' => $order->order_number]
+                );
+            } catch (\Throwable $e) {
+                Log::error('Failed to notify admins of an order status change', [
+                    'order_id' => $order->id,
+                    'status' => $event->newStatus,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         $user = $order->user;
         if (! $user) {
             return;
         }
 
-        if ($event->newStatus === 'cancelled') {
-            $this->notificationService->notifyInApp($user, 'order_cancelled',
-                'Order Cancelled',
-                "Your order #{$order->order_number} has been cancelled.",
-                ['order_id' => $order->id]
+        if ($update = self::CUSTOMER_UPDATES[$event->newStatus] ?? null) {
+            [$title, $sentence] = $update;
+
+            $this->notificationService->notifyInApp(
+                $user,
+                'order_'.$event->newStatus,
+                $title,
+                "Your order #{$order->order_number} {$sentence}",
+                ['order_id' => $order->id, 'order_number' => $order->order_number]
             );
         }
     }

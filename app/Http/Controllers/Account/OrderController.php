@@ -74,7 +74,11 @@ class OrderController extends Controller
             return back()->with('error', 'This order cannot be cancelled.');
         }
 
-        $order->update(['status' => 'cancelled']);
+        // Through updateStatus(), not a bare update: that is what writes the
+        // status history, stamps cancelled_at, settles the payment status and
+        // fires OrderStatusChanged. A customer cancelling their own order used
+        // to do none of those.
+        $order->updateStatus('cancelled', null, 'Cancelled by the customer');
 
         // Add to status history
         $order->statusHistory()->create([

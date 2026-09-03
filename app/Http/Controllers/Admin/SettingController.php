@@ -61,11 +61,15 @@ class SettingController extends Controller
             'site_email' => 'required|email',
             'site_phone' => 'nullable|string|max:20',
             'site_address' => 'nullable|string|max:500',
-            'timezone' => 'required|string',
-            'date_format' => 'required|string',
-            'currency' => 'required|string|size:3',
-            'currency_symbol' => 'required|string|max:5',
-            'currency_position' => 'required|in:before,after',
+            // Nullable, not required: the Regional Settings card is gone from
+            // this form, so these keys no longer arrive with a save. Absent
+            // means "leave what is stored" - the loop below only writes the
+            // fields that were actually submitted.
+            'timezone' => 'nullable|string',
+            'date_format' => 'nullable|string',
+            'currency' => 'nullable|string|size:3',
+            'currency_symbol' => 'nullable|string|max:5',
+            'currency_position' => 'nullable|in:before,after',
         ]);
 
         foreach ($validated as $field => $value) {

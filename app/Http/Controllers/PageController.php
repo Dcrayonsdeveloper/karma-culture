@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\BlogPost;
 use App\Models\Brand;
+use App\Services\NotificationService;
 use App\Models\Enquiry;
 use App\Models\Notification;
 use App\Models\Page;
@@ -90,23 +91,21 @@ class PageController extends Controller
             'message' => $body,
         ]);
 
-        // Notify all admin users
-        $admins = User::where('role', 'admin')->get();
-        foreach ($admins as $admin) {
-            Notification::create([
-                'user_id' => $admin->id,
-                'type' => 'new_enquiry',
-                'title' => 'New Enquiry',
-                'content' => "New enquiry from {$enquiry->name}: {$enquiry->subject}",
-                'data' => [
-                    'enquiry_id' => $enquiry->id,
-                    'name' => $enquiry->name,
-                    'email' => $enquiry->email,
-                    'subject' => $enquiry->subject,
-                ],
-                'channel' => 'database',
-            ]);
-        }
+        // Through notifyAdmins(), which stamps audience = admin. Written
+        // straight to the table before, with no audience - and the admin bell
+        // filters on exactly that, so every enquiry notification was created
+        // and then shown to nobody.
+        app(NotificationService::class)->notifyAdmins(
+            'new_enquiry',
+            'New Enquiry',
+            "New enquiry from {$enquiry->name}: {$enquiry->subject}",
+            [
+                'enquiry_id' => $enquiry->id,
+                'name' => $enquiry->name,
+                'email' => $enquiry->email,
+                'subject' => $enquiry->subject,
+            ]
+        );
 
         return back()->with('success', 'Thank you for your message. We will get back to you soon.');
     }

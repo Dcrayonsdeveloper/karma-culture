@@ -141,6 +141,42 @@ class GeneralSettingsWiringTest extends TestCase
         $this->assertSame('', format_date(''));
     }
 
+    /**
+     * The Regional Settings card is gone from this screen, and saving without
+     * it must not wipe what those keys hold - the storefront still reads them.
+     */
+    public function test_saving_without_the_regional_card_leaves_those_settings_alone(): void
+    {
+        Setting::updateOrCreate(['key' => 'currency_symbol'], ['value' => '₹', 'group' => 'general']);
+        Setting::updateOrCreate(['key' => 'date_format'], ['value' => 'd/m/Y', 'group' => 'general']);
+        Setting::updateOrCreate(['key' => 'timezone'], ['value' => 'Asia/Kolkata', 'group' => 'general']);
+
+        // What the form posts now: Store Information only.
+        $this->actingAs($this->adminUser, 'admin')
+            ->put(route('admin.settings.general.update'), [
+                'site_name' => 'Karmaa Kulture',
+                'site_tagline' => 'Curated fashion',
+                'site_email' => 'hello@karmaa.test',
+                'site_phone' => '9876543210',
+                'site_address' => '12 Rohini, Delhi',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('₹', Setting::get('currency_symbol'));
+        $this->assertSame('d/m/Y', Setting::get('date_format'));
+        $this->assertSame('Asia/Kolkata', Setting::get('timezone'));
+    }
+
+    public function test_the_regional_card_is_off_the_screen(): void
+    {
+        $html = $this->actingAs($this->adminUser, 'admin')
+            ->get(route('admin.settings.general'))->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('name="currency_symbol"', $html);
+        $this->assertStringNotContainsString('name="timezone"', $html);
+        $this->assertStringContainsString('name="site_name"', $html, 'Store Information went with it.');
+    }
+
     public function test_the_currency_symbol_still_reaches_prices(): void
     {
         $this->save(['currency_symbol' => '$', 'currency_position' => 'after']);
