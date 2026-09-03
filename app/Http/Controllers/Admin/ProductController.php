@@ -157,6 +157,7 @@ class ProductController extends Controller
     public function create(): View
     {
         $categories = Category::assignableOptions();
+        $extraCategoryIds = [];
         $sellers = Seller::with('user')->orderBy('store_name')->get();
         $brands = Brand::where('is_active', true)->orderBy('name')->get();
         $attributes = Attribute::with('values')->orderBy('name')->get();
@@ -182,6 +183,11 @@ class ProductController extends Controller
             'cost_price' => V::money(required: false),
             'stock_quantity' => self::STOCK_RULES,
             'category_id' => V::foreignId('categories'),
+
+            // The other shelves this product appears on. The primary above is
+            // added to them on save, so it never has to be ticked twice.
+            'extra_category_ids' => ['nullable', 'array', 'max:20'],
+            'extra_category_ids.*' => V::foreignId('categories'),
             'seller_id' => V::foreignId('sellers', required: false),
             'brand_id' => V::foreignId('brands', required: false),
             'is_active' => V::boolean(),
@@ -262,6 +268,7 @@ class ProductController extends Controller
         );
 
         $product = Product::create($validated);
+        $this->syncShelves($product, $request);
 
         if (is_array($variantsData)) {
             $this->syncVariants($product, $variantsData);
@@ -327,7 +334,15 @@ class ProductController extends Controller
         $attributes = Attribute::with('values')->orderBy('name')->get();
         $product->load(['images', 'variants']);
 
-        return view('admin.products.edit', compact('product', 'categories', 'sellers', 'brands', 'attributes'));
+        // The primary is shown by its own picker, so it is not repeated in the
+        // "also show in" list - ticking it there would say nothing new.
+        $extraCategoryIds = $product->categories()
+            ->pluck('categories.id')
+            ->reject(fn ($id) => $id === $product->category_id)
+            ->values()
+            ->all();
+
+        return view('admin.products.edit', compact('product', 'categories', 'sellers', 'brands', 'attributes', 'extraCategoryIds'));
     }
 
     public function update(Request $request, Product $product): RedirectResponse
@@ -346,6 +361,11 @@ class ProductController extends Controller
             'cost_price' => V::money(required: false),
             'stock_quantity' => self::STOCK_RULES,
             'category_id' => V::foreignId('categories'),
+
+            // The other shelves this product appears on. The primary above is
+            // added to them on save, so it never has to be ticked twice.
+            'extra_category_ids' => ['nullable', 'array', 'max:20'],
+            'extra_category_ids.*' => V::foreignId('categories'),
             'seller_id' => V::foreignId('sellers', required: false),
             'brand_id' => V::foreignId('brands', required: false),
             'is_active' => V::boolean(),
@@ -464,6 +484,7 @@ class ProductController extends Controller
         }
 
         $product->update($validated);
+        $this->syncShelves($product, $request);
 
         if (is_array($variantsData)) {
             $this->syncVariants($product, $variantsData);
@@ -822,6 +843,30 @@ class ProductController extends Controller
 
         return redirect()->route('admin.products.index')
             ->with('success', 'Product deleted successfully.');
+    }
+
+    /**
+     * Put the product on every shelf the form ticked, and take it off the rest.
+     *
+     * The primary category is always included: it is the category the product
+     * is filed under, and a listing that omitted it would contradict the
+     * breadcrumb. Product::booted() adds it too, for the write paths that never
+     * reach this form - this is belt and braces, and it keeps the sync here a
+     * complete statement of the membership rather than a partial one.
+     *
+     * Absent input means "no extra shelves", which is what an unticked set of
+     * checkboxes posts - so clearing them all really does clear them.
+     */
+    private function syncShelves(Product $product, Request $request): void
+    {
+        $ids = collect($request->input('extra_category_ids', []))
+            ->map(fn ($id) => (int) $id)
+            ->push((int) $product->category_id)
+            ->filter()
+            ->unique()
+            ->all();
+
+        $product->categories()->sync($ids);
     }
 
     public function toggleStatus(Product $product): RedirectResponse

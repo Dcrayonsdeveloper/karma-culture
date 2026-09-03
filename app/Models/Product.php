@@ -98,6 +98,18 @@ class Product extends Model
 
         static::saved($forgetColours);
         static::deleted($forgetColours);
+
+        // The primary category is always one of the shelves the product sits on.
+        // Enforced here rather than in the admin controller alone, because a
+        // product created by an import, a seeder, a console command or the API
+        // would otherwise carry an empty pivot and vanish from every listing.
+        // syncWithoutDetaching, so it never clears the extra shelves the admin
+        // picked - the product form owns that list and sets it explicitly.
+        static::saved(function ($product) {
+            if ($product->category_id) {
+                $product->categories()->syncWithoutDetaching([$product->category_id]);
+            }
+        });
         static::creating(function ($product) {
             if (empty($product->uuid)) {
                 $product->uuid = (string) Str::uuid();
@@ -136,6 +148,40 @@ class Product extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    /**
+     * Every category this product is listed under, the primary one included.
+     *
+     * category() is what the product IS - breadcrumb, canonical URL, coupon
+     * scoping, reports. This is where it is SHOWN, which is a longer list: a
+     * unisex shirt belongs on the men's and the women's shelf at once.
+     */
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(Category::class, 'category_product');
+    }
+
+    /**
+     * Products displayed under any of these categories.
+     *
+     * A subquery rather than a join: joining the pivot returns one row per
+     * matching category, so a product on two of the categories being asked
+     * about would come back twice and paginate as two cards.
+     *
+     * An empty list means "nothing matched", not "no filter" - a slug that
+     * resolves to no category must return an empty page rather than the whole
+     * shop, which is what the whereIn on category_id did.
+     *
+     * @param  array<int, int>  $categoryIds
+     */
+    public function scopeInAnyCategory($query, array $categoryIds)
+    {
+        return $query->whereIn('products.id', function ($sub) use ($categoryIds) {
+            $sub->select('product_id')
+                ->from('category_product')
+                ->whereIn('category_id', $categoryIds ?: [0]);
+        });
     }
 
     public function images(): HasMany

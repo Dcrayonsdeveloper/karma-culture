@@ -69,10 +69,10 @@ class CategoryController extends Controller
 
             if ($subIds !== null && ! in_array('subcategory', $except, true)) {
                 // Force an empty result (not "no filter") if the slugs resolve to nothing.
-                return $query->whereIn('products.category_id', $subIds ?: [0]);
+                return $query->inAnyCategory($subIds);
             }
 
-            return $query->whereIn('products.category_id', $pageIds);
+            return $query->inAnyCategory($pageIds);
         };
 
         $filters = ProductFilters::for($request, $bound, [
@@ -96,7 +96,7 @@ class CategoryController extends Controller
                 'products_total',
                 $filters->query(['category', 'subcategory'])
                     ->reorder()
-                    ->whereIn('products.category_id', $tree->descendantIds($sub->id))
+                    ->inAnyCategory($tree->descendantIds($sub->id))
                     ->count()
             ))
             ->values();

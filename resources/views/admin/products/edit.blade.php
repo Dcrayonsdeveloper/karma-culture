@@ -529,6 +529,32 @@
                             @error('category_id') <p class="form-error">{{ $message }}</p> @enderror
                         </div>
                         <div>
+                            {{-- The primary picker above answers "what is this product";
+                                 this answers "where should it show". A unisex shirt sits
+                                 on the men's and the women's shelf at once, and before
+                                 this the admin had to pick one and lose the other.
+                                 The primary is added on save, so it is not repeated here. --}}
+                            <label class="form-label">Also show in</label>
+                            <div style="max-height: 190px; overflow-y: auto; border: 1px solid #e3e3e3; border-radius: 0.5rem; padding: 0.5rem;">
+                                @forelse($categories as $category)
+                                    <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0; font-size: 13px; cursor: pointer;">
+                                        <input type="checkbox" name="extra_category_ids[]" value="{{ $category->id }}"
+                                               style="width: 0.9rem; height: 0.9rem; accent-color: #303030;"
+                                               @checked(in_array($category->id, old('extra_category_ids', $extraCategoryIds ?? [])))>
+                                        <span>{{ $category->path_label ?? $category->name }}</span>
+                                    </label>
+                                @empty
+                                    <p style="font-size: 12px; color: #616161;">No categories yet.</p>
+                                @endforelse
+                            </div>
+                            @error('extra_category_ids') <p class="form-error">{{ $message }}</p> @enderror
+                            @error('extra_category_ids.*') <p class="form-error">{{ $message }}</p> @enderror
+                            <p class="text-[12px] mt-1" style="color: #616161;">
+                                Optional. The category above is always included. A parent category
+                                also shows everything filed under it, so there is no need to tick both.
+                            </p>
+                        </div>
+                        <div>
                             <label for="brand_id" class="form-label">Brand</label>
                             <select name="brand_id" id="brand_id" class="form-input w-full @error('brand_id') form-input-error @enderror">
                                 <option value="">Select</option>

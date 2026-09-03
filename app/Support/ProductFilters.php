@@ -180,13 +180,17 @@ class ProductFilters
         // descendants too - otherwise picking MEN returns nothing while its
         // sub-categories return everything. A slug that resolved to nothing matches
         // nothing, rather than handing back the whole shop.
+        //
+        // Membership comes from the category_product pivot, not products.category_id:
+        // a product can be shelved in several categories, and the one it is filed
+        // under is only the first of them.
         if ($this->options['owns_category'] ?? true) {
             if ($this->categoryIds !== null && ! in_array('category', $except, true)) {
-                $query->whereIn('products.category_id', $this->categoryIds ?: [0]);
+                $query->inAnyCategory($this->categoryIds);
             }
 
             if ($this->subcategoryIds !== null && ! in_array('subcategory', $except, true)) {
-                $query->whereIn('products.category_id', $this->subcategoryIds ?: [0]);
+                $query->inAnyCategory($this->subcategoryIds);
             }
         }
 
@@ -379,11 +383,16 @@ class ProductFilters
      */
     private function countsByCategory(array $except): Collection
     {
+        // Grouped on the pivot, so a product shelved in two categories is counted
+        // under both - grouping products.category_id would credit it only to the
+        // one it is filed under and under-report every other shelf. count(distinct)
+        // because the join fans a product out into one row per category.
         return $this->query($except)
             ->reorder()
-            ->select('products.category_id')
-            ->selectRaw('count(*) as aggregate')
-            ->groupBy('products.category_id')
+            ->join('category_product', 'category_product.product_id', '=', 'products.id')
+            ->select('category_product.category_id')
+            ->selectRaw('count(distinct products.id) as aggregate')
+            ->groupBy('category_product.category_id')
             ->pluck('aggregate', 'category_id');
     }
 
