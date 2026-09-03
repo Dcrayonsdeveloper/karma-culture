@@ -526,7 +526,7 @@
                 /* Centred while the reels fit; ignored once they overflow. */
                 margin: 0 auto;
                 will-change: transform;
-                animation: kk-reel-pan calc(var(--kk-reel-count, 3) * 4s) ease-in-out infinite alternate;
+                animation: kk-reel-pan calc(var(--kk-reel-count, 3) * 1.8s) ease-in-out infinite alternate;
             }
             /* Held still while it is being looked at. */
             .kk-about-reels:hover .kk-about-reels__track,
@@ -1510,7 +1510,7 @@
                      than leaving an empty grid where the strip used to be. --}}
                 @if($aboutReels->isNotEmpty())
                 {{-- The count drives how long the pan takes, so eight reels travel
-                     at the same pace as four rather than in the same 4 seconds. --}}
+                     at the same pace as four rather than in the same time. --}}
                 <div class="kk-about-reels" style="--kk-reel-count: {{ $aboutReels->count() }};">
                     <div class="kk-about-reels__track">
                         @foreach($aboutReels as $aboutReel)
