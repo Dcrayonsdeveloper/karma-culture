@@ -169,8 +169,8 @@
         {{-- Content Section --}}
         <div class="p-3 flex flex-col flex-1">
             {{-- Eyebrow: brand first, category as fallback. Always rendered so
-                 the name and price sit at the same height on every card, even
-                 for products with neither. --}}
+                 the name starts at the same height on every card, even for
+                 products with neither. --}}
             @if($product->brand)
                 <p class="text-[10px] text-kk-text uppercase tracking-wider mb-0.5 leading-[15px] min-h-[15px] truncate">{{ $product->brand->name }}</p>
             @elseif($product->category)
@@ -182,14 +182,14 @@
             @endif
 
             {{-- Product Name --}}
-            <h3 class="text-[13px] font-medium text-[#222] mb-1.5 leading-snug min-h-9">
+            <h3 class="text-[13px] font-medium text-[#222] mb-1 leading-snug">
                 <a href="{{ route('product.show', $product) }}" class="line-clamp-2 hover:text-[#6F9CA2] transition-colors">
                     {{ $product->name }}
                 </a>
             </h3>
 
             {{-- Price Row (directly after the name so prices align) --}}
-            <div class="flex flex-wrap items-baseline gap-1.5 mb-2.5">
+            <div class="flex flex-wrap items-baseline gap-1.5 mb-1.5">
                 <span class="text-sm font-bold text-[#222]">@price($product->price)</span>
                 @if($hasDiscount)
                     <span class="text-[11px] text-neutral-600 line-through">@price($product->mrp)</span>
@@ -199,7 +199,7 @@
 
             {{-- Rating Badge --}}
             @if($rating > 0)
-                <div class="flex items-center gap-1 mb-1.5">
+                <div class="flex items-center gap-1 mb-1">
                     <span class="inline-flex items-center gap-0.5 bg-[#C1539C] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-sm">
                         {{ number_format($rating, 1) }}
                         <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
@@ -232,7 +232,7 @@
                         }
                     }
                 @endphp
-                <div class="flex flex-wrap items-center gap-1.5 mb-2">
+                <div class="flex flex-wrap items-center gap-1.5 mb-1.5">
                     @foreach($colorAttrs as $ca)
                         <span class="inline-flex items-center gap-1 text-[10px] text-neutral-600 bg-neutral-50 border border-neutral-100 rounded-full px-1.5 py-0.5">
                             <span class="w-3 h-3 rounded-full border border-neutral-200 shrink-0" style="background-color: {{ $ca['code'] }}"></span>
@@ -247,7 +247,7 @@
 
             {{-- View Product --}}
             @if($showAddToCart)
-                <div class="mt-auto pt-1">
+                <div class="mt-auto pt-2">
                     <a href="{{ route('product.show', $product) }}"
                        class="block w-full py-2.5 text-[13px] font-semibold text-white rounded-md transition-colors duration-200 text-center"
                        style="background:#2D1810;"
