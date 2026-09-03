@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
+    @include('partials.scroll-top-on-reload')
+
     {{-- The SEO tab's Meta Title was stored but read by nothing; it is the
          site-wide fallback for pages that do not set their own title. --}}
     <title>{{ $title ?? (\App\Models\Setting::get('meta_title') ?: config('app.name', 'Laravel')) }}</title>
