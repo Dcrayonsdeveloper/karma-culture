@@ -70,17 +70,25 @@
             // every admin page load. $adminUser is guarded because a layout includes
             // this partial, and nothing here guarantees an authenticated admin.
             $adminUser = auth('admin')->user();
-            $unreadNotifications = collect();
+            $bellNotifications = collect();
             $unreadCount = 0;
 
             if ($adminUser) {
                 $adminBell = \App\Models\Notification::query()
                     ->where('user_id', $adminUser->id)
-                    ->forAdmin()
-                    ->unread();
+                    ->forAdmin();
 
-                $unreadCount = (clone $adminBell)->count();
-                $unreadNotifications = $adminBell->latest()->limit(5)->get();
+                $unreadCount = (clone $adminBell)->unread()->count();
+
+                // The LATEST five, read or not - the badge is what counts unread.
+                //
+                // The list used to be ->unread() too, so opening a notification
+                // took it off the bell and the bell fell back to whatever was
+                // still unread underneath. The newest order sat at the top of
+                // /admin/notifications while the bell showed cancellations from
+                // ten minutes earlier, which reads as the bell being broken
+                // rather than as the newest ones having been read.
+                $bellNotifications = $adminBell->latest()->limit(5)->get();
             }
 
             // The unread marker is a bare coloured dot with no text, so the accessible
@@ -122,9 +130,13 @@
                     @endif
                 </div>
                 <div class="min-h-0 max-h-96 overflow-y-auto">
-                    @forelse($unreadNotifications as $notification)
+                    @forelse($bellNotifications as $notification)
+                        {{-- Read rows stay on the bell, on a plain background; the
+                             dot beside the title is what separates them from the
+                             ones still waiting. --}}
                         <a href="{{ route('admin.notifications.read', $notification) }}"
-                           class="block px-4 py-3 hover:bg-neutral-50 transition-colors" style="border-bottom: 1px solid #f5f5f5;">
+                           class="block px-4 py-3 hover:bg-neutral-50 transition-colors"
+                           style="border-bottom: 1px solid #f5f5f5;{{ $notification->is_read ? '' : ' background: #f7fbfb;' }}">
                             <div class="flex items-start gap-3">
                                 <div style="width: 2rem; height: 2rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; {{ $notification->type === 'new_enquiry' ? 'background:#e8f5f5;' : ($notification->type === 'new_ticket' ? 'background:#f3e8ff;' : 'background:#f5f5f5;') }}">
                                     @if($notification->type === 'new_enquiry')
@@ -142,7 +154,16 @@
                                     @endif
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-medium" style="color: #303030;">{{ $notification->title }}</p>
+                                    <p class="text-sm font-medium" style="color: #303030;">
+                                        {{ $notification->title }}
+                                        @unless($notification->is_read)
+                                            {{-- Same marker the list uses, so the two screens
+                                                 read the same. aria-hidden with a word behind
+                                                 it: a bare dot announces as nothing. --}}
+                                            <span aria-hidden="true" style="display: inline-block; width: 0.4rem; height: 0.4rem; border-radius: 9999px; background: #2563eb; vertical-align: middle; margin-left: 0.25rem;"></span>
+                                            <span class="sr-only">(unread)</span>
+                                        @endunless
+                                    </p>
                                     <p class="text-xs mt-0.5 truncate" style="color: #999;">{{ $notification->content }}</p>
                                     <p class="text-[10px] mt-1" style="color: #bbb;">{{ $notification->created_at->diffForHumans() }}</p>
                                 </div>
@@ -150,7 +171,7 @@
                         </a>
                     @empty
                         <div class="p-4 text-center text-sm" style="color: #999;">
-                            No new notifications
+                            No notifications yet
                         </div>
                     @endforelse
                 </div>
