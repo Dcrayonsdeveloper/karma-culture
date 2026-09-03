@@ -22,10 +22,15 @@ class DashboardController extends Controller
         // Carbon::parse() unchecked and come back as a 500 rather than as an
         // unusable filter, and an end before the start silently returned an
         // empty report.
+        // Both inputs carry max="today", so the future rules are what keeps the
+        // server from accepting by URL what the picker will not offer - not an
+        // extra restriction on top of it.
         $filters = $request->validate([
-            'start_date' => ['nullable', 'date'],
-            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'start_date' => ['nullable', 'date', 'before_or_equal:today'],
+            'end_date' => ['nullable', 'date', 'before_or_equal:today', 'after_or_equal:start_date'],
         ], [
+            'start_date.before_or_equal' => 'The start date cannot be in the future.',
+            'end_date.before_or_equal' => 'The end date cannot be in the future.',
             'end_date.after_or_equal' => 'The end date must be on or after the start date.',
         ]);
 
