@@ -9,20 +9,104 @@
 
     A section with nothing in it renders nothing: a brand page has no brand list
     to offer, a shop with one size has no size row worth showing.
+
+    Sections are <details>, not an Alpine x-show/x-collapse pair. Closed is the
+    resting state now, and an Alpine collapse cannot start closed without either
+    flashing eight expanded sections while the bundle loads or hiding every
+    control behind an x-cloak that never lifts when the script fails. A <details>
+    is shut before a line of JS runs, opens from the keyboard for free, and keeps
+    its inputs in the form while folded - so Apply still submits a filter whose
+    section is closed.
 --}}
 @php
     $kkValues = $filterPanel['values'];
     $kkActiveSubs = $filterPanel['active_subcategories'] ?? [];
+
+    // Closed is the default. A section already holding a choice opens itself: a
+    // filter the shopper cannot see is one they cannot undo, and the only other
+    // way off it is the chip row above the grid, which is out of sight the
+    // moment the page is scrolled.
+    //
+    // Read from values[] - what the request carried - and not from
+    // active_subcategories, which also holds the slug a category sub-page ticks
+    // on the shopper's behalf. Opening on that would leave the section standing
+    // open on every sub-category page for a filter nobody set. The badge on the
+    // Filters button and the chip row already draw the line in the same place.
+    $kkOpen = [
+        'category' => $kkValues['category'] !== null,
+        'subcategory' => (bool) $kkValues['subcategory'],
+        'size' => (bool) $kkValues['size'],
+        'colour' => (bool) $kkValues['colour'],
+        'brand' => (bool) $kkValues['brand'],
+        'price' => $kkValues['min_price'] !== null || $kkValues['max_price'] !== null,
+        'rating' => $kkValues['rating'] !== null,
+        'availability' => (bool) $kkValues['in_stock'] || (bool) $kkValues['on_sale'],
+    ];
 @endphp
 
-<form action="{{ $filterPanel['action'] }}" method="GET" class="space-y-4">
+@once
+    <style>
+        /* One hairline between neighbouring sections, drawn by the section
+           itself. The dividers used to be eight standalone divs in a space-y-4
+           stack, so every 1px line cost 2rem of gap on top of the rows' own
+           padding - the panel was mostly empty space.
+
+           The tint is translucent black rather than a fixed neutral-100. This
+           panel renders on white here and on the cream page background
+           elsewhere, and #f5f5f5 is lighter than cream: the line read as a
+           white scratch across the sidebar. A tint of whatever sits behind it
+           cannot come out lighter than its own backdrop. */
+        .kk-filter-section + .kk-filter-section { border-top: 1px solid rgb(0 0 0 / 0.08); }
+
+        .kk-filter-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: .5rem;
+            padding: .6875rem 0;
+            cursor: pointer;
+            user-select: none;
+            font-size: .875rem;
+            font-weight: 600;
+            line-height: 1.25rem;
+            color: #171717;
+            /* The native disclosure triangle. This row draws its own chevron on
+               the other side, and two markers on one line read as a mistake. */
+            list-style: none;
+        }
+        .kk-filter-head::-webkit-details-marker { display: none; }
+        .kk-filter-head:hover { color: #000; }
+        .kk-filter-head:focus-visible { outline: 2px solid #6F9CA2; outline-offset: 2px; border-radius: .25rem; }
+
+        .kk-filter-chevron { width: 1rem; height: 1rem; flex: none; color: #737373; transition: transform .2s ease; }
+        .kk-filter-section[open] > .kk-filter-head .kk-filter-chevron { transform: rotate(180deg); }
+
+        .kk-filter-body { padding-bottom: .75rem; }
+        .kk-filter-section[open] > .kk-filter-body { animation: kk-filter-reveal .15s ease-out; }
+        @keyframes kk-filter-reveal {
+            from { opacity: 0; transform: translateY(-.25rem); }
+            to   { opacity: 1; transform: none; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .kk-filter-chevron { transition: none; }
+            .kk-filter-section[open] > .kk-filter-body { animation: none; }
+        }
+    </style>
+@endonce
+
+{{-- x-data, empty, so the debounced auto-submit on the radios below has a scope
+     of its own. It used to borrow one from whichever section wrapped it; those
+     wrappers are gone, and the fragment this same file serves to the header's
+     Filters drawer is injected on its own, with no Alpine ancestor guaranteed. --}}
+<form action="{{ $filterPanel['action'] }}" method="GET" x-data>
     {{-- Anything the page needs carried through a filter submit: the search
          term, a sale scope, and the chosen ordering. --}}
     @foreach($filterPanel['hidden'] ?? [] as $kkName => $kkValue)
         <input type="hidden" name="{{ $kkName }}" value="{{ $kkValue }}">
     @endforeach
     {{-- Always emitted, never gated on "is it the default".
-         The guard used to be `sort !== 'newest'`, which is only the default on
+         The guard used to be sort !== 'newest', which is only the default on
          pages that have no default_sort of their own. On /deals, /bestsellers and
          /new-arrivals the constructor falls back to discount/bestselling/newest
          when the request carries no ?sort, so a shopper who had deliberately
@@ -33,15 +117,15 @@
 
     {{-- Categories --}}
     @if($filterPanel['categories']->isNotEmpty())
-        <div x-data="{ open: true }">
-            <button type="button" @click="open = !open" :aria-expanded="open ? 'true' : 'false'" class="flex items-center justify-between w-full py-2 text-sm font-semibold text-neutral-900">
+        <details class="kk-filter-section" {{ $kkOpen['category'] ? 'open' : '' }}>
+            <summary class="kk-filter-head">
                 Categories
-                <svg class="w-4 h-4 text-neutral-600 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="kk-filter-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                 </svg>
-            </button>
-            <div x-show="open" x-collapse>
-                <div class="space-y-1.5 max-h-52 overflow-y-auto pt-1 pb-2">
+            </summary>
+            <div class="kk-filter-body">
+                <div class="space-y-1.5 max-h-52 overflow-y-auto">
                     @foreach($filterPanel['categories'] as $kkCat)
                         <label class="flex items-center gap-2.5 cursor-pointer group py-0.5 min-h-10 lg:min-h-0">
                             <input type="radio" name="category" value="{{ $kkCat->slug }}"
@@ -58,21 +142,20 @@
                     @endforeach
                 </div>
             </div>
-        </div>
-        <div class="border-t border-neutral-100"></div>
+        </details>
     @endif
 
     {{-- Sub-categories --}}
     @if($filterPanel['subcategories']->isNotEmpty())
-        <div x-data="{ open: true }">
-            <button type="button" @click="open = !open" :aria-expanded="open ? 'true' : 'false'" class="flex items-center justify-between w-full py-2 text-sm font-semibold text-neutral-900">
+        <details class="kk-filter-section" {{ $kkOpen['subcategory'] ? 'open' : '' }}>
+            <summary class="kk-filter-head">
                 Sub-categories
-                <svg class="w-4 h-4 text-neutral-600 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="kk-filter-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                 </svg>
-            </button>
-            <div x-show="open" x-collapse>
-                <div class="space-y-1.5 max-h-52 overflow-y-auto pt-1 pb-2">
+            </summary>
+            <div class="kk-filter-body">
+                <div class="space-y-1.5 max-h-52 overflow-y-auto">
                     @foreach($filterPanel['subcategories'] as $kkSub)
                         {{-- A ticked box stays clickable even when the other filters have
                              emptied it out, or there would be no way to untick it. --}}
@@ -101,21 +184,20 @@
                     @endforeach
                 </div>
             </div>
-        </div>
-        <div class="border-t border-neutral-100"></div>
+        </details>
     @endif
 
     {{-- Size --}}
     @if($filterPanel['sizes']->isNotEmpty())
-        <div x-data="{ open: true }">
-            <button type="button" @click="open = !open" :aria-expanded="open ? 'true' : 'false'" class="flex items-center justify-between w-full py-2 text-sm font-semibold text-neutral-900">
+        <details class="kk-filter-section" {{ $kkOpen['size'] ? 'open' : '' }}>
+            <summary class="kk-filter-head">
                 Size
-                <svg class="w-4 h-4 text-neutral-600 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="kk-filter-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                 </svg>
-            </button>
-            <div x-show="open" x-collapse>
-                <div class="flex flex-wrap gap-1.5 pt-1 pb-2">
+            </summary>
+            <div class="kk-filter-body">
+                <div class="flex flex-wrap gap-1.5">
                     @foreach($filterPanel['sizes'] as $kkSize)
                         <label class="cursor-pointer select-none">
                             <input type="checkbox" name="size[]" value="{{ $kkSize }}"
@@ -136,21 +218,20 @@
                     @endforeach
                 </div>
             </div>
-        </div>
-        <div class="border-t border-neutral-100"></div>
+        </details>
     @endif
 
     {{-- Colour --}}
     @if($filterPanel['colours']->isNotEmpty())
-        <div x-data="{ open: true }">
-            <button type="button" @click="open = !open" :aria-expanded="open ? 'true' : 'false'" class="flex items-center justify-between w-full py-2 text-sm font-semibold text-neutral-900">
+        <details class="kk-filter-section" {{ $kkOpen['colour'] ? 'open' : '' }}>
+            <summary class="kk-filter-head">
                 Colour
-                <svg class="w-4 h-4 text-neutral-600 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="kk-filter-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                 </svg>
-            </button>
-            <div x-show="open" x-collapse>
-                <div class="flex flex-wrap gap-1.5 pt-1 pb-2">
+            </summary>
+            <div class="kk-filter-body">
+                <div class="flex flex-wrap gap-1.5">
                     @foreach($filterPanel['colours'] as $kkC)
                         <label class="cursor-pointer select-none" title="{{ $kkC['name'] }}">
                             <input type="checkbox" name="colour[]" value="{{ $kkC['name'] }}"
@@ -175,21 +256,20 @@
                     @endforeach
                 </div>
             </div>
-        </div>
-        <div class="border-t border-neutral-100"></div>
+        </details>
     @endif
 
     {{-- Brand --}}
     @if($filterPanel['brands']->isNotEmpty())
-        <div x-data="{ open: true }">
-            <button type="button" @click="open = !open" :aria-expanded="open ? 'true' : 'false'" class="flex items-center justify-between w-full py-2 text-sm font-semibold text-neutral-900">
+        <details class="kk-filter-section" {{ $kkOpen['brand'] ? 'open' : '' }}>
+            <summary class="kk-filter-head">
                 Brand
-                <svg class="w-4 h-4 text-neutral-600 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="kk-filter-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                 </svg>
-            </button>
-            <div x-show="open" x-collapse>
-                <div class="space-y-1.5 max-h-52 overflow-y-auto pt-1 pb-2">
+            </summary>
+            <div class="kk-filter-body">
+                <div class="space-y-1.5 max-h-52 overflow-y-auto">
                     @foreach($filterPanel['brands'] as $kkBrand)
                         <label class="flex items-center gap-2.5 cursor-pointer group py-0.5 min-h-10 lg:min-h-0">
                             <input type="checkbox" name="brand[]" value="{{ $kkBrand->slug }}" onchange="this.form.submit()"
@@ -200,20 +280,19 @@
                     @endforeach
                 </div>
             </div>
-        </div>
-        <div class="border-t border-neutral-100"></div>
+        </details>
     @endif
 
     {{-- Price Range --}}
-    <div x-data="{ open: true }">
-        <button type="button" @click="open = !open" :aria-expanded="open ? 'true' : 'false'" class="flex items-center justify-between w-full py-2 text-sm font-semibold text-neutral-900">
+    <details class="kk-filter-section" {{ $kkOpen['price'] ? 'open' : '' }}>
+        <summary class="kk-filter-head">
             Price Range
-            <svg class="w-4 h-4 text-neutral-600 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="kk-filter-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
             </svg>
-        </button>
-        <div x-show="open" x-collapse>
-            <div class="flex items-center gap-2 pt-1 pb-2">
+        </summary>
+        <div class="kk-filter-body">
+            <div class="flex items-center gap-2">
                 <div class="relative flex-1">
                     <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-neutral-600">&#8377;</span>
                     <input type="number" name="min_price" value="{{ $kkValues['min_price'] }}" min="0" step="any" inputmode="decimal"
@@ -229,8 +308,7 @@
                 </div>
             </div>
         </div>
-    </div>
-    <div class="border-t border-neutral-100"></div>
+    </details>
 
     {{-- Rating --}}
     @if($filterPanel['show_rating'])
@@ -241,16 +319,15 @@
             // twenty-five times.
             $kkStarPath = 'M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z';
         @endphp
-        <div x-data="{ open: true }">
-            <button type="button" @click="open = !open" :aria-expanded="open ? 'true' : 'false'"
-                    class="flex items-center justify-between w-full py-2 text-sm font-semibold text-neutral-900">
+        <details class="kk-filter-section" {{ $kkOpen['rating'] ? 'open' : '' }}>
+            <summary class="kk-filter-head">
                 Rating
-                <svg class="w-4 h-4 text-neutral-600 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="kk-filter-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                 </svg>
-            </button>
-            <div x-show="open" x-collapse>
-                <div class="space-y-1.5 pt-1 pb-2" role="group" aria-label="Minimum rating">
+            </summary>
+            <div class="kk-filter-body">
+                <div class="space-y-1.5" role="group" aria-label="Minimum rating">
                     {{-- "Any rating" is what takes a chosen rating back off. A radio
                          group with no empty option can be set but never unset: once a
                          shopper picked 4 stars, the only way back to an unfiltered list
@@ -263,7 +340,7 @@
                                class="w-3.5 h-3.5 border-neutral-300 accent-[#6F9CA2] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#6F9CA2]">
                         <span class="text-sm text-neutral-600 group-hover:text-neutral-900 transition-colors">Any rating</span>
                     </label>
-                    {{-- The query is `rating >= N`, so every row is a floor, not an exact
+                    {{-- The query is rating >= N, so every row is a floor, not an exact
                          score. The label said plainly "4 <star>", which reads as "rated four"
                          and is not what the box does - a 4.6-star product is in the 4 row
                          too. Five stars with the top ones filled, and the words "& up",
@@ -297,20 +374,19 @@
                     @endfor
                 </div>
             </div>
-        </div>
-        <div class="border-t border-neutral-100"></div>
+        </details>
     @endif
 
     {{-- Availability & Offers --}}
-    <div x-data="{ open: true }">
-        <button type="button" @click="open = !open" :aria-expanded="open ? 'true' : 'false'" class="flex items-center justify-between w-full py-2 text-sm font-semibold text-neutral-900">
+    <details class="kk-filter-section" {{ $kkOpen['availability'] ? 'open' : '' }}>
+        <summary class="kk-filter-head">
             Availability
-            <svg class="w-4 h-4 text-neutral-600 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="kk-filter-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
             </svg>
-        </button>
-        <div x-show="open" x-collapse>
-            <div class="space-y-2 pt-1 pb-2">
+        </summary>
+        <div class="kk-filter-body">
+            <div class="space-y-2">
                 <label class="flex items-center gap-2.5 cursor-pointer group py-0.5 min-h-10 lg:min-h-0">
                     <input type="checkbox" name="in_stock" value="1" onchange="this.form.submit()"
                            @checked($kkValues['in_stock'])
@@ -327,7 +403,7 @@
                 @endif
             </div>
         </div>
-    </div>
+    </details>
 
     {{-- Action Buttons.
 
@@ -337,7 +413,7 @@
          it. Everything except the two price boxes auto-submits, which hid the
          problem on desktop and made the drawer apply exactly one filter per
          open on a phone. --}}
-    <div class="flex gap-2 pt-2 {{ ($kkStickyActions ?? false) ? 'sticky bottom-0 -mx-4 px-4 pb-4 bg-white border-t border-neutral-100' : '' }}">
+    <div class="flex gap-2 pt-4 {{ ($kkStickyActions ?? false) ? 'sticky bottom-0 -mx-4 px-4 pb-4 bg-white border-t border-neutral-200' : '' }}">
         <button type="submit" class="flex-1 py-2.5 bg-[#F8931D] hover:bg-[#E07E0A] text-white text-sm font-semibold rounded-lg transition-colors">
             Apply
         </button>

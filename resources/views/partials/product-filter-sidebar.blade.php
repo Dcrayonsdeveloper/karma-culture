@@ -82,8 +82,13 @@
         </div>
     </div>
 
-    <!-- Desktop filters -->
-    <div class="hidden lg:block">
+    {{-- Desktop filters.
+
+         The column sits on the page background with nothing of its own behind
+         it, so the section rules were the only thing giving it an edge - and a
+         hairline is not a panel. A card gives the filters a surface to sit on
+         and reads the same whether the page behind it is white or cream. --}}
+    <div class="hidden lg:block bg-white border border-neutral-200 rounded-xl p-4">
         @include('partials.product-filters')
     </div>
 </aside>
