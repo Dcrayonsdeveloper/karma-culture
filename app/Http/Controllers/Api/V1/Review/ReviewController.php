@@ -62,13 +62,27 @@ class ReviewController extends Controller
         $validated = $request->validate([
             'rating' => 'required|integer|min:1|max:5',
             'title' => 'nullable|string|max:255',
-            'comment' => 'nullable|string|max:2000',
+            // Was 'comment', which is not a column and not in Review::$fillable,
+            // so the one field anyone would actually want to edit was validated
+            // and then silently dropped.
+            'content' => 'nullable|string|max:2000',
         ]);
 
-        $review->update($validated);
+        // Back to the moderation queue. This whole endpoint compared against a
+        // user_id that was NULL on every row, so it answered 403 to everyone and
+        // the omission never showed: without it, an owner could rewrite the
+        // rating and text of an already-approved, publicly visible review - and
+        // Review::updated would fold the new rating straight into the product's
+        // average - with no moderator ever seeing the new version.
+        $review->update($validated + [
+            'status' => 'pending',
+            'is_approved' => false,
+            'moderated_at' => null,
+            'moderated_by' => null,
+        ]);
 
         return response()->json([
-            'message' => 'Review updated successfully',
+            'message' => 'Review updated. It will be published again after moderation.',
             'data' => $review,
         ]);
     }

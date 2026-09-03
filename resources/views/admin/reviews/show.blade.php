@@ -134,8 +134,22 @@
                 <div style="padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
                     <div style="display: flex; justify-content: space-between; font-size: 13px;">
                         <span style="color: #616161;">Customer</span>
-                        <span style="font-weight: 500; color: #303030;">{{ $review->user ? $review->user->first_name . ' ' . $review->user->last_name : 'Guest' }}</span>
+                        <span style="font-weight: 500; color: #303030;">
+                            {{ $review->reviewer_name }}
+                            @unless($review->user)
+                                <span style="color: #616161; font-weight: 400;">(guest)</span>
+                            @endunless
+                        </span>
                     </div>
+                    {{-- The address the review was left under. Nothing showed it before,
+                         so a moderator could not tell two reviews from the same person
+                         apart from two reviews that merely shared a first name. --}}
+                    @if($review->guest_email)
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; gap: 1rem;">
+                            <span style="color: #616161;">Email</span>
+                            <span style="font-weight: 500; color: #303030; overflow-wrap: anywhere;">{{ $review->guest_email }}</span>
+                        </div>
+                    @endif
                     <div style="display: flex; justify-content: space-between; font-size: 13px;">
                         <span style="color: #616161;">Verified Purchase</span>
                         <span style="font-weight: 500; color: #303030;">{{ $review->is_verified_purchase ? 'Yes' : 'No' }}</span>

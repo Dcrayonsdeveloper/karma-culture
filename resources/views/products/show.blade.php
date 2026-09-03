@@ -1444,14 +1444,23 @@
                     @foreach($product->reviews as $review)
                     <div class="kk-rev__item">
                         <div class="kk-rev__item-top">
-                            <div class="kk-rev__item-avatar">{{ strtoupper(substr($review->user?->first_name ?? 'A', 0, 1)) }}</div>
+                            {{-- Through the model's accessors, not the relation. Reading
+                                 $review->user directly ignored guest_name, and no review on
+                                 this site had a user until now - so every one of them
+                                 published as "Anonymous" under an "A" avatar, however
+                                 carefully the reviewer typed their name. --}}
+                            <div class="kk-rev__item-avatar">{{ $review->reviewer_initial }}</div>
                             <div class="kk-rev__item-meta">
                                 <div class="kk-rev__item-name-row">
-                                    <span class="kk-rev__item-name">{{ trim(($review->user?->first_name ?? 'Anonymous') . ' ' . ($review->user?->last_name ?? '')) }}</span>
-                                    <span class="kk-rev__item-verified">
-                                        <svg fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                                        Verified Buyer
-                                    </span>
+                                    <span class="kk-rev__item-name">{{ $review->reviewer_name }}</span>
+                                    {{-- The badge was unconditional, so reviews from people who
+                                         had never bought the product still claimed it. --}}
+                                    @if($review->is_verified_purchase)
+                                        <span class="kk-rev__item-verified">
+                                            <svg fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                            Verified Buyer
+                                        </span>
+                                    @endif
                                 </div>
                                 <div class="kk-rev__item-sub">
                                     <span class="kk-rev__item-stars">
@@ -1548,6 +1557,10 @@
             .kk-revform__input:focus, .kk-revform__textarea:focus { outline: none; border-color: #2d1810; }
             .kk-revform__textarea { margin-bottom: 16px; resize: vertical; }
             .kk-revform__note { font-size: 12px; color: #9b8a72; margin: 12px 0 0; }
+            /* Stands in for the name/email pair a signed-in reviewer is not shown,
+               so the block keeps the spacing the grid used to hold. */
+            .kk-revform__as { font-size: 13px; color: #5c4a3a; margin: 0 0 16px; }
+            .kk-revform__as strong { color: #2d1810; }
             .kk-revform__alert { padding: 11px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
             .kk-revform__alert--ok { background: #eaf6ec; color: #1c6428; border: 1px solid #b9e0c0; }
             .kk-revform__alert--err { background: #fdecea; color: #b71c00; border: 1px solid #f3c4be; }
@@ -1644,20 +1657,32 @@
                     </div>
                     <input type="hidden" name="rating" :value="rating">
 
-                    <div class="kk-revform__grid">
-                        {{-- This name is PUBLISHED under the review, and the box asked only
-                             for a length - so "686876988" or a URL could be typed in and
-                             would appear on the product page. autocomplete="name" is what
-                             earns the keystroke filter (see NAME_AUTOCOMPLETE in app.js),
-                             and it is the right token anyway: this is the visitor's own
-                             name. The pattern is App\Rules\PersonName's charset, which
-                             GuestReviewController now validates against. --}}
-                        <input class="kk-revform__input" type="text" name="guest_name" placeholder="Full name *" value="{{ old('guest_name') }}" required minlength="2" maxlength="100"
-                               autocomplete="name"
-                               pattern="{{ \App\Rules\ValidationRules::namePattern() }}"
-                               title="The full name may only contain letters, spaces, hyphens, apostrophes and periods.">
-                        <input class="kk-revform__input" type="email" name="guest_email" placeholder="Email (not published) *" value="{{ old('guest_email') }}" required maxlength="255">
-                    </div>
+                    @auth
+                        {{-- Signed in, so the review is filed against the account and these
+                             two boxes have nothing left to ask. They were also the reason
+                             every review landed as a guest: the controller took its identity
+                             from whatever was typed here, and a signed-in shopper could put
+                             any address in - including someone else's. --}}
+                        <p class="kk-revform__as">
+                            Posting as <strong>{{ trim(auth()->user()->full_name) ?: auth()->user()->email }}</strong>.
+                            It will show under My Reviews once submitted.
+                        </p>
+                    @else
+                        <div class="kk-revform__grid">
+                            {{-- This name is PUBLISHED under the review, and the box asked only
+                                 for a length - so "686876988" or a URL could be typed in and
+                                 would appear on the product page. autocomplete="name" is what
+                                 earns the keystroke filter (see NAME_AUTOCOMPLETE in app.js),
+                                 and it is the right token anyway: this is the visitor's own
+                                 name. The pattern is App\Rules\PersonName's charset, which
+                                 GuestReviewController now validates against. --}}
+                            <input class="kk-revform__input" type="text" name="guest_name" placeholder="Full name *" value="{{ old('guest_name') }}" required minlength="2" maxlength="100"
+                                   autocomplete="name"
+                                   pattern="{{ \App\Rules\ValidationRules::namePattern() }}"
+                                   title="The full name may only contain letters, spaces, hyphens, apostrophes and periods.">
+                            <input class="kk-revform__input" type="email" name="guest_email" placeholder="Email (not published) *" value="{{ old('guest_email') }}" required maxlength="255">
+                        </div>
+                    @endauth
                     <input class="kk-revform__input" type="text" name="title" placeholder="Review title" value="{{ old('title') }}" maxlength="255" style="margin-bottom:12px;">
                     <textarea class="kk-revform__textarea" name="content" rows="4" placeholder="Share your experience (at least 20 characters)…" required minlength="20" maxlength="2000">{{ old('content') }}</textarea>
 
@@ -1691,7 +1716,10 @@
                     </ul>
 
                     <button type="submit" class="kk-rev__write" :disabled="rating < 1 || overBudget">Submit Review</button>
-                    <p class="kk-revform__note">Open to everyone - no account needed. Your review is published after moderation; your email is never shown publicly.</p>
+                    <p class="kk-revform__note">
+                        @guest Open to everyone - no account needed. @endguest
+                        Your review is published after moderation; your email is never shown publicly.
+                    </p>
                 </form>
             </div>
 

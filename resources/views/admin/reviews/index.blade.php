@@ -69,7 +69,14 @@
                                     <span style="color: #005bd3; font-weight: 500; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ $review->product->name ?? 'Deleted Product' }}</span>
                                 </td>
                                 <td style="padding: 0.5rem 1rem; color: #303030;">
-                                    {{ $review->user ? $review->user->first_name . ' ' . $review->user->last_name : 'Guest' }}
+                                    {{-- The name, then whether it came with an account. This
+                                         printed a bare "Guest" for every review on the site,
+                                         because none of them carried a user - so the column the
+                                         search box searches by name showed no names. --}}
+                                    {{ $review->reviewer_name }}
+                                    @unless($review->user)
+                                        <span style="color: #616161; font-size: 11px;">(guest)</span>
+                                    @endunless
                                 </td>
                                 <td style="padding: 0.5rem 1rem; text-align: center;">
                                     <div style="display: inline-flex; align-items: center; gap: 1px;">

@@ -75,10 +75,13 @@ class ReviewSchemaService
                     'reviewBody' => $review->content,
                 ];
 
-                // Author
-                $authorName = $review->user
-                    ? $review->user->first_name . ' ' . strtoupper(substr($review->user->last_name, 0, 1)) . '.'
-                    : ($review->guest_name ?? 'Anonymous');
+                // Author. The same byline the product page prints, so the visible
+                // review and the structured data cannot disagree about who wrote
+                // it. The old branch built "First L." by hand from the relation,
+                // which was unreachable while every review had a NULL user_id -
+                // and substr() on the NULL last_name an account is allowed to have
+                // is a deprecation on the PHP 8.4 the server runs.
+                $authorName = $review->reviewer_name;
 
                 $reviewSchema['author'] = [
                     '@type' => 'Person',
