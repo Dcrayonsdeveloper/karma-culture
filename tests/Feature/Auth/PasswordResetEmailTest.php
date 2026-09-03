@@ -228,6 +228,24 @@ class PasswordResetEmailTest extends TestCase
         );
     }
 
+    /**
+     * The header login modal has to offer a way out too.
+     *
+     * The /login page carried a "Forgot password?" link from the start, so the
+     * flow looked reachable, but the modal in partials/header.blade.php is what
+     * opens when a customer clicks the account icon over whatever page they are
+     * already on - and it had no link at all. Anyone who never navigated to
+     * /login directly simply could not reset a password.
+     */
+    public function test_the_header_login_modal_offers_a_forgot_password_link(): void
+    {
+        $response = $this->get('/');
+
+        $response->assertOk()
+            ->assertSee(route('password.request'), false)
+            ->assertSee('Forgot password?', false);
+    }
+
     /** Pull the reset URL out of the notification the customer was sent. */
     private function capturedResetUrl(): string
     {

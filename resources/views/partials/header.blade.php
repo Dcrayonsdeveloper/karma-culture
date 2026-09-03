@@ -605,10 +605,20 @@
                     <p class="kk-loginmodal__fielderror" x-show="fieldErrors.password_confirmation" x-text="fieldErrors.password_confirmation" x-cloak></p>
                 </div>
 
-                <label class="kk-loginmodal__notify" x-show="mode === 'login'">
-                    <input type="checkbox" x-model="form.remember">
-                    <span>Remember me</span>
-                </label>
+                {{-- Login-only: remember me, and the way back in for someone who
+                     cannot remember the password at all. The /login page has
+                     carried a forgot-password link all along, but this modal is
+                     where most customers actually meet the form - the header
+                     opens it over whatever page they were already on - and it
+                     offered no route to a reset, so from here the password was
+                     simply unrecoverable. --}}
+                <div class="kk-loginmodal__loginrow" x-show="mode === 'login'">
+                    <label class="kk-loginmodal__notify">
+                        <input type="checkbox" x-model="form.remember">
+                        <span>Remember me</span>
+                    </label>
+                    <a href="{{ route('password.request') }}" class="kk-loginmodal__forgot">Forgot password?</a>
+                </div>
 
                 <button type="submit" class="kk-loginmodal__submit" :disabled="loading">
                     <span x-show="!loading" x-text="mode === 'login' ? 'Login' : 'Create Account'">Login</span>
@@ -947,12 +957,25 @@
     .kk-loginmodal__fielderror {
         margin: 5px 0 0; font-size: 11.5px; color: #d72c0d; line-height: 1.4;
     }
+    /* Remember-me on the left, forgot-password on the right. Wraps rather than
+       squeezing, so the link never collides with the checkbox on a narrow
+       phone. */
+    .kk-loginmodal__loginrow {
+        display: flex; align-items: center; justify-content: space-between;
+        flex-wrap: wrap; gap: 6px 12px;
+        margin-bottom: 16px;
+    }
     .kk-loginmodal__notify {
         display: flex; align-items: center; gap: 8px;
         font-size: 12px; color: #6b6b6b;
-        margin-bottom: 16px; cursor: pointer;
+        cursor: pointer;
     }
     .kk-loginmodal__notify input { width: 14px; height: 14px; accent-color: #2d1810; cursor: pointer; }
+    .kk-loginmodal__forgot {
+        font-size: 12px; font-weight: 600; color: #2d1810;
+        text-decoration: none; white-space: nowrap;
+    }
+    .kk-loginmodal__forgot:hover { text-decoration: underline; }
     .kk-loginmodal__submit {
         width: 100%; padding: 12px; border: none; border-radius: 4px;
         background: #2d1810; color: #fff;
