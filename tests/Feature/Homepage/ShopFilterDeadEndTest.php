@@ -13,7 +13,7 @@ use Tests\TestCase;
 /**
  * A "Shop It Your Way" hanger has to open a listing with something on it.
  *
- * The reported bug: /shop?size=cd, reached by clicking a hanger on the home
+ * The reported bug: /products?size=cd, reached by clicking a hanger on the home
  * page, showed "0 products found" with "cd" drawn in the sidebar as though it
  * were a size the shop sells. "cd" was a typo an admin had saved into a hanger
  * months earlier, and nothing between that field and the shopper's screen ever
@@ -138,14 +138,14 @@ class ShopFilterDeadEndTest extends TestCase
     /** The size off a hanger still filters the shop it opens. */
     public function test_a_live_hanger_opens_a_listing_with_products_on_it(): void
     {
-        $this->get('/shop?size=M')
+        $this->get('/products?size=M')
             ->assertOk()
             ->assertSee('Oxford Shirt');
     }
 
     public function test_the_sidebar_does_not_offer_a_size_no_product_carries(): void
     {
-        $response = $this->get('/shop?size=cd')->assertOk();
+        $response = $this->get('/products?size=cd')->assertOk();
 
         // Not a pickable size...
         $response->assertDontSee('name="size[]" value="cd"', false)
@@ -158,7 +158,7 @@ class ShopFilterDeadEndTest extends TestCase
 
     public function test_the_sidebar_does_not_offer_a_colour_no_product_lists(): void
     {
-        $response = $this->get('/shop?shade=cinnamon')->assertOk();
+        $response = $this->get('/products?shade=cinnamon')->assertOk();
 
         $response->assertDontSee('name="colour[]" value="cinnamon"', false)
             ->assertSee('cinnamon');
@@ -173,7 +173,7 @@ class ShopFilterDeadEndTest extends TestCase
      */
     public function test_a_stocked_size_stays_tickable_once_another_filter_empties_it(): void
     {
-        $this->get('/shop?size=M&max_price=1')
+        $this->get('/products?size=M&max_price=1')
             ->assertOk()
             ->assertSee('name="size[]" value="M"', false);
     }

@@ -76,7 +76,7 @@ class ListingChipsTest extends TestCase
     public function test_removing_a_chip_restarts_at_page_one(string $query): void
     {
         $targets = $this->chipTargets(
-            $this->get('/shop?'.$query.'&page=3')->assertOk()->getContent()
+            $this->get('/products?'.$query.'&page=3')->assertOk()->getContent()
         );
 
         $this->assertNotEmpty($targets, 'No chips rendered for '.$query);
@@ -94,7 +94,7 @@ class ListingChipsTest extends TestCase
     {
         // Dropping page must not turn into dropping everything.
         $targets = $this->chipTargets(
-            $this->get('/shop?rating=3&in_stock=1&page=2')->assertOk()->getContent()
+            $this->get('/products?rating=3&in_stock=1&page=2')->assertOk()->getContent()
         );
 
         $kept = array_filter($targets, fn ($t) => str_contains($t, 'in_stock') && ! str_contains($t, 'rating'));

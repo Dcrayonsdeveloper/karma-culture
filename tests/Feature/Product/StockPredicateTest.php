@@ -82,7 +82,7 @@ class StockPredicateTest extends TestCase
     public static function listingUrls(): array
     {
         return [
-            'shop' => ['/shop?in_stock=1'],
+            'shop' => ['/products?in_stock=1'],
             'category' => ['/category/shirts?in_stock=1'],
         ];
     }
