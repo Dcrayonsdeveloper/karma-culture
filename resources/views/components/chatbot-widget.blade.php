@@ -16,6 +16,9 @@
     // Same heading as the full page, so the widget and /chat do not introduce
     // themselves as two different things.
     $kkSiteName = \App\Models\Setting::get('site_name', 'Karmaa Kulture');
+
+    // One definition of the openers, shared with the full-page chat.
+    $kkQuickChips = app(\App\Http\Controllers\ChatbotController::class)->quickChips();
 @endphp
 <style>
     /* --kk-chat-stack is everything the panel sits on top of inside the flex
@@ -65,6 +68,42 @@
     .kk-chat-msg p + p,
     .kk-chat-msg ul + p { margin-top: 0.45em; }
 
+    /* On a phone the panel used to be a 520px-tall card floating above the
+       launcher, so a strip of the page showed underneath it and the footer
+       could be read through the gap while chatting. Below the sm breakpoint an
+       open panel now fills the viewport: the root loses its corner offsets, the
+       panel drops its width cap, its rounding and its computed height, and the
+       launcher is taken out of the flow because the panel header carries its
+       own close button.
+
+       100dvh, not 100vh: vh ignores the mobile URL bar, which is what left the
+       composer under the fold on the full-page chat. */
+    @media (max-width: 639px) {
+        .chatbot-widget-root.is-fullscreen {
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            gap: 0 !important;
+        }
+
+        .chatbot-widget-root.is-fullscreen .chatbot-panel {
+            /* 100% of the root, not 100vw: vw counts the scrollbar gutter, so
+               the panel hung a scrollbar-width past the right edge and took the
+               close button with it. The root is inset 0, so its box is exactly
+               the viewport. */
+            width: 100% !important;
+            max-width: none !important;
+            height: 100% !important;
+            border-radius: 0 !important;
+            border: 0 !important;
+        }
+
+        .chatbot-widget-root.is-fullscreen .chatbot-launcher {
+            display: none !important;
+        }
+    }
+
     .kk-chat-header-title { font-weight: 600 !important; }
     .kk-chat-input,
     .kk-chat-input::placeholder { font-weight: 400 !important; }
@@ -74,6 +113,7 @@
     x-data="chatbotWidget()"
     x-init="init()"
     class="chatbot-widget-root fixed z-[75] flex flex-col items-end gap-3"
+    :class="isOpen && 'is-fullscreen'"
     style="position: fixed; z-index: 75; display: flex; flex-direction: column; align-items: flex-end; gap: 0.75rem;"
     @keydown.escape.window="isOpen && close()"
 >
@@ -361,7 +401,7 @@
     {{-- ═══════════════════════════════════════════════════════════════════ --}}
     {{-- TOGGLE BUTTON                                                       --}}
     {{-- ═══════════════════════════════════════════════════════════════════ --}}
-    <div class="relative">
+    <div class="chatbot-launcher relative">
         {{-- Orbiting wave rings (always visible when closed) --}}
         <template x-if="!isOpen">
             <div class="absolute inset-0 pointer-events-none">
@@ -470,12 +510,16 @@ function chatbotWidget() {
         messages:     [],
         unreadCount:  0,
 
-        quickChips: [
-            { label: '📦 Track Order',    message: 'How can I track my order?' },
-            { label: '🏷️ Current Offers', message: 'What offers and coupons are available right now?' },
-            { label: '📏 Size Guide',      message: 'How do I find the right size for my child?' },
-            { label: '↩️ Return Policy',   message: 'What is the return policy?' },
-        ],
+        {{-- Rendered from ChatbotController::quickChips(), which is what its own
+             docblock always claimed - the widget in fact kept a second copy here,
+             and the two had drifted: this list went on offering the coupon opener
+             after the assistant stopped answering it, and still asked about sizing
+             "for my child" from the shop this was forked from.
+
+             A Blade comment rather than a JS one: this block sits inside <script>,
+             so a // comment ships to the browser - and a test asserting the page no
+             longer names that opener would match the comment instead of the code. --}}
+        quickChips: @json($kkQuickChips),
 
         historyLoaded: false,
 

@@ -1434,12 +1434,20 @@
             // Falls back to numbered default paths so the section works pre-config.
             $aboutVideoKeys     = ['about_us_video_url', 'about_us_video_url_2', 'about_us_video_url_3'];
             $aboutVideoDefaults = ['videos/karmaa-about.mp4', 'videos/karmaa-about-2.mp4', 'videos/karmaa-about-3.mp4'];
+            // A slot the admin has cleared holds a row with an empty value; one
+            // nobody has ever set has no row at all. Only the second falls back to
+            // the bundled clip - otherwise Remove would put the default straight
+            // back and the card could never be taken down.
+            $aboutConfigured = \App\Models\Setting::whereIn('key', $aboutVideoKeys)->pluck('key')->all();
             $aboutVideos = [];
             foreach ($aboutVideoKeys as $ai => $ak) {
-                $val = \App\Models\Setting::get($ak, '');
-                $aboutVideos[] = $val
-                    ? (str_starts_with($val, 'http') ? $val : asset_v($val))
-                    : asset_v($aboutVideoDefaults[$ai]);
+                $val = (string) \App\Models\Setting::get($ak, '');
+
+                if ($val !== '') {
+                    $aboutVideos[] = str_starts_with($val, 'http') ? $val : asset_v($val);
+                } elseif (! in_array($ak, $aboutConfigured, true)) {
+                    $aboutVideos[] = asset_v($aboutVideoDefaults[$ai]);
+                }
             }
         @endphp
         @if($aboutVisible)
@@ -1449,6 +1457,9 @@
                 <h2 class="kk-section-title kk-section-title--lg" style="margin-top:8px;">{{ $aboutTitle }}</h2>
                 <p class="intro">{{ is_string($aboutText) ? $aboutText : '' }}</p>
 
+                {{-- Hidden entirely once every slot is cleared, rather than leaving
+                     an empty grid where three cards used to be. --}}
+                @if($aboutVideos !== [])
                 <div class="kk-about-reels">
                     @foreach($aboutVideos as $aboutVideo)
                         {{-- Admin-set clips of any ratio, so they are shown whole: a
@@ -1457,6 +1468,7 @@
                         <x-media class="kk-about-reel" :src="$aboutVideo" video dark />
                     @endforeach
                 </div>
+                @endif
 
                 <div class="kk-about-cta">
                     {{-- Button Link is admin-entered and often points at a lookbook or a

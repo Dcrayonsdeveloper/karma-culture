@@ -120,4 +120,72 @@ class CouponSilenceTest extends TestCase
 
         $this->assertNotEmpty($chips, 'The openers were emptied rather than replaced.');
     }
+
+    /**
+     * ...and the widget really renders those, rather than a second copy.
+     *
+     * quickChips() has always claimed in its docblock to be "shared by the
+     * widget and the full page so the two surfaces never drift apart". They
+     * had: the widget carried its own hardcoded list in Alpine, so removing
+     * the coupon opener from the controller left the widget still offering
+     * "Current Offers" to every shopper on the storefront.
+     */
+    public function test_the_widget_renders_the_controllers_openers_and_not_its_own(): void
+    {
+        config(['services.anthropic.key' => 'test-key']);
+
+        $user = \App\Models\User::factory()->create(['role' => 'customer']);
+        $html = $this->actingAs($user)->get('/')->assertOk()->getContent();
+
+        $this->assertStringNotContainsStringIgnoringCase(
+            'Current Offers',
+            $html,
+            'The widget is still offering the coupon opener from its own copy of the list.'
+        );
+
+        foreach ((new ChatbotController)->quickChips() as $chip) {
+            $this->assertStringContainsString(
+                $chip['message'],
+                $html,
+                'The widget is not rendering the controller\'s openers.'
+            );
+        }
+    }
+
+    /**
+     * On a phone the panel was a 520px card floating above the launcher, so a
+     * strip of the page showed underneath and the footer could be read through
+     * the gap while chatting. Below the sm breakpoint an open panel fills the
+     * viewport - verified in Chrome at 500x665: root and panel both measured
+     * exactly the viewport, with the launcher hidden.
+     */
+    public function test_the_widget_goes_full_screen_on_a_phone(): void
+    {
+        config(['services.anthropic.key' => 'test-key']);
+
+        $user = \App\Models\User::factory()->create(['role' => 'customer']);
+        $html = $this->actingAs($user)->get('/')->assertOk()->getContent();
+
+        $this->assertStringContainsString('@media (max-width: 639px)', $html);
+        $this->assertMatchesRegularExpression(
+            '/\.chatbot-widget-root\.is-fullscreen\s*\{[^}]*bottom:\s*0/s',
+            $html,
+            'The open panel no longer clears the corner offsets, so the page shows under it.'
+        );
+        $this->assertMatchesRegularExpression(
+            '/\.is-fullscreen \.chatbot-panel\s*\{[^}]*height:\s*100%/s',
+            $html,
+            'The panel is not filling the viewport height.'
+        );
+        $this->assertMatchesRegularExpression(
+            '/\.is-fullscreen \.chatbot-launcher\s*\{[^}]*display:\s*none/s',
+            $html,
+            'The launcher still floats over the full-screen panel.'
+        );
+        $this->assertStringContainsString(
+            "isOpen && 'is-fullscreen'",
+            $html,
+            'Nothing puts the class on the root, so the rules never apply.'
+        );
+    }
 }

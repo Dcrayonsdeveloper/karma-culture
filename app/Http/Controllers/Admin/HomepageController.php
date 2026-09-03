@@ -172,6 +172,7 @@ class HomepageController extends Controller
 
             $rules[$urlField] = ['nullable', 'string', 'max:255', 'regex:'.self::VIDEO_SRC_REGEX];
             $rules[$fileField] = $this->videoRules();
+            $rules[$slot === 1 ? 'about_us_video_remove' : "about_us_video_remove_{$slot}"] = V::boolean();
 
             $messages["{$urlField}.regex"] = 'Enter a full https:// address, or a path to an .mp4, .webm or .mov file.';
             $messages += $this->videoMessages($fileField);
@@ -227,6 +228,30 @@ class HomepageController extends Controller
                 if ($previous && str_starts_with($previous, 'storage/')) {
                     Storage::disk('public')->delete(substr($previous, strlen('storage/')));
                 }
+            }
+        }
+
+        // Removals, after the uploads: ticking remove and choosing a new file in
+        // the same save is a replacement, and the upload is the clearer intent.
+        //
+        // The setting is written as an empty string rather than deleted, because
+        // the home page tells "the admin cleared this slot" from "nobody has ever
+        // set it" by whether the row exists - a deleted row would bring the
+        // bundled default clip back.
+        foreach ([1, 2, 3] as $slot) {
+            $removeField = $slot === 1 ? 'about_us_video_remove' : "about_us_video_remove_{$slot}";
+            $urlSetting = $slot === 1 ? 'about_us_video_url' : "about_us_video_url_{$slot}";
+            $fileField = $slot === 1 ? 'about_us_video_file' : "about_us_video_file_{$slot}";
+
+            if (! $request->boolean($removeField) || $request->hasFile($fileField)) {
+                continue;
+            }
+
+            $previous = (string) Setting::get($urlSetting, '');
+            Setting::set($urlSetting, '', 'string', 'homepage');
+
+            if ($previous && str_starts_with($previous, 'storage/')) {
+                Storage::disk('public')->delete(substr($previous, strlen('storage/')));
             }
         }
 
