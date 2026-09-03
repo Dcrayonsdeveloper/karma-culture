@@ -321,10 +321,16 @@
     .kk-pdp__oos-browse:hover { color: #2d1810; }
     .kk-pdp__meta { font-size: 13px; color: #7a6555; line-height: 1.7; margin-top: 8px; }
     .kk-pdp__meta strong { color: #2d1810; font-weight: 600; }
+    /* Pill, like the Save to Wishlist and Share buttons it stands beside. */
     .kk-pdp__qty {
-        padding: 8px 32px 8px 12px; border: 1px solid #c9b393; border-radius: 4px;
-        font-size: 13px; background: #fff; color: #2d1810; cursor: pointer; min-height: 40px;
+        appearance: none; -webkit-appearance: none;
+        padding: 8px 34px 8px 16px; border: 1px solid #c9b393; border-radius: 999px;
+        font-size: 13px; background-color: #fff; color: #2d1810; cursor: pointer; min-height: 44px;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3e%3cpath stroke='%238c5c34' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+        background-position: right 13px center; background-repeat: no-repeat; background-size: 14px 14px;
+        transition: border-color .18s ease;
     }
+    .kk-pdp__qty:hover, .kk-pdp__qty.kk-select-hover { border-color: #2d1810; }
     .kk-pdp__actions { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .kk-pdp__wish {
         display: inline-flex; align-items: center; gap: 9px; height: 44px;
@@ -623,7 +629,11 @@
                 <div style="display:flex; align-items:flex-end; gap:24px; flex-wrap:wrap; margin:0 0 8px;">
                     <div class="kk-pdp__variant-group" style="margin:0;">
                         <h3 class="kk-pdp__variant-label">Quantity</h3>
-                        <select x-model.number="quantity" class="kk-pdp__qty">
+                        {{-- The "Quantity" above is an <h3>, which names nothing:
+                             the control had no accessible name at all, and on a
+                             phone its dropdown opened as an untitled list of bare
+                             numbers. --}}
+                        <select x-model.number="quantity" aria-label="Quantity" class="kk-pdp__qty">
                             @for($q = 1; $q <= 10; $q++)
                             <option value="{{ $q }}">{{ $q }}</option>
                             @endfor
