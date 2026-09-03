@@ -562,19 +562,49 @@ class ProductFilters
         $rating = $safe['rating'] ?? null;
         $sort = $safe['sort'] ?? null;
 
+        [$minPrice, $maxPrice] = self::orderedRange($number('min_price'), $number('max_price'));
+
         return [
             'category' => ($category === null || $category === '') ? null : $category,
             'subcategory' => self::stringList($request->input('subcategory'), 120),
             'size' => self::stringList($request->input('size'), 40),
             'colour' => self::stringList($request->input('colour'), 60),
             'brand' => self::stringList($request->input('brand'), 120),
-            'min_price' => $number('min_price'),
-            'max_price' => $number('max_price'),
+            'min_price' => $minPrice,
+            'max_price' => $maxPrice,
             'rating' => ($rating === null || $rating === '') ? null : (int) $rating,
             'in_stock' => filter_var($safe['in_stock'] ?? false, FILTER_VALIDATE_BOOLEAN),
             'on_sale' => filter_var($safe['on_sale'] ?? false, FILTER_VALIDATE_BOOLEAN),
             'sort' => (is_string($sort) && $sort !== '') ? $sort : 'newest',
         ];
+    }
+
+    /**
+     * A price pair, smaller bound first.
+     *
+     * Min 1000 with Max 0 is `price >= 1000 AND price <= 0` - a range nothing
+     * can ever be in - so the shop answered "0 products found" with an Active
+     * Filters chip reading "₹1,000 - ₹0" and nothing anywhere saying what was
+     * wrong. The two numbers still name one range, so they are put back in
+     * order rather than refused: a 422 on a public, shareable, crawled URL is
+     * worse, and dropping one bound would silently widen the grid past what
+     * the shopper asked for.
+     *
+     * It happens here, in normalise(), because most of these never come from
+     * the sidebar's two boxes - a link a shopper shared, a crawler, and a
+     * "Shop It Your Way" hanger an admin typed backwards all arrive as a query
+     * string. Everything downstream reads what normalise() returns, so the
+     * boxes and the chip redraw as the corrected range too, which is what
+     * tells the shopper it was reordered.
+     *
+     * Equal bounds are left alone: min == max is the exact-price filter, not a
+     * mistake.
+     *
+     * @return array{0: ?float, 1: ?float}
+     */
+    public static function orderedRange(?float $min, ?float $max): array
+    {
+        return ($min !== null && $max !== null && $min > $max) ? [$max, $min] : [$min, $max];
     }
 
     /**

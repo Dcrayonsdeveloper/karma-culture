@@ -292,18 +292,46 @@
             </svg>
         </summary>
         <div class="kk-filter-body">
-            <div class="flex items-center gap-2">
+            {{-- The two boxes name one range, so they are kept in order as they
+                 are filled in. Min 1000 with Max 0 asks the shop for
+                 `price >= 1000 AND price <= 0` - a range nothing can be in - and
+                 the grid came back "0 products found" under a chip reading
+                 "₹1,000 - ₹0", with nothing anywhere saying what was wrong.
+
+                 Swapped rather than the submit being blocked: a native
+                 "value must be less than" bubble fires on a control the shopper
+                 may have already scrolled past inside the phone drawer, so the
+                 form would stop dead with the reason off screen. Swapping puts
+                 the numbers the right way round in front of them before they
+                 press Apply.
+
+                 One listener on the row, because `change` bubbles - and change,
+                 not input, so a half-typed "1" in Max does not jump into Min
+                 mid-keystroke.
+
+                 ProductFilters::orderedRange() does the same server-side, which
+                 is what covers a range that never passes through these boxes: a
+                 link a shopper shared, a crawler, a "Shop It Your Way" hanger an
+                 admin typed backwards. That is also the half that still works
+                 with the sidebar's JS unavailable. --}}
+            <div class="flex items-center gap-2" x-data
+                 @change="
+                     const lo = $refs.minPrice, hi = $refs.maxPrice;
+                     if (lo.value !== '' && hi.value !== '' && Number(lo.value) > Number(hi.value)) {
+                         [lo.value, hi.value] = [hi.value, lo.value];
+                     }
+                 ">
                 <div class="relative flex-1">
                     <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-neutral-600">&#8377;</span>
                     <input type="number" name="min_price" value="{{ $kkValues['min_price'] }}" min="0" step="any" inputmode="decimal"
-                           placeholder="Min" aria-label="Minimum price"
+                           placeholder="Min" aria-label="Minimum price" x-ref="minPrice"
                            class="w-full pl-6 pr-2 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:border-[#6F9CA2] bg-neutral-50">
                 </div>
                 <span class="text-neutral-300 text-sm">-</span>
                 <div class="relative flex-1">
                     <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-neutral-600">&#8377;</span>
                     <input type="number" name="max_price" value="{{ $kkValues['max_price'] }}" min="0" step="any" inputmode="decimal"
-                           placeholder="Max" aria-label="Maximum price"
+                           placeholder="Max" aria-label="Maximum price" x-ref="maxPrice"
                            class="w-full pl-6 pr-2 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:border-[#6F9CA2] bg-neutral-50">
                 </div>
             </div>
