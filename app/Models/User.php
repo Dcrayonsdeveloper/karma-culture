@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Notifications\ResetPasswordNotification;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -59,6 +60,19 @@ class User extends Authenticatable implements MustVerifyEmail
                 $user->uuid = (string) \Illuminate\Support\Str::uuid();
             }
         });
+    }
+
+    /**
+     * Send the shop's own password reset email rather than the framework's.
+     *
+     * The broker calls this method to deliver the reset link; without the
+     * override it sends Illuminate's stock notification, which carries no
+     * shop name in the body and looks nothing like the other mail this
+     * customer has ever had from us.
+     */
+    public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
     }
 
     // Accessors
