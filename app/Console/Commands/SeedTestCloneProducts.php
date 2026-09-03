@@ -33,13 +33,19 @@ use Illuminate\Support\Str;
  *   in by model events; a raw insert produces rows that look complete in the
  *   products table and are invisible or unbuyable everywhere else.
  *
- * - Clones are ticked into admin-made collections but NEVER into the three
- *   system ones. Ticking a product into "New In", "Bestsellers" or
- *   "Introductory Offer" switches that page from computing itself to showing
- *   the picks - so ticking clones there would REPLACE the real catalogue on
- *   those pages rather than join it. Left unticked, the pages keep computing
- *   and the clones qualify on their own merits anyway: newest by date, a
- *   sales figure, and a price under the MRP.
+ * - The three system collections - "New In", "Bestsellers", "Introductory
+ *   Offer" - are joined only when they ALREADY have something ticked into
+ *   them, and the rule turns on that because ticking means opposite things in
+ *   the two cases. An empty one is computing its page: newest by date, by
+ *   sales count, whatever is discounted. Ticking the first product into it is
+ *   precisely what stops it computing, so a clone would REPLACE the real
+ *   catalogue on that page rather than join it - and left alone the clones
+ *   qualify on their own merits anyway. One that already holds picks has
+ *   already stopped computing, so it will never find a clone on merit no
+ *   matter how new or how discounted it is; there, ticking is the only way on
+ *   to the page, and it is purely additive because the existing picks stay.
+ *   Production had all three picked and local had none, which is the whole
+ *   reason this is decided per collection at runtime rather than once here.
  *
  * - Sizes, shades and price bands are spread across the batch rather than
  *   copied identically. The "Shop It Your Way" hangers and the shop sidebar
@@ -99,12 +105,27 @@ class SeedTestCloneProducts extends Command
             return self::FAILURE;
         }
 
-        // Admin-made shelves only. The three system collections are left alone
-        // on purpose - see the class docblock.
         $collections = ProductCollection::query()
             ->where('is_active', true)
             ->where('is_system', false)
             ->get(['id', 'name']);
+
+        // The three system collections split by what is already ticked into
+        // them, because the same action means opposite things in the two cases
+        // - see the class docblock.
+        $systemPicked = ProductCollection::query()
+            ->where('is_active', true)
+            ->where('is_system', true)
+            ->has('products')
+            ->get(['id', 'name', 'handle']);
+
+        $systemEmpty = ProductCollection::query()
+            ->where('is_active', true)
+            ->where('is_system', true)
+            ->doesntHave('products')
+            ->get(['id', 'name', 'handle']);
+
+        $collections = $collections->concat($systemPicked);
 
         $shades = $this->shades();
         $sizes = $this->sizes();
@@ -114,7 +135,10 @@ class SeedTestCloneProducts extends Command
         $this->line('  Copying     : '.$source->name.'  (id '.$source->id.', sku '.$source->sku.')');
         $this->line('  Copies      : '.$count);
         $this->line('  Categories  : '.$categories->count().' - every clone joins all of them');
-        $this->line('  Collections : '.($collections->isEmpty() ? 'none (system collections skipped by design)' : $collections->pluck('name')->implode(', ')));
+        $this->line('  Collections : '.($collections->isEmpty() ? 'none' : $collections->pluck('name')->implode(', ')));
+        $this->line('  Left alone  : '.($systemEmpty->isEmpty()
+            ? 'nothing'
+            : $systemEmpty->pluck('name')->implode(', ').' - empty, so those pages still compute themselves'));
         $this->line('  Sizes       : '.implode(', ', $sizes));
         $this->line('  Shades      : '.implode(', ', array_keys($shades)));
         $this->line('  Images      : '.$sourceImages->count().' per clone, reusing the source URLs');
@@ -251,13 +275,21 @@ class SeedTestCloneProducts extends Command
         $this->line('  They now appear on:');
         $this->line('    /                     featured, new arrivals, bestsellers, trending and deals rows');
         $this->line('    /shop                 all of them, paginated');
-        $this->line('    /new-arrivals         newest first');
-        $this->line('    /bestsellers          by sales count');
-        $this->line('    /deals                every clone is priced under its MRP');
+        // Said per page, because how a clone got there differs by how the
+        // collection behind it was set up, and "it should be there" is not
+        // worth much next to "here is why it is there".
+        $picked = $systemPicked->pluck('handle')->all();
+        $why = fn (string $handle, string $computed) => in_array($handle, $picked, true)
+            ? 'ticked in beside the existing picks'
+            : $computed;
+
+        $this->line('    /new-arrivals         '.$why('new_in', 'newest first'));
+        $this->line('    /bestsellers          '.$why('bestsellers', 'by sales count'));
+        $this->line('    /deals                '.$why('deals', 'every clone is priced under its MRP'));
         $this->line('    /category/{slug}      all '.$categories->count().' categories');
         $this->line('    /search?q=Test+Copy   by name');
         if ($collectionIds !== []) {
-            $this->line('    /collection/{slug}    '.count($collectionIds).' admin-made collection(s)');
+            $this->line('    /collection/{slug}    '.count($collectionIds).' collection(s): '.$collections->pluck('name')->implode(', '));
         }
         $this->newLine();
         $this->line('  Remove them with:  php artisan products:test-clones --delete');
