@@ -83,14 +83,23 @@ class ProductApiTest extends TestCase
     }
 
     /**
-     * The same wrong-way-round pair the storefront sidebar corrects: min 1500
-     * with max 500 is `price >= 1500 AND price <= 500`, a range nothing can be
-     * in, so the endpoint answered an empty page for what the caller plainly
-     * meant as 500-1500.
+     * A wrong-way-round pair is answered as asked, not swapped into one that
+     * works. `price >= 1500 AND price <= 500` matches nothing, and nothing is
+     * what comes back - the shop says so in words under its two boxes, but an
+     * endpoint has none, and guessing at the caller's meaning would answer a
+     * question they did not ask.
      */
-    public function test_a_backwards_price_range_is_put_back_in_order(): void
+    public function test_a_backwards_price_range_is_answered_as_asked(): void
     {
-        $response = $this->getJson('/api/v1/products?min_price=1500&max_price=500');
+        $this->getJson('/api/v1/products?min_price=1500&max_price=500')
+            ->assertStatus(200)
+            ->assertJsonCount(0, 'data');
+    }
+
+    /** And the same pair the right way round still finds the product. */
+    public function test_a_valid_price_range_still_filters(): void
+    {
+        $response = $this->getJson('/api/v1/products?min_price=500&max_price=1500');
 
         $response->assertStatus(200);
         $this->assertSame(['Building Blocks'], array_column($response->json('data'), 'name'));
