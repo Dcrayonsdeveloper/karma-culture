@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Cart;
 use App\Models\NewsletterSubscriber;
 use App\Rules\ValidationRules as V;
+use App\Services\NotificationService;
 use App\Support\OfferClaims;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class NewsletterController extends Controller
 {
@@ -130,7 +132,7 @@ class NewsletterController extends Controller
             ]);
         }
 
-        NewsletterSubscriber::create([
+        $subscriber = NewsletterSubscriber::create([
             'email' => $validated['email'],
             'name' => $validated['name'] ?? null,
             'phone' => $phone,
@@ -139,6 +141,14 @@ class NewsletterController extends Controller
             'subscribed_at' => now(),
             'ip_address' => $request->ip(),
         ]);
+
+        // Only on this path, deliberately. The two branches above return before
+        // reaching here, so an address that is already on the list - and a
+        // re-subscribe - stays silent: the popups post on every visit, and an
+        // alert per repeat would bury the genuinely new signups. That also
+        // keeps the cost of this public, throttled endpoint to one extra write
+        // per address ever, not per request.
+        $this->notifyAdminsOfSubscriber($subscriber, $source);
 
         return response()->json([
             'success' => true,
@@ -189,5 +199,34 @@ class NewsletterController extends Controller
         return $result['coupon']
             ? ['state' => 'applied', 'discount' => $result['discount']]
             : $saved;
+    }
+
+    /**
+     * Tell the admins a new address joined the list.
+     *
+     * Logged and swallowed on failure: the subscriber row is already written by
+     * the time this runs, and a signup form open to the public has to answer
+     * "you're subscribed" rather than 500 because a notification could not be
+     * recorded.
+     */
+    private function notifyAdminsOfSubscriber(NewsletterSubscriber $subscriber, string $source): void
+    {
+        try {
+            app(NotificationService::class)->notifyAdmins(
+                'new_newsletter_subscriber',
+                'New Newsletter Subscriber',
+                "{$subscriber->email} subscribed via {$source}",
+                [
+                    'subscriber_id' => $subscriber->id,
+                    'email' => $subscriber->email,
+                    'source' => $source,
+                ]
+            );
+        } catch (\Throwable $e) {
+            Log::error('Failed to notify admins of a newsletter subscriber', [
+                'subscriber_id' => $subscriber->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

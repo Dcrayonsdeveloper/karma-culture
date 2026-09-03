@@ -68,6 +68,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Notifications
         Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications');
         Route::get('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
+        // POST because it mutates, which also puts it in front of LogAdminActions.
+        Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
 
         // AJAX search endpoints (used by multiple features)
         Route::get('/search/products', [SearchController::class, 'products'])->name('search.products');

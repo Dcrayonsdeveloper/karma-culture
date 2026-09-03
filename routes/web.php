@@ -234,6 +234,12 @@ Route::middleware('auth')->group(function () {
 
         // Notifications
         Route::get('/notifications', [App\Http\Controllers\Account\NotificationController::class, 'index'])->name('notifications');
+        // Clicking a notification is what marks it read, and the account page
+        // had no read action of any kind: every notification a customer had
+        // ever received stayed unread for good, so the read/unread styling the
+        // list is built around never fired.
+        Route::get('/notifications/{notification}/read', [App\Http\Controllers\Account\NotificationController::class, 'read'])->name('notifications.read');
+        Route::post('/notifications/read-all', [App\Http\Controllers\Account\NotificationController::class, 'readAll'])->name('notifications.read-all');
 
         // Notification Preferences
         Route::get('/notification-preferences', [App\Http\Controllers\Account\NotificationPreferenceController::class, 'edit'])->name('notification-preferences');

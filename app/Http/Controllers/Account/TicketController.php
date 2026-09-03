@@ -3,14 +3,14 @@
 namespace App\Http\Controllers\Account;
 
 use App\Http\Controllers\Controller;
-use App\Models\Notification;
 use App\Models\Setting;
 use App\Models\SupportTicket;
 use App\Models\SupportTicketReply;
-use App\Models\User;
 use App\Rules\ValidationRules as V;
+use App\Services\NotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 class TicketController extends Controller
@@ -24,7 +24,7 @@ class TicketController extends Controller
     /** The statuses the filter tabs offer, and the only ones a ticket holds. */
     public const STATUSES = ['open', 'answered', 'closed'];
 
-    public function __construct()
+    public function __construct(private NotificationService $notifications)
     {
         abort_unless(Setting::get('support_tickets_enabled', true), 404);
     }
@@ -76,23 +76,21 @@ class TicketController extends Controller
             'message' => $validated['message'],
         ]);
 
-        // Notify admin users
-        $admins = User::where('role', 'admin')->get();
-        foreach ($admins as $admin) {
-            Notification::create([
-                'user_id' => $admin->id,
-                'type' => 'new_ticket',
-                'title' => 'New Support Ticket',
-                'content' => "New ticket from {$request->user()->full_name}: {$ticket->subject}",
-                'data' => [
-                    'ticket_id' => $ticket->id,
-                    'subject' => $ticket->subject,
-                    'category' => $ticket->category,
-                    'priority' => $ticket->priority,
-                ],
-                'channel' => 'database',
-            ]);
-        }
+        // Through the service instead of a hand-rolled loop over the admin
+        // users. That loop wrote its rows without an audience, so the shop's
+        // alerts and a shopper's own order updates landed in the table
+        // indistinguishable from one another - and an admin who also shops saw
+        // both in the same bell. notifyAdmins() stamps audience = admin, and is
+        // now the one path this and reply() below both take.
+        $this->alertAdmins('new_ticket', 'New Support Ticket',
+            "New ticket from {$request->user()->full_name}: {$ticket->subject}",
+            [
+                'ticket_id' => $ticket->id,
+                'subject' => $ticket->subject,
+                'category' => $ticket->category,
+                'priority' => $ticket->priority,
+            ]
+        );
 
         return redirect()->route('account.tickets.show', $ticket)
             ->with('success', 'Your ticket has been submitted. We\'ll get back to you soon.');
@@ -130,6 +128,39 @@ class TicketController extends Controller
             $ticket->update(['status' => 'open']);
         }
 
+        // A customer's reply reopened the ticket but told nobody it had, so a
+        // ticket already marked answered dropped back to the bottom of the
+        // queue and the reply sat there unread.
+        $this->alertAdmins('ticket_customer_reply', 'Customer Replied',
+            "{$request->user()->full_name} replied to ticket: {$ticket->subject}",
+            [
+                'ticket_id' => $ticket->id,
+                'subject' => $ticket->subject,
+            ]
+        );
+
         return back()->with('success', 'Reply sent.');
+    }
+
+    /**
+     * Fan a ticket event out to the admins without it ever costing the customer
+     * the thing they came here to do.
+     *
+     * Both callers run after the row the customer cares about is committed, so
+     * a notification that throws has to be logged and dropped: turning it into
+     * an error page would tell them their ticket or reply failed when it is
+     * sitting in the database.
+     */
+    private function alertAdmins(string $type, string $title, string $content, array $data): void
+    {
+        try {
+            $this->notifications->notifyAdmins($type, $title, $content, $data);
+        } catch (\Throwable $e) {
+            Log::error('Failed to notify admins of a support ticket event', [
+                'type' => $type,
+                'ticket_id' => $data['ticket_id'] ?? null,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

@@ -13,6 +13,7 @@ use App\Mail\OrderDelivered as OrderDeliveredMail;
 use App\Mail\OrderShipped as OrderShippedMail;
 use App\Mail\RefundProcessed as RefundProcessedMail;
 use App\Mail\ReturnApproved;
+use App\Models\Order;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Log;
 
@@ -25,6 +26,39 @@ class SendOrderNotification
     public function handleOrderPlaced(OrderPlaced $event): void
     {
         $order = $event->order;
+
+        // A new order used to reach no admin at all. Both web and API checkout
+        // dispatch OrderPlaced, so the shop's own alert belongs here rather
+        // than in either controller: one implementation covers both, and it is
+        // the only placement that cannot notify twice for one order.
+        //
+        // It runs before the customer's confirmation, and above the guest early
+        // return below, because an order placed without an account is still an
+        // order the shop has to hear about.
+        //
+        // Its failure is logged and dropped. Both controllers dispatch this
+        // event after the order transaction has committed, so a notification
+        // that throws cannot roll the order back - it would only turn a placed
+        // order into a 500 in front of the customer, and cost them the
+        // confirmation for the order they just paid for.
+        try {
+            $this->notificationService->notifyAdmins(
+                'new_order',
+                'New Order',
+                "Order #{$order->order_number} placed for ".format_price($order->total).' by '.$this->customerName($order),
+                [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'total' => (float) $order->total,
+                ]
+            );
+        } catch (\Throwable $e) {
+            Log::error('Failed to notify admins of a new order', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         $user = $order->user;
         if (! $user) {
             return;
@@ -122,5 +156,19 @@ class SendOrderNotification
             'return_id' => $return->id,
             'amount' => $event->amount,
         ], new RefundProcessedMail($return, $event->amount));
+    }
+
+    /**
+     * Who to name in the admin alert for an order.
+     *
+     * Guest checkout leaves user_id null, so the account is not always there to
+     * ask. The address snapshot taken at checkout always is, and it carries the
+     * same name the order screens already show.
+     */
+    private function customerName(Order $order): string
+    {
+        return trim((string) ($order->user?->full_name ?? ''))
+            ?: trim((string) ($order->shipping_address_snapshot['name'] ?? ''))
+            ?: 'Guest';
     }
 }

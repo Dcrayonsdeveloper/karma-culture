@@ -346,6 +346,39 @@
                     </span>
                 </a>
 
+                {{-- Notifications. The storefront header carried no indicator of any
+                     kind, so a signed-in customer had no way to learn a notification
+                     existed short of guessing the account URL.
+
+                     The count cannot come from an Alpine store the way the cart and
+                     wishlist badges do - nothing publishes it to the browser - so it
+                     is counted here, once, per request, and only for a signed-in
+                     customer. forCustomer() keeps an admin's own store alerts out of
+                     the shopper-facing bell: both audiences share this table and are
+                     keyed only by user_id.
+
+                     A plain link rather than a dropdown: this header is already tight
+                     at lg, and the link adds no width the layout cannot absorb. It
+                     follows the wishlist's hidden sm:flex, because below sm the whole
+                     cluster gives way to the mobile nav, which carries its own
+                     Notifications entry. --}}
+                @auth
+                    @php
+                        $unreadNotificationCount = auth()->user()->notifications()->forCustomer()->unread()->count();
+                    @endphp
+                    <a href="{{ route('account.notifications') }}"
+                       class="relative p-2 lg:p-1.5 xl:p-2 text-kk-brown hover:text-kk-tan-dark transition-colors hidden sm:flex"
+                       aria-label="Notifications{{ $unreadNotificationCount > 0 ? ', ' . $unreadNotificationCount . ' unread' : '' }}">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                        </svg>
+                        @if($unreadNotificationCount > 0)
+                            <span aria-hidden="true"
+                                  class="absolute -top-0.5 -right-0.5 w-4 h-4 bg-kk-tan-dark text-kk-cream text-[10px] font-bold rounded-full flex items-center justify-center">{{ $unreadNotificationCount > 9 ? '9+' : $unreadNotificationCount }}</span>
+                        @endif
+                    </a>
+                @endauth
+
                 <!-- User account - desktop -->
                 @guest
                     <button type="button"

@@ -2,7 +2,10 @@
     <!-- Left side -->
     <div class="flex items-center gap-3">
         <!-- Mobile menu toggle -->
-        <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden p-1.5 -ml-1 text-neutral-600 hover:text-neutral-900 rounded-lg hover:bg-neutral-100" aria-label="Toggle menu">
+        <button @click="sidebarOpen = !sidebarOpen"
+                :aria-expanded="sidebarOpen ? 'true' : 'false'"
+                aria-controls="admin-sidebar"
+                class="lg:hidden p-1.5 -ml-1 text-neutral-600 hover:text-neutral-900 rounded-lg hover:bg-neutral-100" aria-label="Toggle menu">
             <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
             </svg>
@@ -56,29 +59,67 @@
     <div class="flex items-center gap-1">
         <!-- Notifications -->
         @php
+            // This bell shows the admin audience only. Both audiences live in the one
+            // notifications table and are keyed by user_id alone - an admin is a users
+            // row with role = 'admin' - so before ->forAdmin() an admin who also shopped
+            // saw their own "Your order has been confirmed" rows mixed into the admin
+            // bell. The conditions are declared once and the badge count clones them, so
+            // the count and the list cannot drift apart on a partial that renders on
+            // every admin page load. $adminUser is guarded because a layout includes
+            // this partial, and nothing here guarantees an authenticated admin.
             $adminUser = auth('admin')->user();
-            $unreadNotifications = \App\Models\Notification::where('user_id', $adminUser->id)->unread()->latest()->limit(5)->get();
-            $unreadCount = \App\Models\Notification::where('user_id', $adminUser->id)->unread()->count();
+            $unreadNotifications = collect();
+            $unreadCount = 0;
+
+            if ($adminUser) {
+                $adminBell = \App\Models\Notification::query()
+                    ->where('user_id', $adminUser->id)
+                    ->forAdmin()
+                    ->unread();
+
+                $unreadCount = (clone $adminBell)->count();
+                $unreadNotifications = $adminBell->latest()->limit(5)->get();
+            }
+
+            // The unread marker is a bare coloured dot with no text, so the accessible
+            // name has to carry the count or the bell announces identically at 0 and 40.
+            $bellLabel = $unreadCount > 0
+                ? "Notifications, {$unreadCount} unread"
+                : 'Notifications, none unread';
         @endphp
-        <div class="relative" x-data="{ open: false }">
-            <button @click="open = !open" class="relative p-2 rounded-lg text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 transition-colors" aria-label="Notifications">
+        <div class="relative" x-data="{ open: false }" @keydown.escape.window="open = false">
+            <button @click="open = !open"
+                    :aria-expanded="open ? 'true' : 'false'"
+                    aria-haspopup="true"
+                    aria-controls="admin-notifications-panel"
+                    class="relative p-2 rounded-lg text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 transition-colors" aria-label="{{ $bellLabel }}">
                 <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                 </svg>
                 @if($unreadCount > 0)
-                    <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style="background: #e74c3c;"></span>
+                    <span aria-hidden="true" class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style="background: #e74c3c;"></span>
                 @endif
             </button>
 
+            {{-- The panel is a flex column capped against the viewport so that only the
+                 list scrolls and the "View all notifications" footer stays reachable.
+                 The admin shell is h-screen overflow-hidden, so on a short window
+                 anything the panel spills past the viewport was hard-clipped and the
+                 footer could not be reached at all. Below sm the panel is a fixed sheet
+                 under the header and from sm it anchors to the bell - keep both, that
+                 pair is what stopped it clipping off the side of a phone. --}}
             <div x-cloak x-show="open" x-transition @click.away="open = false"
-                 class="fixed left-3 right-3 top-14 mt-2 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:w-80 bg-white rounded-xl z-50" style="border: 1px solid #e3e3e3; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
-                <div class="px-4 py-3 flex items-center justify-between" style="border-bottom: 1px solid #e3e3e3;">
-                    <h3 class="text-sm font-semibold" style="color: #303030;">Notifications</h3>
+                 id="admin-notifications-panel"
+                 role="region"
+                 aria-labelledby="admin-notifications-heading"
+                 class="admin-dropdown-panel fixed left-3 right-3 top-14 mt-2 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:w-80 flex flex-col max-h-[calc(100vh-5rem)] overflow-hidden bg-white rounded-xl" style="border: 1px solid #e3e3e3; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+                <div class="px-4 py-3 shrink-0 flex items-center justify-between" style="border-bottom: 1px solid #e3e3e3;">
+                    <h3 id="admin-notifications-heading" class="text-sm font-semibold" style="color: #303030;">Notifications</h3>
                     @if($unreadCount > 0)
                         <span class="text-xs font-medium" style="color: #6F9CA2;">{{ $unreadCount }} new</span>
                     @endif
                 </div>
-                <div class="max-h-96 overflow-y-auto">
+                <div class="min-h-0 max-h-96 overflow-y-auto">
                     @forelse($unreadNotifications as $notification)
                         <a href="{{ route('admin.notifications.read', $notification) }}"
                            class="block px-4 py-3 hover:bg-neutral-50 transition-colors" style="border-bottom: 1px solid #f5f5f5;">
@@ -111,7 +152,7 @@
                         </div>
                     @endforelse
                 </div>
-                <div class="px-4 py-3" style="border-top: 1px solid #e3e3e3;">
+                <div class="px-4 py-3 shrink-0" style="border-top: 1px solid #e3e3e3;">
                     <a href="{{ route('admin.notifications') }}" class="text-sm font-medium" style="color: #6F9CA2;">
                         View all notifications
                     </a>
@@ -120,18 +161,25 @@
         </div>
 
         <!-- User menu -->
-        <div class="relative" x-data="{ open: false }">
-            <button @click="open = !open" class="flex items-center gap-1.5 p-1.5 rounded-lg hover:bg-neutral-100 transition-colors" aria-label="User menu">
+        <div class="relative" x-data="{ open: false }" @keydown.escape.window="open = false">
+            <button @click="open = !open"
+                    :aria-expanded="open ? 'true' : 'false'"
+                    aria-haspopup="true"
+                    aria-controls="admin-user-menu"
+                    class="flex items-center gap-1.5 p-1.5 rounded-lg hover:bg-neutral-100 transition-colors" aria-label="User menu">
                 <div style="width: 1.75rem; height: 1.75rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; background: #1a7a2e;">
                     <span class="text-xs font-medium text-white">F</span>
                 </div>
             </button>
 
             <div x-cloak x-show="open" x-transition @click.away="open = false"
-                 class="absolute right-0 mt-2 w-52 bg-white rounded-xl z-50" style="border: 1px solid #e3e3e3; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+                 id="admin-user-menu"
+                 role="region"
+                 aria-labelledby="admin-user-menu-name"
+                 class="admin-dropdown-panel absolute right-0 mt-2 w-52 bg-white rounded-xl" style="border: 1px solid #e3e3e3; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
                 <div class="px-4 py-3" style="border-bottom: 1px solid #f0f0f0;">
-                    <div class="text-sm font-medium" style="color: #303030; overflow-wrap: anywhere;">{{ auth('admin')->user()->full_name }}</div>
-                    <div class="text-xs" style="color: #999; overflow-wrap: anywhere;">{{ auth('admin')->user()->email }}</div>
+                    <div id="admin-user-menu-name" class="text-sm font-medium" style="color: #303030; overflow-wrap: anywhere;">{{ $adminUser?->full_name }}</div>
+                    <div class="text-xs" style="color: #999; overflow-wrap: anywhere;">{{ $adminUser?->email }}</div>
                 </div>
                 <div class="py-1">
                     <a href="{{ route('admin.profile') }}" class="block px-4 py-2 text-sm hover:bg-neutral-50 transition-colors" style="color: #303030;">

@@ -8,8 +8,10 @@ use App\Models\OrderReturn;
 use App\Models\ReturnItem;
 use App\Models\Setting;
 use App\Rules\ValidationRules as V;
+use App\Services\NotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -157,6 +159,32 @@ class ReturnController extends Controller
                 'quantity' => $item['quantity'],
                 'reason' => $item['reason'] ?? null,
                 'condition' => $item['condition'],
+            ]);
+        }
+
+        // A return the customer raises themselves used to notify nobody:
+        // ReturnRequested is dispatched only when an ADMIN touches the row
+        // (Admin\ReturnController), so a request made here sat in the queue
+        // until somebody happened to look at the list.
+        //
+        // Logged and swallowed on failure. The return and its items are already
+        // written by this point, so a notification that throws would show the
+        // customer an error page for a request that was in fact submitted.
+        try {
+            app(NotificationService::class)->notifyAdmins(
+                'new_return_request',
+                'New Return Request',
+                "{$request->user()->full_name} requested a {$return->type} (#{$return->return_number}) for order #{$order->order_number}",
+                [
+                    'return_id' => $return->id,
+                    'return_number' => $return->return_number,
+                    'order_id' => $order->id,
+                ]
+            );
+        } catch (\Throwable $e) {
+            Log::error('Failed to notify admins of a return request', [
+                'return_id' => $return->id,
+                'error' => $e->getMessage(),
             ]);
         }
 

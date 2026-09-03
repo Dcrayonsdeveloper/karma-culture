@@ -53,7 +53,20 @@
      class="fixed inset-0 bg-black/50 z-20 lg:hidden"></div>
 
 <!-- Sidebar -->
-<aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+{{-- Below lg this is an off-canvas drawer hidden only by -translate-x-full, which
+     moves it out of sight but leaves all ~27 nav links focusable and in the
+     accessibility tree: an admin tabbing from the top of a phone screen walked the
+     whole closed menu before reaching the bell. From lg the sidebar is permanently
+     on screen and must stay focusable, so the drawer state is tracked by its own
+     media query rather than by the Tailwind breakpoint classes, which Alpine cannot
+     read. inert is set as a DOM property (not an attribute binding) so that turning
+     it back off is unambiguous - an inert="false" attribute would still be inert. --}}
+<aside id="admin-sidebar"
+       x-data="{ navQuery: window.matchMedia('(max-width: 1023.98px)'), navIsDrawer: window.matchMedia('(max-width: 1023.98px)').matches }"
+       x-init="navQuery.addEventListener('change', e => navIsDrawer = e.matches)"
+       x-effect="$el.inert = navIsDrawer && ! sidebarOpen"
+       :aria-hidden="(navIsDrawer && ! sidebarOpen) ? 'true' : 'false'"
+       :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
        class="fixed inset-y-0 left-0 z-30 w-60 flex flex-col transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0"
        style="background: #1a1a1a;">
 
@@ -83,6 +96,16 @@
             Home
         </a>
         @endif
+
+        {{-- Ungated on purpose: the notifications route carries no admin.section
+             middleware, so every admin can open the page the header bell links to. --}}
+        <a href="{{ route('admin.notifications') }}"
+           class="admin-nav-item {{ request()->routeIs('admin.notifications') ? 'active' : '' }}">
+            <svg style="width: 18px; height: 18px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+            Notifications
+        </a>
 
         <!-- Orders Section -->
         @if($user->canAccessSection('orders'))
