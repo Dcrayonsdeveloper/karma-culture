@@ -72,6 +72,28 @@
         .footer-thanks { font-size: 15px; color: #374151; font-weight: 600; margin-bottom: 4px; }
         .footer-url { font-size: 12px; color: #9ca3af; }
 
+        /* Phones: the 820px sheet is wider than the screen, so the 40px
+           paddings, the two-column addresses, the 320px totals box and the
+           five-column table all ran off the right edge. Screen only - the
+           printed page keeps its layout. */
+        .invoice-number, .address-name, .address-line { overflow-wrap: anywhere; }
+        @media screen and (max-width: 639.98px) {
+            /* Scroll wrapper is screen-only: a scroll container is monolithic
+               when paginated, so leaving it on in print could clip a long
+               item list to the first page. */
+            .table-wrap { max-width: 100%; overflow-x: auto; }
+            .toolbar { padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
+            .btn { min-height: 40px; }
+            .invoice { padding: 24px 16px; }
+            .header { flex-wrap: wrap; gap: 16px; }
+            .header-left { flex-wrap: wrap; gap: 12px; }
+            .header-right { text-align: left; }
+            .addresses { grid-template-columns: 1fr; gap: 12px; }
+            .address-block { padding: 16px; }
+            table { min-width: 520px; }
+            .totals { width: 100%; }
+        }
+
         @media print {
             body { background: #fff; }
             .invoice { padding: 20px; min-height: auto; }
@@ -165,6 +187,7 @@
         </div>
 
         {{-- Items Table --}}
+        <div class="table-wrap">
         <table>
             <thead>
                 <tr>
@@ -192,6 +215,7 @@
                 @endforeach
             </tbody>
         </table>
+        </div>
 
         {{-- Totals --}}
         <div class="totals-wrapper">

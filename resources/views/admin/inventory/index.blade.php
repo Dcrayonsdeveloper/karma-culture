@@ -85,24 +85,24 @@
     </div>
 
     {{-- Main Card with Tabs + Search + Table --}}
-    <div style="background: #fff; border: 1px solid #e3e3e3; border-radius: 0.75rem; overflow: hidden;">
+    <div class="card" style="background: #fff; border: 1px solid #e3e3e3; border-radius: 0.75rem; overflow: hidden;">
 
         {{-- Tab Filters --}}
         <div style="display: flex; border-bottom: 1px solid #e3e3e3;">
             <a href="{{ route('admin.inventory.index', request()->except('status', 'page')) }}"
-               style="padding: 0.75rem 1rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ !request('status') ? '#303030' : 'transparent' }}; color: {{ !request('status') ? '#303030' : '#616161' }};">
+               style="padding: 0.75rem 1rem; font-size: 13px; font-weight: 500; text-decoration: none; margin-bottom: -1px; border-bottom: 2px solid {{ !request('status') ? '#303030' : 'transparent' }}; color: {{ !request('status') ? '#303030' : '#616161' }};">
                 All
             </a>
             <a href="{{ route('admin.inventory.index', array_merge(request()->except('page'), ['status' => 'in_stock'])) }}"
-               style="padding: 0.75rem 1rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('status') === 'in_stock' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'in_stock' ? '#303030' : '#616161' }};">
+               style="padding: 0.75rem 1rem; font-size: 13px; font-weight: 500; text-decoration: none; margin-bottom: -1px; border-bottom: 2px solid {{ request('status') === 'in_stock' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'in_stock' ? '#303030' : '#616161' }};">
                 In Stock
             </a>
             <a href="{{ route('admin.inventory.index', array_merge(request()->except('page'), ['status' => 'low_stock'])) }}"
-               style="padding: 0.75rem 1rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('status') === 'low_stock' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'low_stock' ? '#303030' : '#616161' }};">
+               style="padding: 0.75rem 1rem; font-size: 13px; font-weight: 500; text-decoration: none; margin-bottom: -1px; border-bottom: 2px solid {{ request('status') === 'low_stock' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'low_stock' ? '#303030' : '#616161' }};">
                 Low Stock
             </a>
             <a href="{{ route('admin.inventory.index', array_merge(request()->except('page'), ['status' => 'out_of_stock'])) }}"
-               style="padding: 0.75rem 1rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('status') === 'out_of_stock' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'out_of_stock' ? '#303030' : '#616161' }};">
+               style="padding: 0.75rem 1rem; font-size: 13px; font-weight: 500; text-decoration: none; margin-bottom: -1px; border-bottom: 2px solid {{ request('status') === 'out_of_stock' ? '#303030' : 'transparent' }}; color: {{ request('status') === 'out_of_stock' ? '#303030' : '#616161' }};">
                 Out of Stock
             </a>
         </div>
@@ -113,7 +113,7 @@
                 @if(request('status'))
                     <input type="hidden" name="status" value="{{ request('status') }}">
                 @endif
-                <div style="position: relative; flex: 1; max-width: 320px;">
+                <div style="position: relative; flex: 1; max-width: 24rem;">
                     <svg style="position: absolute; left: 0.5rem; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: #616161;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
@@ -147,7 +147,7 @@
         @if($products->total() > 0)
             <div style="padding: 0.5rem 1rem; border-bottom: 1px solid #e3e3e3; background: #f6f6f7;">
                 <p style="font-size: 12px; color: #616161; margin: 0;">
-                    Showing <span style="font-weight: 600; color: #303030;">{{ $products->firstItem() }}</span>-<span style="font-weight: 600; color: #303030;">{{ $products->lastItem() }}</span> of <span style="font-weight: 600; color: #303030;">{{ $products->total() }}</span> products
+                    Showing <span style="font-size: 12px; font-weight: 600; color: #303030;">{{ $products->firstItem() }}</span>-<span style="font-size: 12px; font-weight: 600; color: #303030;">{{ $products->lastItem() }}</span> of <span style="font-size: 12px; font-weight: 600; color: #303030;">{{ $products->total() }}</span> products
                 </p>
             </div>
         @endif
@@ -192,7 +192,7 @@
                                     <a href="{{ $atLocation ? route('admin.inventory.locations.show', $atLocation) : '#' }}"
                                        title="{{ $atLocation->name ?? 'Location' }}"
                                        style="display: inline-block; margin: 1px 2px 1px 0; padding: 0.125rem 0.375rem; border-radius: 0.25rem; background: #f6f6f7; color: #616161; font-size: 12px; text-decoration: none;">
-                                        {{ $atLocation->code ?? '?' }} <span style="font-weight: 600; color: #303030;">{{ $lines->sum('quantity') }}</span>
+                                        {{ $atLocation->code ?? '?' }} <span style="font-size: 12px; font-weight: 600; color: #303030;">{{ $lines->sum('quantity') }}</span>
                                     </a>
                                 @empty
                                     <span style="font-size: 12px; color: #8a8a8a;">Not in a warehouse</span>
@@ -212,7 +212,7 @@
                             </td>
                             <td style="text-align: right;">
                                 <button onclick="openStockModal({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->stock_quantity }}, {{ Js::from($product->heldByLocation()) }})"
-                                        style="display: inline-flex; align-items: center; padding: 0.25rem 0.625rem; font-size: 12px; font-weight: 500; color: #303030; background: #fff; border: 1px solid #c9cccf; border-radius: 0.375rem; cursor: pointer; gap: 0.25rem;">
+                                        class="btn btn-secondary" style="display: inline-flex; align-items: center; padding: 0.25rem 0.625rem; font-size: 12px; font-weight: 500; color: #303030; background: #fff; border: 1px solid #c9cccf; border-radius: 0.375rem; cursor: pointer; gap: 0.25rem;">
                                     <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                     </svg>
@@ -276,7 +276,7 @@
                     <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #303030;" x-text="'Adjust Stock'"></h3>
                     <p style="font-size: 12px; color: #616161; margin: 0.25rem 0 0 0;" x-show="!isNew" x-text="productName"></p>
                 </div>
-                <button type="button" x-on:click="open = false" style="background: none; border: none; cursor: pointer; padding: 0.25rem; border-radius: 0.375rem; color: #616161; display: flex; align-items: center; justify-content: center;">
+                <button type="button" x-on:click="open = false" class="btn-icon" style="background: none; border: none; cursor: pointer; padding: 0.25rem; border-radius: 0.375rem; color: #616161; display: flex; align-items: center; justify-content: center;">
                     <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
@@ -351,8 +351,8 @@
 
                 {{-- Modal Footer --}}
                 <div style="padding: 0.75rem 1rem; background: #f6f6f7; border-top: 1px solid #e3e3e3; display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; border-radius: 0 0 0.75rem 0.75rem;">
-                    <button type="button" x-on:click="open = false" style="padding: 0.4rem 0.75rem; font-size: 13px; font-weight: 500; color: #303030; background: #fff; border: 1px solid #c9cccf; border-radius: 0.5rem; cursor: pointer;">Cancel</button>
-                    <button type="submit" style="padding: 0.4rem 0.75rem; font-size: 13px; font-weight: 500; color: #fff; background: #303030; border: 1px solid #303030; border-radius: 0.5rem; cursor: pointer;">Save Adjustment</button>
+                    <button type="button" x-on:click="open = false" class="btn" style="padding: 0.4rem 0.75rem; font-size: 13px; font-weight: 500; color: #303030; background: #fff; border: 1px solid #c9cccf; border-radius: 0.5rem; cursor: pointer;">Cancel</button>
+                    <button type="submit" class="btn" style="padding: 0.4rem 0.75rem; font-size: 13px; font-weight: 500; color: #fff; background: #303030; border: 1px solid #303030; border-radius: 0.5rem; cursor: pointer;">Save Adjustment</button>
                 </div>
             </form>
         </div>

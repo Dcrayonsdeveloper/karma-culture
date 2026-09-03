@@ -36,7 +36,7 @@
         .ab-banner .ab-btn { background:var(--kk-cream); color:var(--kk-brown)!important; }
         .ab-banner .ab-btn:hover { background:var(--kk-cream-dark); }
         .ab-cta { text-align:center; padding:44px 0 88px; }
-        @media (max-width:768px) { .ab-title { font-size:34px; } .ab-values { grid-template-columns:1fr; } .ab-hero { padding:52px 0 40px; } }
+        @media (max-width:768px) { .ab-title { font-size:34px; } .ab-values { grid-template-columns:1fr; } .ab-hero { padding:52px 0 40px; } .ab-banner { padding:36px 20px; } .ab-cta { padding:36px 0 64px; } }
     </style>
     </x-slot>
 

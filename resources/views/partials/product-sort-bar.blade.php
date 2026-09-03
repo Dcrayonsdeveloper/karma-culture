@@ -46,9 +46,11 @@
         <label for="kk-sort" class="text-xs text-kk-text-muted hidden sm:inline">Sort by:</label>
         {{-- aria-label as well as the label, because the label is hidden below
              sm: and a display:none label gives the control no name at all on a
-             phone - which is also where the dropdown opens as a titled sheet. --}}
+             phone - which is also where the dropdown opens as a titled sheet.
+             min-h-10 keeps the touch target on a phone; the pill carries the
+             rest of the look. --}}
         <select id="kk-sort" name="sort" aria-label="Sort by" onchange="this.form.submit()"
-                class="kk-select-pill">
+                class="kk-select-pill min-h-10 sm:min-h-0">
             @foreach($kkSortOptions as $kkValueKey => $kkLabel)
                 <option value="{{ $kkValueKey }}" @selected($kkSortValues['sort'] === $kkValueKey)>{{ $kkLabel }}</option>
             @endforeach

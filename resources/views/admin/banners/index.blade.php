@@ -14,7 +14,7 @@
     </x-slot>
 
     {{-- Card with search + table --}}
-    <div style="background: white; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); overflow: hidden;">
+    <div class="card" style="background: white; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); overflow: hidden;">
 
         {{-- Search --}}
         <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;">
@@ -85,12 +85,12 @@
                             </td>
                             <td style="padding: 0.625rem 1rem; text-align: right;" onclick="event.stopPropagation()">
                                 <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem;">
-                                    <a href="{{ route('admin.banners.edit', $banner) }}" style="color: #005bd3; font-size: 12px; font-weight: 500; text-decoration: none;"
+                                    <a href="{{ route('admin.banners.edit', $banner) }}" style="display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 0.25rem; color: #005bd3; font-size: 12px; font-weight: 500; text-decoration: none;"
                                        onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Edit</a>
                                     <form action="{{ route('admin.banners.destroy', $banner) }}" method="POST" onsubmit="return confirm('Delete this banner?')">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" style="color: #d72c0d; font-size: 12px; font-weight: 500; background: none; border: none; cursor: pointer; padding: 0;"
+                                        <button type="submit" style="display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 0.25rem; color: #d72c0d; font-size: 12px; font-weight: 500; background: none; border: none; cursor: pointer;"
                                                 onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Delete</button>
                                     </form>
                                 </div>

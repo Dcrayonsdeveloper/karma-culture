@@ -70,7 +70,7 @@
                  floors the nav links slide under the search bar at lg-xl widths. --}}
             <div class="flex items-center gap-3 lg:gap-0 flex-1 lg:min-w-fit">
                 <!-- Mobile menu button -->
-                <button @click="$dispatch('toggle-mobile-nav')" class="lg:hidden p-1.5 -ml-1.5 text-kk-brown hover:text-kk-tan-dark" aria-label="Open menu">
+                <button @click="$dispatch('toggle-mobile-nav')" class="lg:hidden p-2.5 -ml-2.5 text-kk-brown hover:text-kk-tan-dark" aria-label="Open menu">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"/>
                     </svg>
@@ -79,14 +79,14 @@
                 {{-- Logo: centered (absolute) only below sm, where the search bar is
                      collapsed to an icon. From sm up it must sit in normal flow on the
                      left, otherwise the inline search bar overlaps it on tablets. --}}
-                <a href="{{ url('/') }}" class="absolute inset-0 flex items-center justify-center pointer-events-none sm:static sm:inset-auto sm:justify-start sm:pointer-events-auto shrink-0 sm:mr-3 lg:mr-8">
+                <a href="{{ url('/') }}" class="absolute inset-0 flex items-center justify-center pointer-events-none sm:static sm:inset-auto sm:justify-start sm:pointer-events-auto shrink-0 sm:mr-3 lg:mr-4 xl:mr-8">
                     @php $siteLogo = \App\Models\Setting::get('site_logo', ''); @endphp
                     @if($siteLogo)
                         {{-- A custom logo whose file has gone missing used to leave a hole
                              where the brand mark should be; fall back to the bundled one. --}}
-                        <img id="site-logo" src="{{ asset_v('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-16 lg:h-20 object-contain pointer-events-auto" data-fallback="{{ asset_v('images/karmaa-kulture-logo.png') }}">
+                        <img id="site-logo" src="{{ asset_v('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-16 lg:h-20 max-w-[40vw] sm:max-w-none object-contain pointer-events-auto" data-fallback="{{ asset_v('images/karmaa-kulture-logo.png') }}">
                     @else
-                        <img id="site-logo" src="{{ asset_v('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-16 lg:h-20 object-contain pointer-events-auto">
+                        <img id="site-logo" src="{{ asset_v('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-16 lg:h-20 max-w-[40vw] sm:max-w-none object-contain pointer-events-auto">
                     @endif
                 </a>
 
@@ -96,8 +96,8 @@
                          and until now nothing in the header, the mobile drawer or the
                          footer pointed at it: a shopper reached it by failing a search
                          or by clicking a home page hanger that may not exist. --}}
-                    <a href="{{ route('shop') }}" class="px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">Shop All</a>
-                    <a href="{{ route('new-arrivals') }}" class="px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">New In</a>
+                    <a href="{{ route('shop') }}" class="px-2 xl:px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">Shop All</a>
+                    <a href="{{ route('new-arrivals') }}" class="px-2 xl:px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">New In</a>
 
                     {{-- Categories: hover-triggered mega menu - clean text layout, data from admin --}}
                     @php
@@ -117,7 +117,7 @@
                          @mouseenter="clearTimeout(closeT); open = true"
                          @mouseleave="closeT = setTimeout(() => open = false, 120)">
                         <button type="button" @click="open = !open"
-                                class="px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap inline-flex items-center gap-1 cursor-pointer bg-transparent border-0">
+                                class="px-2 xl:px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap inline-flex items-center gap-1 cursor-pointer bg-transparent border-0">
                             Categories
                             <svg class="w-3 h-3 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
@@ -145,7 +145,7 @@
                         </div>
                     </div>
 
-                    <a href="{{ route('bestsellers') }}" class="px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">Bestsellers</a>
+                    <a href="{{ route('bestsellers') }}" class="px-2 xl:px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">Bestsellers</a>
                     <a href="{{ route('deals') }}" class="px-2.5 py-2 text-[12px] text-kk-tan-dark hover:text-kk-brown font-semibold transition-colors tracking-widest uppercase whitespace-nowrap">Introductory Offer</a>
                 </nav>
 
@@ -206,7 +206,7 @@
                 <!-- Desktop Navigation (Right side) -->
                 <nav class="hidden lg:flex items-center gap-1 mr-2">
                     @if(config('app.wholesale_enabled'))
-                        <a href="{{ route('wholesale') }}" class="px-3 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.18em] uppercase">Wholesale</a>
+                        <a href="{{ route('wholesale') }}" class="px-2 xl:px-3 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.18em] uppercase">Wholesale</a>
                     @endif
                     {{-- Online Store > Navigation has always saved header menu items and
                          no template read them back, so anything added there never
@@ -214,7 +214,7 @@
                     @foreach(\App\Models\NavigationMenu::getByLocation('header') as $kkNavItem)
                         <a href="{{ $kkNavItem->url }}"
                            @if($kkNavItem->open_in_new_tab) target="_blank" rel="noopener" @endif
-                           class="px-3 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.18em] uppercase">{{ $kkNavItem->label }}</a>
+                           class="px-2 xl:px-3 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.18em] uppercase">{{ $kkNavItem->label }}</a>
                     @endforeach
                 </nav>
 
@@ -224,7 +224,7 @@
                      shopper on an empty screen asking for a keyword. --}}
                 <button type="button"
                         @click="$dispatch('open-mobile-search')"
-                        class="sm:hidden p-2 text-kk-brown hover:text-kk-tan-dark transition-colors"
+                        class="sm:hidden p-2.5 text-kk-brown hover:text-kk-tan-dark transition-colors"
                         aria-label="Search">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -232,7 +232,7 @@
                 </button>
 
                 <!-- Inline Search Bar with Typewriter + Mic (hidden on mobile) -->
-                <div class="relative hidden sm:block flex-1 min-w-0 max-w-xs lg:max-w-sm mx-1 lg:mx-3"
+                <div class="relative hidden sm:block flex-1 min-w-0 max-w-xs xl:max-w-sm mx-1 xl:mx-3"
                      x-data="searchBar()"
                      @click.outside="showResults = false">
                     <form action="{{ route('search') }}" method="GET" class="relative flex items-center">
@@ -268,100 +268,7 @@
                             </svg>
                         </button>
 
-                        {{-- Voice search panel. Shown while the browser's own
-                             permission prompt is open, so the customer can see
-                             what is being asked for and why, and again if the
-                             microphone is unavailable - a bare alert() gave no
-                             context and no way back. --}}
-                        <template x-if="micPanel">
-                            <div class="fixed inset-0 z-[80] flex items-center justify-center p-4"
-                                 @click.self="closeMicPanel()" x-cloak>
-                                <div class="absolute inset-0" style="background: rgba(45,24,16,.55);"></div>
-                                <div class="relative w-full max-w-sm rounded-2xl p-6 text-center shadow-2xl"
-                                     style="background:#fff;">
-                                    <button type="button" @click="closeMicPanel()" aria-label="Close"
-                                            class="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                                    </button>
-
-                                    <div class="mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center"
-                                         :style="micPanel === 'listening' ? 'background:#fdecea;' : 'background:#f4efe6;'">
-                                        <svg class="w-7 h-7" :class="micPanel === 'listening' ? 'animate-pulse' : ''"
-                                             :style="micPanel === 'listening' ? 'color:#dc362e;' : 'color:#8C5C34;'"
-                                             fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-                                            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
-                                        </svg>
-                                    </div>
-
-                                    <template x-if="micPanel === 'waiting'">
-                                        <div>
-                                            <h3 class="text-base font-semibold" style="color:#2d1810;">Waiting for permission</h3>
-                                            <p class="text-sm mt-1" style="color:#616161;">Allow microphone access to search with your voice.</p>
-                                        </div>
-                                    </template>
-
-                                    <template x-if="micPanel === 'listening'">
-                                        <div>
-                                            <h3 class="text-base font-semibold" style="color:#2d1810;">Listening&hellip;</h3>
-                                            <p class="text-sm mt-1" style="color:#616161;">Say what you are looking for, like &ldquo;polo shirt in blue&rdquo;.</p>
-                                        </div>
-                                    </template>
-
-                                    <template x-if="micPanel === 'blocked'">
-                                        <div>
-                                            <h3 class="text-base font-semibold" style="color:#2d1810;">Microphone is blocked</h3>
-                                            <p class="text-sm mt-1" style="color:#616161;">
-                                                Your browser is blocking the microphone for this site, so it will not ask again.
-                                            </p>
-                                            <ol class="text-sm text-left mt-3 space-y-1 mx-auto" style="color:#444; max-width:17rem;">
-                                                <li>1. Click the icon left of the web address</li>
-                                                <li>2. Choose <strong>Site settings</strong></li>
-                                                <li>3. Set <strong>Microphone</strong> to <strong>Allow</strong></li>
-                                                <li>4. Reload this page</li>
-                                            </ol>
-                                        </div>
-                                    </template>
-
-                                    <template x-if="micPanel === 'denied'">
-                                        <div>
-                                            <h3 class="text-base font-semibold" style="color:#2d1810;">Permission not granted</h3>
-                                            <p class="text-sm mt-1" style="color:#616161;">Choose <strong>Allow</strong> when your browser asks, then try again.</p>
-                                            <button type="button" @click="toggleMic()" class="mt-4 px-5 py-2 rounded-full text-white text-xs font-semibold" style="background:#8C5C34;">Try again</button>
-                                        </div>
-                                    </template>
-
-                                    <template x-if="micPanel === 'nodevice'">
-                                        <div>
-                                            <h3 class="text-base font-semibold" style="color:#2d1810;">No microphone found</h3>
-                                            <p class="text-sm mt-1" style="color:#616161;">Check that a microphone is connected, then try again.</p>
-                                        </div>
-                                    </template>
-
-                                    <template x-if="micPanel === 'nospeech'">
-                                        <div>
-                                            <h3 class="text-base font-semibold" style="color:#2d1810;">Didn&rsquo;t catch that</h3>
-                                            <p class="text-sm mt-1" style="color:#616161;">No speech was detected.</p>
-                                            <button type="button" @click="toggleMic()" class="mt-4 px-5 py-2 rounded-full text-white text-xs font-semibold" style="background:#8C5C34;">Try again</button>
-                                        </div>
-                                    </template>
-
-                                    <template x-if="micPanel === 'unsupported'">
-                                        <div>
-                                            <h3 class="text-base font-semibold" style="color:#2d1810;">Not supported here</h3>
-                                            <p class="text-sm mt-1" style="color:#616161;">Voice search works in Chrome and Edge. You can still type your search.</p>
-                                        </div>
-                                    </template>
-
-                                    <template x-if="micPanel === 'error'">
-                                        <div>
-                                            <h3 class="text-base font-semibold" style="color:#2d1810;">Voice search unavailable</h3>
-                                            <p class="text-sm mt-1" style="color:#616161;">Something went wrong. Please try again in a moment.</p>
-                                        </div>
-                                    </template>
-                                </div>
-                            </div>
-                        </template>
+                        @include('partials.voice-search-panel')
                         <!-- Submit button -->
                         <button type="submit" class="absolute right-2 p-1 text-kk-brown hover:text-kk-tan-dark transition-colors" aria-label="Search">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -420,7 +327,7 @@
                      is already sitting there in full. --}}
                 <button type="button"
                         @click="$dispatch('open-global-filters')"
-                        class="relative p-2 text-kk-brown hover:text-kk-tan-dark transition-colors kk-filters-btn"
+                        class="relative p-2 lg:p-1.5 xl:p-2 text-kk-brown hover:text-kk-tan-dark transition-colors kk-filters-btn"
                         aria-label="Filters" title="Filters">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
@@ -428,7 +335,7 @@
                 </button>
 
                 <!-- Wishlist -->
-                <a href="{{ route('wishlist') }}" class="relative p-2 text-kk-brown hover:text-kk-tan-dark transition-colors hidden sm:flex" aria-label="Wishlist">
+                <a href="{{ route('wishlist') }}" class="relative p-2.5 lg:p-2 text-kk-brown hover:text-kk-tan-dark transition-colors hidden sm:flex" aria-label="Wishlist">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                     </svg>
@@ -451,7 +358,7 @@
                     </button>
                 @else
                 <div class="relative hidden lg:block" x-data="dropdown()">
-                    <button @click="toggle()" class="p-2 text-kk-brown hover:text-kk-tan-dark transition-colors" aria-label="Account">
+                    <button @click="toggle()" class="p-2 lg:p-1.5 xl:p-2 text-kk-brown hover:text-kk-tan-dark transition-colors" aria-label="Account">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                         </svg>
@@ -479,7 +386,7 @@
                 @endguest
 
                 <!-- Cart -->
-                <a href="{{ route('cart.index') }}" class="relative p-2 text-kk-brown hover:text-kk-tan-dark transition-colors" aria-label="Cart">
+                <a href="{{ route('cart.index') }}" class="relative p-2 lg:p-1.5 xl:p-2 text-kk-brown hover:text-kk-tan-dark transition-colors" aria-label="Cart">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                     </svg>
@@ -883,6 +790,8 @@
     }
     .kk-loginmodal__close:hover { background: #1f1109; transform: rotate(90deg); }
     .kk-loginmodal__close svg { width: 18px; height: 18px; display: block; }
+    /* Invisible halo: brings the 28-32px disc up to a 40px+ touch target. */
+    .kk-loginmodal__close::before { content: ''; position: absolute; inset: -6px; }
     .kk-loginmodal__left {
         background: #2d1810; color: #efe2cb;
         padding: 48px 32px;

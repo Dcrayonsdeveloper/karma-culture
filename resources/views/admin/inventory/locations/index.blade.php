@@ -59,12 +59,12 @@
                             </td>
                             <td style="padding: 0.625rem 1rem; text-align: right;">
                                 <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem;">
-                                    <a href="{{ route('admin.inventory.locations.show', $location) }}" style="color: #005bd3; font-size: 13px; font-weight: 500; text-decoration: none;">Manage stock</a>
-                                    <a href="{{ route('admin.inventory.locations.edit', $location) }}" style="color: #005bd3; font-size: 13px; font-weight: 500; text-decoration: none;">Edit</a>
+                                    <a href="{{ route('admin.inventory.locations.show', $location) }}" class="btn" style="padding: 0; color: #005bd3; font-size: 13px; font-weight: 500; text-decoration: none;">Manage stock</a>
+                                    <a href="{{ route('admin.inventory.locations.edit', $location) }}" class="btn" style="padding: 0; color: #005bd3; font-size: 13px; font-weight: 500; text-decoration: none;">Edit</a>
                                     <form action="{{ route('admin.inventory.locations.destroy', $location) }}" method="POST" onsubmit="return confirm('Delete this location?')">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" style="color: #d72c0d; font-size: 13px; font-weight: 500; background: none; border: none; cursor: pointer;">Delete</button>
+                                        <button type="submit" class="btn" style="padding: 0; color: #d72c0d; font-size: 13px; font-weight: 500; background: none; border: none; cursor: pointer;">Delete</button>
                                     </form>
                                 </div>
                             </td>

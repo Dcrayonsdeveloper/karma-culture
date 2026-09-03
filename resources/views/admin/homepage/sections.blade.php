@@ -29,7 +29,7 @@
                          something an admin can usefully change. --}}
                     <div style="display: flex; align-items: center; gap: 0.75rem;">
                         <div>
-                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.125rem;">
+                            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-bottom: 0.125rem;">
                                 <span style="font-size: 13px; font-weight: 600; color: #303030;">{{ $section->title }}</span>
                                 <span style="display: inline-block; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 10px; font-weight: 500; background: #ebebeb; color: #616161;">{{ $section->key }}</span>
                             </div>

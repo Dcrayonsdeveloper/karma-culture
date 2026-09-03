@@ -177,7 +177,7 @@
 
                         <!-- Display Mode -->
                         <div x-show="!editing">
-                            <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+                            <div style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.75rem;">
                                 <!-- Drag Handle + Position -->
                                 <div style="display: flex; flex-direction: column; align-items: center; gap: 0.25rem; flex-shrink: 0; padding-top: 0.25rem;">
                                     <span class="pos-badge" title="{{ $banner->is_active ? 'Position on the storefront' : 'Hidden - not shown on the storefront' }}" style="font-size: 12px; font-weight: 700; color: #616161; width: 1.5rem; height: 1.5rem; display: flex; align-items: center; justify-content: center; background: #f6f6f7; border-radius: 0.25rem;">{{ isset($kkLivePositions[$banner->id]) ? '#'.$kkLivePositions[$banner->id] : '--' }}</span>
@@ -186,10 +186,10 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/>
                                         </svg>
                                     </div>
-                                    <button type="button" @click="moveUp($el)" style="color: #616161; background: none; border: none; cursor: pointer; padding: 0.125rem;" title="Move up">
+                                    <button type="button" @click="moveUp($el)" class="kk-nudge" style="color: #616161; background: none; border: none; cursor: pointer; padding: 0.125rem;" title="Move up">
                                         <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
                                     </button>
-                                    <button type="button" @click="moveDown($el)" style="color: #616161; background: none; border: none; cursor: pointer; padding: 0.125rem;" title="Move down">
+                                    <button type="button" @click="moveDown($el)" class="kk-nudge" style="color: #616161; background: none; border: none; cursor: pointer; padding: 0.125rem;" title="Move down">
                                         <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                                     </button>
                                 </div>
@@ -210,7 +210,7 @@
                                         . ($banner->image_url ? '' : ' kk-media--dark')
                                         . ($banner->image_url || $banner->video_url ? '' : ' is-broken');
                                 @endphp
-                                <div class="{{ $kkThumbClass }}" style="width: 11rem; height: 6rem; border-radius: 0.5rem; flex-shrink: 0;">
+                                <div class="{{ $kkThumbClass }}" style="width: 11rem; max-width: 100%; height: 6rem; border-radius: 0.5rem; flex-shrink: 0;">
                                     @if($banner->image_url)
                                         <img class="kk-media__fill" src="{{ $banner->image }}" alt="" aria-hidden="true" onerror="this.remove()">
                                         <img src="{{ $banner->image }}" alt="{{ $banner->name }}" onerror="this.closest('.kk-media').classList.add('is-broken')">
@@ -235,7 +235,7 @@
                                 </div>
 
                                 <!-- Info -->
-                                <div style="flex: 1; min-width: 0;">
+                                <div style="flex: 1 1 14rem; min-width: 0;">
                                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem;">
                                         <span style="font-size: 13px; font-weight: 600; color: #303030;">{{ $banner->name ?: $banner->title ?: 'Banner #' . $banner->id }}</span>
                                         @if($banner->is_active)
@@ -250,12 +250,12 @@
                                     @if($banner->subtitle)
                                         <p style="font-size: 12px; color: #616161; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ $banner->subtitle }}</p>
                                     @endif
-                                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.25rem; font-size: 12px; color: #616161;">
+                                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; row-gap: 0.125rem; margin-top: 0.25rem; font-size: 12px; color: #616161;">
                                         @if($banner->button_text)
                                             <span>Button: {{ $banner->button_text }}</span>
                                         @endif
                                         @if($banner->link)
-                                            <span>Link: {{ $banner->link }}</span>
+                                            <span style="min-width: 0; overflow-wrap: anywhere;">Link: {{ $banner->link }}</span>
                                         @endif
                                         <span>Overlay: {{ \App\Models\Banner::OVERLAY_STYLES[$banner->overlay_style] ?? 'Default' }}</span>
                                         {{-- Which breakpoint a banner has artwork for is otherwise
@@ -267,7 +267,7 @@
                                                 : 'uses desktop' }}
                                         </span>
                                     </div>
-                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem;">
+                                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.75rem;">
                                         <button @click="editing = true" type="button" class="btn btn-primary" style="font-size: 12px; padding: 0.25rem 0.5rem;">Edit</button>
                                         <form action="{{ route('admin.homepage.hero-banners.toggle', $banner) }}" method="POST" style="display: inline;">
                                             @csrf
@@ -279,7 +279,7 @@
                                         <form action="{{ route('admin.homepage.hero-banners.destroy', $banner) }}" method="POST" style="display: inline;" onsubmit="return confirm('Delete this banner?')">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" style="font-size: 12px; padding: 0.25rem 0.5rem; background: none; border: 1px solid #d72c0d; color: #d72c0d; border-radius: 0.375rem; cursor: pointer;">Delete</button>
+                                            <button type="submit" class="btn" style="font-size: 12px; padding: 0.25rem 0.5rem; background: none; border: 1px solid #d72c0d; color: #d72c0d; border-radius: 0.375rem; cursor: pointer;">Delete</button>
                                         </form>
                                     </div>
                                 </div>
@@ -290,7 +290,7 @@
                         <div x-show="editing" x-cloak>
                             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
                                 <span style="font-size: 13px; font-weight: 600; color: #303030;">Edit Banner</span>
-                                <button @click="editing = false" type="button" style="color: #616161; background: none; border: none; cursor: pointer; padding: 0.25rem;">
+                                <button @click="editing = false" type="button" class="kk-nudge" style="color: #616161; background: none; border: none; cursor: pointer; padding: 0.25rem;">
                                     <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                 </button>
                             </div>
@@ -425,6 +425,12 @@
     @push('scripts')
     <style>
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        /* The reorder arrows and the close-edit cross are 18-28px icons; on a touch
+           screen they are the only reorder path (HTML5 drag does not fire there),
+           so they grow to a finger-sized box. A mouse keeps the compact look. */
+        @media (pointer: coarse) {
+            .kk-nudge { min-width: 2.25rem; min-height: 2.25rem; display: inline-flex; align-items: center; justify-content: center; }
+        }
     </style>
     <script>
         function bannerSorter() {

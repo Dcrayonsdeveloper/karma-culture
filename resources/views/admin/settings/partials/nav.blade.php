@@ -104,6 +104,14 @@
     outline-offset: -2px;
     border-radius: 4px;
 }
+/* Touch screens: at 13px the tabs stand 39px tall, a hair under the 40px
+   target. A minimum height on coarse pointers only leaves the desktop strip
+   exactly as it is. */
+@media (pointer: coarse) {
+    .layout-admin .settings-tabs__tab:not(.btn):not(.admin-nav-item):not(.badge) {
+        min-height: 2.75rem;
+    }
+}
 </style>
 @endpush
 

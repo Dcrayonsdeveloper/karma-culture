@@ -28,11 +28,15 @@
 
     <!-- Category Header: mobile orange gradient / desktop banner image -->
     <style>
-        .cat-banner { height: 150px; }
-        .cat-banner-inner { padding: 25px; }
+        /* min-height, not height: a category name that wraps on a narrow
+           phone used to push the product count below the frame, where
+           overflow-hidden clipped it. The inner box carries the same minimum
+           so justify-center still centres the copy whenever there is room. */
+        .cat-banner { min-height: 150px; }
+        .cat-banner-inner { padding: 25px; min-height: 150px; }
         @media(min-width:640px) {
-            .cat-banner { height: 224px; }
-            .cat-banner-inner { padding: 0 1rem; }
+            .cat-banner { min-height: 224px; }
+            .cat-banner-inner { padding: 0 1rem; min-height: 224px; }
         }
         /* The banner art is 1440px wide, so cover sliced the children off its
            right edge on every screen narrower than that. It is contained now.

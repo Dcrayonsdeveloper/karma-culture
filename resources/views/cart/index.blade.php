@@ -135,19 +135,19 @@
                                                 </div>
 
                                                 <!-- Quantity + Remove -->
-                                                <div class="flex items-center gap-3 mt-2">
+                                                <div class="flex flex-wrap items-center gap-3 mt-2">
                                                     <div class="flex items-center border border-neutral-200 rounded overflow-hidden">
                                                         <button @click="updateQty(item, item.quantity - 1)"
-                                                                class="w-9 h-9 flex items-center justify-center text-neutral-600 hover:bg-neutral-50 transition-colors"
+                                                                class="w-10 h-10 sm:w-9 sm:h-9 flex items-center justify-center text-neutral-600 hover:bg-neutral-50 transition-colors"
                                                                 :class="item.quantity <= 1 || item.updating ? 'opacity-30 cursor-not-allowed' : 'hover:text-neutral-900'"
                                                                 :disabled="item.quantity <= 1 || item.updating"
                                                                 aria-label="Decrease quantity">
                                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
                                                         </button>
-                                                        <span class="w-9 h-9 flex items-center justify-center text-xs font-semibold border-x border-neutral-200 bg-neutral-50/50"
+                                                        <span class="w-10 h-10 sm:w-9 sm:h-9 flex items-center justify-center text-xs font-semibold border-x border-neutral-200 bg-neutral-50/50"
                                                               x-text="item.quantity"></span>
                                                         <button @click="updateQty(item, item.quantity + 1)"
-                                                                class="w-9 h-9 flex items-center justify-center text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900 transition-colors"
+                                                                class="w-10 h-10 sm:w-9 sm:h-9 flex items-center justify-center text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900 transition-colors"
                                                                 :class="item.quantity >= 99 || item.updating ? 'opacity-30 cursor-not-allowed' : ''"
                                                                 :disabled="item.quantity >= 99 || item.updating"
                                                                 aria-label="Increase quantity">
@@ -155,7 +155,7 @@
                                                         </button>
                                                     </div>
 
-                                                    <button @click="removeItem(item)" class="flex items-center gap-1 text-[12px] text-neutral-600 hover:text-error-500 transition-colors py-2 px-1"
+                                                    <button @click="removeItem(item)" class="flex items-center gap-1 text-[12px] text-neutral-600 hover:text-error-500 transition-colors py-2 px-1 min-h-10 sm:min-h-0"
                                                             :disabled="item.updating">
                                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                                         Remove
@@ -177,7 +177,7 @@
 
                             <!-- Clear Cart -->
                             <div class="flex justify-end">
-                                <button @click="clearCart()" class="text-xs text-neutral-600 hover:text-error-500 transition-colors py-2 px-1">
+                                <button @click="clearCart()" class="text-xs text-neutral-600 hover:text-error-500 transition-colors py-2 px-1 min-h-10 sm:min-h-0">
                                     Remove All Items
                                 </button>
                             </div>
@@ -231,7 +231,7 @@
                                                         <p class="text-[11px] text-success-600 font-medium" x-text="couponLabel"></p>
                                                     </template>
                                                 </div>
-                                                <button @click="removeCoupon()" class="text-xs text-error-500 hover:text-error-600 font-medium py-1 px-2">Remove</button>
+                                                <button @click="removeCoupon()" class="text-xs text-error-500 hover:text-error-600 font-medium py-1 px-2 min-h-10 sm:min-h-0">Remove</button>
                                             </div>
                                         </div>
                                     </template>
@@ -320,7 +320,7 @@
 
                                 <!-- Trust Badges -->
                                 <div class="px-4 pb-4">
-                                    <div class="flex items-center justify-center gap-4 pt-3 border-t border-neutral-100">
+                                    <div class="flex flex-wrap items-center justify-center gap-4 pt-3 border-t border-neutral-100">
                                         <div class="flex items-center gap-1.5 text-neutral-600">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                                             <span class="text-[10px] font-medium">Secure</span>

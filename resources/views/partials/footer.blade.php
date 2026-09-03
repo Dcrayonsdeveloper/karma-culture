@@ -51,7 +51,7 @@
                         // kk-social-link carries the hover colour in app.css. Tailwind's
                         // hover:text-* loses to the storefront's generic `a:hover` rule on
                         // specificity, which left the icon dark on the dark hover circle.
-                        $kkSocialClass = 'kk-social-link w-9 h-9 bg-kk-cream-lighter hover:bg-kk-brown text-kk-brown rounded-full flex items-center justify-center transition-all border border-kk-cream-dark';
+                        $kkSocialClass = 'kk-social-link w-10 h-10 sm:w-9 sm:h-9 bg-kk-cream-lighter hover:bg-kk-brown text-kk-brown rounded-full flex items-center justify-center transition-all border border-kk-cream-dark';
                     @endphp
                     @if(!empty($kkSocials))
                     <div class="flex items-center gap-3 mt-1 flex-wrap">
@@ -157,7 +157,7 @@
                 {{-- footer_copyright is editable under Online Store > Site Settings but
                      nothing read it, so the line here was fixed no matter what was saved. --}}
                 @php $kkCopyright = trim((string) \App\Models\Setting::get('footer_copyright', '')); @endphp
-                <p class="text-xs text-kk-text-muted">
+                <p class="text-xs text-kk-text-muted text-center md:text-left">
                     &copy; {{ date('Y') }}
                     {{ $kkCopyright !== '' ? $kkCopyright : \App\Models\Setting::get('site_name', 'Karmaa Kulture').'. All rights reserved.' }}
                 </p>

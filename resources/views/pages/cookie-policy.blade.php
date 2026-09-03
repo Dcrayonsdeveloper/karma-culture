@@ -37,9 +37,9 @@
 
             {{-- Essential Cookies --}}
             <div class="bg-white border border-neutral-100 rounded-xl p-5 sm:p-6 mb-4">
-                <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center justify-between gap-2 mb-3">
                     <h2 class="text-[15px] font-bold text-neutral-900">Essential Cookies</h2>
-                    <span class="text-xs font-medium px-2.5 py-0.5 rounded-full bg-green-100 text-green-700">Always Active</span>
+                    <span class="shrink-0 text-xs font-medium px-2.5 py-0.5 rounded-full bg-green-100 text-green-700">Always Active</span>
                 </div>
                 <p class="text-[13px] text-neutral-600 mb-3">Required for the website to function properly. These cannot be disabled.</p>
                 <ul class="space-y-2">
@@ -65,9 +65,9 @@
             {{-- Functional + Analytics side by side --}}
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div class="bg-white border border-neutral-100 rounded-xl p-5 sm:p-6">
-                    <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center justify-between gap-2 mb-3">
                         <h2 class="text-[15px] font-bold text-neutral-900">Functional Cookies</h2>
-                        <span class="text-xs font-medium px-2.5 py-0.5 rounded-full bg-[#6F9CA2]/10 text-[#5B878D]">Optional</span>
+                        <span class="shrink-0 text-xs font-medium px-2.5 py-0.5 rounded-full bg-[#6F9CA2]/10 text-[#5B878D]">Optional</span>
                     </div>
                     <p class="text-[13px] text-neutral-600 mb-3">Enhance your experience by remembering preferences and settings.</p>
                     <ul class="space-y-1.5">
@@ -86,9 +86,9 @@
                     </ul>
                 </div>
                 <div class="bg-white border border-neutral-100 rounded-xl p-5 sm:p-6">
-                    <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center justify-between gap-2 mb-3">
                         <h2 class="text-[15px] font-bold text-neutral-900">Analytics Cookies</h2>
-                        <span class="text-xs font-medium px-2.5 py-0.5 rounded-full bg-[#6F9CA2]/10 text-[#5B878D]">Optional</span>
+                        <span class="shrink-0 text-xs font-medium px-2.5 py-0.5 rounded-full bg-[#6F9CA2]/10 text-[#5B878D]">Optional</span>
                     </div>
                     <p class="text-[13px] text-neutral-600 mb-3">Help us understand how visitors use our website so we can improve it.</p>
                     <ul class="space-y-1.5">
@@ -110,9 +110,9 @@
 
             {{-- Marketing Cookies --}}
             <div class="bg-white border border-neutral-100 rounded-xl p-5 sm:p-6 mb-4">
-                <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center justify-between gap-2 mb-3">
                     <h2 class="text-[15px] font-bold text-neutral-900">Marketing Cookies</h2>
-                    <span class="text-xs font-medium px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700">Optional</span>
+                    <span class="shrink-0 text-xs font-medium px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700">Optional</span>
                 </div>
                 <p class="text-[13px] text-neutral-600 mb-3">Used to show relevant advertisements and measure campaign effectiveness.</p>
                 <ul class="space-y-2">
@@ -163,14 +163,14 @@
                 <h2 class="text-[15px] font-bold text-neutral-900 mb-2">Questions About Cookies?</h2>
                 <p class="text-[13px] text-neutral-600 mb-4">If you have questions about how we use cookies, our support team is here to help.</p>
                 <div class="flex flex-wrap items-center justify-center gap-3">
-                    <a href="{{ route('contact') }}" class="inline-flex items-center gap-2 px-4 py-2 text-[13px] font-medium text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50 transition-colors">
+                    <a href="{{ route('contact') }}" class="inline-flex items-center gap-2 px-4 py-2 min-h-10 sm:min-h-0 text-[13px] font-medium text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                         Contact Us
                     </a>
-                    <a href="{{ route('privacy') }}" class="inline-flex items-center gap-2 px-4 py-2 text-[13px] font-medium text-neutral-700 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
+                    <a href="{{ route('privacy') }}" class="inline-flex items-center gap-2 px-4 py-2 min-h-10 sm:min-h-0 text-[13px] font-medium text-neutral-700 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
                         Privacy Policy
                     </a>
-                    <a href="{{ route('gdpr') }}" class="inline-flex items-center gap-2 px-4 py-2 text-[13px] font-medium text-neutral-700 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
+                    <a href="{{ route('gdpr') }}" class="inline-flex items-center gap-2 px-4 py-2 min-h-10 sm:min-h-0 text-[13px] font-medium text-neutral-700 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
                         GDPR Compliance
                     </a>
                 </div>

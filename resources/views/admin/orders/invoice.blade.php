@@ -64,7 +64,7 @@
 
         /* Totals */
         .totals-wrapper { display: flex; justify-content: flex-end; }
-        .totals { width: 320px; }
+        .totals { width: 100%; max-width: 320px; }
         .totals-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 13px; }
         .totals-label { color: #6b7280; }
         .totals-value { font-weight: 600; color: #374151; }
@@ -85,6 +85,21 @@
         .footer { margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e7eb; text-align: center; }
         .footer-thanks { font-size: 15px; color: #374151; font-weight: 600; margin-bottom: 4px; }
         .footer-url { font-size: 12px; color: #9ca3af; }
+
+        /* On-screen phone view; print is untouched. */
+        @media screen and (max-width: 640px) {
+            .toolbar { padding: 12px 16px; }
+            .invoice { padding: 20px 16px; }
+            .header { flex-wrap: wrap; gap: 16px; }
+            .header-left { flex-wrap: wrap; }
+            .header-right { text-align: left; }
+            .addresses { grid-template-columns: 1fr; gap: 12px; }
+            .address-block, .footer-url { overflow-wrap: anywhere; }
+            .meta-bar { grid-template-columns: repeat(2, 1fr); }
+            .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .table-wrap table { min-width: 520px; }
+            thead th, tbody td { padding: 10px 8px; }
+        }
 
         @media print {
             body { background: #fff; }
@@ -203,6 +218,7 @@
         </div>
 
         {{-- Items Table --}}
+        <div class="table-wrap">
         <table>
             <thead>
                 <tr>
@@ -230,6 +246,7 @@
                 @endforeach
             </tbody>
         </table>
+        </div>
 
         {{-- Totals --}}
         <div class="totals-wrapper">

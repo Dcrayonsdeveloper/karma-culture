@@ -28,24 +28,24 @@
     </div>
 
     <!-- Main Card -->
-    <div style="background: white; border-radius: 0.75rem; border: 1px solid #e3e3e3; overflow: hidden;">
+    <div class="card" style="background: white; border-radius: 0.75rem; border: 1px solid #e3e3e3; overflow: hidden;">
 
         <!-- Tab Row -->
         <div style="display: flex; border-bottom: 1px solid #e3e3e3; padding: 0 1rem;">
             <a href="{{ route('admin.fraud.index', request()->except('action')) }}"
-               style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ !request('action') ? '#303030' : 'transparent' }}; color: {{ !request('action') ? '#303030' : '#616161' }};">
+               style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ !request('action') ? '#303030' : 'transparent' }}; color: {{ !request('action') ? '#303030' : '#616161' }}; margin-bottom: -1px;">
                 All
             </a>
             <a href="{{ route('admin.fraud.index', array_merge(request()->except('action'), ['action' => 'flagged'])) }}"
-               style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('action') === 'flagged' ? '#303030' : 'transparent' }}; color: {{ request('action') === 'flagged' ? '#303030' : '#616161' }};">
+               style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('action') === 'flagged' ? '#303030' : 'transparent' }}; color: {{ request('action') === 'flagged' ? '#303030' : '#616161' }}; margin-bottom: -1px;">
                 Flagged
             </a>
             <a href="{{ route('admin.fraud.index', array_merge(request()->except('action'), ['action' => 'blocked'])) }}"
-               style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('action') === 'blocked' ? '#303030' : 'transparent' }}; color: {{ request('action') === 'blocked' ? '#303030' : '#616161' }};">
+               style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('action') === 'blocked' ? '#303030' : 'transparent' }}; color: {{ request('action') === 'blocked' ? '#303030' : '#616161' }}; margin-bottom: -1px;">
                 Blocked
             </a>
             <a href="{{ route('admin.fraud.index', array_merge(request()->except('action'), ['action' => 'allowed'])) }}"
-               style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('action') === 'allowed' ? '#303030' : 'transparent' }}; color: {{ request('action') === 'allowed' ? '#303030' : '#616161' }};">
+               style="padding: 0.625rem 0.75rem; font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 2px solid {{ request('action') === 'allowed' ? '#303030' : 'transparent' }}; color: {{ request('action') === 'allowed' ? '#303030' : '#616161' }}; margin-bottom: -1px;">
                 Allowed
             </a>
         </div>
@@ -175,7 +175,7 @@
                     @empty
                         <tr>
                             <td colspan="8" style="padding: 3rem 1rem; text-align: center;">
-                                <div style="display: flex; flex-direction: column; align-items: center;">
+                                <div style="display: flex; flex-direction: column; align-items: center; position: sticky; left: 1rem; max-width: calc(100vw - 4rem);">
                                     <div style="width: 48px; height: 48px; border-radius: 50%; background: #f6f6f7; display: flex; align-items: center; justify-content: center; margin-bottom: 0.75rem;">
                                         <svg style="width: 24px; height: 24px; color: #616161;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>

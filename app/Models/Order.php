@@ -37,6 +37,20 @@ class Order extends Model
     public const NON_SALE_STATUSES = ['cancelled', 'returned'];
 
     /**
+     * How the ten statuses group for a customer-facing breakdown. Every value of
+     * the enum belongs to exactly one bucket, which is the point: the account
+     * dashboard used to count three literal statuses, so an order sitting in any
+     * of the other seven - "pending" above all, where every order starts - was
+     * counted in the total and then by no tile at all.
+     */
+    public const STATUS_BUCKETS = [
+        'pending' => ['pending', 'on_hold'],
+        'in_progress' => ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery'],
+        'delivered' => ['delivered'],
+        'closed' => ['cancelled', 'returned'],
+    ];
+
+    /**
      * Narrow $query to the orders that count as revenue.
      *
      * Every reporting screen used to filter on payment_status = "paid" alone,

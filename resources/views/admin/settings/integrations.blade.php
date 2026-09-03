@@ -46,7 +46,7 @@
                                    autocomplete="new-password"
                                    class="form-input" style="padding-right: 4rem;">
                             <button type="button" @click="toggle()"
-                                    style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); font-size: 12px; color: #616161; background: none; border: none; cursor: pointer;"
+                                    style="position: absolute; right: 0; top: 0; bottom: 0; min-width: 2.75rem; padding: 0 0.75rem; font-size: 12px; color: #616161; background: none; border: none; cursor: pointer;"
                                     x-text="show ? 'Hide' : 'Show'"></button>
                         </div>
                         <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
@@ -87,7 +87,7 @@
                                    value="{{ old('whatsapp_page_access_token', $settings['whatsapp_page_access_token'] ?? '') }}"
                                    autocomplete="new-password" class="form-input" style="padding-right: 4rem;">
                             <button type="button" @click="toggle()"
-                                    style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); font-size: 12px; color: #616161; background: none; border: none; cursor: pointer;"
+                                    style="position: absolute; right: 0; top: 0; bottom: 0; min-width: 2.75rem; padding: 0 0.75rem; font-size: 12px; color: #616161; background: none; border: none; cursor: pointer;"
                                     x-text="show ? 'Hide' : 'Show'"></button>
                         </div>
                         <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Meta Developer Console &rarr; WhatsApp &rarr; Temporary / Permanent Access Token</p>
@@ -100,7 +100,7 @@
                                    value="{{ old('whatsapp_app_secret', $settings['whatsapp_app_secret'] ?? '') }}"
                                    autocomplete="new-password" class="form-input" style="padding-right: 4rem;">
                             <button type="button" @click="toggle()"
-                                    style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); font-size: 12px; color: #616161; background: none; border: none; cursor: pointer;"
+                                    style="position: absolute; right: 0; top: 0; bottom: 0; min-width: 2.75rem; padding: 0 0.75rem; font-size: 12px; color: #616161; background: none; border: none; cursor: pointer;"
                                     x-text="show ? 'Hide' : 'Show'"></button>
                         </div>
                         <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Meta Developer Console &rarr; App Settings &rarr; Basic &rarr; App Secret</p>
@@ -131,7 +131,7 @@
                                    value="{{ old('sms_api_key', $settings['sms_api_key'] ?? '') }}"
                                    autocomplete="new-password" class="form-input" style="padding-right: 4rem;">
                             <button type="button" @click="toggle()"
-                                    style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); font-size: 12px; color: #616161; background: none; border: none; cursor: pointer;"
+                                    style="position: absolute; right: 0; top: 0; bottom: 0; min-width: 2.75rem; padding: 0 0.75rem; font-size: 12px; color: #616161; background: none; border: none; cursor: pointer;"
                                     x-text="show ? 'Hide' : 'Show'"></button>
                         </div>
                     </div>
@@ -179,7 +179,7 @@
                                    placeholder="sk-ant-..."
                                    class="form-input" style="padding-right: 4rem; font-family: monospace; font-size: 13px;">
                             <button type="button" @click="toggle()"
-                                    style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); font-size: 12px; color: #616161; background: none; border: none; cursor: pointer;"
+                                    style="position: absolute; right: 0; top: 0; bottom: 0; min-width: 2.75rem; padding: 0 0.75rem; font-size: 12px; color: #616161; background: none; border: none; cursor: pointer;"
                                     x-text="show ? 'Hide' : 'Show'"></button>
                         </div>
                         <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
@@ -209,7 +209,7 @@
                                    placeholder="AIzaSy..."
                                    class="form-input" style="padding-right: 4rem; font-family: monospace; font-size: 13px;">
                             <button type="button" @click="toggle()"
-                                    style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); font-size: 12px; color: #616161; background: none; border: none; cursor: pointer;"
+                                    style="position: absolute; right: 0; top: 0; bottom: 0; min-width: 2.75rem; padding: 0 0.75rem; font-size: 12px; color: #616161; background: none; border: none; cursor: pointer;"
                                     x-text="show ? 'Hide' : 'Show'"></button>
                         </div>
                         <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">

@@ -21,11 +21,11 @@ $icons = [
     <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         {!! $icons !!}
     </svg>
-    <div class="flex-1">
+    <div class="flex-1 min-w-0">
         {{ $slot }}
     </div>
     @if($dismissible)
-        <button @click="show = false" class="shrink-0 text-current opacity-50 hover:opacity-75">
+        <button @click="show = false" class="shrink-0 p-2.5 -m-2.5 text-current opacity-50 hover:opacity-75">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
             </svg>

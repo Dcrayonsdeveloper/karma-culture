@@ -58,7 +58,7 @@
                                 <span class="absolute top-2 left-2 z-10 bg-[#8c5c34] text-white text-[10px] font-bold px-2 py-0.5 rounded-md" x-text="item.discount + '% Off'"></span>
                             </template>
                             <button @click.prevent="$store.wishlist.remove(item.id)"
-                                    class="absolute top-2 right-2 z-10 w-8 h-8 flex items-center justify-center bg-white/90 rounded-full text-[#8c5c34] hover:bg-white shadow-sm"
+                                    class="absolute top-2 right-2 z-10 w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center bg-white/90 rounded-full text-[#8c5c34] hover:bg-white shadow-sm"
                                     aria-label="Remove from wishlist">
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
                             </button>
@@ -75,7 +75,7 @@
                                 <p class="text-[11px] font-medium text-red-500 mt-1">Out of Stock</p>
                             </template>
                             <a :href="item.url"
-                               class="mt-3 block w-full py-2.5 text-center text-[12px] font-semibold text-white rounded-md transition-colors"
+                               class="mt-3 block w-full py-3 sm:py-2.5 text-center text-[12px] font-semibold text-white rounded-md transition-colors"
                                style="background:#2D1810;"
                                onmouseover="this.style.background='#1F1109'" onmouseout="this.style.background='#2D1810'">
                                 View Product

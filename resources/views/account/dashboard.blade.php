@@ -6,6 +6,23 @@
         // missing, so a deleted product or a file that has gone from disk still
         // shows something rather than an empty box.
         $placeholder = asset_v('images/no-product-image.svg');
+
+        // One entry per orders.status value. The badge used to test for
+        // "completed", which is not in the enum and is written nowhere, so a
+        // delivered order never went green here even though the same order is
+        // green on My Orders; every other status fell to the same blue.
+        $badgeClasses = [
+            'pending' => 'badge-warning',
+            'on_hold' => 'badge-warning',
+            'confirmed' => 'badge-info',
+            'processing' => 'badge-info',
+            'packed' => 'badge-info',
+            'shipped' => 'badge-info',
+            'out_for_delivery' => 'badge-info',
+            'delivered' => 'badge-success',
+            'cancelled' => 'badge-error',
+            'returned' => 'badge-neutral',
+        ];
     @endphp
 
     {{-- These wells are only 44-80px across, and the shared frame is tuned for a
@@ -42,7 +59,7 @@
                                      onerror="this.remove()">
                             @endif
                         </div>
-                        <div>
+                        <div class="min-w-0">
                             <h1 class="text-lg sm:text-xl font-bold">Welcome back, {{ $user->first_name }}!</h1>
                             <p class="text-sm text-white/80">Member since {{ $user->created_at->format('F Y') }}</p>
                         </div>
@@ -50,22 +67,30 @@
                 </div>
 
                 <!-- Order Stats -->
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
+                {{-- One tile per bucket of Order::STATUS_BUCKETS, which covers the
+                     status enum exhaustively, so these four always add back up to
+                     the total. The old row named three literal statuses, which is
+                     why a pending order showed as "Total 1" and four zeroes. --}}
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4 mb-6">
                     <div class="bg-white border border-neutral-100 rounded-xl p-4 text-center">
                         <div class="text-2xl font-bold text-neutral-900">{{ $orderStats['total'] }}</div>
                         <div class="text-xs text-neutral-600 mt-0.5">Total Orders</div>
                     </div>
                     <div class="bg-white border border-neutral-100 rounded-xl p-4 text-center">
-                        <div class="text-2xl font-bold text-warning-600">{{ $orderStats['confirmed'] }}</div>
-                        <div class="text-xs text-neutral-600 mt-0.5">Confirmed</div>
+                        <div class="text-2xl font-bold text-warning-600">{{ $orderStats['pending'] }}</div>
+                        <div class="text-xs text-neutral-600 mt-0.5">Pending</div>
                     </div>
                     <div class="bg-white border border-neutral-100 rounded-xl p-4 text-center">
-                        <div class="text-2xl font-bold text-info-600">{{ $orderStats['processing'] }}</div>
-                        <div class="text-xs text-neutral-600 mt-0.5">Processing</div>
+                        <div class="text-2xl font-bold text-info-600">{{ $orderStats['in_progress'] }}</div>
+                        <div class="text-xs text-neutral-600 mt-0.5">In Progress</div>
                     </div>
                     <div class="bg-white border border-neutral-100 rounded-xl p-4 text-center">
-                        <div class="text-2xl font-bold text-success-600">{{ $orderStats['completed'] }}</div>
-                        <div class="text-xs text-neutral-600 mt-0.5">Completed</div>
+                        <div class="text-2xl font-bold text-success-600">{{ $orderStats['delivered'] }}</div>
+                        <div class="text-xs text-neutral-600 mt-0.5">Delivered</div>
+                    </div>
+                    <div class="bg-white border border-neutral-100 rounded-xl p-4 text-center">
+                        <div class="text-2xl font-bold text-neutral-400">{{ $orderStats['closed'] }}</div>
+                        <div class="text-xs text-neutral-600 mt-0.5">Cancelled</div>
                     </div>
                 </div>
 
@@ -83,7 +108,10 @@
                         <svg class="w-7 h-7 mx-auto text-primary-500 mb-2 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                         </svg>
-                        <span class="text-[13px] font-medium text-neutral-700">Wishlist ({{ $wishlistCount }})</span>
+                        {{-- The wishlist is the kk_wishlist cookie, not the wishlists
+                             table, so the count has to come from the same Alpine store
+                             the header badge uses or the two disagree on one screen. --}}
+                        <span class="text-[13px] font-medium text-neutral-700">Wishlist (<span x-data x-text="$store.wishlist.count">0</span>)</span>
                     </a>
                     <a href="{{ route('account.addresses.index') }}" class="bg-white border border-neutral-100 rounded-xl p-4 text-center hover:border-primary-300 hover:shadow-sm transition-all group">
                         <svg class="w-7 h-7 mx-auto text-primary-500 mb-2 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -105,14 +133,14 @@
                 <div class="bg-white border border-neutral-100 rounded-xl overflow-hidden">
                     <div class="px-5 py-4 border-b border-neutral-100 flex items-center justify-between">
                         <h2 class="text-[15px] font-semibold text-neutral-900">Recent Orders</h2>
-                        <a href="{{ route('account.orders.index') }}" class="text-[13px] text-primary-600 hover:text-primary-700 font-medium">View All</a>
+                        <a href="{{ route('account.orders.index') }}" class="inline-flex items-center min-h-10 sm:min-h-0 text-[13px] text-primary-600 hover:text-primary-700 font-medium">View All</a>
                     </div>
 
                     @if($recentOrders->count())
                         <div class="divide-y divide-neutral-100">
                             @foreach($recentOrders as $order)
                                 <div class="px-5 py-4 flex items-center justify-between gap-4">
-                                    <div class="flex items-center gap-3.5">
+                                    <div class="flex items-center gap-3.5 min-w-0">
                                         {{-- Contained in the fixed 44px well so the row keeps its height
                                              and the order is still recognisable from its first item. --}}
                                         <div class="kk-media kk-media--thumb w-11 h-11 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
@@ -133,18 +161,19 @@
                                                 </svg>
                                             @endif
                                         </div>
-                                        <div>
+                                        <div class="min-w-0">
                                             <a href="{{ route('account.orders.show', $order) }}" class="text-[13px] font-semibold text-neutral-900 hover:text-primary-600">
                                                 Order #{{ $order->order_number }}
                                             </a>
                                             <p class="text-xs text-neutral-600 mt-0.5">
-                                                {{ $order->created_at->format('M d, Y') }} &middot; {{ $order->items_count }} items
+                                                @php($orderUnits = $order->items->sum('quantity'))
+                                                {{ $order->created_at->format('M d, Y') }} &middot; {{ $orderUnits }} {{ Str::plural('item', $orderUnits) }}
                                             </p>
                                         </div>
                                     </div>
                                     <div class="text-right shrink-0">
                                         <div class="text-[13px] font-semibold text-neutral-900">@price($order->total)</div>
-                                        <span class="badge mt-1 {{ $order->status === 'completed' ? 'badge-success' : ($order->status === 'pending' ? 'badge-warning' : ($order->status === 'cancelled' ? 'badge-error' : 'badge-info')) }}">
+                                        <span class="badge mt-1 {{ $badgeClasses[$order->status] ?? 'badge-neutral' }}">
                                             {{ ucfirst(str_replace('_', ' ', $order->status)) }}
                                         </span>
                                     </div>

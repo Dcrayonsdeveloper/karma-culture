@@ -105,7 +105,7 @@
                                                     @click="rating = {{ $i }}"
                                                     @mouseenter="hoveredRating = {{ $i }}"
                                                     @mouseleave="hoveredRating = 0"
-                                                    class="focus:outline-none transition-transform hover:scale-110">
+                                                    class="p-1 -m-1 focus:outline-none transition-transform hover:scale-110">
                                                 <svg class="w-8 h-8 transition-colors"
                                                      :class="(hoveredRating || rating) >= {{ $i }} ? 'text-amber-400' : 'text-neutral-200'"
                                                      fill="currentColor" viewBox="0 0 20 20">
@@ -181,7 +181,7 @@
                             </div>
 
                             {{-- Submit --}}
-                            <div class="flex items-center gap-3 pt-2">
+                            <div class="flex flex-wrap items-center gap-3 pt-2">
                                 <button type="submit"
                                         :disabled="rating === 0"
                                         :class="rating === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#E07E0A]'"

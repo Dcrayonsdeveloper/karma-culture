@@ -27,8 +27,16 @@
         .check-col { width: 40px; text-align: center; }
         .checkbox { width: 16px; height: 16px; border: 2px solid #999; display: inline-block; border-radius: 3px; }
         .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; }
-        .footer .signature { margin-top: 40px; display: flex; justify-content: space-between; }
+        .footer .signature { margin-top: 40px; display: flex; justify-content: space-between; gap: 12px; }
         .footer .signature .line { width: 200px; border-top: 1px solid #999; padding-top: 5px; font-size: 12px; color: #666; text-align: center; }
+        /* On-screen phone view; print is untouched. */
+        @media screen and (max-width: 640px) {
+            .slip { padding: 20px 16px; }
+            .header { flex-wrap: wrap; gap: 12px; }
+            .header .order-info { text-align: left; }
+            .ship-to p, .product-sku { overflow-wrap: anywhere; }
+            thead th, tbody td { padding: 10px 8px; }
+        }
         @media print {
             body { font-size: 12px; }
             .slip { padding: 0; }

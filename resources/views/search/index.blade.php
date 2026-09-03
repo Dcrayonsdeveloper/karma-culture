@@ -61,7 +61,7 @@
                                autocomplete="off"
                                aria-label="Search products">
                         <button type="submit"
-                                class="absolute right-1.5 px-4 py-2 bg-kk-brown text-white text-sm font-semibold rounded-full">
+                                class="absolute right-1.5 min-h-10 sm:min-h-0 px-4 py-2 bg-kk-brown text-white text-sm font-semibold rounded-full">
                             Search
                         </button>
                     </div>
@@ -73,7 +73,7 @@
                         <h3 class="text-sm font-medium text-neutral-700 mb-4">Popular Categories</h3>
                         <div class="flex flex-wrap justify-center gap-2">
                             @foreach($categories as $category)
-                                <a href="{{ route('category.show', $category) }}" class="btn btn-outline text-sm">
+                                <a href="{{ route('category.show', $category) }}" class="btn btn-outline text-sm min-h-10 sm:min-h-0">
                                     {{ $category->name }}
                                 </a>
                             @endforeach

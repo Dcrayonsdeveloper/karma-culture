@@ -126,7 +126,7 @@
                             <td style="padding: 0.5rem 1rem; text-align: right;">
                                 <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.25rem;">
                                     <a href="{{ route('admin.enquiries.show', $enquiry) }}" title="View"
-                                       style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.5rem; border-radius: 0.375rem; font-size: 12px; font-weight: 500; color: #005bd3; text-decoration: none;"
+                                       style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.5rem; min-height: 2.25rem; border-radius: 0.375rem; font-size: 12px; font-weight: 500; color: #005bd3; text-decoration: none;"
                                        onmouseover="this.style.backgroundColor='#e0f0ff'" onmouseout="this.style.backgroundColor='transparent'">
                                         <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -138,7 +138,7 @@
                                         @csrf
                                         @method('PUT')
                                         <button type="submit" title="{{ $enquiry->is_read ? 'Mark as unread' : 'Mark as read' }}"
-                                                style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.5rem; border-radius: 0.375rem; font-size: 12px; font-weight: 500; color: #616161; background: none; border: none; cursor: pointer;"
+                                                style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.5rem; min-height: 2.25rem; border-radius: 0.375rem; font-size: 12px; font-weight: 500; color: #616161; background: none; border: none; cursor: pointer;"
                                                 onmouseover="this.style.backgroundColor='#f1f1f1'" onmouseout="this.style.backgroundColor='transparent'">
                                             @if($enquiry->is_read)
                                                 <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -158,7 +158,7 @@
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" title="Delete"
-                                                style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.5rem; border-radius: 0.375rem; font-size: 12px; font-weight: 500; color: #d72c0d; background: none; border: none; cursor: pointer;"
+                                                style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; padding: 0.25rem 0.5rem; min-width: 2.25rem; min-height: 2.25rem; border-radius: 0.375rem; font-size: 12px; font-weight: 500; color: #d72c0d; background: none; border: none; cursor: pointer;"
                                                 onmouseover="this.style.backgroundColor='#ffe0db'" onmouseout="this.style.backgroundColor='transparent'">
                                             <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>

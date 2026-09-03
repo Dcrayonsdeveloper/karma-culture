@@ -149,14 +149,14 @@
                                            @keydown.enter="choose($event)"
                                            value="{{ old('exit_popup_code', $settings['exit_popup_code'] ?? '') }}"
                                            class="form-input"
-                                           style="text-transform: uppercase;@if(! empty($couponCodes)) padding-right: 2.25rem;@endif">
+                                           style="text-transform: uppercase;@if(! empty($couponCodes)) padding-right: 2.75rem;@endif">
                                     @if(! empty($couponCodes))
                                         {{-- tabindex -1: the input already opens the list with the
                                              down arrow, so Tab should reach Countdown rather than
                                              stopping on a second control for the same field. --}}
                                         <button type="button" tabindex="-1" @click="toggle()"
                                                 :aria-label="open ? 'Hide the discount codes' : 'Show the discount codes that exist'"
-                                                style="position: absolute; top: 0; right: 0; height: 100%; width: 2.25rem; display: flex; align-items: center; justify-content: center; padding: 0; background: none; border: 0; color: #616161; cursor: pointer;">
+                                                style="position: absolute; top: 0; right: 0; height: 100%; width: 2.75rem; display: flex; align-items: center; justify-content: center; padding: 0; background: none; border: 0; color: #616161; cursor: pointer;">
                                             <svg style="width: 14px; height: 14px; transition: transform .15s;" :style="open ? 'transform: rotate(180deg);' : ''"
                                                  fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>

@@ -20,23 +20,29 @@
         @media (max-width: 1023px) {
             body { background: linear-gradient(180deg, #ffffff 0%, #fdf5ff 50%, #fae6ff 100%); }
         }
+        /* 100vh on a phone is the tallest viewport (browser bar hidden), and this
+           page never scrolls the document, so the bar never collapses: the last
+           inch of the form sat below the screen. dvh tracks the visible area. */
+        @supports (height: 100dvh) {
+            .kk-auth-shell { height: 100dvh; }
+        }
     </style>
 </head>
 <body class="font-sans antialiased bg-white" x-data>
-    <div class="h-screen flex overflow-hidden">
+    <div class="kk-auth-shell h-screen flex overflow-hidden">
 
         <!-- LEFT SIDE - Form -->
-        <div class="w-full lg:w-1/2 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 py-6 lg:py-8 relative overflow-y-auto">
+        <div class="w-full lg:w-1/2 flex flex-col px-6 sm:px-12 lg:px-16 xl:px-24 py-6 lg:py-8 relative overflow-y-auto">
 
             <!-- Back to login link -->
-            <a href="{{ route('login') }}" class="absolute top-6 left-6 sm:left-12 lg:left-16 xl:left-24 flex items-center gap-2 text-sm text-neutral-600 hover:text-[#6F9CA2] transition-colors group">
+            <a href="{{ route('login') }}" class="self-start mb-6 lg:mb-0 lg:absolute lg:top-6 lg:left-16 xl:left-24 flex items-center gap-2 text-sm text-neutral-600 hover:text-[#6F9CA2] transition-colors group">
                 <svg class="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                 </svg>
                 Back to login
             </a>
 
-            <div class="w-full max-w-md mx-auto form-enter">
+            <div class="w-full max-w-md mx-auto my-auto form-enter">
                 <!-- Logo -->
                 <div class="mb-6">
                     <a href="{{ url('/') }}" class="inline-block">

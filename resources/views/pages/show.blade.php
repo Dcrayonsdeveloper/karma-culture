@@ -15,9 +15,9 @@
         <meta name="twitter:title" content="{{ $page->meta_title ?? $page->title }} - {{ config('app.name') }}">
     @endpush
 
-    <div class="container mx-auto px-4 py-12">
+    <div class="container mx-auto px-4 py-8 sm:py-12">
         <div class="max-w-4xl mx-auto">
-            <h1 class="text-4xl font-bold text-neutral-900 mb-6">{{ $page->title }}</h1>
+            <h1 class="text-2xl sm:text-4xl font-bold text-neutral-900 mb-6">{{ $page->title }}</h1>
 
             <div class="prose prose-lg max-w-none">
                 {!! safe_html($page->content, '<p><br><strong><em><ul><ol><li><h1><h2><h3><h4><h5><h6><a><span><div><table><tr><td><th><thead><tbody><img><blockquote><hr><figure><figcaption>') !!}

@@ -43,7 +43,7 @@
             <div x-show="open" x-collapse>
                 <div class="space-y-1.5 max-h-52 overflow-y-auto pt-1 pb-2">
                     @foreach($filterPanel['categories'] as $kkCat)
-                        <label class="flex items-center gap-2.5 cursor-pointer group py-0.5">
+                        <label class="flex items-center gap-2.5 cursor-pointer group py-0.5 min-h-10 lg:min-h-0">
                             <input type="radio" name="category" value="{{ $kkCat->slug }}"
                                    {{ $kkValues['category'] === $kkCat->slug ? 'checked' : '' }}
                                    @change.debounce.350ms="$el.form.submit()"
@@ -76,13 +76,24 @@
                     @foreach($filterPanel['subcategories'] as $kkSub)
                         {{-- A ticked box stays clickable even when the other filters have
                              emptied it out, or there would be no way to untick it. --}}
-                        @php $kkEmpty = ($kkSub->products_total ?? null) === 0 && ! in_array($kkSub->slug, $kkActiveSubs, true); @endphp
-                        <label class="flex items-center gap-2.5 py-0.5 group {{ $kkEmpty ? 'cursor-not-allowed opacity-45' : 'cursor-pointer' }}"
-                               @if($kkEmpty) title="Nothing in this collection yet" @endif>
-                            <input type="checkbox" name="subcategory[]" value="{{ $kkSub->slug }}" onchange="this.form.submit()" @disabled($kkEmpty)
+                        @php
+                            $kkEmpty = ($kkSub->products_total ?? null) === 0 && ! in_array($kkSub->slug, $kkActiveSubs, true);
+                            // The collection this page IS. The category page ticks it on
+                            // the shopper's behalf and re-ticks it on every submit, so as
+                            // a live checkbox it swallowed clicks and never changed -
+                            // unticking it just reloaded the same page with it ticked
+                            // again. Shown as settled instead: it is where they are
+                            // standing, and the way out is the parent category, not this
+                            // box. Disabled means the browser leaves it out of the submit,
+                            // which is exactly what unticking it already did.
+                            $kkPinned = ($filterPanel['pinned_subcategory'] ?? null) === $kkSub->slug;
+                        @endphp
+                        <label class="flex items-center gap-2.5 py-0.5 min-h-10 lg:min-h-0 group {{ $kkEmpty ? 'cursor-not-allowed opacity-45' : ($kkPinned ? 'cursor-default' : 'cursor-pointer') }}"
+                               @if($kkEmpty) title="Nothing in this collection yet" @elseif($kkPinned) title="You are browsing this collection" @endif>
+                            <input type="checkbox" name="subcategory[]" value="{{ $kkSub->slug }}" onchange="this.form.submit()" @disabled($kkEmpty || $kkPinned)
                                    {{ in_array($kkSub->slug, $kkActiveSubs, true) ? 'checked' : '' }}
                                    class="w-3.5 h-3.5 rounded border-neutral-300 accent-[#6F9CA2] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#6F9CA2]">
-                            <span class="text-sm text-neutral-600 group-hover:text-neutral-900 transition-colors">{{ $kkSub->name }}</span>
+                            <span class="text-sm {{ $kkPinned ? 'font-medium text-neutral-900' : 'text-neutral-600 group-hover:text-neutral-900' }} transition-colors">{{ $kkSub->name }}</span>
                             @isset($kkSub->products_total)
                                 <span class="ml-auto text-xs text-neutral-400 tabular-nums">{{ $kkSub->products_total }}</span>
                             @endisset
@@ -114,7 +125,7 @@
                                  its label near-black and swallow it. Tailwind v4 wraps peer-* in :where(),
                                  which zeroes its specificity, so peer-checked:text-white ties with the hover
                                  rule and loses on source order. The peer-checked:hover:* pair outranks it. --}}
-                            <span class="inline-block px-2.5 py-1 text-xs rounded-md border transition-colors
+                            <span class="inline-flex items-center min-h-10 lg:min-h-0 px-2.5 py-1 text-xs rounded-md border transition-colors
                                          border-neutral-200 text-neutral-700 hover:border-neutral-500 hover:text-neutral-900
                                          peer-checked:border-neutral-900 peer-checked:bg-neutral-900 peer-checked:text-white
                                          peer-checked:hover:text-white peer-checked:hover:border-neutral-900
@@ -151,7 +162,7 @@
                             {{-- Selected state is a ring, not a fill: filling the chip
                                  with black fights the swatch, which is the one thing
                                  the customer is actually reading. --}}
-                            <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded-md border transition-all
+                            <span class="inline-flex items-center min-h-10 lg:min-h-0 gap-1.5 px-2 py-1 text-xs rounded-md border transition-all
                                          border-neutral-200 text-neutral-700 bg-white hover:border-neutral-500
                                          peer-checked:border-neutral-900 peer-checked:text-neutral-900 peer-checked:font-semibold
                                          peer-checked:ring-2 peer-checked:ring-neutral-900/15 peer-checked:shadow-sm
@@ -180,7 +191,7 @@
             <div x-show="open" x-collapse>
                 <div class="space-y-1.5 max-h-52 overflow-y-auto pt-1 pb-2">
                     @foreach($filterPanel['brands'] as $kkBrand)
-                        <label class="flex items-center gap-2.5 cursor-pointer group py-0.5">
+                        <label class="flex items-center gap-2.5 cursor-pointer group py-0.5 min-h-10 lg:min-h-0">
                             <input type="checkbox" name="brand[]" value="{{ $kkBrand->slug }}" onchange="this.form.submit()"
                                    {{ in_array($kkBrand->slug, $kkValues['brand'], true) ? 'checked' : '' }}
                                    class="w-3.5 h-3.5 rounded border-neutral-300 accent-[#6F9CA2] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#6F9CA2]">
@@ -245,7 +256,7 @@
                          shopper picked 4 stars, the only way back to an unfiltered list
                          was the chip above the grid - and on a page scrolled past it,
                          nothing in the sidebar could undo the choice at all. --}}
-                    <label class="flex items-center gap-2.5 cursor-pointer group py-0.5">
+                    <label class="flex items-center gap-2.5 cursor-pointer group py-0.5 min-h-10 lg:min-h-0">
                         <input type="radio" name="rating" value=""
                                {{ $kkValues['rating'] === null ? 'checked' : '' }}
                                @change.debounce.350ms="$el.form.submit()"
@@ -263,7 +274,7 @@
                          until a review is approved, so it is the "has been reviewed at
                          all" filter, not a no-op. --}}
                     @for($kkStars = 5; $kkStars >= 1; $kkStars--)
-                        <label class="flex items-center gap-2.5 cursor-pointer group py-0.5">
+                        <label class="flex items-center gap-2.5 cursor-pointer group py-0.5 min-h-10 lg:min-h-0">
                             <input type="radio" name="rating" value="{{ $kkStars }}"
                                    {{ $kkValues['rating'] === $kkStars ? 'checked' : '' }}
                                    @change.debounce.350ms="$el.form.submit()"
@@ -300,14 +311,14 @@
         </button>
         <div x-show="open" x-collapse>
             <div class="space-y-2 pt-1 pb-2">
-                <label class="flex items-center gap-2.5 cursor-pointer group py-0.5">
+                <label class="flex items-center gap-2.5 cursor-pointer group py-0.5 min-h-10 lg:min-h-0">
                     <input type="checkbox" name="in_stock" value="1" onchange="this.form.submit()"
                            @checked($kkValues['in_stock'])
                            class="w-3.5 h-3.5 rounded border-neutral-300 accent-[#6F9CA2] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#6F9CA2]">
                     <span class="text-sm text-neutral-600 group-hover:text-neutral-900 transition-colors">In Stock Only</span>
                 </label>
                 @if($filterPanel['show_on_sale'] ?? true)
-                    <label class="flex items-center gap-2.5 cursor-pointer group py-0.5">
+                    <label class="flex items-center gap-2.5 cursor-pointer group py-0.5 min-h-10 lg:min-h-0">
                         <input type="checkbox" name="on_sale" value="1" onchange="this.form.submit()"
                                @checked($kkValues['on_sale'])
                                class="w-3.5 h-3.5 rounded border-neutral-300 accent-[#6F9CA2] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#6F9CA2]">

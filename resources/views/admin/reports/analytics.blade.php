@@ -37,18 +37,20 @@
         view no longer does arithmetic of its own.
     --}}
     @if($funnel['visitors'] > 0)
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #e3e3e3; border-radius: 0.75rem; overflow: hidden; margin-bottom: 1rem;">
-            <div style="background: white; padding: 0.875rem 1rem; border-left: 3px solid #005bd3;">
+        {{-- A wrapping flex row, not a grid: a tile that wraps alone onto its own
+             line stretches across it, so the grey backdrop never shows through. --}}
+        <div style="display: flex; flex-wrap: wrap; gap: 1px; background: #e3e3e3; border-radius: 0.75rem; overflow: hidden; margin-bottom: 1rem;">
+            <div style="flex: 1 1 200px; background: white; padding: 0.875rem 1rem; border-left: 3px solid #005bd3;">
                 <div style="font-size: 12px; color: #616161;">Visitor &rarr; Cart Rate</div>
                 <div style="font-size: 1.25rem; font-weight: 600; color: #303030; margin-top: 0.125rem;">{{ $rates['visitor_to_cart'] }}%</div>
                 <div style="font-size: 12px; color: #616161; margin-top: 0.25rem;">{{ number_format($funnel['add_to_cart']) }} of {{ number_format($funnel['visitors']) }} visitors</div>
             </div>
-            <div style="background: white; padding: 0.875rem 1rem; border-left: 3px solid #b98900;">
+            <div style="flex: 1 1 200px; background: white; padding: 0.875rem 1rem; border-left: 3px solid #b98900;">
                 <div style="font-size: 12px; color: #616161;">Visitor &rarr; Order Rate</div>
                 <div style="font-size: 1.25rem; font-weight: 600; color: #303030; margin-top: 0.125rem;">{{ $rates['visitor_to_order'] }}%</div>
                 <div style="font-size: 12px; color: #616161; margin-top: 0.25rem;">{{ number_format($funnel['checkout']) }} of {{ number_format($funnel['visitors']) }} visitors</div>
             </div>
-            <div style="background: white; padding: 0.875rem 1rem; border-left: 3px solid #1a7a2e;">
+            <div style="flex: 1 1 200px; background: white; padding: 0.875rem 1rem; border-left: 3px solid #1a7a2e;">
                 <div style="font-size: 12px; color: #616161;">Overall Conversion</div>
                 <div style="font-size: 1.25rem; font-weight: 600; color: #1a7a2e; margin-top: 0.125rem;">{{ $rates['overall'] }}%</div>
                 <div style="font-size: 12px; color: #616161; margin-top: 0.25rem;">{{ number_format($funnel['completed']) }} bought of {{ number_format($funnel['visitors']) }}</div>
@@ -243,7 +245,7 @@
                                 ['label' => 'Tablet',  'pct' => $devices['tablet'],  'color' => '#b98900'],
                             ];
                         @endphp
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 0.75rem;">
                             @foreach($deviceItems as $d)
                                 <div style="background: #f6f6f7; border-radius: 0.75rem; padding: 0.75rem; text-align: center;">
                                     <div style="font-size: 1.125rem; font-weight: 600; color: #303030;">{{ $d['pct'] }}%</div>

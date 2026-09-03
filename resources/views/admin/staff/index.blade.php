@@ -67,12 +67,12 @@
                                 <span style="font-size: 13px; color: #616161;">{{ $member->created_at->format('M d, Y') }}</span>
                             </td>
                             <td style="text-align: right; padding-right: 1rem;">
-                                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem;">
+                                <div class="kk-row-actions" style="display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem;">
                                     <a href="{{ route('admin.staff.edit', $member) }}" style="font-size: 13px; font-weight: 500; color: #005bd3; text-decoration: none;" onclick="event.stopPropagation()">Edit</a>
                                     <form action="{{ route('admin.staff.destroy', $member) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this staff member?')" onclick="event.stopPropagation()">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" style="font-size: 13px; font-weight: 500; color: #d72c0d; background: none; border: none; cursor: pointer; padding: 0;">Delete</button>
+                                        <button type="submit" style="font-size: 13px; font-weight: 500; color: #d72c0d; background: none; border: none; cursor: pointer;">Delete</button>
                                     </form>
                                 </div>
                             </td>
@@ -80,7 +80,7 @@
                     @empty
                         <tr>
                             <td colspan="6" style="padding: 3rem 1rem; text-align: center;">
-                                <div style="display: flex; flex-direction: column; align-items: center;">
+                                <div style="display: flex; flex-direction: column; align-items: center; position: sticky; left: 0; max-width: calc(100vw - 4rem);">
                                     <div style="width: 3rem; height: 3rem; border-radius: 50%; background: #f1f1f1; display: flex; align-items: center; justify-content: center; margin-bottom: 0.75rem;">
                                         <svg width="20" height="20" style="color: #999;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -109,4 +109,21 @@
             </div>
         @endif
     </div>
+    @push('styles')
+    <style>
+        /* Touch: the compact Search button and the Edit / Delete row actions
+           reach a 36px target without changing the row height. */
+        @media (pointer: coarse) {
+            .layout-admin main .btn-sm { min-height: 2.25rem; }
+            .kk-row-actions > a,
+            .kk-row-actions > form > button {
+                display: inline-flex;
+                align-items: center;
+                min-height: 2.25rem;
+                padding: 0 0.375rem;
+                margin: -0.5rem 0;
+            }
+        }
+    </style>
+    @endpush
 </x-layouts.admin>

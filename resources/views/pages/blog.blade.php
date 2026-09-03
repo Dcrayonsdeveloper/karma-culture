@@ -45,7 +45,7 @@
                            class="w-full pl-9 pr-4 py-2 border border-neutral-200 rounded-full text-[13px] focus:outline-none focus:border-primary-300 focus:ring-2 focus:ring-primary-100 bg-white">
                 </div>
                 @if(request('search'))
-                    <button type="submit" class="px-5 py-2 bg-primary-600 text-white text-[13px] font-medium rounded-full hover:bg-primary-700 transition-colors">
+                    <button type="submit" class="w-full sm:w-auto min-h-10 sm:min-h-0 px-5 py-2 bg-primary-600 text-white text-[13px] font-medium rounded-full hover:bg-primary-700 transition-colors">
                         Search
                     </button>
                 @endif
@@ -54,12 +54,12 @@
             @if($categories->count())
                 <div class="flex flex-wrap justify-center gap-2 mb-8">
                     <a href="{{ route('blog') }}"
-                       class="px-4 py-1.5 rounded-full text-[13px] font-medium transition-colors {{ !request('category') ? 'bg-primary-600 text-white shadow-sm' : 'bg-white border border-neutral-200 text-neutral-600 hover:border-primary-300 hover:text-primary-600' }}">
+                       class="inline-flex items-center min-h-10 sm:min-h-0 px-4 py-1.5 rounded-full text-[13px] font-medium transition-colors {{ !request('category') ? 'bg-primary-600 text-white shadow-sm' : 'bg-white border border-neutral-200 text-neutral-600 hover:border-primary-300 hover:text-primary-600' }}">
                         All Posts
                     </a>
                     @foreach($categories as $cat)
                         <a href="{{ route('blog', ['category' => $cat]) }}"
-                           class="px-4 py-1.5 rounded-full text-[13px] font-medium transition-colors {{ request('category') === $cat ? 'bg-primary-600 text-white shadow-sm' : 'bg-white border border-neutral-200 text-neutral-600 hover:border-primary-300 hover:text-primary-600' }}">
+                           class="inline-flex items-center min-h-10 sm:min-h-0 px-4 py-1.5 rounded-full text-[13px] font-medium transition-colors {{ request('category') === $cat ? 'bg-primary-600 text-white shadow-sm' : 'bg-white border border-neutral-200 text-neutral-600 hover:border-primary-300 hover:text-primary-600' }}">
                             {{ $cat }}
                         </a>
                     @endforeach

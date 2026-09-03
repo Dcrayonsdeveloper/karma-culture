@@ -26,15 +26,21 @@
         @media (max-width: 1023px) {
             body { background: linear-gradient(180deg, #ffffff 0%, #f0f7f8 50%, #d9ecee 100%); }
         }
+        /* 100vh on a phone is the tallest viewport (browser bar hidden), and this
+           page never scrolls the document, so the bar never collapses: the last
+           inch of the form sat below the screen. dvh tracks the visible area. */
+        @supports (height: 100dvh) {
+            .kk-auth-shell { height: 100dvh; }
+        }
     </style>
 </head>
 <body class="font-sans antialiased bg-white" x-data>
-    <div class="h-screen flex overflow-hidden">
+    <div class="kk-auth-shell h-screen flex overflow-hidden">
 
         <!-- ==========================================
              LEFT SIDE - Login / Register Forms
              ========================================== -->
-        <div class="w-full lg:w-1/2 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 py-6 lg:py-8 relative overflow-y-auto"
+        <div class="w-full lg:w-1/2 flex flex-col px-6 sm:px-12 lg:px-16 xl:px-24 py-6 lg:py-8 relative overflow-y-auto"
              x-data="{
                 mode: '{{ $errors->has('full_name') || $errors->has('phone') || $errors->has('terms') || old('_register') || request()->get('mode') === 'register' ? 'register' : 'login' }}',
                 switching: false,
@@ -48,7 +54,7 @@
                 }
              }">
 
-            <div class="w-full max-w-md mx-auto">
+            <div class="w-full max-w-md mx-auto my-auto">
                 <!-- Back to home link -->
                 <a href="{{ url('/') }}" class="inline-flex items-center gap-2 text-sm text-neutral-600 hover:text-[#3A6166] transition-colors group mb-6 mt-2">
                     <svg class="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -141,7 +147,7 @@
                                     <input :type="show ? 'text' : 'password'" name="password" id="login_password" required
                                            class="w-full pl-12 pr-12 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all @error('password') border-red-300 bg-red-50 @enderror"
                                            placeholder="Enter your password">
-                                    <button type="button" @click="show = !show" class="absolute inset-y-0 right-0 pr-4 flex items-center text-neutral-600 hover:text-neutral-600 transition-colors">
+                                    <button type="button" @click="show = !show" class="absolute inset-y-0 right-0 pl-3 pr-4 flex items-center text-neutral-600 hover:text-neutral-600 transition-colors">
                                         <svg x-show="!show" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -334,7 +340,7 @@
                                                class="w-full px-4 pr-11 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all"
                                                :class="errors.password && 'border-red-300 bg-red-50'"
                                                placeholder="Min 8 characters">
-                                        <button type="button" @click="show = !show" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-neutral-600 hover:text-neutral-600 transition-colors">
+                                        <button type="button" @click="show = !show" class="absolute inset-y-0 right-0 pl-2.5 pr-3.5 flex items-center text-neutral-600 hover:text-neutral-600 transition-colors">
                                             <svg x-show="!show" class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -366,7 +372,7 @@
                                                placeholder="Repeat password">
                                         <button type="button" @click="show = !show"
                                                 :aria-label="show ? 'Hide password' : 'Show password'"
-                                                class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-neutral-600 hover:text-neutral-600 transition-colors">
+                                                class="absolute inset-y-0 right-0 pl-2.5 pr-3.5 flex items-center text-neutral-600 hover:text-neutral-600 transition-colors">
                                             <svg x-show="!show" class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>

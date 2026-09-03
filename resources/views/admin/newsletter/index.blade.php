@@ -27,23 +27,23 @@
     @endif
 
     {{-- Stats --}}
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #e3e3e3; border-radius: 0.75rem; overflow: hidden; margin-bottom: 1rem;">
-        <div style="background: white; padding: 0.875rem 1rem;">
+    <div style="display: flex; flex-wrap: wrap; gap: 1px; background: #e3e3e3; border-radius: 0.75rem; overflow: hidden; margin-bottom: 1rem;">
+        <div style="flex: 1 1 10rem; background: white; padding: 0.875rem 1rem;">
             <div style="font-size: 12px; color: #616161;">Total Subscribers</div>
             <div style="font-size: 1.25rem; font-weight: 600; color: #303030;">{{ number_format($stats['total']) }}</div>
         </div>
-        <div style="background: white; padding: 0.875rem 1rem;">
+        <div style="flex: 1 1 10rem; background: white; padding: 0.875rem 1rem;">
             <div style="font-size: 12px; color: #616161;">Active</div>
             <div style="font-size: 1.25rem; font-weight: 600; color: #1a7a2e;">{{ number_format($stats['active']) }}</div>
         </div>
-        <div style="background: white; padding: 0.875rem 1rem;">
+        <div style="flex: 1 1 10rem; background: white; padding: 0.875rem 1rem;">
             <div style="font-size: 12px; color: #616161;">Unsubscribed</div>
             <div style="font-size: 1.25rem; font-weight: 600; color: #616161;">{{ number_format($stats['inactive']) }}</div>
         </div>
     </div>
 
     {{-- Card with tabs + search + table --}}
-    <div style="background: white; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); overflow: hidden;"
+    <div class="card" style="background: white; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); overflow: hidden;"
          x-data="{
              selected: [],
              toggleAll(checked, ids) { this.selected = checked ? ids : []; },
@@ -126,11 +126,11 @@
                 <template x-for="id in selected" :key="id">
                     <input type="hidden" name="ids[]" :value="id">
                 </template>
-                <button type="submit" name="action" value="activate" class="btn btn-sm btn-secondary" style="color: #1a7a2e;">Activate</button>
-                <button type="submit" name="action" value="deactivate" class="btn btn-sm btn-secondary" style="color: #b98900;">Deactivate</button>
+                <button type="submit" name="action" value="activate" class="btn btn-sm btn-secondary pointer-coarse:min-h-9" style="color: #1a7a2e;">Activate</button>
+                <button type="submit" name="action" value="deactivate" class="btn btn-sm btn-secondary pointer-coarse:min-h-9" style="color: #b98900;">Deactivate</button>
                 <button type="submit" name="action" value="delete"
                         onclick="return confirm('Delete selected subscribers?')"
-                        class="btn btn-sm btn-secondary" style="color: #d72c0d;">Delete</button>
+                        class="btn btn-sm btn-secondary pointer-coarse:min-h-9" style="color: #d72c0d;">Delete</button>
             </form>
         </div>
 
@@ -141,9 +141,11 @@
                     <tr style="border-bottom: 1px solid #e3e3e3;">
                         <th style="padding: 0.5rem 1rem; text-align: left; width: 40px;">
                             @php $ids = $subscribers->pluck('id')->toArray(); @endphp
-                            <input type="checkbox"
-                                   @change="toggleAll($event.target.checked, {{ json_encode($ids) }})"
-                                   :checked="selected.length === {{ count($ids) }} && {{ count($ids) }} > 0">
+                            <label style="display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; margin: -0.5rem; vertical-align: middle; cursor: pointer;">
+                                <input type="checkbox"
+                                       @change="toggleAll($event.target.checked, {{ json_encode($ids) }})"
+                                       :checked="selected.length === {{ count($ids) }} && {{ count($ids) }} > 0">
+                            </label>
                         </th>
                         <th style="padding: 0.5rem 1rem; text-align: left; font-weight: 500; color: #616161; font-size: 12px;">Email</th>
                         <th style="padding: 0.5rem 1rem; text-align: left; font-weight: 500; color: #616161; font-size: 12px;">Name</th>
@@ -160,9 +162,11 @@
                             onmouseover="this.style.background='#f6f6f7'"
                             onmouseout="this.style.background='transparent'">
                             <td style="padding: 0.625rem 1rem;">
-                                <input type="checkbox"
-                                       :checked="selected.includes({{ $subscriber->id }})"
-                                       @change="toggle({{ $subscriber->id }})">
+                                <label style="display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; margin: -0.5rem; vertical-align: middle; cursor: pointer;">
+                                    <input type="checkbox"
+                                           :checked="selected.includes({{ $subscriber->id }})"
+                                           @change="toggle({{ $subscriber->id }})">
+                                </label>
                             </td>
                             <td style="padding: 0.625rem 1rem; font-weight: 500; color: #303030;">
                                 {{ $subscriber->email }}

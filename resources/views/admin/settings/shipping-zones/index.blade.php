@@ -53,11 +53,11 @@
                             </td>
                             <td style="padding: 0.625rem 1rem; text-align: right;">
                                 <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem;">
-                                    <a href="{{ route('admin.settings.shipping-zones.edit', $zone) }}" style="font-size: 13px; font-weight: 500; color: #005bd3; text-decoration: none;">Edit</a>
+                                    <a href="{{ route('admin.settings.shipping-zones.edit', $zone) }}" class="pointer-coarse:inline-flex pointer-coarse:items-center pointer-coarse:min-h-9 pointer-coarse:-my-2 pointer-coarse:px-2" style="font-size: 13px; font-weight: 500; color: #005bd3; text-decoration: none;">Edit</a>
                                     <form action="{{ route('admin.settings.shipping-zones.destroy', $zone) }}" method="POST" onsubmit="return confirm('Delete this zone?')">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" style="font-size: 13px; font-weight: 500; color: #d72c0d; cursor: pointer; background: none; border: none;">Delete</button>
+                                        <button type="submit" class="pointer-coarse:inline-flex pointer-coarse:items-center pointer-coarse:min-h-9 pointer-coarse:-my-2 pointer-coarse:px-2" style="font-size: 13px; font-weight: 500; color: #d72c0d; cursor: pointer; background: none; border: none;">Delete</button>
                                     </form>
                                 </div>
                             </td>

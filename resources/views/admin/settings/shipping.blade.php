@@ -37,7 +37,7 @@
                          x-data="{ authMode: '{{ old('shiprocket_auth_mode', $settings['shiprocket_auth_mode'] ?? (!empty($settings['shiprocket_api_token'] ?? '') ? 'token' : 'credentials')) }}' }">
                         <div>
                             <label class="form-label">Authentication Method</label>
-                            <div style="display: flex; gap: 1rem; margin-top: 0.25rem;">
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin-top: 0.25rem;">
                                 <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 13px; cursor: pointer;">
                                     <input type="radio" name="shiprocket_auth_mode" value="token" x-model="authMode"> API Token
                                 </label>

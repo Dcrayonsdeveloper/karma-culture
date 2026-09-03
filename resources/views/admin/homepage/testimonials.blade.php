@@ -113,7 +113,7 @@
                             @if($testimonial->product_name)
                                 <p style="font-size: 12px; color: #616161; margin: 0.25rem 0 0 0;">Product: {{ $testimonial->product_name }}</p>
                             @endif
-                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem;">
+                            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.75rem;">
                                 <form action="{{ route('admin.homepage.testimonials.toggle', $testimonial) }}" method="POST" style="display: inline;">
                                     @csrf
                                     @method('PUT')
@@ -128,7 +128,7 @@
                                 <form action="{{ route('admin.homepage.testimonials.destroy', $testimonial) }}" method="POST" style="display: inline;" onsubmit="return confirm('Delete this testimonial?')">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" style="font-size: 12px; padding: 0.25rem 0.5rem; background: none; border: 1px solid #d72c0d; color: #d72c0d; border-radius: 0.375rem; cursor: pointer;">Delete</button>
+                                    <button type="submit" class="btn" style="font-size: 12px; padding: 0.25rem 0.5rem; background: none; border: 1px solid #d72c0d; color: #d72c0d; border-radius: 0.375rem; cursor: pointer;">Delete</button>
                                 </form>
 
                                 {{-- position was set once at creation and never again, so the order
@@ -139,7 +139,7 @@
                                             @csrf
                                             @method('PUT')
                                             <input type="hidden" name="direction" value="up">
-                                            <button type="submit" class="btn btn-secondary" style="font-size: 12px; padding: 0.25rem 0.45rem;" aria-label="Move up" title="Move up">&uarr;</button>
+                                            <button type="submit" class="btn btn-secondary pointer-coarse:min-w-9" style="font-size: 12px; padding: 0.25rem 0.45rem;" aria-label="Move up" title="Move up">&uarr;</button>
                                         </form>
                                     @endif
                                     @if(! $loop->last)
@@ -147,7 +147,7 @@
                                             @csrf
                                             @method('PUT')
                                             <input type="hidden" name="direction" value="down">
-                                            <button type="submit" class="btn btn-secondary" style="font-size: 12px; padding: 0.25rem 0.45rem;" aria-label="Move down" title="Move down">&darr;</button>
+                                            <button type="submit" class="btn btn-secondary pointer-coarse:min-w-9" style="font-size: 12px; padding: 0.25rem 0.45rem;" aria-label="Move down" title="Move down">&darr;</button>
                                         </form>
                                     @endif
                                 </span>

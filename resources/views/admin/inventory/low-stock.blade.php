@@ -126,7 +126,7 @@
                     <h3 style="font-size: 14px; font-weight: 600; color: #303030; margin: 0;">Restock Product</h3>
                     <p style="font-size: 12px; color: #616161; margin: 0.25rem 0 0 0;" x-text="productName"></p>
                 </div>
-                <button type="button" x-on:click="open = false" style="background: none; border: none; cursor: pointer; color: #616161; padding: 0.25rem;">
+                <button type="button" x-on:click="open = false" class="btn-icon" style="background: none; border: none; cursor: pointer; color: #616161; padding: 0.25rem;">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>

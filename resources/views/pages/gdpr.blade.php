@@ -180,14 +180,14 @@
                 <h2 class="text-[15px] font-bold text-neutral-900 mb-2">Submit a Data Request</h2>
                 <p class="text-[13px] text-neutral-600 mb-4">To exercise your GDPR rights, contact us below. Please include <strong>"GDPR Request"</strong> in your message and specify which right you are exercising. We aim to respond within 30 days.</p>
                 <div class="flex flex-wrap items-center justify-center gap-3">
-                    <a href="{{ route('contact') }}" class="inline-flex items-center gap-2 px-4 py-2 text-[13px] font-medium text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50 transition-colors">
+                    <a href="{{ route('contact') }}" class="inline-flex items-center gap-2 px-4 py-2 min-h-10 sm:min-h-0 text-[13px] font-medium text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                         Contact Us
                     </a>
-                    <a href="{{ route('privacy') }}" class="inline-flex items-center gap-2 px-4 py-2 text-[13px] font-medium text-neutral-700 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
+                    <a href="{{ route('privacy') }}" class="inline-flex items-center gap-2 px-4 py-2 min-h-10 sm:min-h-0 text-[13px] font-medium text-neutral-700 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
                         Privacy Policy
                     </a>
-                    <a href="{{ route('cookie-policy') }}" class="inline-flex items-center gap-2 px-4 py-2 text-[13px] font-medium text-neutral-700 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
+                    <a href="{{ route('cookie-policy') }}" class="inline-flex items-center gap-2 px-4 py-2 min-h-10 sm:min-h-0 text-[13px] font-medium text-neutral-700 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
                         Cookie Policy
                     </a>
                 </div>

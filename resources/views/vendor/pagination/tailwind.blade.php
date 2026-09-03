@@ -4,14 +4,14 @@
         {{-- Mobile: Previous / Next --}}
         <div class="flex flex-1 items-center justify-between sm:hidden">
             @if ($paginator->onFirstPage())
-                <span class="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-neutral-600 bg-neutral-50 border border-neutral-200 rounded-lg cursor-not-allowed">
+                <span class="inline-flex items-center gap-1.5 min-h-10 px-3.5 py-2 text-sm font-medium text-neutral-600 bg-neutral-50 border border-neutral-200 rounded-lg cursor-not-allowed">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                     </svg>
                     Previous
                 </span>
             @else
-                <a href="{{ $paginator->previousPageUrl() }}" rel="prev" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
+                <a href="{{ $paginator->previousPageUrl() }}" rel="prev" class="inline-flex items-center gap-1.5 min-h-10 px-3.5 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                     </svg>
@@ -24,14 +24,14 @@
             </span>
 
             @if ($paginator->hasMorePages())
-                <a href="{{ $paginator->nextPageUrl() }}" rel="next" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
+                <a href="{{ $paginator->nextPageUrl() }}" rel="next" class="inline-flex items-center gap-1.5 min-h-10 px-3.5 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
                     Next
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
                 </a>
             @else
-                <span class="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-neutral-600 bg-neutral-50 border border-neutral-200 rounded-lg cursor-not-allowed">
+                <span class="inline-flex items-center gap-1.5 min-h-10 px-3.5 py-2 text-sm font-medium text-neutral-600 bg-neutral-50 border border-neutral-200 rounded-lg cursor-not-allowed">
                     Next
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>

@@ -113,17 +113,18 @@
 
                             {{-- Actions --}}
                             <td style="padding: 8px 16px; text-align: right;" onclick="event.stopPropagation();">
+                                {{-- Vertical padding cancelled by a negative margin: a ~36px touch target without changing the row height. --}}
                                 <div style="display: flex; align-items: center; justify-content: flex-end; gap: 12px;">
                                     @if($post->is_published)
                                         <a href="{{ route('blog.show', $post->slug) }}" target="_blank"
-                                           style="color: #005bd3; text-decoration: none; font-size: 13px; font-weight: 500;">View</a>
+                                           style="color: #005bd3; text-decoration: none; font-size: 13px; font-weight: 500; padding: 0.5rem 0; margin: -0.5rem 0;">View</a>
                                     @endif
                                     <a href="{{ route('admin.blog-posts.edit', $post) }}"
-                                       style="color: #005bd3; text-decoration: none; font-size: 13px; font-weight: 500;">Edit</a>
+                                       style="color: #005bd3; text-decoration: none; font-size: 13px; font-weight: 500; padding: 0.5rem 0; margin: -0.5rem 0;">Edit</a>
                                     <form action="{{ route('admin.blog-posts.toggle-status', $post) }}" method="POST" style="margin: 0;">
                                         @csrf
                                         @method('PUT')
-                                        <button type="submit" style="background: none; border: none; color: #005bd3; cursor: pointer; font-size: 13px; font-weight: 500; padding: 0;">
+                                        <button type="submit" style="background: none; border: none; color: #005bd3; cursor: pointer; font-size: 13px; font-weight: 500; padding: 0.5rem 0; margin: -0.5rem 0;">
                                             {{ $post->is_published ? 'Unpublish' : 'Publish' }}
                                         </button>
                                     </form>
@@ -131,7 +132,7 @@
                                           onsubmit="return confirm('Delete this blog post?')" style="margin: 0;">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" style="background: none; border: none; color: #d72c0d; cursor: pointer; font-size: 13px; font-weight: 500; padding: 0;">Delete</button>
+                                        <button type="submit" style="background: none; border: none; color: #d72c0d; cursor: pointer; font-size: 13px; font-weight: 500; padding: 0.5rem 0; margin: -0.5rem 0;">Delete</button>
                                     </form>
                                 </div>
                             </td>

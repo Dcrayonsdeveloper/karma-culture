@@ -5,7 +5,7 @@
         <!-- Shopify-style top bar with breadcrumb + actions -->
         <div class="flex items-center justify-between mb-5">
             <div class="flex items-center gap-2 min-w-0">
-                <a href="{{ route('admin.products.index') }}" class="shrink-0 p-1 rounded hover:bg-neutral-200 transition-colors" style="color: #616161;">
+                <a href="{{ route('admin.products.index') }}" class="shrink-0 p-2 -m-1 rounded hover:bg-neutral-200 transition-colors" style="color: #616161;">
                     <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                 </a>
                 <h1 style="font-size: 1.125rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #303030;">{{ $product->name }}</h1>
@@ -21,10 +21,10 @@
             @method('PUT')
 
             <!-- Two-column Shopify layout -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
 
                 <!-- LEFT COLUMN (2/3) -->
-                <div class="lg:col-span-2 space-y-4">
+                <div class="xl:col-span-2 space-y-4">
 
                     <!-- Title & Description -->
                     <div class="card p-5 space-y-4">
@@ -91,10 +91,21 @@
                                     </svg>
                                     File missing
                                 </span>
-                                <button type="button" @click="markForDelete({{ $image->id }})"
-                                        class="absolute top-1.5 right-1.5 z-10 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <svg style="width: 0.875rem; height: 0.875rem; color: #d72c0d;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                                </button>
+                                {{-- Touch screens send no HTML5 drag events, so a tile can also step one place with a tap. --}}
+                                <div class="absolute top-1.5 right-1.5 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button type="button" @click="moveTile($el, -1)" title="Move earlier" aria-label="Move earlier"
+                                            class="w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-sm">
+                                        <svg style="width: 0.875rem; height: 0.875rem; color: #303030;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                                    </button>
+                                    <button type="button" @click="moveTile($el, 1)" title="Move later" aria-label="Move later"
+                                            class="w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-sm">
+                                        <svg style="width: 0.875rem; height: 0.875rem; color: #303030;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                    </button>
+                                    <button type="button" @click="markForDelete({{ $image->id }})"
+                                            class="w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-sm">
+                                        <svg style="width: 0.875rem; height: 0.875rem; color: #d72c0d;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    </button>
+                                </div>
                             </div>
                             @endforeach
 
@@ -104,7 +115,7 @@
                                     <img class="kk-media__fill" :src="preview.url" alt="" aria-hidden="true">
                                     <img :src="preview.url" alt="New image preview">
                                     <span class="absolute top-1.5 left-1.5 z-10 px-1.5 py-0.5 text-[10px] font-semibold rounded text-white" style="background: #2a9d3e;">New</span>
-                                    <button type="button" @click="removeGalleryImage(index)" class="absolute top-1.5 right-1.5 z-10 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm">
+                                    <button type="button" @click="removeGalleryImage(index)" class="absolute top-1.5 right-1.5 z-10 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-sm">
                                         <svg style="width: 0.875rem; height: 0.875rem; color: #d72c0d;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                     </button>
                                 </div>
@@ -115,7 +126,7 @@
                                     <video class="kk-media__fill" :src="preview.url" muted playsinline aria-hidden="true" tabindex="-1"></video>
                                     <video :src="preview.url" muted playsinline></video>
                                     <span class="absolute top-1.5 left-1.5 z-10 px-1.5 py-0.5 text-[10px] font-semibold rounded text-white" style="background: #2a9d3e;">New &#9654;</span>
-                                    <button type="button" @click="removeVideo(index)" class="absolute top-1.5 right-1.5 z-10 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm">
+                                    <button type="button" @click="removeVideo(index)" class="absolute top-1.5 right-1.5 z-10 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-sm">
                                         <svg style="width: 0.875rem; height: 0.875rem; color: #d72c0d;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                     </button>
                                 </div>
@@ -266,7 +277,7 @@
                                 @error('height') <p class="form-error">{{ $message }}</p> @enderror
                             </div>
                         </div>
-                        <div class="grid grid-cols-2 gap-4 mt-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                             <div>
                                 <label for="hsn_code" class="form-label">HSN code</label>
                                 <input type="text" name="hsn_code" id="hsn_code" value="{{ old('hsn_code', $product->hsn_code) }}"
@@ -367,7 +378,7 @@
                                                 <input type="checkbox" x-bind:name="'variants[' + i + '][is_active]'" value="1" x-model="r.is_active" class="form-checkbox">
                                             </td>
                                             <td style="padding:.4rem;text-align:center;">
-                                                <button type="button" @click="drop(i)" title="Remove"
+                                                <button type="button" @click="drop(i)" title="Remove" class="btn-icon"
                                                         style="color:#d72c0d;background:none;border:0;cursor:pointer;font-size:16px;line-height:1;">&times;</button>
                                             </td>
                                         </tr>
@@ -439,7 +450,7 @@
                                     <input type="text" x-bind:name="'colours[' + i + '][name]'" x-model="c.name" placeholder="Navy"
                                            maxlength="60" aria-label="Colour name"
                                            style="flex:1 1 auto;max-width:240px;font-size:13px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.4rem .6rem;">
-                                    <button type="button" @click="rows.splice(i, 1)" title="Remove"
+                                    <button type="button" @click="rows.splice(i, 1)" title="Remove" class="btn-icon"
                                             style="color:#d72c0d;background:none;border:0;cursor:pointer;font-size:16px;line-height:1;">&times;</button>
                                 </div>
                             </template>
@@ -545,7 +556,7 @@
             <!-- Save bar -->
             <div class="flex items-center justify-between mt-5 pt-4" style="border-top: 1px solid #e3e3e3;">
                 <div>
-                    <button type="submit" form="delete-product-form" class="text-[13px] font-medium" style="color: #d72c0d;">Delete product</button>
+                    <button type="submit" form="delete-product-form" class="text-[13px] font-medium py-2" style="color: #d72c0d;">Delete product</button>
                 </div>
                 <div class="flex items-center gap-2">
                     <a href="{{ route('admin.products.index') }}" class="btn btn-secondary text-[13px]">Discard</a>
@@ -567,6 +578,9 @@
         .ck-editor__editable { min-height: 180px; }
         .ck.ck-editor__main>.ck-editor__editable:not(.ck-focused) { border-color: #d4d4d4; }
         .ck.ck-editor__main>.ck-editor__editable.ck-focused { border-color: #005bd3; box-shadow: 0 0 0 1px #005bd3; }
+        /* group-hover only fires where a pointer can hover, so on a touch screen the
+           tile controls would never appear; there they stay visible instead. */
+        @media (hover: none) { .kk-media > .opacity-0 { opacity: 1; } }
     </style>
     @endpush
 
@@ -678,6 +692,17 @@
                 },
                 onDrop(e) { e.preventDefault(); },
                 onDragEnd() { this.dragEl = null; this.saveOrder(); },
+                // Tap fallback for the drag above: Android Chrome and iOS Safari send no
+                // HTML5 drag events from touch, so the tile steps one place instead.
+                moveTile(btn, dir) {
+                    const el = btn.closest('.media-tile');
+                    const deleted = this.deletedIds.map(String);
+                    const tiles = [...this.$refs.mediaList.querySelectorAll('.media-tile')].filter(t => !deleted.includes(t.dataset.id));
+                    const i = tiles.indexOf(el), j = i + dir;
+                    if (i < 0 || j < 0 || j >= tiles.length) return;
+                    if (dir < 0) tiles[j].before(el); else tiles[j].after(el);
+                    this.saveOrder();
+                },
                 saveOrder() {
                     const deleted = this.deletedIds.map(String);
                     const ids = [...this.$refs.mediaList.querySelectorAll('.media-tile')]

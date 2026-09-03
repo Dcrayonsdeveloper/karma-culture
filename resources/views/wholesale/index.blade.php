@@ -56,10 +56,10 @@
                 @csrf
                 <input type="hidden" name="subject" value="Wholesale Enquiry">
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label for="wholesale_business_name" style="display: block; font-size: 13px; font-weight: 500; color: #0F1111; margin-bottom: 0.375rem;">Business Name *</label>
-                        <input type="text" name="business_name" id="wholesale_business_name" value="{{ old('business_name') }}" required maxlength="120"
+                        <input type="text" name="business_name" id="wholesale_business_name" class="min-h-10 sm:min-h-0" value="{{ old('business_name') }}" required maxlength="120"
                                placeholder="Your business name"
                                style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d5d9d9; border-radius: 0.5rem; font-size: 13px; box-sizing: border-box;">
                         @error('business_name')
@@ -68,7 +68,7 @@
                     </div>
                     <div>
                         <label for="wholesale_name" style="display: block; font-size: 13px; font-weight: 500; color: #0F1111; margin-bottom: 0.375rem;">Contact Name *</label>
-                        <input type="text" name="name" id="wholesale_name" value="{{ old('name') }}" required minlength="2" maxlength="30" data-kk-chars="letters"
+                        <input type="text" name="name" id="wholesale_name" class="min-h-10 sm:min-h-0" value="{{ old('name') }}" required minlength="2" maxlength="30" data-kk-chars="letters"
                                pattern="{{ \App\Rules\ValidationRules::namePattern(lettersOnly: true) }}" title="Letters and spaces only, up to 30 characters."
                                placeholder="Your name"
                                style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d5d9d9; border-radius: 0.5rem; font-size: 13px; box-sizing: border-box;">
@@ -78,10 +78,10 @@
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label for="wholesale_email" style="display: block; font-size: 13px; font-weight: 500; color: #0F1111; margin-bottom: 0.375rem;">Email *</label>
-                        <input type="email" name="email" id="wholesale_email" value="{{ old('email') }}" required maxlength="255"
+                        <input type="email" name="email" id="wholesale_email" class="min-h-10 sm:min-h-0" value="{{ old('email') }}" required maxlength="255"
                                placeholder="your@email.com"
                                style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d5d9d9; border-radius: 0.5rem; font-size: 13px; box-sizing: border-box;">
                         @error('email')
@@ -90,7 +90,7 @@
                     </div>
                     <div>
                         <label for="wholesale_phone" style="display: block; font-size: 13px; font-weight: 500; color: #0F1111; margin-bottom: 0.375rem;">Phone</label>
-                        <input type="tel" name="phone" id="wholesale_phone" value="{{ old('phone') }}" maxlength="20" inputmode="tel"
+                        <input type="tel" name="phone" id="wholesale_phone" class="min-h-10 sm:min-h-0" value="{{ old('phone') }}" maxlength="20" inputmode="tel"
                                pattern="[+\s()-]*(?:\d[+\s()-]*){10,15}" title="Enter a phone number with 10 to 15 digits. Spaces, brackets, hyphens and a leading + are fine."
                                placeholder="+91 XXXXX XXXXX"
                                style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d5d9d9; border-radius: 0.5rem; font-size: 13px; box-sizing: border-box;">

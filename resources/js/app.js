@@ -20,6 +20,12 @@ Alpine.plugin(intersect);
 // Make Alpine available globally
 window.Alpine = Alpine;
 
+// Runtime bridge for the inline Blade components. An inline classic <script> is
+// executed while the page is still parsing, long before this deferred module, so
+// `Alpine` is undefined in its body. Those components reach the popup queue
+// lazily from inside init() through this, never at parse time.
+window.kkPopupQueue = () => Alpine.store('popupQueue');
+
 // ========================================
 // Global Utilities
 // ========================================
@@ -646,6 +652,58 @@ const _seen = (k) => { try { if (localStorage.getItem(k)) return true; } catch (
 const _markSeen = (k) => { try { localStorage.setItem(k, '1'); } catch (e) {} document.cookie = `${k}=1; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`; };
 const _validPhone = (v) => /^[0-9]{10}$/.test((v || '').replace(/\D/g, ''));
 
+// ========================================
+// Popup queue - the one arbiter for every timed overlay on the storefront.
+//
+// The rule: one popup on screen at a time; the next opens 2s after the previous
+// one CLOSES, never 2s after it opened; on home the cycle runs again once for a
+// shopper who has neither engaged nor left; the first real click on anything
+// that is not a popup's own chrome stops all of it for the visit.
+//
+// Each popup used to own a private timer, so the flash sale opened at 1.5s and
+// the offer popup painted over it at 3.5s - the reported bug. Nothing arbitrated
+// because nothing could: they are three components in two files.
+//
+// Two different questions used to share one flag, and they are separated here:
+//   - "shown this visit?" -> kk_popup_visit in sessionStorage, owned below.
+//                            Per-tab, dies with the visit, survives a reload so
+//                            the cycle cannot be farmed by refreshing.
+//   - "shopper is done?"  -> the existing _seen/_markSeen 30-day localStorage +
+//                            cookie pair, unchanged. Read once per page load as
+//                            an admission gate in each component's init(), and
+//                            written only on retirement (see _maybeRetire).
+// Conflating them is why a restart was impossible: _markSeen fired the instant a
+// popup opened, so a second cycle vetoed itself against the key the first wrote.
+// It also burned a 30-day gate on a visitor who closed the tab at t=3.6s without
+// ever reading the thing.
+// ========================================
+const PQ_GAP_MS = 2000;           // R2: close -> next open. The number the owner asked for.
+const PQ_REST_MS = 45000;         // end of a cycle -> the next one. Re-running modals 2s
+                                  // apart reads as a bug rather than a campaign.
+const PQ_MAX_CYCLES = 2;          // the first run plus one restart (1 under reduced motion)
+const PQ_CONSENT_GRACE_MS = 6000; // longest the queue waits on an unanswered cookie bar
+const PQ_VISIT_KEY = 'kk_popup_visit';
+const PQ_CHROME = '[data-kk-popup]';
+const PQ_IGNORE = '[data-kk-popup-ignore]';
+const PQ_ENGAGE = 'a[href], button, [role="button"], input, select, textarea, summary, label';
+
+let _visitCache = null;
+const _visit = () => {
+    if (_visitCache) return _visitCache;
+    let v = { engaged: false, cycle: 0, shown: {} };
+    try {
+        const raw = sessionStorage.getItem(PQ_VISIT_KEY);
+        if (raw) v = Object.assign(v, JSON.parse(raw) || {});
+    } catch (e) {}
+    if (!v.shown || typeof v.shown !== 'object') v.shown = {};
+    _visitCache = v;
+    return _visitCache;
+};
+// try/catch with the in-memory copy as the fallback: sessionStorage throws in
+// Safari private mode and in some embedded webviews. That degrades to
+// per-pageview behaviour, which is the old behaviour, and never throws.
+const _saveVisit = () => { try { sessionStorage.setItem(PQ_VISIT_KEY, JSON.stringify(_visitCache)); } catch (e) {} };
+
 // Client-side mirror of App\Rules\PersonName (see also ValidationRules::name).
 // Kept message-for-message identical to the server so a name the popup accepts
 // is never bounced back by the endpoint, and vice versa. Returns '' when valid.
@@ -920,14 +978,321 @@ Alpine.data('kkRegisterForm', (serverErrors = {}) => ({
     },
 }));
 
+Alpine.store('popupQueue', {
+    members: {},   // id -> registration options
+    order: [],     // planned TIMED ids, ascending priority
+    idx: 0,        // cursor into order for the cycle in progress
+    current: null, // id of the popup on screen, or null
+    stopped: false,
+    cycle: 0,
+    homePage: false,
+    reduced: false,
+    planned: false,
+    holds: null,   // Set of hold tags; a non-empty set parks the queue
+    _urgent: null, // an event-driven member jumping the cursor - never splices order
+    _t: null, _waitFn: null, _waitMs: 0, _waitFrom: 0, _waitTag: null,
+
+    init() {
+        this.holds = new Set();
+        const v = _visit();
+        this.cycle = v.cycle || 0;
+        // <body> is already parsed by now: @vite emits a deferred module.
+        this.homePage = !!(document.body && document.body.dataset.kkPage === 'home');
+        this.reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+        // The kill switch is honoured on home only. Someone clicking around /shop
+        // must not arrive at home already silenced.
+        if (this.homePage && v.engaged) this.stopped = true;
+
+        let consent = null;
+        try { consent = localStorage.getItem('fk_cookie_consent'); } catch (e) {}
+        if (!consent) {
+            // Seeded from the stored key deliberately: a returning visitor never
+            // sees the banner, so neither accept handler runs and waiting on the
+            // event alone would stall every return visit for the whole grace.
+            this.hold('consent');
+            const release = () => this.unhold('consent');
+            window.addEventListener('kk-consent-resolved', release, { once: true });
+            window.setTimeout(release, PQ_CONSENT_GRACE_MS);
+        }
+
+        // Capture phase for both, and that is load-bearing rather than stylistic:
+        // the modal panels carry Alpine's @click.stop and the form validator near
+        // the bottom of this file stopPropagation()s an invalid submit, so a
+        // bubble-phase listener goes blind to exactly the clicks that matter.
+        document.addEventListener('click', (e) => this._onInteract(e), true);
+        document.addEventListener('submit', (e) => this._onInteract(e), true);
+        // Deliberately not focusin: x-trap hands focus back to the pre-open
+        // element when a popup closes, so a header button or the search box would
+        // latch the kill switch on the queue's own close path. Enter on a focused
+        // link or button already dispatches a click.
+        document.addEventListener('visibilitychange', () => this._onVisibility());
+        window.addEventListener('pageshow', (e) => { if (e.persisted) this._onPageshow(); });
+        window.addEventListener('pagehide', () => this._onPagehide());
+        // Component init() runs in plain DOM order during Alpine's initTree walk,
+        // so planning there would let markup position pick the running order.
+        document.addEventListener('alpine:initialized', () => this._plan());
+    },
+
+    // ---- the API the popups use -------------------------------------
+    register(id, opts) {
+        this.members[id] = Object.assign({
+            priority: 50, delay: PQ_GAP_MS, mode: 'timed',
+            seenKey: '', seenStore: 'local', root: null,
+            canShow: () => true, show: () => {}, hide: () => {},
+        }, opts);
+        if (!this.current && this.idx === 0) this._buildOrder();
+    },
+
+    request(id) {
+        if (this.stopped || !this.members[id] || this.current === id) return;
+        if (!this.isEligible(id)) return;
+        this._urgent = id;
+        // A real exit gesture must not be made to sit out a 45s rest.
+        if (this._waitTag === 'rest') { this._clearWait(); this._waitFn = null; this._waitTag = null; this._advance(0); return; }
+        // If a gap is already armed, leave it alone: _peek() hands it the urgent
+        // member when it fires, so the 2s-after-close rule still holds.
+        if (!this.current && !this._waitFn) this._advance(0);
+    },
+
+    release(id) {
+        if (this.current !== id) return;   // idempotent - a stray call is a no-op
+        this.current = null;
+        this._maybeRetire(id);
+        if (this.stopped) return;
+        this._advance(PQ_GAP_MS);          // R2: the clock starts at CLOSE
+    },
+
+    stop(reason) {
+        if (this.stopped) return;
+        this.stopped = true;
+        this._urgent = null;
+        this._clearWait();
+        this._waitFn = null; this._waitTag = null;
+        if (this.homePage) { const v = _visit(); v.engaged = true; _saveVisit(); }
+        // Whatever the shopper actually saw is finished with now.
+        Object.keys(this.members).forEach((id) => this._maybeRetire(id));
+        // Deliberately does not close what is on screen: pulling a modal out from
+        // under a half-finished click is its own bug.
+    },
+
+    hold(tag) { this.holds.add(tag); this._clearWait(); this._waitFn = null; this._waitTag = null; },
+    unhold(tag) {
+        if (!this.holds.delete(tag)) return;
+        // An exit gesture that arrived while the queue was held keeps its
+        // immediacy: without the 0 it would fall through to the member's own
+        // delay, and an event-driven member has no meaningful one.
+        this._advance(this._urgent ? 0 : undefined);
+    },
+
+    isEligible(id) {
+        const m = this.members[id];
+        if (!m || this.stopped) return false;
+        if (!m.canShow()) return false;
+        const shows = _visit().shown[id] || 0;
+        if (m.mode === 'event' && shows >= 1) return false;   // the exit popup: once a visit
+        return shows < this._cap();
+    },
+
+    // ---- internals --------------------------------------------------
+    _cap() { return this.reduced ? 1 : PQ_MAX_CYCLES; },
+
+    // Is a hold currently blocking the queue? A timed marketing popup always
+    // waits - that is what the consent hold is for. An exit gesture does not:
+    // it is shopper-initiated and time-critical, and the thing that triggered it
+    // is the shopper leaving, so deferring it for the consent grace does not
+    // delay it, it cancels it. That would silently take abandoned-cart recovery
+    // off every page for first-time visitors, who are the ones being held.
+    _heldOut() {
+        if (!this.holds.size) return false;
+        const u = this._urgent && this.members[this._urgent];
+        return !(u && u.mode === 'event');
+    },
+
+    _buildOrder() {
+        this.order = Object.keys(this.members)
+            .filter((id) => this.members[id].mode === 'timed')
+            .sort((a, b) => this.members[a].priority - this.members[b].priority);
+    },
+
+    _plan() {
+        if (this.planned) return;
+        this.planned = true;
+        this._buildOrder();
+        this._advance();   // no delay argument => each member's own opening delay
+    },
+
+    // The 30-day key means "this shopper is done with this popup", not "it was
+    // painted once". One predicate on purpose: it is the rule most likely to be
+    // misread later.
+    _maybeRetire(id) {
+        const m = this.members[id];
+        // The flash sale writes its own per-slug session key in dismiss().
+        if (!m || !m.seenKey || m.seenStore !== 'local') return;
+        if (!(_visit().shown[id] || 0)) return;
+        const finished = this.stopped || m.mode === 'event' || this.cycle + 1 >= this._cap();
+        if (finished) _markSeen(m.seenKey);
+    },
+
+    _peek() {
+        if (this._urgent) {
+            if (this.isEligible(this._urgent)) return this._urgent;
+            this._urgent = null;
+        }
+        while (this.idx < this.order.length && !this.isEligible(this.order[this.idx])) this.idx++;
+        return this.idx < this.order.length ? this.order[this.idx] : null;
+    },
+
+    _advance(delayMs) {
+        // Stall guard. A component torn down or navigated over while it was open
+        // would otherwise pin `current` and silently kill every popup after it,
+        // which is a worse and much harder-to-report failure than stacking.
+        if (this.current) {
+            const root = this.members[this.current] && this.members[this.current].root;
+            if (root && !document.contains(root)) this.current = null;
+            else return;
+        }
+        if (this.stopped || this._heldOut() || this._waitFn) return;
+        const id = this._peek();
+        if (!id) { this._scheduleRestart(); return; }
+        const ms = delayMs === undefined ? this.members[id].delay : delayMs;
+        this._wait(ms, 'gap', () => this._fire());
+    },
+
+    _fire() {
+        if (this.stopped || this.current || this._heldOut()) return;
+        const id = this._peek();
+        if (!id) { this._scheduleRestart(); return; }
+        if (this._urgent === id) this._urgent = null; else this.idx++;
+        this._show(id);
+    },
+
+    _show(id) {
+        this.current = id;
+        const v = _visit();
+        v.shown[id] = (v.shown[id] || 0) + 1;
+        _saveVisit();
+        this.members[id].show();
+    },
+
+    // R3: the shopper is still sitting on home, has not engaged and has not left,
+    // so run the list again - once. "Restart the cycle" is a permission, not a
+    // licence to loop for as long as the tab stays open.
+    _scheduleRestart() {
+        if (!this.homePage || this.stopped || this._waitTag === 'rest') return;
+        if (this.cycle + 1 >= this._cap()) return;
+        if (!this.order.some((id) => (_visit().shown[id] || 0) > 0)) return;
+        this._wait(PQ_REST_MS, 'rest', () => {
+            if (this.stopped) return;
+            this.cycle++;
+            const v = _visit(); v.cycle = this.cycle; _saveVisit();
+            this.idx = 0;
+            this._advance(PQ_GAP_MS);
+        });
+    },
+
+    // One pausable timer for the whole queue. Browsers throttle timers in a
+    // background tab, so an unpaused gap would burn a popup's turn against a tab
+    // nobody is looking at and then ambush the shopper on return.
+    _wait(ms, tag, fn) {
+        this._clearWait();
+        this._waitFn = fn; this._waitTag = tag; this._waitMs = ms; this._waitFrom = Date.now();
+        if (document.hidden) return;
+        this._t = window.setTimeout(() => {
+            this._t = null;
+            const f = this._waitFn;
+            this._waitFn = null; this._waitTag = null;
+            if (f) f();
+        }, ms);
+    },
+    _clearWait() { if (this._t) { window.clearTimeout(this._t); this._t = null; } },
+
+    _onVisibility() {
+        if (document.hidden) {
+            if (this._t && this._waitFn) {
+                this._waitMs = Math.max(0, this._waitMs - (Date.now() - this._waitFrom));
+                this._clearWait();
+            }
+        } else if (this._waitFn && !this._t) {
+            this._wait(this._waitMs, this._waitTag, this._waitFn);
+        }
+    },
+
+    _onPagehide() {
+        // Never let a bfcache restore paint a stale modal over a page whose
+        // scroll lock was torn down with it.
+        const id = this.current;
+        if (id && this.members[id]) this.members[id].hide();
+        this.current = null;
+        // Retire it here rather than leaving it to the $watch. hide() only flips
+        // the component's `open` flag, and Alpine defers a watcher to a
+        // microtask - by the time it runs, current is null and release() bails
+        // before retiring. That matters most for the exit popup, whose likeliest
+        // ending is exactly this one: it appears because the shopper is leaving,
+        // and then they leave. Without this its 30-day key is never written and
+        // it greets them again on the next visit. _maybeRetire is idempotent, so
+        // a later real release() costs nothing.
+        if (id) this._maybeRetire(id);
+        // The pending callback has to go with its timer. _clearWait() only drops
+        // the timer handle, and _advance()/request() both refuse to do anything
+        // while _waitFn is set - so leaving it behind parks the queue for the
+        // rest of the page view, with nothing able to re-arm it.
+        this._clearWait();
+        this._waitFn = null; this._waitTag = null;
+    },
+
+    _onPageshow() {
+        _visitCache = null;
+        const v = _visit();
+        this.cycle = v.cycle || 0;
+        if (this.homePage && v.engaged) { this.stop('engaged'); return; }
+        // A page restored from the bfcache never re-runs init(), so this is the
+        // only thing that puts the queue back to work after _onPagehide cleared it.
+        if (!this.stopped) this._advance();
+    },
+
+    _onInteract(e) {
+        if (this.stopped || !this.homePage) return;
+        const el = e.target instanceof Element ? e.target : (e.target && e.target.parentElement);
+        if (!el) return;
+        if (el.closest(PQ_IGNORE)) return;
+        if (el.closest(PQ_CHROME)) {
+            // Inside a popup only a real navigation counts. The close button, the
+            // backdrop, the inputs and the submit are the shopper saying no, and
+            // treating those as engagement would stop the queue on its own chrome.
+            const a = el.closest('a[href]');
+            if (a && !(a.getAttribute('href') || '').startsWith('#')) this.stop('converted-cta');
+            return;
+        }
+        if (e.type === 'submit' || el.closest(PQ_ENGAGE)) this.stop('engaged');
+    },
+});
+
 Alpine.data('offerPopup', () => ({
     open: false, submitting: false, done: false, error: '',
     form: { name: '', email: '', phone: '' },
     key: 'kk_offer_popup_seen',
     init() {
-        if (_seen(this.key)) return;
-        window.setTimeout(() => { this.open = true; _markSeen(this.key); }, 3500);
+        if (_seen(this.key)) return;   // the 30-day gate, read once, here
+        const q = this.$store.popupQueue;
+        q.register('offer', {
+            priority: 20, delay: 3500,
+            seenKey: this.key, seenStore: 'local',
+            root: this.$root,
+            canShow: () => !this.done,
+            // Clear the transient submit state on the way in, not on the way
+            // out: a shopper who closed this after a failed submit would
+            // otherwise meet the same red error, announced again by role=alert,
+            // when the cycle brings the popup back. What they typed is kept.
+            show: () => { this.error = ''; this.submitting = false; this.open = true; },
+            hide: () => { this.open = false; },
+        });
+        // This tells the queue about every close path there is - the X, the
+        // backdrop, Escape and the 2800ms auto-close after a signup - without any
+        // of them being edited, and it cannot be forgotten the way a manual
+        // release() call in one branch can.
+        this.$watch('open', (v) => { if (!v) q.release('offer'); });
     },
+    destroy() { this.$store.popupQueue.release('offer'); },
     close() { this.open = false; },
     async submit() {
         this.error = '';
@@ -943,7 +1308,14 @@ Alpine.data('offerPopup', () => ({
                 body: JSON.stringify({ ...this.form, source: 'offer_popup' }),
             });
             const data = await res.json().catch(() => ({}));
-            if (res.ok && data.success) { this.done = true; window.setTimeout(() => this.close(), 2800); }
+            if (res.ok && data.success) {
+                this.done = true;
+                // Before the auto-close, so the close below finds the queue
+                // already stopped and schedules nothing: nobody who just handed
+                // over an email should be shown another popup 47s later.
+                this.$store.popupQueue.stop('converted');
+                window.setTimeout(() => this.close(), 2800);
+            }
             else { this.error = data.message || 'Something went wrong. Please try again.'; }
         } catch (e) { this.error = 'Network error. Please try again.'; }
         finally { this.submitting = false; }
@@ -982,7 +1354,7 @@ Alpine.data('purchaseNotif', (items = [], productName = '', thumb = '') => ({
 Alpine.data('exitPopup', (code = 'KARMAA10', minutes = 10, accountEmail = '') => ({
     open: false, submitting: false, done: false, error: '',
     form: { email: '', phone: '' },
-    code, timeLeft: `${minutes}:00`, _tick: null, _dwell: null, _armed: false, _lastY: 0,
+    code, timeLeft: `${minutes}:00`, _minutes: minutes, _tick: null, _dwell: null, _armed: false, _lastY: 0,
     accountEmail, state: '', expired: false, discount: 0, claimedEmail: '', _reloadHost: false,
     key: 'kk_exit_popup_seen',
     // Whether the address claimed with is the account being browsed as. Derived
@@ -1006,26 +1378,48 @@ Alpine.data('exitPopup', (code = 'KARMAA10', minutes = 10, accountEmail = '') =>
     init() {
         if (_seen(this.key)) return;
         this.form.email = this.accountEmail || '';
+        const q = this.$store.popupQueue;
+        q.register('exit', {
+            priority: 30, mode: 'event',
+            seenKey: this.key, seenStore: 'local',
+            root: this.$root,
+            canShow: () => !this.done,
+            // The countdown runs off the minutes the admin configured, never off
+            // the already-decremented timeLeft the old trigger() parsed back out.
+            show: () => { this.open = true; this.startCountdown(this._minutes); },
+            hide: () => { this.open = false; },
+        });
+        this.$watch('open', (v) => { if (!v) q.release('exit'); });
+
         this._onMouseOut = (e) => { if (e.clientY <= 0 && !e.relatedTarget) this.trigger(); };
         document.addEventListener('mouseout', this._onMouseOut);
         // Mobile-friendly fallbacks: a fast upward scroll near the top, or long dwell.
         this._lastY = window.scrollY;
-        this._onScroll = () => {
-            const y = window.scrollY;
-            if (this._lastY - y > 60 && y < 120) this.trigger();
-            this._lastY = y;
-        };
-        window.addEventListener('scroll', this._onScroll, { passive: true });
+        // The scroll heuristic is kept everywhere except home, where the
+        // back-to-top float's own window.scrollTo({top: 0, behavior: 'smooth'})
+        // satisfies it exactly and makes this popup fire itself. Every other page
+        // keeps all three triggers, so abandoned-cart recovery is unchanged.
+        if (!q.homePage) {
+            this._onScroll = () => {
+                const y = window.scrollY;
+                if (this._lastY - y > 60 && y < 120) this.trigger();
+                this._lastY = y;
+            };
+            window.addEventListener('scroll', this._onScroll, { passive: true });
+        }
         this._dwell = window.setTimeout(() => this.trigger(), 60000);
     },
+    destroy() { this.$store.popupQueue.release('exit'); },
     trigger() {
-        if (this.open || _seen(this.key)) return;
-        this.open = true;
-        _markSeen(this.key);
-        this.startCountdown(parseInt((this.timeLeft || '10:00').split(':')[0], 10) || 10);
+        if (this.open) return;
+        // The _seen() re-check that used to be here is gone on purpose: the
+        // 30-day gate is read once in init(), and re-reading it here would veto
+        // this popup against the key its own retirement had just written.
+        this.$store.popupQueue.request('exit');
         this.cleanup();
     },
     startCountdown(minutes) {
+        if (this._tick) window.clearInterval(this._tick);   // a second show must not double-tick
         const end = Date.now() + minutes * 60 * 1000;
         this._tick = window.setInterval(() => {
             const ms = Math.max(0, end - Date.now());
@@ -1076,6 +1470,7 @@ Alpine.data('exitPopup', (code = 'KARMAA10', minutes = 10, accountEmail = '') =>
                 // still shows full price reads as a bug, so reconcile the page.
                 if (this.state === 'applied') this._reloadHost = /^\/(cart|checkout)\/?$/.test(window.location.pathname);
                 this.done = true;
+                this.$store.popupQueue.stop('converted');
             } else { this.error = data.message || 'Something went wrong.'; }
         } catch (e) { this.error = 'Network error. Please try again.'; }
         finally { this.submitting = false; }

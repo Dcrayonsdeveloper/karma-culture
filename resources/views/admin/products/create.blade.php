@@ -5,7 +5,7 @@
         <!-- Shopify-style top bar -->
         <div class="flex items-center justify-between mb-5">
             <div class="flex items-center gap-2">
-                <a href="{{ route('admin.products.index') }}" class="p-1 rounded hover:bg-neutral-200 transition-colors" style="color: #616161;">
+                <a href="{{ route('admin.products.index') }}" class="p-2 -m-1 rounded hover:bg-neutral-200 transition-colors" style="color: #616161;">
                     <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                 </a>
                 <h1 style="font-size: 1.125rem; font-weight: 600; color: #303030;">Add product</h1>
@@ -16,10 +16,10 @@
             @csrf
 
             <!-- Two-column Shopify layout -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
 
                 <!-- LEFT COLUMN (2/3) -->
-                <div class="lg:col-span-2 space-y-4">
+                <div class="xl:col-span-2 space-y-4">
 
                     <!-- Title & Description -->
                     <div class="card p-5 space-y-4">
@@ -61,7 +61,7 @@
                                 <img class="kk-media__fill" :src="mainPreview" alt="" aria-hidden="true">
                                 <img :src="mainPreview" alt="Main image preview">
                                 <button type="button" @click="removeMainImage()"
-                                        class="absolute top-1 right-1 z-10 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm">
+                                        class="absolute top-1 right-1 z-10 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-sm">
                                     <svg style="width: 0.875rem; height: 0.875rem; color: #d72c0d;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                 </button>
                                 <span class="absolute bottom-0 left-0 right-0 z-10 px-2 py-0.5 text-[10px] font-semibold text-center text-white" style="background: rgba(0,91,211,0.85);">Main</span>
@@ -107,7 +107,7 @@
                                         <img class="kk-media__fill" :src="preview.url" alt="" aria-hidden="true">
                                         <img :src="preview.url" alt="Gallery image preview">
                                         <button type="button" @click="removeGalleryImage(index)"
-                                                class="absolute top-1 right-1 z-10 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                                                class="absolute top-1 right-1 z-10 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
                                             <svg style="width: 0.75rem; height: 0.75rem; color: #d72c0d;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                         </button>
                                     </div>
@@ -278,6 +278,9 @@
         .ck-editor__editable { min-height: 180px; }
         .ck.ck-editor__main>.ck-editor__editable:not(.ck-focused) { border-color: #d4d4d4; }
         .ck.ck-editor__main>.ck-editor__editable.ck-focused { border-color: #005bd3; box-shadow: 0 0 0 1px #005bd3; }
+        /* group-hover only fires where a pointer can hover, so on a touch screen the
+           tile controls would never appear; there they stay visible instead. */
+        @media (hover: none) { .kk-media > .opacity-0 { opacity: 1; } }
     </style>
     @endpush
 

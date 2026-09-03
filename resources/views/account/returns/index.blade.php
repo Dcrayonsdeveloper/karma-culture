@@ -19,7 +19,7 @@
                         <div class="bg-white rounded-xl border border-neutral-200 mb-3 overflow-hidden hover:shadow-sm transition-shadow">
                             {{-- Header --}}
                             <div class="px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-neutral-100">
-                                <div class="flex items-center gap-3">
+                                <div class="flex flex-wrap items-center gap-3">
                                     <a href="{{ route('account.returns.show', $return) }}" class="text-sm font-bold text-neutral-900 hover:text-[#6F9CA2] transition-colors">
                                         {{ $return->return_number }}
                                     </a>
@@ -65,7 +65,7 @@
                                 <div class="space-y-2">
                                     @foreach($return->items as $item)
                                         <div class="flex items-center justify-between text-sm">
-                                            <div class="flex items-center gap-2">
+                                            <div class="flex items-center gap-2 min-w-0">
                                                 <span class="w-1.5 h-1.5 rounded-full bg-neutral-300 shrink-0"></span>
                                                 <span class="text-neutral-700">{{ Str::limit($item->orderItem->product_name ?? $item->orderItem->product->name ?? 'Product', 45) }}</span>
                                             </div>
@@ -76,13 +76,13 @@
                             </div>
 
                             {{-- Footer --}}
-                            <div class="px-4 py-2.5 bg-neutral-50 border-t border-neutral-100 flex items-center justify-between">
+                            <div class="px-4 py-2.5 bg-neutral-50 border-t border-neutral-100 flex flex-wrap items-center justify-between gap-2">
                                 @if((float) $return->refund_amount > 0)
                                     <span class="text-xs text-neutral-600">Refund: <span class="font-semibold text-emerald-600">{{ format_price($return->refund_amount) }}</span></span>
                                 @else
                                     <span></span>
                                 @endif
-                                <a href="{{ route('account.returns.show', $return) }}" class="text-xs font-semibold text-[#6F9CA2] hover:text-[#5B878D] inline-flex items-center gap-1">
+                                <a href="{{ route('account.returns.show', $return) }}" class="text-xs font-semibold text-[#6F9CA2] hover:text-[#5B878D] inline-flex items-center gap-1 min-h-10 sm:min-h-0">
                                     View Details
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                                 </a>

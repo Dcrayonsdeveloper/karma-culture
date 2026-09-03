@@ -28,7 +28,7 @@
     </div>
 
     {{-- Card with tabs + search + table --}}
-    <div style="background: white; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); overflow: hidden;">
+    <div class="card" style="background: white; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); overflow: hidden;">
 
         {{-- Tabs --}}
         <div style="display: flex; border-bottom: 1px solid #e3e3e3; padding: 0 1rem;">
@@ -64,7 +64,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                 </svg>
                 <input type="text" name="search" value="{{ request('search') }}" placeholder="Search by ID, subject, customer..."
-                       style="flex: 1; border: none; outline: none; font-size: 13px; color: #303030; background: transparent;">
+                       style="flex: 1 1 12rem; border: none; outline: none; font-size: 13px; color: #303030; background: transparent;">
                 {{-- Priority filter inline --}}
                 <select name="priority" onchange="this.form.submit()"
                         style="border: 1px solid #c9cccf; border-radius: 0.5rem; padding: 0.25rem 2rem 0.25rem 0.5rem; font-size: 12px; color: #303030; background-color: white; cursor: pointer;">

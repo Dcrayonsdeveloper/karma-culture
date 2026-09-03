@@ -16,7 +16,7 @@
         <form action="{{ route('admin.settings.shipping-zones.rates.store', $shippingZone) }}" method="POST">
             @csrf
 
-            <div style="background: #fff; border: 1px solid #e3e3e3; border-radius: 0.75rem; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem;">
+            <div class="card" style="background: #fff; border: 1px solid #e3e3e3; border-radius: 0.75rem; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem;">
 
                 <div>
                     <label style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.375rem;">Rate Name <span style="color: #d72c0d;">*</span></label>
@@ -85,7 +85,7 @@
                 </div>
             </div>
 
-            <div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
+            <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem;">
                 <button type="submit"
                         style="padding: 0.5rem 1.25rem; background: #303030; color: #fff; border: none; border-radius: 0.5rem; font-size: 13px; font-weight: 500; cursor: pointer;">
                     Add Rate

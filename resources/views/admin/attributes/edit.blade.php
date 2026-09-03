@@ -3,7 +3,7 @@
 
     <!-- Top bar -->
     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.25rem;">
-        <a href="{{ route('admin.attributes.index') }}" style="padding: 0.25rem; border-radius: 0.25rem; color: #616161; text-decoration: none;">
+        <a href="{{ route('admin.attributes.index') }}" style="padding: 0.5rem; margin: -0.25rem; border-radius: 0.25rem; color: #616161; text-decoration: none;">
             <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
         </a>
         <h1 style="font-size: 1.125rem; font-weight: 600; color: #303030;">{{ $attribute->name }}</h1>
@@ -41,7 +41,7 @@
                             @enderror
                         </div>
 
-                        <div style="display: flex; align-items: center; gap: 1.5rem;">
+                        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem;">
                             <div style="display: flex; align-items: center; gap: 0.5rem;">
                                 <input type="hidden" name="is_filterable" value="0">
                                 <input type="checkbox" name="is_filterable" value="1" id="is_filterable"
@@ -62,7 +62,7 @@
 
                 <!-- Save bar -->
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #e3e3e3;">
-                    <button type="submit" form="record-delete-form" style="font-size: 13px; font-weight: 500; color: #d72c0d; background: none; border: none; cursor: pointer;">Delete attribute</button>
+                    <button type="submit" form="record-delete-form" style="font-size: 13px; font-weight: 500; color: #d72c0d; background: none; border: none; padding: 0.5rem 0.75rem; margin-left: -0.75rem; cursor: pointer;">Delete attribute</button>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <a href="{{ route('admin.attributes.index') }}" class="btn btn-secondary" style="font-size: 13px;">Discard</a>
                         <button type="submit" class="btn btn-primary" style="font-size: 13px;">Save</button>
@@ -100,11 +100,11 @@
                                     @endif
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <a href="{{ route('admin.values.edit', $value) }}" style="color: #005bd3; font-size: 13px; font-weight: 500; text-decoration: none;">Edit</a>
+                                    <a href="{{ route('admin.values.edit', $value) }}" style="color: #005bd3; font-size: 13px; font-weight: 500; text-decoration: none; padding: 0.5rem 0.375rem; margin: 0 -0.375rem;">Edit</a>
                                     <form action="{{ route('admin.values.destroy', $value) }}" method="POST" onsubmit="return confirm('Delete this value?')">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" style="color: #d72c0d; font-size: 13px; font-weight: 500; background: none; border: none; cursor: pointer;">Delete</button>
+                                        <button type="submit" style="color: #d72c0d; font-size: 13px; font-weight: 500; background: none; border: none; padding: 0.5rem 0.375rem; margin: 0 -0.375rem; cursor: pointer;">Delete</button>
                                     </form>
                                 </div>
                             </div>
