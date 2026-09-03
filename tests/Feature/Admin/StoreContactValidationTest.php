@@ -187,6 +187,129 @@ class StoreContactValidationTest extends TestCase
     }
 
     /**
+     * The name was V::text, which took every one of these. The form was
+     * specified as letters and spaces, so it now runs PersonName in
+     * lettersOnly mode - the same rule the contact form uses.
+     *
+     * @return array<string, array{0: string}>
+     */
+    public static function badNames(): array
+    {
+        return [
+            'digits in a word' => ['Store 2'],
+            'digits only' => ['12345'],
+            'hash' => ['Store #1'],
+            'hyphenated' => ['Main-Street Store'],
+            'underscore' => ['Main_Street'],
+            'punctuation soup' => ['!!!***'],
+            'opens on punctuation' => ['.Karmaa'],
+        ];
+    }
+
+    /** @dataProvider badNames */
+    public function test_a_name_with_digits_or_punctuation_is_rejected(string $name): void
+    {
+        $response = $this->post(route('admin.stores.store'), $this->payload(['name' => $name]));
+
+        $response->assertSessionHasErrors('name');
+        $this->assertDatabaseCount('stores', 0);
+    }
+
+    /**
+     * Letters means letters in any script, not A-Z: \p{L} and the combining
+     * marks that travel with it, or Devanagari loses its vowel signs.
+     *
+     * @return array<string, array{0: string}>
+     */
+    public static function goodNames(): array
+    {
+        return [
+            'two words' => ['Main Street Store'],
+            'one word' => ['Kolkata'],
+            'accented' => ['Café Karmaa'],
+            'devanagari' => ['कर्मा कल्चर'],
+        ];
+    }
+
+    /** @dataProvider goodNames */
+    public function test_a_name_of_letters_and_spaces_is_accepted(string $name): void
+    {
+        $response = $this->post(route('admin.stores.store'), $this->payload(['name' => $name]));
+
+        $response->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('stores', ['name' => $name]);
+    }
+
+    /**
+     * A syntactically valid address of an exact overall length. The padding
+     * goes on the local part, which has to stay inside the RFC's 64-octet
+     * limit, so only the total length is ever what is under test.
+     */
+    private function emailOfLength(int $length): string
+    {
+        $domain = str_repeat('sub.', 45).'example.com';   // 191 characters
+
+        return str_repeat('a', $length - strlen($domain) - 1).'@'.$domain;
+    }
+
+    public function test_an_email_of_exactly_two_hundred_characters_is_accepted(): void
+    {
+        $email = $this->emailOfLength(200);
+        $this->assertSame(200, strlen($email), 'The fixture itself is the wrong length.');
+
+        $response = $this->post(route('admin.stores.store'), $this->payload(['email' => $email]));
+
+        $response->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('stores', ['email' => $email]);
+    }
+
+    public function test_an_email_longer_than_two_hundred_characters_is_rejected(): void
+    {
+        $email = $this->emailOfLength(201);
+        $this->assertSame(201, strlen($email), 'The fixture itself is the wrong length.');
+
+        $response = $this->post(route('admin.stores.store'), $this->payload(['email' => $email]));
+
+        $response->assertSessionHasErrors('email');
+        $this->assertDatabaseCount('stores', 0);
+    }
+
+    /**
+     * A browser rule that disagrees with the server is worse than none: it
+     * either blocks a value the server accepts, or waves one through that
+     * comes back as a round trip with the form's other fields lost.
+     */
+    public function test_both_forms_carry_the_same_limits_as_the_server(): void
+    {
+        $store = Store::create($this->payload());
+
+        $forms = [
+            'create' => route('admin.stores.create'),
+            'edit' => route('admin.stores.edit', $store),
+        ];
+
+        foreach ($forms as $which => $url) {
+            $html = $this->get($url)->assertOk()->getContent();
+
+            $this->assertMatchesRegularExpression(
+                '/<input[^>]*name="name"[^>]*data-kk-chars="letters"/s',
+                $html,
+                "The {$which} form's name box no longer refuses digits as they are typed."
+            );
+            $this->assertMatchesRegularExpression(
+                '/<input[^>]*name="name"[^>]*pattern="[^"]+"/s',
+                $html,
+                "The {$which} form's name box lost its pattern, so only the server checks the charset."
+            );
+            $this->assertMatchesRegularExpression(
+                '/<input[^>]*name="email"[^>]*maxlength="200"/s',
+                $html,
+                "The {$which} form's email box still advertises a limit the server no longer allows."
+            );
+        }
+    }
+
+    /**
      * The unique rule has to ignore the row being edited, or a store cannot be
      * saved without also renaming its own code.
      */

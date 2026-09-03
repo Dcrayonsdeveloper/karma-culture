@@ -32,11 +32,17 @@ class StoreController extends Controller
      * strictShape is deliberately NOT passed to V::email(): a store's address is
      * a business contact being recorded, not an account being minted, so this
      * matches HomepageController's contact_email rather than signup.
+     *
+     * The name is lettersOnly: it was V::text, which took "Store #1!!" and any
+     * other punctuation soup. Letters and spaces only was the shape asked for,
+     * and it is the same PersonName rule the contact form uses - so a store
+     * called "Store 2" is refused. Widen this rather than the column if
+     * numbered branches are ever needed.
      */
     private function rules(?Store $store = null): array
     {
         return [
-            'name' => V::text(max: 255, min: 2),
+            'name' => V::name(required: true, min: 2, max: 255, lettersOnly: true),
 
             // stores.code is varchar(20) and UNIQUE. The old max:50 was accepted
             // here and then truncated (or rejected) by MySQL - the same bug
@@ -57,7 +63,9 @@ class StoreController extends Controller
 
             'address' => V::addressLine(required: false, max: 255),
             'phone' => V::mobile(required: false),
-            'email' => V::email(required: false),
+            // 200, not the rule's 255 default: the column is varchar(255), so
+            // this is a deliberate ceiling rather than a schema limit.
+            'email' => V::email(required: false, max: 200),
             'is_active' => V::boolean(),
         ];
     }
