@@ -43,9 +43,12 @@
             @endphp
             <input type="hidden" name="{{ $kkField }}" value="{{ $kkValue }}">
         @endforeach
-        <label for="kk-sort" class="text-xs text-neutral-600 hidden sm:inline">Sort by:</label>
-        <select id="kk-sort" name="sort" onchange="this.form.submit()"
-                class="text-sm py-1.5 pl-3 pr-8 border border-neutral-200 rounded-lg bg-white text-neutral-700 focus:outline-none focus:border-[#6F9CA2] cursor-pointer">
+        <label for="kk-sort" class="text-xs text-kk-text-muted hidden sm:inline">Sort by:</label>
+        {{-- aria-label as well as the label, because the label is hidden below
+             sm: and a display:none label gives the control no name at all on a
+             phone - which is also where the dropdown opens as a titled sheet. --}}
+        <select id="kk-sort" name="sort" aria-label="Sort by" onchange="this.form.submit()"
+                class="kk-select-pill">
             @foreach($kkSortOptions as $kkValueKey => $kkLabel)
                 <option value="{{ $kkValueKey }}" @selected($kkSortValues['sort'] === $kkValueKey)>{{ $kkLabel }}</option>
             @endforeach

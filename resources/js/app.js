@@ -8,6 +8,10 @@ import focus from '@alpinejs/focus';
 import collapse from '@alpinejs/collapse';
 import intersect from '@alpinejs/intersect';
 
+// Site-wide dropdown: draws every <select>'s option list itself instead of
+// letting the operating system paint it.
+import './kk-select';
+
 // Register plugins
 Alpine.plugin(focus);
 Alpine.plugin(collapse);
