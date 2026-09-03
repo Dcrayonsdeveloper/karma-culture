@@ -526,14 +526,6 @@
                 /* Centred while the reels fit; ignored once they overflow. */
                 margin: 0 auto;
                 will-change: transform;
-                animation: kk-reel-pan calc(var(--kk-reel-count, 3) * 1.8s) ease-in-out infinite alternate;
-            }
-            /* Held still while it is being looked at. */
-            .kk-about-reels:hover .kk-about-reels__track,
-            .kk-about-reels:focus-within .kk-about-reels__track { animation-play-state: paused; }
-            @keyframes kk-reel-pan {
-                from { transform: translateX(0); }
-                to   { transform: translateX(min(0px, calc(100cqw - 100%))); }
             }
             /* Nothing moves on its own; the strip is scrolled by hand instead. */
             @media (prefers-reduced-motion: reduce) {
@@ -1509,10 +1501,15 @@
                 {{-- Hidden entirely once the last reel is deleted or hidden, rather
                      than leaving an empty grid where the strip used to be. --}}
                 @if($aboutReels->isNotEmpty())
-                {{-- The count drives how long the pan takes, so eight reels travel
-                     at the same pace as four rather than in the same time. --}}
-                <div class="kk-about-reels" style="--kk-reel-count: {{ $aboutReels->count() }};">
-                    <div class="kk-about-reels__track">
+                {{-- The strip runs one way and never turns back: kkAboutReels
+                     slides the track and moves each reel to the end of the line
+                     as it leaves the left edge, so the sequence repeats forever
+                     without the clips being laid down twice. --}}
+                <div class="kk-about-reels" x-data="kkAboutReels()"
+                     style="--kk-reel-count: {{ $aboutReels->count() }};">
+                    <div class="kk-about-reels__track" x-ref="track"
+                         @mouseenter="paused = true" @mouseleave="paused = false"
+                         @focusin="paused = true" @focusout="paused = false">
                         @foreach($aboutReels as $aboutReel)
                             {{-- Admin-set clips of any ratio, so they are shown whole: a
                                  landscape capture used to be cropped to a ribbon of its
@@ -1521,6 +1518,69 @@
                         @endforeach
                     </div>
                 </div>
+                <script>
+                    /* One way, forever. The track slides left at a steady pace and
+                       the reel that has just left the edge is moved to the end of
+                       the line, so the sequence carries on with no seam and no
+                       turn-around - and without the strip being laid down twice,
+                       which would double the number of playing <video> elements
+                       and cost the clips their decoders.
+
+                       That recycling only holds while there is more strip than
+                       screen: once the leading reel is taken off the front, what
+                       is left has to still reach the right-hand edge. Where it
+                       does not - a wide screen, or only two or three reels - the
+                       shortfall is covered by cloning the reels back on, as few
+                       as will do. A strip that already fits stands still. */
+                    function kkAboutReels() {
+                        return {
+                            paused: false,
+                            init() {
+                                // Decorative motion, so anyone who has asked their
+                                // OS for less of it gets a strip that just sits.
+                                if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+                                const strip = this.$el;
+                                const track = this.$refs.track;
+                                const reels = Array.from(track.children);
+                                const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
+                                const lead = () => track.firstElementChild.getBoundingClientRect().width + gap;
+
+                                if (track.scrollWidth <= strip.clientWidth) return;
+
+                                for (let i = 0; track.scrollWidth < strip.clientWidth + lead() && i < reels.length * 6; i++) {
+                                    track.appendChild(reels[i % reels.length].cloneNode(true));
+                                }
+
+                                let x = 0;
+                                let last = null;
+
+                                const step = (now) => {
+                                    // Clamped: a backgrounded tab hands back one huge
+                                    // delta, which would jump the strip on return.
+                                    const dt = last === null ? 0 : Math.min((now - last) / 1000, 0.05);
+                                    last = now;
+
+                                    if (!this.paused) {
+                                        x -= 90 * dt;
+
+                                        const first = lead();
+                                        if (-x >= first) {
+                                            x += first;
+                                            track.appendChild(track.firstElementChild);
+                                        }
+
+                                        track.style.transform = 'translateX(' + x.toFixed(2) + 'px)';
+                                    }
+
+                                    requestAnimationFrame(step);
+                                };
+
+                                requestAnimationFrame(step);
+                            },
+                        };
+                    }
+                </script>
                 @endif
 
                 <div class="kk-about-cta">
