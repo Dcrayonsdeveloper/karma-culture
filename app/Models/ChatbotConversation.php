@@ -28,7 +28,7 @@ class ChatbotConversation extends Model
     public const LEAD_STATUS_COLOURS = [
         'new' => ['#f1f1f1', '#616161'],
         'chatting' => ['#e7f0ff', '#0064a4'],
-        'on_hold' => ['#fff1e3', '#996a13'],
+        'on_hold' => ['#fff1e3', '#8a5c0d'],
         'acquired' => ['#e3f5e9', '#0a7d3f'],
         'lost' => ['#fde8e6', '#d72c0d'],
     ];
@@ -64,10 +64,16 @@ class ChatbotConversation extends Model
         return self::LEAD_STATUSES[$this->leadStatusKey()];
     }
 
-    /** @return array{0: string, 1: string} background, then text colour. */
+    /**
+     * @return array{0: string, 1: string} background, then text colour.
+     *
+     * Falls back the same way leadStatusKey() does: a status added to
+     * LEAD_STATUSES without a matching colour renders grey rather than
+     * destructuring two nulls into the style attribute.
+     */
     public function leadStatusColour(): array
     {
-        return self::LEAD_STATUS_COLOURS[$this->leadStatusKey()];
+        return self::LEAD_STATUS_COLOURS[$this->leadStatusKey()] ?? ['#f1f1f1', '#616161'];
     }
 
     public function messages(): HasMany
