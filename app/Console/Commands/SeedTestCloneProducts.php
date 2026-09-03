@@ -143,7 +143,16 @@ class SeedTestCloneProducts extends Command
             : $systemEmpty->pluck('name')->implode(', ').' - empty, so those pages still compute themselves'));
         $this->line('  Sizes       : '.implode(', ', $sizes));
         $this->line('  Shades      : '.implode(', ', array_keys($shades)));
-        $this->line('  Images      : '.$sourceImages->count().' per clone, reusing the source URLs');
+        // Counted by type rather than called "images", because the source can
+        // already carry a video of its own - production's does - and reporting
+        // "2 images" for one photo and one video is the summary describing
+        // something the run did not do.
+        $sourcePhotos = $sourceImages->where('media_type', '!=', 'video')->count();
+        $sourceVideos = $sourceImages->where('media_type', 'video')->count();
+
+        $this->line('  Media       : '.$sourcePhotos.' photo(s)'
+            .($sourceVideos > 0 ? ' and '.$sourceVideos.' video(s)' : '')
+            .' per clone, copied from the source');
 
         $videoEvery = max(0, (int) $this->option('video-every'));
         $videoUrl = $videoEvery > 0 ? $this->resolveVideoUrl() : null;
@@ -247,7 +256,16 @@ class SeedTestCloneProducts extends Command
                     $clone->collections()->sync($collectionIds);
                 }
 
+                // The primary goes to the first PHOTO, not to whatever happens
+                // to sit at position 0. A source can lead with a video - and
+                // every product card on the site paints the primary and cannot
+                // play one, so copying that arrangement would drop the clone to
+                // the no-image placeholder on every listing it appears in.
+                $primaryTaken = false;
+
                 foreach ($sourceImages as $position => $image) {
+                    $isPhoto = $image->media_type !== 'video';
+
                     ProductImage::create([
                         'product_id' => $clone->id,
                         'media_type' => $image->media_type,
@@ -255,8 +273,10 @@ class SeedTestCloneProducts extends Command
                         'thumbnail_url' => $image->thumbnail_url,
                         'alt_text' => $clone->name,
                         'position' => $position,
-                        'is_primary' => $position === 0,
+                        'is_primary' => $isPhoto && ! $primaryTaken,
                     ]);
+
+                    $primaryTaken = $primaryTaken || $isPhoto;
                 }
 
                 // Last in the gallery, never primary: the primary image is what

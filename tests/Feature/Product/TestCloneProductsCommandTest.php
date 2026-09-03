@@ -213,6 +213,40 @@ class TestCloneProductsCommandTest extends TestCase
         }
     }
 
+    /**
+     * Production's source product leads its gallery with an admin-uploaded
+     * video. Copying "position 0 is the primary" straight across would make a
+     * video the primary image on all forty clones, and every listing card on
+     * the site would fall through to the no-image placeholder.
+     */
+    public function test_a_source_that_leads_with_a_video_still_yields_a_photo_primary(): void
+    {
+        $source = $this->makeSourceProduct();
+
+        // Push the photo behind a video, so position 0 is the video.
+        $source->images()->update(['position' => 1]);
+        ProductImage::create([
+            'product_id' => $source->id,
+            'media_type' => 'video',
+            'url' => '/storage/products/videos/source-own.mp4',
+            'position' => 0,
+            'is_primary' => false,
+        ]);
+
+        $this->artisan('products:test-clones', ['--count' => 3, '--video-every' => 0])->assertSuccessful();
+
+        foreach (Product::where('sku', 'like', 'TESTCLONE-%')->with('images')->get() as $clone) {
+            $primaries = $clone->images->where('is_primary', true);
+
+            $this->assertCount(1, $primaries, 'exactly one primary, or the card picks arbitrarily');
+            $this->assertSame('image', $primaries->first()->media_type);
+            $this->assertSame('https://example.test/polo.jpg', $primaries->first()->url);
+
+            // The source's own video still comes along - it is part of the product.
+            $this->assertTrue($clone->images->contains('media_type', 'video'));
+        }
+    }
+
     public function test_video_can_be_switched_off(): void
     {
         $this->makeSourceProduct();
