@@ -12,6 +12,10 @@
     $kkBotLogo = \App\Models\Setting::get('site_logo', '')
         ? asset_v('storage/' . \App\Models\Setting::get('site_logo'))
         : $kkBotLogoFallback;
+
+    // Same heading as the full page, so the widget and /chat do not introduce
+    // themselves as two different things.
+    $kkSiteName = \App\Models\Setting::get('site_name', 'Karmaa Kulture');
 @endphp
 <style>
     /* --kk-chat-stack is everything the panel sits on top of inside the flex
@@ -112,10 +116,10 @@
                     <img src="{{ $kkBotLogo }}" alt="Karmaa Kulture" class="w-5 h-5 object-contain" data-fallback="{{ $kkBotLogoFallback }}">
                 </div>
                 <div>
-                    <p class="kk-chat-header-title text-sm leading-tight" style="color: #FFFFFF;">Shopping Assistant</p>
+                    <p class="kk-chat-header-title text-sm leading-tight" style="color: #FFFFFF;">{{ $kkSiteName }}</p>
                     <div class="flex items-center gap-1.5 mt-0.5">
                         <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background: #86EFAC;"></span>
-                        <span class="text-[10px] font-medium" style="color: rgba(255,255,255,0.72);">Online • AI Powered</span>
+                        <span class="text-[10px] font-medium" style="color: rgba(255,255,255,0.72);">Shopping assistant • Online</span>
                     </div>
                 </div>
             </div>
@@ -218,7 +222,7 @@
                     {{-- Bot bubble --}}
                     <template x-if="msg.role === 'assistant'">
                         <div class="flex items-start gap-2">
-                            <div class="w-7 h-7 rounded-full bg-[#8C5C34] flex items-center justify-center shrink-0 mt-0.5">
+                            <div class="w-7 h-7 rounded-full bg-white ring-1 ring-neutral-200 flex items-center justify-center shrink-0 mt-0.5">
                                 <img src="{{ $kkBotLogo }}" alt="Karmaa Kulture" class="w-4 h-4 object-contain" data-fallback="{{ $kkBotLogoFallback }}">
                             </div>
                             <div class="flex-1 min-w-0">
@@ -285,7 +289,7 @@
             {{-- Typing indicator --}}
             <template x-if="isTyping">
                 <div class="flex items-start gap-2">
-                    <div class="w-7 h-7 rounded-full bg-[#8C5C34] flex items-center justify-center shrink-0 mt-0.5">
+                    <div class="w-7 h-7 rounded-full bg-white ring-1 ring-neutral-200 flex items-center justify-center shrink-0 mt-0.5">
                         <img src="{{ $kkBotLogo }}" alt="Karmaa Kulture" class="w-4 h-4 object-contain" data-fallback="{{ $kkBotLogoFallback }}">
                     </div>
                     <div class="px-4 py-3 rounded-2xl rounded-tl-sm bg-white border border-neutral-100 shadow-sm flex items-center gap-1">

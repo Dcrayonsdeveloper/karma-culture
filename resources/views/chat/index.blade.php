@@ -13,10 +13,15 @@
     $kkBotLogo = \App\Models\Setting::get('site_logo', '')
         ? asset_v('storage/' . \App\Models\Setting::get('site_logo'))
         : $kkBotLogoFallback;
+
+    // The shop's own name heads the conversation. "Shopping Assistant" said
+    // what the page is but not who the customer is talking to, and the store
+    // owner sets this in Settings.
+    $kkSiteName = \App\Models\Setting::get('site_name', 'Karmaa Kulture');
 @endphp
 
 <x-layouts.app>
-    <x-slot name="title">Shopping Assistant - {{ config('app.name') }}</x-slot>
+    <x-slot name="title">Shopping Assistant - {{ $kkSiteName }}</x-slot>
 
     <div class="bg-neutral-50 border-b border-neutral-100">
         <div class="container mx-auto px-4 py-3">
@@ -33,14 +38,19 @@
 
             {{-- Header --}}
             <div class="flex flex-wrap items-center gap-3 mb-5">
-                <div class="w-11 h-11 rounded-full bg-[#2D1810] flex items-center justify-center shrink-0">
+                {{-- A white disc, as the floating widget uses. The fill here was
+                     the espresso #2D1810 and the logo is a dark mark on
+                     transparent, so the two cancelled out: a dark blob with
+                     nothing legible inside it. The ring keeps the disc visible
+                     against the page rather than relying on the fill. --}}
+                <div class="w-11 h-11 rounded-full bg-white ring-1 ring-neutral-200 shadow-sm flex items-center justify-center shrink-0">
                     <img src="{{ $kkBotLogo }}" alt="" class="w-6 h-6 object-contain" data-fallback="{{ $kkBotLogoFallback }}">
                 </div>
                 <div class="min-w-0">
-                    <h1 class="text-xl sm:text-2xl font-bold text-neutral-900 leading-tight">Shopping Assistant</h1>
+                    <h1 class="text-xl sm:text-2xl font-bold text-neutral-900 leading-tight">{{ $kkSiteName }}</h1>
                     <p class="text-sm text-neutral-600 flex items-center gap-1.5">
                         <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                        Online &middot; AI powered
+                        Shopping assistant &middot; Online
                     </p>
                 </div>
                 <a href="{{ route('shop') }}"
@@ -100,7 +110,7 @@
                             {{-- Assistant --}}
                             <template x-if="msg.role === 'assistant'">
                                 <div class="flex gap-2.5">
-                                    <div class="w-8 h-8 rounded-full bg-[#2D1810] flex items-center justify-center shrink-0 mt-0.5">
+                                    <div class="w-8 h-8 rounded-full bg-white ring-1 ring-neutral-200 flex items-center justify-center shrink-0 mt-0.5">
                                         <img src="{{ $kkBotLogo }}" alt="" class="w-4 h-4 object-contain" data-fallback="{{ $kkBotLogoFallback }}">
                                     </div>
                                     <div class="flex-1 min-w-0">
@@ -151,7 +161,7 @@
                     {{-- Typing --}}
                     <template x-if="isTyping">
                         <div class="flex gap-2.5">
-                            <div class="w-8 h-8 rounded-full bg-[#2D1810] flex items-center justify-center shrink-0">
+                            <div class="w-8 h-8 rounded-full bg-white ring-1 ring-neutral-200 flex items-center justify-center shrink-0">
                                 <img src="{{ $kkBotLogo }}" alt="" class="w-4 h-4 object-contain" data-fallback="{{ $kkBotLogoFallback }}">
                             </div>
                             <div class="px-4 py-3 rounded-2xl rounded-tl-sm bg-white border border-neutral-200 shadow-sm">
