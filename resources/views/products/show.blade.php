@@ -582,6 +582,13 @@
                     // size => variant id. Selecting a size points the page at that row so
                     // the existing currentPrice/currentMrp getters show its price.
                     $kkSizeVariant = $kkRows->reverse()->mapWithKeys(fn ($v) => [trim((string) $v->name) => $v->id])->filter(fn ($id, $n) => $n !== '');
+
+                    // Open the page on a buyable choice: pre-select the first
+                    // size and colour instead of leaving the customer to discover
+                    // an empty selector on their way to the cart.
+                    $kkDefaultSize = $kkSizes->first();
+                    $kkDefaultColour = $kkColours->first();
+                    $kkDefaultVariant = $kkDefaultSize !== null ? ($kkSizeVariant[$kkDefaultSize] ?? null) : null;
                 @endphp
                 @if($kkSizes->isNotEmpty())
                 <section class="kk-sizeguide" id="kk-size-select" aria-label="Select size">
@@ -2117,12 +2124,12 @@
             imageCount: {{ count($media) }},
             touchStartX: 0,
             quantity: 1,
-            selectedSize: null,
-            selectedColor: null,
+            selectedSize: @json($kkDefaultSize),
+            selectedColor: @json($kkDefaultColour),
             // Only enforce a choice for options this product actually offers.
             hasSizes: {{ $kkSizes->isNotEmpty() ? 'true' : 'false' }},
             hasColours: {{ $kkColours->isNotEmpty() ? 'true' : 'false' }},
-            selectedVariant: null,
+            selectedVariant: @json($kkDefaultVariant),
             selectedAttributes: {},
             variants: @json($variantData),
             showZoom: false,
