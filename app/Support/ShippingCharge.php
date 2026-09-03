@@ -73,4 +73,25 @@ class ShippingCharge
             ? (float) Setting::get('flat_rate_amount', 0)
             : 0.0;
     }
+
+    /**
+     * The spend that earns free delivery, or 0 when there is no such offer.
+     *
+     * For the "free over X" note the summaries print, which must not be read
+     * off free_shipping_threshold on its own. Switching Free Shipping off
+     * leaves that row behind - the amount field sits inside an x-show, so it
+     * still submits, and updateShipping() writes the toggle and the amount as
+     * two independent settings. A shop with the switch off and 400 still
+     * stored therefore advertised "free over 400" beside a charge that
+     * isOverThreshold() refuses to waive at any basket size, so a customer
+     * could spend past the advertised minimum and still be billed.
+     *
+     * 0 means "say nothing", which is what both summaries already do with it.
+     */
+    public static function freeShippingThreshold(): float
+    {
+        return (bool) Setting::get('free_shipping_enabled', false)
+            ? (float) Setting::get('free_shipping_threshold', 0)
+            : 0.0;
+    }
 }

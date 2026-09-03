@@ -94,7 +94,15 @@ class CheckoutController extends Controller
         //
         // The cart page has always done this on load; this is the same rule on
         // the last screen that quotes a total.
-        $cart->recalculate();
+        //
+        // skipAutoApply follows the same dismissal the cart page honours. With
+        // auto-apply on unconditionally, a coupon the shopper had removed was
+        // put back the moment they reached this page: the cart quoted one Total
+        // Amount, the checkout quoted a smaller one, and because a discount
+        // moves the basket against the free-delivery minimum the two screens
+        // could disagree about the delivery charge as well. process() already
+        // passes skipAutoApply: true for the same reason.
+        $cart->recalculate(skipAutoApply: session('coupon_dismissed', false));
         $cart->refresh()->load(['items.product', 'items.variant', 'coupon']);
 
         $user = request()->user();

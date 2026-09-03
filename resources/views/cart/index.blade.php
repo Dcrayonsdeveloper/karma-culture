@@ -288,11 +288,38 @@
                                             </div>
                                         </template>
 
-                                        @php $kkFreeShip = (int) \App\Models\Setting::get('free_shipping_threshold', 999); @endphp
+                                        {{-- The amount, not the word - the same fix the checkout
+                                             summary got. This row printed FREE unconditionally and
+                                             the threshold beside it was a hardcoded 999 default,
+                                             so a shop charging for delivery above a 400 minimum
+                                             showed every basket "FREE (free over 999)" and then
+                                             quoted a total with no delivery in it. The figure is
+                                             the server's - see cart_shipping in CartController. --}}
                                         <div class="flex items-center justify-between text-[13px]">
-                                            <span class="text-neutral-600">Shipping <span class="text-neutral-400">(free over ₹{{ number_format($kkFreeShip) }})</span></span>
-                                            <span class="text-success-600 font-semibold">FREE</span>
+                                            <span class="text-neutral-600">
+                                                Shipping
+                                                <template x-if="shipping > 0 && freeShipThreshold > 0">
+                                                    <span class="text-neutral-400" x-text="'(free over ' + fp(freeShipThreshold) + ')'"></span>
+                                                </template>
+                                            </span>
+                                            <template x-if="shipping > 0">
+                                                <span class="font-semibold text-neutral-900" x-text="fp(shipping)"></span>
+                                            </template>
+                                            <template x-if="shipping <= 0">
+                                                <span class="text-success-600 font-semibold">FREE</span>
+                                            </template>
                                         </div>
+
+                                        {{-- Tax, shown only when there is some. The cart has always
+                                             stored it and the checkout now shows it; leaving it out
+                                             here alone would have made this page's total the one
+                                             figure on the site that disagreed with what is charged. --}}
+                                        <template x-if="tax > 0">
+                                            <div class="flex items-center justify-between text-[13px]">
+                                                <span class="text-neutral-600">Tax</span>
+                                                <span class="font-medium text-neutral-900" x-text="fp(tax)"></span>
+                                            </div>
+                                        </template>
                                     </div>
 
                                     <div class="border-t border-dashed border-neutral-200 my-3"></div>
@@ -415,6 +442,18 @@
                 items: @json($cartItems),
                 coupon: @json($cartCoupon),
                 discount: {{ $cartDiscount }},
+                // Delivery and tax as the server worked them out. Every mutation
+                // below re-reads them from its response rather than recomputing
+                // them here, so this page can never quote a delivery charge the
+                // checkout would disagree with.
+                shipping: {{ (float) $cart->shipping }},
+                tax: {{ (float) $cart->tax }},
+                // Display only: what the "free over X" note says, and 0 when
+                // there is no offer to announce. Read through ShippingCharge
+                // rather than off the setting, because the stored threshold
+                // outlives the switch being turned off. The decision itself is
+                // ShippingCharge's, never this number's.
+                freeShipThreshold: {{ \App\Support\ShippingCharge::freeShippingThreshold() }},
                 couponCode: '',
                 couponError: '',
                 applyingCoupon: false,
@@ -441,9 +480,16 @@
                 get productDiscount() {
                     return this.totalMrp - this.subtotal;
                 },
+                // The same four terms the checkout adds up, in the same order.
+                // This was subtotal - discount, so the "Total Amount" a shopper
+                // agreed to on the cart page was short by the delivery charge
+                // and the tax that the next page would go on to bill them.
                 get totalAmount() {
-                    return this.subtotal - this.discount;
+                    return this.subtotal - this.discount + this.shipping + this.tax;
                 },
+                // Savings are what came off the goods. Delivery is a charge, not
+                // a saving, so it stays out of this - adding it would have let
+                // "You will save" grow when the basket got more expensive.
                 get totalSavings() {
                     return this.productDiscount + this.discount;
                 },
@@ -521,6 +567,12 @@
                             this.items = [];
                             this.coupon = null;
                             this.discount = 0;
+                            // Clearing empties the basket client-side without going
+                            // through syncCouponData, so these have to be dropped by
+                            // hand - otherwise an emptied cart kept quoting the
+                            // delivery charge its last item had earned.
+                            this.shipping = 0;
+                            this.tax = 0;
                             this.updateCartBadge();
                             this.toast('Cart cleared');
                         } else {
@@ -590,6 +642,18 @@
                 syncCouponData(data) {
                     if (data.cart_discount !== undefined) {
                         this.discount = data.cart_discount;
+                    }
+                    // Every mutation - quantity, removal, coupon on, coupon off -
+                    // funnels through here, which makes it the one place the
+                    // recalculated delivery charge and tax need reading back.
+                    // Guarded on undefined rather than truthiness: a basket that
+                    // has just qualified for free delivery answers 0, and `if (0)`
+                    // would have left the old charge on screen.
+                    if (data.cart_shipping !== undefined) {
+                        this.shipping = data.cart_shipping;
+                    }
+                    if (data.cart_tax !== undefined) {
+                        this.tax = data.cart_tax;
                     }
                     if (data.coupon) {
                         this.coupon = data.coupon;

@@ -27,8 +27,15 @@ class CartController extends Controller
         // or activated afterwards never reached a cart that was already sitting
         // there. Re-evaluate on view - unless the customer removed the coupon
         // themselves, which must not spring back.
-        if ($cart->items()->exists() && ! session('coupon_dismissed', false)) {
-            $cart->recalculate();
+        //
+        // The dismissal now suppresses the auto-apply pass rather than the whole
+        // recalculation. It used to skip recalculate() outright, which also
+        // skipped the delivery charge, the tax and the subtotal: a shopper who
+        // had once removed a coupon saw this page quote whatever was last
+        // written to the cart row, so a shipping setting changed afterwards
+        // never reached them and the summary and the checkout disagreed.
+        if ($cart->items()->exists()) {
+            $cart->recalculate(skipAutoApply: session('coupon_dismissed', false));
         }
 
         // An offer claimed from the exit popup, honoured now that we know who
@@ -128,6 +135,14 @@ class CartController extends Controller
             // report cart state was the one that spelled it differently.
             'cart_subtotal' => (float) $cart->subtotal,
             'cart_discount' => (float) $cart->discount,
+            // Delivery and tax travel with the rest of the money. The cart page
+            // works its own subtotal out from the line rows so quantity changes
+            // feel instant, but it must not work the DELIVERY charge out too:
+            // that is ShippingCharge's job, and a second implementation of the
+            // threshold rule in JavaScript is exactly how a shopper ends up
+            // shown one total and billed another. Sent, not recomputed.
+            'cart_shipping' => (float) $cart->shipping,
+            'cart_tax' => (float) $cart->tax,
             'cart_total' => (float) $cart->total,
         ]);
     }
@@ -341,6 +356,11 @@ class CartController extends Controller
                 'cart_count' => $cart->items->sum('quantity'),
                 'cart_subtotal' => (float) $cart->subtotal,
                 'cart_discount' => (float) $cart->discount,
+                // Changing a quantity is what carries a basket over or back under
+                // the free-delivery minimum, so this is the response that has to
+                // report the new charge.
+                'cart_shipping' => (float) $cart->shipping,
+                'cart_tax' => (float) $cart->tax,
                 'cart_total' => (float) $cart->total,
                 'coupon' => $cart->coupon ? $this->formatCouponData($cart->coupon, $cart) : null,
             ]);
@@ -373,6 +393,8 @@ class CartController extends Controller
                 'cart_count' => $cart->items->sum('quantity'),
                 'cart_subtotal' => (float) $cart->subtotal,
                 'cart_discount' => (float) $cart->discount,
+                'cart_shipping' => (float) $cart->shipping,
+                'cart_tax' => (float) $cart->tax,
                 'cart_total' => (float) $cart->total,
                 'coupon' => $cart->coupon ? $this->formatCouponData($cart->coupon, $cart) : null,
             ]);
@@ -504,6 +526,11 @@ class CartController extends Controller
                 'success' => true,
                 'message' => 'Coupon applied successfully',
                 'cart_discount' => (float) $cart->discount,
+                // A discount can drop a basket back under the free-delivery
+                // minimum, and a free_shipping coupon waives the charge outright -
+                // both change this figure, so it is sent with the discount.
+                'cart_shipping' => (float) $cart->shipping,
+                'cart_tax' => (float) $cart->tax,
                 'cart_total' => (float) $cart->total,
                 'coupon' => $this->formatCouponData($coupon, $cart),
             ]);
@@ -533,6 +560,8 @@ class CartController extends Controller
                 'message' => 'Coupon removed',
                 'cart_subtotal' => (float) $cart->subtotal,
                 'cart_discount' => (float) $cart->discount,
+                'cart_shipping' => (float) $cart->shipping,
+                'cart_tax' => (float) $cart->tax,
                 'cart_total' => (float) $cart->total,
                 'coupon' => $cart->coupon ? $this->formatCouponData($cart->coupon, $cart) : null,
             ]);

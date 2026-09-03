@@ -349,7 +349,11 @@
                                          The threshold note only appears when there is a charge to
                                          be spared - "free over X" beside a free order is noise. --}}
                                     @php
-                                        $kkFreeShip = (float) \App\Models\Setting::get('free_shipping_threshold', 0);
+                                        // Through ShippingCharge, not off the setting: turning Free
+                                        // Shipping off leaves free_shipping_threshold behind, and
+                                        // reading it raw advertised a minimum that no basket could
+                                        // reach however much the customer spent.
+                                        $kkFreeShip = \App\Support\ShippingCharge::freeShippingThreshold();
                                         $kkShipping = (float) $cart->shipping;
                                         $kkTax = (float) $cart->tax;
                                     @endphp
