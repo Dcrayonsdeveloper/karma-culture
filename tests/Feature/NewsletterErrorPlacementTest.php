@@ -121,16 +121,54 @@ class NewsletterErrorPlacementTest extends TestCase
     }
 
     /**
-     * And the opt-out has to be the one the blur handler actually reads.
-     * `novalidate` is not it: the submit handler stands down for that, the
-     * blur handler does not, which is how the second message got in.
+     * Every path that prints a message reads the SAME opt-out.
+     *
+     * The submit handler stood down for a `novalidate` form from the start -
+     * that attribute means "this form is judged by its own code" - but the
+     * blur, invalid, keystroke and password paths only checked
+     * data-no-validate, so most of the module carried on running on a form
+     * that had already opted out. The register form showed it plainest: the
+     * shared "Enter a 10-digit Indian mobile number starting with 6, 7, 8 or
+     * 9." printed above kkRegisterForm's own "Please enter a valid 10-digit
+     * mobile number starting with 6, 7, 8 or 9.", one mistake reported twice
+     * in two wordings.
      */
-    public function test_the_blur_handler_honours_that_opt_out(): void
+    public function test_one_opt_out_covers_every_path_that_prints_a_message(): void
     {
+        $js = $this->appJs();
+
         $this->assertMatchesRegularExpression(
-            '/function skipOnBlur\([^)]*\)\s*\{(?:[^}]|\}(?!\s*\n\s*\}))*data-no-validate/s',
-            $this->appJs(),
-            'skipOnBlur no longer reads data-no-validate, so opting a form out does nothing on blur.'
+            '/function reportsForItself\(form\)\s*\{\s*return[^}]*data-no-validate[^}]*novalidate/s',
+            $js,
+            'The opt-out has to cover novalidate as well, or a self-reporting form gets messages from both.'
+        );
+
+        // Blur, invalid, password and the keystroke note all route through it.
+        $this->assertGreaterThanOrEqual(
+            5,
+            substr_count($js, 'reportsForItself('),
+            'A path that checks the attribute itself will drift away from the rest.'
+        );
+        $this->assertSame(
+            1,
+            substr_count($js, "hasAttribute('novalidate')"),
+            'novalidate should be read in one place - the shared helper - and nowhere else.'
+        );
+    }
+
+    /**
+     * The keystroke filter is not a message and does not opt out with them: a
+     * mobile box on the register form still refuses letters, it just no longer
+     * says so twice.
+     */
+    public function test_the_keystroke_filter_survives_the_opt_out(): void
+    {
+        $js = $this->appJs();
+
+        $this->assertMatchesRegularExpression(
+            '/if \(reportsForItself\(field\.form\)\) return;\s*\n\s*showError\(field, policy\.message\);/',
+            $js,
+            'The guard belongs after the character has been stripped, not before it.'
         );
     }
 }

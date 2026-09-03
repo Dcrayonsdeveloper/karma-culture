@@ -1566,6 +1566,32 @@ Alpine.start();
     const ERROR_CLASS = 'kk-field-error';
     const INVALID_CLASS = 'kk-input-invalid';
 
+    /**
+     * A form that reports for itself, and gets no messages from here.
+     *
+     * `novalidate` says the browser must not judge this form - and everything
+     * in this module IS that judgement, only rendered into our own markup
+     * instead of the browser's bubble. The submit handler below has always read
+     * it that way and stood down; the blur, invalid, keystroke and password
+     * paths only checked data-no-validate, so half of the module kept running
+     * on a form that had already opted out.
+     *
+     * What the customer saw was the same complaint twice under one box, in two
+     * different wordings and two different places: on the register form,
+     * "Enter a 10-digit Indian mobile number starting with 6, 7, 8 or 9."
+     * above kkRegisterForm's own "Please enter a valid 10-digit mobile number
+     * starting with 6, 7, 8 or 9." Every novalidate form on this site is an
+     * Alpine component with its own per-field messages - the register form, the
+     * login modal, the newsletter, the offer and exit popups - so there is
+     * nothing here for this module to add to any of them.
+     *
+     * data-no-validate stays as the explicit opt-out, for a form that keeps
+     * native validation but wants no messages from this module.
+     */
+    function reportsForItself(form) {
+        return !!(form && (form.hasAttribute('data-no-validate') || form.hasAttribute('novalidate')));
+    }
+
     function labelFor(field) {
         if (field.labels && field.labels.length) {
             return field.labels[0].textContent.replace(/\*/g, '').trim().replace(/:$/, '');
@@ -1745,7 +1771,7 @@ Alpine.start();
     document.addEventListener('submit', function (event) {
         const form = event.target;
         if (!(form instanceof HTMLFormElement)) return;
-        if (form.hasAttribute('data-no-validate') || form.hasAttribute('novalidate')) return;
+        if (reportsForItself(form)) return;
 
         const fields = Array.from(form.elements).filter(function (el) {
             return el.willValidate && !el.disabled && el.type !== 'hidden';
@@ -1856,8 +1882,11 @@ Alpine.start();
         const field = event.target;
         if (!field || typeof field.value !== 'string') return;
 
-        const form = field.form;
-        if (form && form.hasAttribute('data-no-validate')) return;
+        // data-no-validate turns this handler off outright - a form that wants
+        // nothing from this module gets no keystroke filtering either. A
+        // novalidate form is a different case and is handled further down: it
+        // keeps the filtering and only forgoes the note.
+        if (field.form && field.form.hasAttribute('data-no-validate')) return;
 
         const policy = charPolicy(field);
         if (!policy) return;
@@ -1902,6 +1931,13 @@ Alpine.start();
 
         field.value = cleaned;
         try { field.setSelectionRange(caret - removedBeforeCaret, caret - removedBeforeCaret); } catch (e) { /* unsupported on some types */ }
+
+        // The character is refused either way - that is this handler's job and
+        // it belongs to no form's validator. Only the note is held back on a
+        // form that reports for itself, or it would print a second complaint
+        // beside the one that form is already showing, and the hand-back below
+        // would leave it there for good.
+        if (reportsForItself(field.form)) return;
 
         showError(field, policy.message);
 
@@ -2019,8 +2055,8 @@ Alpine.start();
         const role = passwordRole(field);
         if (!role) return;
 
-        const form = field.form;
-        if (form && form.hasAttribute('data-no-validate')) return;
+        // kkRegisterForm judges its own password box, in its own wording.
+        if (reportsForItself(field.form)) return;
 
         const value = field.value || '';
         let message = '';
@@ -2118,8 +2154,7 @@ Alpine.start();
         if (!field || !field.willValidate || field.disabled) return true;
         if (field.type === 'checkbox' || field.type === 'radio') return true;
 
-        const form = field.form;
-        return !!(form && form.hasAttribute('data-no-validate'));
+        return reportsForItself(field.form);
     }
 
     document.addEventListener('blur', function (event) {
@@ -2154,8 +2189,7 @@ Alpine.start();
         const field = event.target;
         if (!field || !field.willValidate) return;
 
-        const form = field.form;
-        if (form && form.hasAttribute('data-no-validate')) return;
+        if (reportsForItself(field.form)) return;
 
         showError(field, messageFor(field));
 
