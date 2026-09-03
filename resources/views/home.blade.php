@@ -477,28 +477,59 @@
             /* About Us - video-led, minimal copy */
             .kk-about { background: var(--kk-cream); padding: 40px 0; text-align: center; }
             .kk-about p.intro { max-width: 480px; margin: 14px auto 0; color: var(--kk-text-muted); font-size: 15px; line-height: 1.65; }
-            /* Three reel-style (9:16) videos, Instagram-reels grid */
-            /* A wrapping, centred row rather than three fixed columns. The strip
-               used to be exactly three clips because three settings keys held it;
-               it is a list now, so it has to look right at one, two, four or eight.
-               `repeat(3, 1fr)` left a single reel stretched across a third of the
-               section and hugging the left edge with two empty columns beside it.
+            /* Reel-style (9:16) clips on one line that pans by itself.
+               The strip wrapped before, so a fourth clip dropped onto a second
+               row and the section read as a block of tiles rather than a strip
+               of reels. It is one line now however many are saved: the track
+               overflows and slides between its two ends.
 
-               287px is what a column measured before (900px, three tracks, two
-               20px gaps), and shrinking is still allowed, so three reels land
-               pixel-for-pixel where they always did and the phone layout - three
-               narrow reels across - is unchanged. */
+               Panned, not looped by duplication. A seamless marquee needs the
+               clips laid down twice, and every one of them is a playing
+               <video> - browsers cap concurrent hardware decoders, and past the
+               cap clips silently stop painting, which is the blank tile
+               x-media exists to prevent. So each reel is on the page once and
+               the track slides the exact distance it overflows: 100cqw is the
+               strip's own width, 100% the track's, and min() pins it still
+               when everything already fits.
+
+               287px is what a reel measured in the old grid (900px, three
+               tracks, two 20px gaps), so three of them still land where they
+               always did. */
             .kk-about-reels {
-                display: flex;
-                flex-wrap: wrap;
-                justify-content: center;
-                gap: 20px;
+                --kk-reel-gap: 20px;
+                container-type: inline-size;
+                position: relative;
                 width: 100%;
-                max-width: 900px;
                 margin: 40px auto 0;
+                overflow: hidden;
+                /* Clips fade in and out at the ends instead of being cut off. */
+                -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 5%, #000 95%, transparent 100%);
+                mask-image: linear-gradient(90deg, transparent 0, #000 5%, #000 95%, transparent 100%);
+            }
+            .kk-about-reels__track {
+                display: flex;
+                gap: var(--kk-reel-gap);
+                width: max-content;
+                /* Centred while the reels fit; ignored once they overflow. */
+                margin: 0 auto;
+                will-change: transform;
+                animation: kk-reel-pan calc(var(--kk-reel-count, 3) * 4s) ease-in-out infinite alternate;
+            }
+            /* Held still while it is being looked at. */
+            .kk-about-reels:hover .kk-about-reels__track,
+            .kk-about-reels:focus-within .kk-about-reels__track { animation-play-state: paused; }
+            @keyframes kk-reel-pan {
+                from { transform: translateX(0); }
+                to   { transform: translateX(min(0px, calc(100cqw - 100%))); }
+            }
+            /* Nothing moves on its own; the strip is scrolled by hand instead. */
+            @media (prefers-reduced-motion: reduce) {
+                .kk-about-reels { overflow-x: auto; }
+                .kk-about-reels__track { animation: none; }
             }
             .kk-about-reel {
-                flex: 0 1 287px;
+                flex: 0 0 auto;
+                width: 287px;
                 position: relative;
                 aspect-ratio: 9 / 16;
                 border-radius: 14px;
@@ -520,8 +551,10 @@
             .kk-about-cta { margin-top: 36px; }
             @media (max-width: 640px) {
                 .kk-about { padding: 28px 0; }
-                .kk-about-reels { margin-top: 28px; gap: 10px; }
-                .kk-about-reel { border-radius: 8px; }
+                .kk-about-reels { margin-top: 28px; --kk-reel-gap: 10px; }
+                /* Three across the phone, as before, rather than one 287px reel
+                   filling the screen with the next only half in view. */
+                .kk-about-reel { width: 30vw; border-radius: 8px; }
             }
 
             /* Qualities (dark) - video-background cards */
@@ -1463,13 +1496,17 @@
                 {{-- Hidden entirely once the last reel is deleted or hidden, rather
                      than leaving an empty grid where the strip used to be. --}}
                 @if($aboutReels->isNotEmpty())
-                <div class="kk-about-reels">
-                    @foreach($aboutReels as $aboutReel)
-                        {{-- Admin-set clips of any ratio, so they are shown whole: a
-                             landscape capture used to be cropped to a ribbon of its
-                             middle by the 9/16 reel. --}}
-                        <x-media class="kk-about-reel" :src="$aboutReel->url" video dark />
-                    @endforeach
+                {{-- The count drives how long the pan takes, so eight reels travel
+                     at the same pace as four rather than in the same 4 seconds. --}}
+                <div class="kk-about-reels" style="--kk-reel-count: {{ $aboutReels->count() }};">
+                    <div class="kk-about-reels__track">
+                        @foreach($aboutReels as $aboutReel)
+                            {{-- Admin-set clips of any ratio, so they are shown whole: a
+                                 landscape capture used to be cropped to a ribbon of its
+                                 middle by the 9/16 reel. --}}
+                            <x-media class="kk-about-reel" :src="$aboutReel->url" video dark />
+                        @endforeach
+                    </div>
                 </div>
                 @endif
 

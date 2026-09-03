@@ -83,7 +83,9 @@ class AboutReelsTest extends TestCase
     /**
      * And the strip has to survive the count changing. Three fixed columns left
      * a single reel stretched across a third of the section, hugging the left
-     * edge with two empty columns beside it.
+     * edge with two empty columns beside it - and a wrapping row dropped the
+     * fourth clip onto a second line, which read as a block of tiles rather
+     * than a strip of reels.
      */
     public function test_the_strip_lays_itself_out_around_the_count(): void
     {
@@ -94,8 +96,15 @@ class AboutReelsTest extends TestCase
             $home,
             'A hardcoded three columns cannot hold one reel or four.'
         );
+        $this->assertDoesNotMatchRegularExpression(
+            '/\.kk-about-reels[^{]*\{[^}]*flex-wrap: wrap/',
+            $home,
+            'The strip is one line; a fourth reel must not drop onto a second row.'
+        );
+        // The track is max-content wide, so its auto margins are what centre a
+        // short strip - and they give way by themselves once it overflows.
         $this->assertMatchesRegularExpression(
-            '/\.kk-about-reels \{[^}]*justify-content: center/',
+            '/\.kk-about-reels__track \{[^}]*margin: 0 auto/',
             $home,
             'One or two reels have to sit in the middle of the section, not against its left edge.'
         );
