@@ -50,9 +50,25 @@
     /* Responsive behaviour (grid collapse, wrapping toolbars, scrolling
        tables) lives in resources/css/app.css under "Responsive: admin shell",
        so the rules are versioned with the rest of the stylesheet. */
+
+    /* The shell is exactly one viewport tall and <main> is the only box that
+       scrolls page content, so anything <main> cannot reach is unreachable.
+       app.css re-declares the shell's 100vh as 100dvh for that reason. The
+       safe-area term below is 0px unless the viewport meta gains
+       viewport-fit=cover; it is the matching guard for the drawer's. */
+    @media (max-width: 1023.98px) {
+        .layout-admin main { padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); }
+    }
     </style>
 </head>
-<body class="font-sans antialiased layout-admin" style="background: #efeded;" x-data="{ sidebarOpen: false }">
+{{-- `sidebarOpen` drives the off-canvas drawer in admin.partials.sidebar.
+     Escape closes it, and crossing back over lg clears the flag: past that
+     width the drawer is a static column again, and a flag left set would
+     spring it open on the way back down. --}}
+<body class="font-sans antialiased layout-admin" style="background: #efeded;"
+      x-data="{ sidebarOpen: false }"
+      @keydown.escape.window="sidebarOpen = false"
+      @resize.window="if (window.innerWidth >= 1024) sidebarOpen = false">
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
         @include('admin.partials.sidebar')

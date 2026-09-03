@@ -2,7 +2,12 @@
     <!-- Left side -->
     <div class="flex items-center gap-3">
         <!-- Mobile menu toggle -->
-        <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden p-1.5 -ml-1 text-neutral-600 hover:text-neutral-900 rounded-lg hover:bg-neutral-100" aria-label="Toggle menu">
+        <button type="button"
+                @click="sidebarOpen = !sidebarOpen"
+                class="lg:hidden p-1.5 -ml-1 text-neutral-600 hover:text-neutral-900 rounded-lg hover:bg-neutral-100"
+                aria-controls="admin-sidebar"
+                :aria-expanded="sidebarOpen ? 'true' : 'false'"
+                aria-label="Toggle menu">
             <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
             </svg>
