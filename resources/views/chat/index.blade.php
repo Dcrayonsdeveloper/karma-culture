@@ -272,8 +272,11 @@
                             .slice(-10)
                             .map(m => ({ role: m.role, content: m.content }));
 
+                        // No _token in the body: bootstrap.js already sets X-CSRF-TOKEN on
+                        // every axios request from the same meta tag. The widget builds the
+                        // identical request without it, and this is the same endpoint - two
+                        // shapes for one call is how they drift apart.
                         const { data } = await axios.post('{{ route('chatbot.message') }}', {
-                            _token: document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
                             message: text,
                             history: history,
                         });

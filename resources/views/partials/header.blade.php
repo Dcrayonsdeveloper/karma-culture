@@ -297,7 +297,10 @@
                          class="absolute left-0 right-0 top-full mt-1 bg-kk-cream-lighter border border-kk-cream-dark rounded-lg shadow-dropdown z-50 overflow-hidden">
                         <div x-show="results.length > 0" class="max-h-60 overflow-y-auto">
                             <ul class="py-1">
-                                <template x-for="result in results" :key="result.id">
+                                {{-- Keyed on type+id: products, categories and brands each have their own id
+                                     sequence, so keying on the id alone made Alpine treat a product
+                                     and a category that happened to share one as the same node. --}}
+                                <template x-for="result in results" :key="result.type + '-' + result.id">
                                     <li>
                                         <a :href="result.url" class="flex items-center gap-2.5 px-3 py-2 hover:bg-kk-cream transition-colors">
                                             {{-- Contained, not cropped: at 32px a cover crop of a

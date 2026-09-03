@@ -39,40 +39,52 @@ Route::get('/sitemap-blog.xml', [App\Http\Controllers\SitemapController::class, 
 // Storefront Routes
 Route::get('/', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 
-// Products
-Route::prefix('products')->name('products.')->group(function () {
-    // All-products index page removed - CTAs now point to the home page.
-    Route::get('/{product:slug}', [App\Http\Controllers\ProductController::class, 'show'])->name('show');
-});
-
-// Alias for product show
+// Products.
+//
+// /product/{slug} is the canonical path and the only one. It is what every link
+// on the site uses, what the canonical tag emits, what the sitemap advertises
+// and what the JSON endpoints hand back.
+//
+// The plural /products/{slug} is not registered, by decision: a path this site
+// does not serve is a wrong address, and a wrong address gets the 404 page. It
+// is not quietly forwarded to a page the visitor did not ask for, which hides
+// the broken link from whoever wrote it and makes the 404 page a liar about
+// what this site actually has.
 Route::get('/product/{product:slug}', [App\Http\Controllers\ProductController::class, 'show'])->name('product.show');
 
-// Quick View (AJAX)
-Route::get('/product/{product}/quick-view', [App\Http\Controllers\ProductController::class, 'quickView'])->name('product.quick-view');
+// Everything else that hangs off one product. These are all named product.*
+// already; three of the four answered at /products/... while the fourth and the
+// page itself were at /product/..., so the paths disagreed with their own names
+// and with each other. They take an id, not a slug - Product has no
+// getRouteKeyName(), so route('product.guest-review', $product) has always
+// generated the id, and whereNumber pins that.
+Route::prefix('product/{product}')->name('product.')->whereNumber('product')->group(function () {
+    Route::get('/quick-view', [App\Http\Controllers\ProductController::class, 'quickView'])->name('quick-view');
 
-// Guest Reviews
-Route::post('/products/{product}/guest-review', [App\Http\Controllers\GuestReviewController::class, 'store'])
-    ->name('product.guest-review')
-    ->middleware('throttle:3,60');
+    Route::post('/guest-review', [App\Http\Controllers\GuestReviewController::class, 'store'])
+        ->middleware('throttle:3,60')
+        ->name('guest-review');
 
-// Product Questions
-Route::post('/products/{product}/ask-question', [App\Http\Controllers\ProductController::class, 'askQuestion'])
-    ->name('product.ask-question')
-    ->middleware('throttle:5,60');
+    Route::post('/ask-question', [App\Http\Controllers\ProductController::class, 'askQuestion'])
+        ->middleware('throttle:5,60')
+        ->name('ask-question');
 
-// Back in Stock Notifications
-Route::post('/products/{product}/notify-back-in-stock', [App\Http\Controllers\ProductController::class, 'notifyBackInStock'])
-    ->name('product.notify-back-in-stock')
-    ->middleware('throttle:5,60');
-
-// Categories
-Route::prefix('categories')->name('categories.')->group(function () {
-    // Categories index page removed - the navbar shows a hover dropdown instead.
-    Route::get('/{category:slug}', [App\Http\Controllers\CategoryController::class, 'show'])->name('show');
+    Route::post('/notify-back-in-stock', [App\Http\Controllers\ProductController::class, 'notifyBackInStock'])
+        ->middleware('throttle:5,60')
+        ->name('notify-back-in-stock');
 });
 
-// Alias for category show
+// The review form's old path. Unnamed on purpose so route() only ever emits the
+// new one; this is here for a product page that was already open when the
+// deploy landed, whose form action is baked into HTML the shopper may be part
+// way through filling in. A redirect would not help - a 301 turns their POST
+// into a GET and their review would be lost.
+Route::post('/products/{product}/guest-review', [App\Http\Controllers\GuestReviewController::class, 'store'])
+    ->middleware('throttle:3,60');
+
+// Categories. Same rule as products above: /category/{slug} is the one path,
+// the plural is not registered and 404s.
+// (There is no categories index page - the navbar shows a hover dropdown.)
 Route::get('/category/{category:slug}', [App\Http\Controllers\CategoryController::class, 'show'])->name('category.show');
 
 // Brands
@@ -86,37 +98,48 @@ Route::get('/search', [App\Http\Controllers\SearchController::class, 'index'])->
 Route::get('/search/suggestions', [App\Http\Controllers\SearchController::class, 'suggestions'])->name('search.suggestions');
 
 // Special Pages
-// The all-products page. Its controller and filters already existed but it
-// had no route, which is why /products 404'd and the Shop It Your Way tiles
-// pointed at the home page, where their filters mean nothing.
-Route::get('/shop', [App\Http\Controllers\ProductController::class, 'index'])->name('shop');
+// The all-products page, served at /products. That is the address the store
+// owner wants shoppers to arrive at, so it is where the page is answered rather
+// than somewhere it is forwarded from - it sat at /shop, with /products first
+// 404ing and then 301ing here, and both of those made a visitor who typed the
+// obvious address wrong about this shop instead of the other way round.
+//
+// Nothing collides: the product page is at /product/{slug}, singular, and no
+// /products/{slug} wildcard is registered to swallow /products/filters below.
+// If one is ever added it must be declared AFTER these two literals, or it will
+// answer them - the same ordering bug that once ate /cart/remove-coupon.
+Route::get('/products', [App\Http\Controllers\ProductController::class, 'index'])->name('shop');
 
 // The filter panel on its own, for the Filters drawer the header now carries on
 // every page. Fetched the first time a shopper opens the drawer rather than
 // rendered into every page, because building the facets is five queries and
 // most visits never open it.
-Route::get('/shop/filters', [App\Http\Controllers\ProductController::class, 'filtersPanel'])->name('shop.filters');
+Route::get('/products/filters', [App\Http\Controllers\ProductController::class, 'filtersPanel'])->name('shop.filters');
 
-// The paths that used to live here - /products, /returns, /orders/{id} and
-// /orders/{id}/track - are deliberately not registered.
-//
-// They were 301s to /shop, /returns-policy and the /account order pages, on the
-// theory that forwarding an old link is kinder than refusing it. It is not.
-// Typing /products put a visitor on /shop having never asked to go there, with
-// nothing to tell them the address they held is dead; and whoever wrote the bad
-// link never found out it was bad, because the site covered for them silently
-// and forever. The redirect also quietly dropped query strings - a Laravel
-// redirect route forwards path parameters only - so /products?category=kurtas
-// landed on an unfiltered /shop, which is a wrong page rather than a slow one.
-//
-// A path this site does not serve now answers with the 404 page. Nothing on the
-// site asks for these: every internal link goes through route(), and the stored
-// links and page copy that still named an old path were repointed at the real
-// pages by 2026_09_03_120000_repoint_legacy_storefront_links.
-//
-// tests/Feature/NotFoundUrlsTest.php holds the line, including a check that no
-// route anywhere answers a path with a redirect to another page on this site.
+// The route names stay 'shop' and 'shop.filters'. They are what ~30 call sites
+// already ask for, and every one emits the new path the moment the URI changes
+// here - which is why moving this page took two lines rather than thirty.
+// Renaming them is a tidy-up worth doing on its own, not folded into a URL
+// change that has to ship.
 
+// /shop, /returns, /orders/{id} and /orders/{id}/track are deliberately not
+// registered. /shop is where the all-products page used to be answered, before
+// it moved to /products above; the other three predate /returns-policy and the
+// move of order pages under /account.
+//
+// None is an alias, because this site does not answer a path it cannot serve by
+// sending the visitor somewhere else. That was tried - /products used to 301 to
+// /shop - and it put people on a page they never asked for with nothing to say
+// the address they held was dead, while whoever wrote the bad link never found
+// out, because the site covered for them silently and forever. It was not even
+// faithful: a Laravel redirect route carries path parameters only, so
+// /products?category=kurtas arrived at an unfiltered /shop, a wrong page rather
+// than a slow one.
+//
+// So a path this site does not serve answers with the 404 page. Nothing here
+// asks for one: every internal link goes through route(), and the stored links
+// and page copy that named an old path are repointed by the two
+// repoint_legacy_storefront_links / repoint_shop_links_at_products migrations.
 Route::get('/deals', [App\Http\Controllers\DealsController::class, 'index'])->name('deals');
 Route::get('/flash-sale/{flashSale:slug}', [App\Http\Controllers\FlashSaleController::class, 'show'])->name('flash-sale.show');
 Route::get('/new-arrivals', [App\Http\Controllers\ProductController::class, 'newArrivals'])->name('new-arrivals');
@@ -180,16 +203,33 @@ Route::prefix('checkout')->name('checkout.')->group(function () {
 // guest session) is enforced inside the controller.
 Route::get('/payu/initiate/{order}', [App\Http\Controllers\PayUController::class, 'initiate'])->name('payu.initiate');
 
-// Wishlist page - client-side (localStorage) wishlist, works for guests
+// Wishlist. The list itself lives in a browser cookie (kk_wishlist), so it
+// works for a guest; the endpoints below only turn ids into product data and
+// keep the signed-in server copy in step.
 Route::get('/wishlist', [App\Http\Controllers\WishlistController::class, 'index'])->name('wishlist');
-// Product data for the favourited IDs (guest-accessible; used to render the wishlist page)
-Route::get('/wishlist-items', [App\Http\Controllers\WishlistController::class, 'items'])->name('wishlist.items');
 
-// Wishlist actions (require auth - legacy server wishlist, kept for logged-in sync if needed)
-Route::middleware('auth')->prefix('wishlist')->name('wishlist.')->group(function () {
-    Route::post('/{product}', [App\Http\Controllers\WishlistController::class, 'store'])->name('store');
-    Route::delete('/{product}', [App\Http\Controllers\WishlistController::class, 'destroy'])->name('destroy');
+// The data endpoint used to sit at /wishlist-items, outside the prefix its own
+// page and actions use. whereNumber on {product} is what lets /items live in
+// here safely - the cart carries the same constraint after exactly that bug
+// swallowed /cart/remove-coupon.
+Route::prefix('wishlist')->name('wishlist.')->group(function () {
+    // Product data for the favourited ids. Guest-accessible: it is what renders
+    // the wishlist page and the drawer, both of which answer for a guest.
+    Route::get('/items', [App\Http\Controllers\WishlistController::class, 'items'])->name('items');
+
+    // Writing takes an account, same as the cart.
+    Route::middleware('auth')->group(function () {
+        Route::post('/{product}', [App\Http\Controllers\WishlistController::class, 'store'])->whereNumber('product')->name('store');
+        Route::delete('/{product}', [App\Http\Controllers\WishlistController::class, 'destroy'])->whereNumber('product')->name('destroy');
+    });
 });
+
+// The old path, still answering. A tab opened before this deploy is running the
+// previous JS bundle and still asks for this one. A redirect would not do here:
+// Laravel's redirect routes forward path parameters only and would drop the
+// ?ids= list, so the shopper would be told their wishlist was empty rather than
+// sent to the right place. Safe to delete once no old bundle can be in a browser.
+Route::get('/wishlist-items', [App\Http\Controllers\WishlistController::class, 'items']);
 
 // Guest Authentication Routes
 //
@@ -226,8 +266,11 @@ Route::middleware('auth')->group(function () {
         Route::put('/profile', [App\Http\Controllers\Account\ProfileController::class, 'update'])->name('profile.update');
         Route::put('/password', [App\Http\Controllers\Account\ProfileController::class, 'updatePassword'])->name('password.update');
 
-        // Addresses
-        Route::resource('addresses', App\Http\Controllers\Account\AddressController::class);
+        // Addresses. except(show) because AddressController has no show() - the
+        // list links straight to edit, so GET /account/addresses/{id} was only
+        // ever reachable by typing it, and answered 500 rather than 404.
+        Route::resource('addresses', App\Http\Controllers\Account\AddressController::class)
+            ->except(['show']);
 
         // Orders
         Route::prefix('orders')->name('orders.')->group(function () {
@@ -239,8 +282,12 @@ Route::middleware('auth')->group(function () {
             Route::post('/{order}/reorder', [App\Http\Controllers\Account\OrderController::class, 'reorder'])->name('reorder');
         });
 
-        // Returns
-        Route::resource('returns', App\Http\Controllers\Account\ReturnController::class);
+        // Returns. Only the four methods ReturnController defines. The full
+        // resource also registered edit, update and destroy, which resolved to
+        // missing methods and 500'd when hit - a customer cannot amend or
+        // withdraw a return request from here, only raise and read one.
+        Route::resource('returns', App\Http\Controllers\Account\ReturnController::class)
+            ->only(['index', 'create', 'store', 'show']);
 
         // Reviews
         Route::get('/reviews', [App\Http\Controllers\Account\ReviewController::class, 'index'])->name('reviews');
@@ -277,8 +324,12 @@ Route::post('/newsletter/subscribe', [App\Http\Controllers\NewsletterController:
 // Recommendations (AJAX)
 Route::prefix('recommendations')->name('recommendations.')->group(function () {
     Route::get('/recently-viewed', [App\Http\Controllers\Web\RecommendationController::class, 'recentlyViewed'])->name('recently-viewed');
-    Route::get('/similar/{productId}', [App\Http\Controllers\Web\RecommendationController::class, 'similar'])->name('similar');
-    Route::get('/bought-together/{productId}', [App\Http\Controllers\Web\RecommendationController::class, 'frequentlyBoughtTogether'])->name('bought-together');
+    // whereNumber because both controller methods type-hint int $productId:
+    // an unconstrained {productId} let /recommendations/similar/foo through to a
+    // TypeError and a 500, where the rest of the site answers 404 for an
+    // identifier that cannot exist.
+    Route::get('/similar/{productId}', [App\Http\Controllers\Web\RecommendationController::class, 'similar'])->whereNumber('productId')->name('similar');
+    Route::get('/bought-together/{productId}', [App\Http\Controllers\Web\RecommendationController::class, 'frequentlyBoughtTogether'])->whereNumber('productId')->name('bought-together');
     Route::get('/personalized', [App\Http\Controllers\Web\RecommendationController::class, 'personalized'])->name('personalized');
 });
 

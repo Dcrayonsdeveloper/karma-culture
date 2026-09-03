@@ -799,7 +799,7 @@ Returns up to 12 products ordered by `created_at` descending.
       "id": 1,
       "rating": 5,
       "title": "Great quality!",
-      "comment": "My kids love these blocks. Very sturdy and safe.",
+      "content": "My kids love these blocks. Very sturdy and safe.",
       "is_approved": true,
       "created_at": "2026-02-10T14:30:00.000000Z",
       "user": {
@@ -1633,7 +1633,7 @@ Cancels an order that is in `pending` or `processing` status.
       "product_id": 1,
       "rating": 5,
       "title": "Great quality!",
-      "comment": "My kids love these blocks.",
+      "content": "My kids love these blocks.",
       "is_approved": true,
       "created_at": "2026-02-10T14:30:00.000000Z",
       "product": {
@@ -1666,7 +1666,7 @@ Cancels an order that is in `pending` or `processing` status.
   "product_id": 1,
   "rating": 5,
   "title": "Great quality!",
-  "comment": "My kids love these blocks. Very sturdy and safe."
+  "content": "My kids love these blocks. Very sturdy and safe."
 }
 ```
 
@@ -1675,7 +1675,7 @@ Cancels an order that is in `pending` or `processing` status.
 | `product_id` | integer | Yes | must exist in products table |
 | `rating` | integer | Yes | min:1, max:5 |
 | `title` | string | No | max:255 |
-| `comment` | string | No | max:2000 |
+| `content` | string | No | max:2000 |
 
 **Response** `201 Created`
 
@@ -1687,7 +1687,7 @@ Cancels an order that is in `pending` or `processing` status.
     "product_id": 1,
     "rating": 5,
     "title": "Great quality!",
-    "comment": "My kids love these blocks. Very sturdy and safe.",
+    "content": "My kids love these blocks. Very sturdy and safe.",
     "is_approved": false,
     "created_at": "2026-02-25T12:00:00.000000Z"
   }
@@ -1721,7 +1721,7 @@ Cancels an order that is in `pending` or `processing` status.
     "product_id": 1,
     "rating": 5,
     "title": "Great quality!",
-    "comment": "My kids love these blocks.",
+    "content": "My kids love these blocks.",
     "is_approved": true,
     "product": {
       "id": 1,
@@ -1748,7 +1748,7 @@ Cancels an order that is in `pending` or `processing` status.
 {
   "rating": 4,
   "title": "Updated: Good quality",
-  "comment": "Still great but found a small chip."
+  "content": "Still great but found a small chip."
 }
 ```
 
@@ -1761,7 +1761,7 @@ Cancels an order that is in `pending` or `processing` status.
     "id": 1,
     "rating": 4,
     "title": "Updated: Good quality",
-    "comment": "Still great but found a small chip."
+    "content": "Still great but found a small chip."
   }
 }
 ```

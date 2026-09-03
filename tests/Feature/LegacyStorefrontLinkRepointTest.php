@@ -17,6 +17,13 @@ use Tests\TestCase;
  * Those rows would have become dead buttons the moment the redirect went. The
  * repoint_legacy_storefront_links migration rewrites them to the page they were
  * always meant to open, and this is what says it did.
+ *
+ * Read the /products -> /shop cases below as history, not as current addresses:
+ * the all-products page has since moved to /products, and a second migration
+ * carries these same rows the rest of the way. This file pins what that first
+ * migration did, because it has already run on production and editing it now
+ * would only make the history disagree with the database. ShopLinkRepointTest
+ * pins the correction, and the end state after both.
  */
 class LegacyStorefrontLinkRepointTest extends TestCase
 {
@@ -275,7 +282,7 @@ class LegacyStorefrontLinkRepointTest extends TestCase
                     continue;
                 }
 
-                if (preg_match('#/(products|returns)(?![\w-])#', $line)) {
+                if (preg_match('#/(shop|returns)(?![\w-])#', $line)) {
                     $offenders[] = basename($file).':'.($i + 1).' '.trim($line);
                 }
             }
@@ -285,7 +292,7 @@ class LegacyStorefrontLinkRepointTest extends TestCase
             [],
             $offenders,
             "The admin offers staff an example link that 404s:\n  ".implode("\n  ", $offenders)
-                ."\n\nUse /shop, /category/{slug} and /returns-policy - the pages that exist."
+                ."\n\nUse /products, /category/{slug} and /returns-policy - the pages that exist."
         );
     }
 
@@ -309,8 +316,8 @@ class LegacyStorefrontLinkRepointTest extends TestCase
             // deliberately absent - it is still a page, just not the canonical
             // one, which is a separate question from this one.
             $needles = [
-                "'/products'", '"/products"', "'/returns'", '"/returns"',
-                'href="/products"', "href='/products'",
+                "'/shop'", '"/shop"', "'/returns'", '"/returns"',
+                'href="/shop"', "href='/shop'",
                 'href="/returns"', "href='/returns'",
                 'href="/orders/', "href='/orders/",
             ];
@@ -326,7 +333,7 @@ class LegacyStorefrontLinkRepointTest extends TestCase
             [],
             $offenders,
             "These seeders write a link to a path that 404s:\n  ".implode("\n  ", $offenders)
-                ."\n\nUse /shop and /returns-policy - the pages that replaced them."
+                ."\n\nUse /products and /returns-policy - the pages that exist."
         );
     }
 }

@@ -132,7 +132,7 @@ class OutOfStockOrderingTest extends TestCase
         ]);
 
         // Favourited sold-out first, so the ids alone would list it first.
-        $response = $this->getJson('/wishlist-items?ids='.$soldOut->id.','.$available->id)->assertOk();
+        $response = $this->getJson('/wishlist/items?ids='.$soldOut->id.','.$available->id)->assertOk();
 
         $this->assertSame(
             ['Wishlist Available', 'Wishlist Soldout'],

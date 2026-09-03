@@ -273,7 +273,7 @@ class KidsClothingSeeder extends Seeder
     private function seedHomepageSections(): void
     {
         $sections = [
-            ['key' => 'benefits', 'title' => 'Clothing for children exactly as they love it!', 'subtitle' => 'Quality clothing parents trust', 'type' => 'benefits', 'position' => 0, 'button_text' => 'How We Do It', 'button_link' => '/shop', 'content' => [
+            ['key' => 'benefits', 'title' => 'Clothing for children exactly as they love it!', 'subtitle' => 'Quality clothing parents trust', 'type' => 'benefits', 'position' => 0, 'button_text' => 'How We Do It', 'button_link' => '/products', 'content' => [
                 ['title' => '100% Safe Materials', 'description' => 'Pure cotton & organic fabrics gentle on little skin', 'icon' => 'shield'],
                 ['title' => 'Super Comfortable', 'description' => 'Toddler-tested for all-day play & comfort', 'icon' => 'comfort'],
                 ['title' => 'Wash & Wear', 'description' => 'Easy to wash, quick to dry, ready to rewear', 'icon' => 'wash'],
@@ -282,8 +282,8 @@ class KidsClothingSeeder extends Seeder
                 ['title' => 'Made With Love', 'description' => 'Each piece crafted with care for your little ones', 'icon' => 'heart'],
             ]],
             ['key' => 'categories', 'title' => 'Shop by Category', 'subtitle' => 'Find the perfect outfit for your little ones', 'type' => 'categories', 'position' => 1],
-            ['key' => 'featured', 'title' => 'Featured Products', 'subtitle' => 'Handpicked favorites parents love', 'type' => 'products', 'position' => 2, 'button_text' => 'View All', 'button_link' => '/shop'],
-            ['key' => 'promo_banner', 'title' => 'Dress Them in Joy', 'subtitle' => 'Adorable outfits crafted with the softest fabrics for happy little ones.', 'type' => 'cta', 'position' => 3, 'button_text' => 'Shop Collection', 'button_link' => '/shop'],
+            ['key' => 'featured', 'title' => 'Featured Products', 'subtitle' => 'Handpicked favorites parents love', 'type' => 'products', 'position' => 2, 'button_text' => 'View All', 'button_link' => '/products'],
+            ['key' => 'promo_banner', 'title' => 'Dress Them in Joy', 'subtitle' => 'Adorable outfits crafted with the softest fabrics for happy little ones.', 'type' => 'cta', 'position' => 3, 'button_text' => 'Shop Collection', 'button_link' => '/products'],
             ['key' => 'bestsellers', 'title' => 'Bestsellers', 'subtitle' => 'Most-loved outfits that parents keep coming back for', 'type' => 'products', 'position' => 4, 'button_text' => 'View All', 'button_link' => '/bestsellers'],
             ['key' => 'new_arrivals', 'title' => 'New Arrivals', 'subtitle' => 'Fresh styles just dropped this week', 'type' => 'products', 'position' => 5, 'button_text' => 'View All', 'button_link' => '/new-arrivals'],
             ['key' => 'deals', 'title' => "Today's Deals", 'subtitle' => 'Grab these offers before they are gone', 'type' => 'products', 'position' => 6],

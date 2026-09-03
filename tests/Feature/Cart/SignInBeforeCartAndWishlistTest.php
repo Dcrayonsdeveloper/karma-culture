@@ -104,12 +104,12 @@ class SignInBeforeCartAndWishlistTest extends TestCase
      */
     public function test_the_login_page_remembers_where_the_customer_was(): void
     {
-        $this->get('/login?next=/products/oxford-shirt')->assertOk();
+        $this->get('/login?next=/product/oxford-shirt')->assertOk();
 
         $this->post('/login', [
             'email' => 'shopper@example.com',
             'password' => 'Password!2345',
-        ])->assertRedirect('/products/oxford-shirt');
+        ])->assertRedirect('/product/oxford-shirt');
     }
 
     /**

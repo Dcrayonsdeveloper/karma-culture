@@ -840,7 +840,12 @@
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || '', 'Accept': 'application/json' },
                         body: JSON.stringify({ order: ids }),
-                    }).then(r => { if (r.ok && window.toastr) toastr.success('Order saved'); });
+                    })
+                    // The tile has already moved in the DOM by the time this runs, so a
+                    // rejected save used to leave the admin looking at the new order
+                    // believing it was stored. Same handling as the A+ reorder beside it.
+                    .then(r => { if (window.toastr) { r.ok ? toastr.success('Order saved') : toastr.error('Could not save order'); } })
+                    .catch(() => { if (window.toastr) toastr.error('Could not save order'); });
                 },
             };
         }

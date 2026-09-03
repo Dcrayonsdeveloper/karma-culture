@@ -529,7 +529,7 @@
                 <div class="px-4 py-2">
                     <template x-for="item in $store.cart.items" :key="item.id">
                         <div class="flex gap-3 py-3" style="border-bottom:1px solid #f0f0f0;">
-                            <a :href="'/product/' + item.slug" class="shrink-0">
+                            <a :href="item.url" class="shrink-0">
                                 {{-- Contained, not cropped: a half-cut garment in the drawer
                                      leaves the shopper unable to tell what they added. --}}
                                 <div class="kk-media kk-media--thumb rounded" style="width:64px;height:64px;background:#f8f8f8;">
@@ -538,7 +538,7 @@
                                 </div>
                             </a>
                             <div class="flex-1 min-w-0">
-                                <a :href="'/product/' + item.slug" class="text-sm font-medium line-clamp-2 block" style="color:#222;" x-text="item.product_name"></a>
+                                <a :href="item.url" class="text-sm font-medium line-clamp-2 block" style="color:#222;" x-text="item.product_name"></a>
                                 <template x-if="item.size">
                                     <p class="text-xs mt-0.5" style="color:#777;">Size: <span class="font-medium" style="color:#444;" x-text="item.size"></span></p>
                                 </template>
@@ -554,6 +554,8 @@
                                         </button>
                                         <span class="w-8 h-9 sm:h-7 flex items-center justify-center text-xs font-semibold" style="border-left:1px solid #ddd;border-right:1px solid #ddd;background:#fafafa;" x-text="item.quantity"></span>
                                         <button @click="$store.cart.update(item.id, item.quantity + 1)"
+                                                :disabled="item.quantity >= 99"
+                                                :class="item.quantity >= 99 ? 'opacity-30 cursor-not-allowed' : ''"
                                                 class="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center text-sm transition-colors" style="color:#555;" onmouseenter="this.style.background='#f5f5f5'" onmouseleave="this.style.background='transparent'">
                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                                         </button>
@@ -909,9 +911,15 @@
                     this.showResults = true;
                     try {
                         const response = await axios.get('/search/suggestions', { params: { q: this.query } });
-                        // API returns { suggestions: [...] }; keep old keys as fallbacks
-                        const data = response.data || {};
-                        this.results = Array.isArray(data) ? data : (data.suggestions || data.results || []);
+                        // SearchController::suggestions answers { suggestions: [...] }
+                        // and nothing else - a short query gets the key with an
+                        // empty array, not a missing key. The `.results` fallback
+                        // that used to sit here belonged to an older component
+                        // that has since gone. Check the type rather than the
+                        // truthiness, so a malformed reply leaves an array here
+                        // instead of something the template cannot iterate.
+                        const suggestions = response.data?.suggestions;
+                        this.results = Array.isArray(suggestions) ? suggestions : [];
                     } catch (e) {
                         this.results = [];
                     } finally {

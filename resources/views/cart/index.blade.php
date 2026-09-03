@@ -467,7 +467,7 @@
                         const data = await res.json();
                         if (!res.ok) {
                             item.quantity = oldQty;
-                            this.toast(data.error || 'Failed to update', 'error');
+                            this.handleRefusal(res, data, 'Failed to update');
                         } else {
                             this.syncCouponData(data);
                             this.updateCartBadge();
@@ -499,7 +499,7 @@
                             this.updateCartBadge();
                             this.toast('Item removed from cart');
                         } else {
-                            this.toast(data.error || 'Failed to remove', 'error');
+                            this.handleRefusal(res, data, 'Failed to remove');
                             item.updating = false;
                         }
                     } catch (e) {
@@ -523,6 +523,11 @@
                             this.discount = 0;
                             this.updateCartBadge();
                             this.toast('Cart cleared');
+                        } else {
+                            // There was no else here: pressing Clear Cart on a lapsed
+                            // session did nothing at all - no toast, no error, no change.
+                            const data = await res.json().catch(() => ({}));
+                            this.handleRefusal(res, data, 'Could not clear the cart');
                         }
                     } catch (e) {
                         this.toast('Something went wrong', 'error');
@@ -549,8 +554,10 @@
                             this.syncCouponData(data);
                             this.couponCode = '';
                             this.toast('Coupon applied successfully');
+                        } else if (res.status === 401 || res.status === 419) {
+                            if (window.kkGoToLogin) window.kkGoToLogin();
                         } else {
-                            this.couponError = data.error || 'Invalid coupon';
+                            this.couponError = data.error || data.message || 'Invalid coupon';
                         }
                     } catch (e) {
                         this.couponError = 'Something went wrong';
@@ -568,10 +575,12 @@
                                 'Accept': 'application/json',
                             },
                         });
-                        const data = await res.json();
+                        const data = await res.json().catch(() => ({}));
                         if (res.ok) {
                             this.syncCouponData(data);
                             this.toast('Coupon removed');
+                        } else {
+                            this.handleRefusal(res, data, 'Could not remove the coupon');
                         }
                     } catch (e) {
                         this.toast('Something went wrong', 'error');
@@ -602,10 +611,42 @@
                 },
 
                 updateCartBadge() {
+                    // Refetch rather than write the store by hand. The header badge reads
+                    // store.itemCount, which assigning store.items never touched, so it
+                    // kept showing the pre-change number until the shopper navigated
+                    // away - and this page holds only quantity and price, so writing
+                    // store.items from it stripped the name, image and url the drawer
+                    // renders from the same array. Refetching is what the drawer's own
+                    // add/update/remove already do.
                     const store = Alpine.store('cart');
-                    if (store) {
-                        store.items = this.items.map(i => ({ quantity: i.quantity, price: i.price }));
+                    if (store) store.fetch();
+                },
+
+                /**
+                 * What to do with a response that was not ok.
+                 *
+                 * These handlers are raw fetch(), so they never pass through the axios
+                 * 401 interceptor in app.js - a session that lapsed in an open tab
+                 * produced "Failed to update" and a silent revert instead of the trip
+                 * to the login page every other control on the site makes.
+                 *
+                 * The message read is widened too: the cart's own refusals come back
+                 * as {error}, but a framework refusal (403, 419, 429) carries
+                 * {message}, so reading only .error showed the generic fallback.
+                 *
+                 * Returns true when it has taken over (i.e. we are leaving).
+                 */
+                handleRefusal(res, data, fallback) {
+                    if (res.status === 401 || res.status === 419) {
+                        if (window.kkGoToLogin) {
+                            window.kkGoToLogin();
+                            return true;
+                        }
                     }
+
+                    this.toast((data && (data.error || data.message)) || fallback, 'error');
+
+                    return false;
                 },
 
                 toast(message, type = 'success') {

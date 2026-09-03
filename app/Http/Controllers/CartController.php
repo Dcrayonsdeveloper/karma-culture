@@ -37,7 +37,10 @@ class CartController extends Controller
         // incumbent rather than a coupon that is about to appear underneath it.
         $claimedOffer = OfferClaims::applyTo($cart, request()->user());
 
-        $cart->load(['items.product.primaryImage', 'items.variant']);
+        // images, not primaryImage: primary_image_url reads the whole set so it
+        // can fall back past a video, and eager-loading only the primary row made
+        // that a query per line.
+        $cart->load(['items.product.images', 'items.variant']);
 
         // "You May Also Like" - products related to the cart's items (else popular).
         $recommended = $this->recommendedForCart($cart);
@@ -86,7 +89,10 @@ class CartController extends Controller
     public function data(): JsonResponse
     {
         $cart = $this->getOrCreateCart();
-        $cart->load(['items.product.primaryImage', 'items.variant']);
+        // images, not primaryImage: primary_image_url reads the whole set so it
+        // can fall back past a video, and eager-loading only the primary row made
+        // that a query per line.
+        $cart->load(['items.product.images', 'items.variant']);
 
         $items = $cart->items->map(function ($item) {
             return [
@@ -99,17 +105,30 @@ class CartController extends Controller
                 'price' => (float) $item->price,
                 'product_name' => $item->product->name ?? '',
                 'variant_name' => $item->variant->name ?? null,
-                'image' => $item->product->primaryImage->first()?->url,
+                // Every other field here guards against the product having been
+                // deleted out from under the cart line; image was the one that did
+                // not, so a cart holding a since-deleted product 500d the whole
+                // endpoint. primary_image_url is also what the rest of the app
+                // sends: it resolves the path, fingerprints it, skips a video and
+                // falls back to the placeholder instead of answering null when the
+                // product has gallery images but no main one.
+                'image' => $item->product?->primary_image_url,
                 'slug' => $item->product->slug ?? '',
+                // Sent for the same reason /cart/recommendations sends it: without
+                // it the drawer had to build '/product/' + item.slug by hand.
+                'url' => $item->product ? route('product.show', $item->product) : null,
             ];
         });
 
         return response()->json([
             'items' => $items,
             'cart_count' => $cart->items->sum('quantity'),
-            'subtotal' => (float) $cart->subtotal,
-            'discount' => (float) $cart->discount,
-            'total' => (float) $cart->total,
+            // cart_-prefixed like every other cart endpoint. This one answered with
+            // bare subtotal/discount/total, so the endpoint whose whole job is to
+            // report cart state was the one that spelled it differently.
+            'cart_subtotal' => (float) $cart->subtotal,
+            'cart_discount' => (float) $cart->discount,
+            'cart_total' => (float) $cart->total,
         ]);
     }
 
@@ -594,7 +613,17 @@ class CartController extends Controller
 
         // Remove orphaned items whose product was deleted - otherwise the cart
         // page crashes on route('product.show', null) / null property reads.
-        $cart->items()->whereDoesntHave('product')->delete();
+        //
+        // Recalculate when that actually removed something. The stored subtotal
+        // and total were worked out with those lines still in them, and nothing
+        // else recomputes them, so the cart went on reporting the old money
+        // beside an empty basket: /cart/data answered items: [], cart_count: 0
+        // and cart_total: 500 in the same breath, and checkout reads the same
+        // stored total. delete() returns the row count, so the common path -
+        // nothing orphaned - costs one query and no recalculation.
+        if ($cart->items()->whereDoesntHave('product')->delete() > 0) {
+            $cart->recalculate();
+        }
 
         return $cart;
     }

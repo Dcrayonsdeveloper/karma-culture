@@ -72,7 +72,7 @@ class PopupQueueMarkupTest extends TestCase
     {
         // The site-wide exit popup must keep behaving exactly as it did off home,
         // which means the queue has to be able to tell it is not on home.
-        $html = $this->get('/shop')->getContent();
+        $html = $this->get('/products')->getContent();
 
         $this->assertStringContainsString('data-kk-page=', $html);
         $this->assertStringNotContainsString('data-kk-page="home"', $html);

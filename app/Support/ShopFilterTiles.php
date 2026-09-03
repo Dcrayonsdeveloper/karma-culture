@@ -77,7 +77,7 @@ class ShopFilterTiles
         // Counted through the shop's own filter stack rather than a hand-rolled
         // query - aliases, validation and all - so the count can never disagree
         // with the page the hanger opens.
-        $request = Request::create('/shop', 'GET', $params);
+        $request = Request::create(route('shop'), 'GET', $params);
         $request->merge(ProductFilters::tileAliases($request));
 
         return ProductFilters::for($request, fn () => Product::query()->where('is_active', true))

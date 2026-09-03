@@ -141,5 +141,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
     // Recommendations (public)
     Route::get('recommendations/popular', [\App\Http\Controllers\Api\V1\RecommendationController::class, 'popular'])->name('recommendations.popular');
-    Route::get('recommendations/similar/{productId}', [\App\Http\Controllers\Api\V1\RecommendationController::class, 'similar'])->name('recommendations.similar');
+    // whereNumber: the controller type-hints int $productId, so a non-numeric
+    // id reached a TypeError and answered 500 instead of 404.
+    Route::get('recommendations/similar/{productId}', [\App\Http\Controllers\Api\V1\RecommendationController::class, 'similar'])->whereNumber('productId')->name('recommendations.similar');
 });

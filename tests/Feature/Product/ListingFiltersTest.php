@@ -90,7 +90,7 @@ class ListingFiltersTest extends TestCase
     public static function listingPages(): array
     {
         return [
-            'shop' => ['/shop'],
+            'shop' => ['/products'],
             'category' => ['/category/men'],
             'sub-category' => ['/category/shirts'],
             'search' => ['/search?q=shirt'],
@@ -139,7 +139,7 @@ class ListingFiltersTest extends TestCase
     /** And the same filter set at a real value keeps what matches. */
     public function test_a_price_filter_keeps_the_products_inside_the_bound(): void
     {
-        $response = $this->get('/shop?max_price=1000')->assertOk();
+        $response = $this->get('/products?max_price=1000')->assertOk();
 
         $this->assertSame(
             ['Oxford Shirt'],
@@ -151,14 +151,14 @@ class ListingFiltersTest extends TestCase
     public function test_deals_hides_the_redundant_on_sale_box(): void
     {
         $this->get('/deals')->assertOk()->assertDontSee('name="on_sale"', false);
-        $this->get('/shop')->assertOk()->assertSee('name="on_sale"', false);
+        $this->get('/products')->assertOk()->assertSee('name="on_sale"', false);
     }
 
     /** The brand page has no Brand facet, because there is only ever one. */
     public function test_brand_page_hides_the_redundant_brand_facet(): void
     {
         $this->get('/brands/biba')->assertOk()->assertDontSee('name="brand[]"', false);
-        $this->get('/shop')->assertOk()->assertSee('name="brand[]" value="biba"', false);
+        $this->get('/products')->assertOk()->assertSee('name="brand[]" value="biba"', false);
     }
 
     /** Search carries the phrase through a filter submit, or the results reset. */
@@ -180,7 +180,7 @@ class ListingFiltersTest extends TestCase
      */
     public function test_sorting_stays_on_the_page_it_was_chosen_from(): void
     {
-        foreach (['/shop', '/deals', '/bestsellers'] as $url) {
+        foreach (['/products', '/deals', '/bestsellers'] as $url) {
             $this->get($url)
                 ->assertOk()
                 ->assertSee('action="'.url($url).'"', false);
@@ -190,7 +190,7 @@ class ListingFiltersTest extends TestCase
     /** An applied filter is shown as a chip the shopper can click off again. */
     public function test_an_applied_filter_shows_as_a_removable_chip(): void
     {
-        $this->get('/shop?colour[]=Black')
+        $this->get('/products?colour[]=Black')
             ->assertOk()
             ->assertSee('Active Filters')
             ->assertSee('Clear all');
@@ -205,7 +205,7 @@ class ListingFiltersTest extends TestCase
      */
     public function test_rating_rows_say_they_are_a_floor_and_can_be_cleared(): void
     {
-        $response = $this->get('/shop')->assertOk();
+        $response = $this->get('/products')->assertOk();
 
         $response->assertSee('name="rating" value="5"', false)
             ->assertSee('name="rating" value="1"', false)
@@ -223,9 +223,9 @@ class ListingFiltersTest extends TestCase
     public function test_the_rating_filter_keeps_everything_at_or_above_the_chosen_star(): void
     {
         // Both fixture products are rated 4.
-        $this->assertSame(2, $this->get('/shop?rating=4')->assertOk()->viewData('products')->total());
-        $this->assertSame(2, $this->get('/shop?rating=1')->assertOk()->viewData('products')->total());
-        $this->assertSame(0, $this->get('/shop?rating=5')->assertOk()->viewData('products')->total());
+        $this->assertSame(2, $this->get('/products?rating=4')->assertOk()->viewData('products')->total());
+        $this->assertSame(2, $this->get('/products?rating=1')->assertOk()->viewData('products')->total());
+        $this->assertSame(0, $this->get('/products?rating=5')->assertOk()->viewData('products')->total());
     }
 
     /**
@@ -239,7 +239,7 @@ class ListingFiltersTest extends TestCase
 
         // Asserted on the control, not the word: "Best Rating" is also an
         // option in the sort dropdown and would match either way.
-        $this->get('/shop')->assertOk()->assertDontSee('name="rating"', false);
+        $this->get('/products')->assertOk()->assertDontSee('name="rating"', false);
     }
 
     /**
@@ -259,19 +259,19 @@ class ListingFiltersTest extends TestCase
     }
 
     /**
-     * A "Shop It Your Way" hanger links to /shop?shade=Indigo, and the shop
+     * A "Shop It Your Way" hanger links to /products?shade=Indigo, and the listing
      * merges `shade` into `colour` before the panel is built. The chip stripped
      * only `colour`, so the URL it handed back still said `shade=` and the next
      * request re-derived the very filter the shopper had just removed.
      */
     public function test_a_hanger_filter_can_be_taken_off_again(): void
     {
-        $this->get('/shop?shade=Black')
+        $this->get('/products?shade=Black')
             ->assertOk()
             ->assertSee('Active Filters')
             ->assertDontSee('shade=Black', false);
 
-        $this->get('/shop?price_min=100&price_max=2000')
+        $this->get('/products?price_min=100&price_max=2000')
             ->assertOk()
             ->assertSee('Active Filters')
             ->assertDontSee('price_min=100', false);
@@ -289,7 +289,7 @@ class ListingFiltersTest extends TestCase
             ->assertDontSee('Active Filters');
 
         // On the shop, which does own it, the same parameter is a real filter.
-        $this->get('/shop?category=men')
+        $this->get('/products?category=men')
             ->assertOk()
             ->assertSee('Active Filters');
     }
@@ -297,12 +297,12 @@ class ListingFiltersTest extends TestCase
     /**
      * The Filters button in the header reaches every page, including the ones
      * with no listing behind them - before this, a shopper away from a listing
-     * had no filter control anywhere, and /shop was not linked from the header,
+     * had no filter control anywhere, and the listing was not linked from the header,
      * the mobile drawer or the footer.
      */
     public function test_every_page_carries_the_header_filters_button(): void
     {
-        foreach (['/shop', '/wishlist', '/brands'] as $url) {
+        foreach (['/products', '/wishlist', '/brands'] as $url) {
             $this->get($url)->assertOk()->assertSee('open-global-filters', false);
         }
 
@@ -313,7 +313,7 @@ class ListingFiltersTest extends TestCase
         // attribute: the drawer's querySelector mentions that attribute by name,
         // so the literal string is on every page whether a sidebar is there or
         // not. `mobileOpen` belongs to the sidebar alone.
-        $this->get('/shop')->assertOk()
+        $this->get('/products')->assertOk()
             ->assertSee('data-kk-filter-sidebar', false)
             ->assertSee('mobileOpen', false);
         $this->get('/wishlist')->assertOk()->assertDontSee('mobileOpen', false);
@@ -341,7 +341,7 @@ class ListingFiltersTest extends TestCase
             ->assertDontSee('You are browsing this collection', false);
     }
 
-    /** And /shop is reachable from the navigation rather than only by accident. */
+    /** And /products is reachable from the navigation rather than only by accident. */
     public function test_the_shop_is_linked_from_the_navigation(): void
     {
         $this->get('/wishlist')->assertOk()->assertSee('href="'.route('shop').'"', false);
@@ -350,7 +350,7 @@ class ListingFiltersTest extends TestCase
     /** The drawer fetches the panel on first open rather than on every page load. */
     public function test_the_filter_panel_endpoint_returns_a_usable_form(): void
     {
-        $this->get('/shop/filters')
+        $this->get('/products/filters')
             ->assertOk()
             ->assertSee('action="'.route('shop').'"', false)
             ->assertSee('name="size[]" value="M"', false)
@@ -358,7 +358,7 @@ class ListingFiltersTest extends TestCase
 
         // Filters already in the URL are reflected, so opening the drawer after
         // arriving from a hanger shows that hanger's picks ticked.
-        $this->get('/shop/filters?shade=Black')
+        $this->get('/products/filters?shade=Black')
             ->assertOk()
             ->assertSee('name="colour[]" value="Black"', false);
     }

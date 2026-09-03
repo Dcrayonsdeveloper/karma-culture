@@ -16,7 +16,7 @@ At {{ config('app.name') }}, we are passionate about curated, high-quality piece
 - **Exclusive Deals** -- Member-only discounts and early access to sales
 - **Easy Returns** -- Hassle-free returns within 7 days of delivery
 
-@component('mail::button', ['url' => url('/shop')])
+@component('mail::button', ['url' => route('shop')])
 Start Shopping
 @endcomponent
 

@@ -120,7 +120,7 @@ class ListingChipsTest extends TestCase
             'is_active' => true,
         ]);
 
-        $html = $this->get('/products/'.$product->slug)->assertOk()->getContent();
+        $html = $this->get('/product/'.$product->slug)->assertOk()->getContent();
 
         $ok = preg_match('/<a\s+href="([^"]+)"[^>]*>\s*Browse similar pieces/', $html, $m);
         $this->assertSame(1, $ok, 'No "Browse similar pieces" link on the sold-out product page.');

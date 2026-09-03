@@ -61,6 +61,21 @@ class Product extends Model
         'published_at',
     ];
 
+    /**
+     * Never serialise what the shop paid.
+     *
+     * Several endpoints hand back whole Product models rather than a chosen
+     * shape - /api/v1/products, /api/v1/recommendations/* and the home rails
+     * among them - and all of those are public and unauthenticated, so the
+     * purchase cost of every product in the catalogue was readable by anyone
+     * who asked. $hidden only affects toArray()/toJson(); the admin forms,
+     * the Excel export and the margin reports all read $product->cost_price
+     * directly and are unaffected.
+     */
+    protected $hidden = [
+        'cost_price',
+    ];
+
     protected function casts(): array
     {
         return [

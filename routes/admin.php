@@ -116,7 +116,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::resource('products', ProductController::class);
             Route::put('/products/{product}/toggle-status', [ProductController::class, 'toggleStatus'])->name('products.toggle-status');
             Route::put('/products/{product}/toggle-featured', [ProductController::class, 'toggleFeatured'])->name('products.toggle-featured');
-            Route::post('/products/{product}/duplicate', [ProductController::class, 'duplicate'])->name('products.duplicate');
             Route::post('/products/{product}/images/reorder', [ProductController::class, 'reorderImages'])->name('products.images.reorder');
             // A+ Content (Amazon-style banner images)
             Route::post('/products/{product}/aplus', [ProductAplusImageController::class, 'store'])->name('products.aplus.store');
@@ -131,11 +130,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/categories/reorder', [CategoryController::class, 'reorder'])->name('categories.reorder');
 
             // Brands
-            Route::resource('brands', BrandController::class);
+            Route::resource('brands', BrandController::class)->except(['show']);
 
             // Attributes
-            Route::resource('attributes', AttributeController::class);
-            Route::resource('attributes.values', AttributeValueController::class)->shallow();
+            Route::resource('attributes', AttributeController::class)->except(['show']);
+            Route::resource('attributes.values', AttributeValueController::class)->shallow()->except(['index', 'show']);
 
             // Inventory
             Route::prefix('inventory')->name('inventory.')->group(function () {
@@ -162,14 +161,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Staff (admin-only)
         Route::middleware('admin.section:staff')->group(function () {
-            Route::resource('staff', StaffController::class);
+            Route::resource('staff', StaffController::class)->except(['show']);
         });
 
         // Marketing
         Route::middleware('admin.section:marketing')->group(function () {
-            Route::resource('coupons', CouponController::class);
-            Route::resource('flash-sales', FlashSaleController::class);
-            Route::resource('banners', BannerController::class);
+            Route::resource('coupons', CouponController::class)->except(['show']);
+            Route::resource('flash-sales', FlashSaleController::class)->except(['show']);
+            Route::resource('banners', BannerController::class)->except(['show']);
             Route::post('/banners/reorder', [BannerController::class, 'reorder'])->name('banners.reorder');
 
             // Newsletter
@@ -191,10 +190,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 ->parameters(['collections' => 'collection'])
                 ->except(['show']);
 
-            Route::resource('pages', PageController::class);
+            Route::resource('pages', PageController::class)->except(['show']);
             Route::put('/pages/{page}/toggle-status', [PageController::class, 'toggleStatus'])->name('pages.toggle-status');
 
-            Route::resource('blog-posts', BlogPostController::class);
+            Route::resource('blog-posts', BlogPostController::class)->except(['show']);
             Route::put('/blog-posts/{blogPost}/toggle-status', [BlogPostController::class, 'toggleStatus'])->name('blog-posts.toggle-status');
 
             Route::prefix('reviews')->name('reviews.')->group(function () {

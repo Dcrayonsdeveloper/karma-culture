@@ -40,16 +40,16 @@ class ProductListingTest extends TestCase
 
     public function test_product_index_page_loads(): void
     {
-        // The all-products listing lives at /shop; /products is now the
-        // product-detail prefix only.
-        $response = $this->get('/shop');
+        // The all-products listing is served at /products. The product detail
+        // page is at /product/{slug}, singular, so the two do not collide.
+        $response = $this->get('/products');
 
         $response->assertStatus(200);
     }
 
     public function test_product_detail_page_loads(): void
     {
-        $response = $this->get('/products/' . $this->product->slug);
+        $response = $this->get('/product/' . $this->product->slug);
 
         $response->assertStatus(200);
     }
@@ -70,7 +70,7 @@ class ProductListingTest extends TestCase
 
     public function test_nonexistent_product_returns_404(): void
     {
-        $response = $this->get('/products/nonexistent-product-slug');
+        $response = $this->get('/product/nonexistent-product-slug');
 
         $response->assertStatus(404);
     }

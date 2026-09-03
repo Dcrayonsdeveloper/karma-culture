@@ -14,7 +14,10 @@ class CartController extends Controller
     public function index(Request $request): JsonResponse
     {
         $cart = $this->getOrCreateCart($request);
-        $cart->load('items.product:id,name,slug,price,mrp,images,stock_quantity');
+        // images is a relation, so it cannot ride in the column list - the query
+        // asked products for an "images" column and this 500'd for any cart that
+        // had something in it.
+        $cart->load(['items.product:id,name,slug,price,mrp,stock_quantity', 'items.product.images']);
 
         return response()->json([
             'data' => $cart,

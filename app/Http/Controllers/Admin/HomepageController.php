@@ -244,7 +244,7 @@ class HomepageController extends Controller
     {
         return [
             'image.required_without' => 'Upload an image, or a video to use instead.',
-            'link.regex' => 'Enter a path such as /shop, or a full https:// address.',
+            'link.regex' => 'Enter a path such as /products, or a full https:// address.',
         ] + $this->videoMessages('video')
           + $this->videoMessages('mobile_video');
     }
@@ -451,7 +451,7 @@ class HomepageController extends Controller
             'content.*.description' => V::text(required: false, max: 255),
             'content.*.icon' => ['nullable', 'string', 'max:40', 'regex:/^[A-Za-z0-9_-]+$/'],
         ], [
-            'button_link.regex' => 'Enter a path such as /shop, or a full https:// address.',
+            'button_link.regex' => 'Enter a path such as /products, or a full https:// address.',
             'background_color.regex' => 'Pick a colour, or enter one as #rrggbb.',
             'text_color.regex' => 'Pick a colour, or enter one as #rrggbb.',
             'content.*.icon.regex' => 'An icon name may only contain letters, numbers, hyphens and underscores.',

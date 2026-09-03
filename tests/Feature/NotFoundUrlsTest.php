@@ -16,6 +16,11 @@ use Tests\TestCase;
  * /returns, /orders/{id} and /orders/{id}/track - were registered as permanent
  * redirects to whatever replaced them. Typing /products put you on /shop.
  *
+ * /products has since become the all-products page itself, which is where the
+ * store owner wanted shoppers to arrive all along, and /shop - the address it
+ * was being forwarded to - is now the one that no longer resolves. It gets the
+ * same answer every other dead path gets, and for the same reason.
+ *
  * That is worse than a 404 in both directions. The visitor is moved to a page
  * they did not ask for, with nothing to tell them the address they were holding
  * is dead; and whoever wrote the bad link - an admin filling in a banner, a
@@ -39,9 +44,10 @@ class NotFoundUrlsTest extends TestCase
     public static function legacyPaths(): array
     {
         return [
-            'the all-products page before it became /shop' => ['/products'],
-            'the same, with a trailing slash' => ['/products/'],
-            'the same, with the filter that the redirect used to throw away' => ['/products?category=shirts'],
+            'the all-products page before it moved to /products' => ['/shop'],
+            'the same, with a trailing slash' => ['/shop/'],
+            'the same, with the filter a redirect would have thrown away' => ['/shop?category=shirts'],
+            'the filter panel at its old path' => ['/shop/filters'],
             'the returns page before it became /returns-policy' => ['/returns'],
             'order pages before they moved under /account' => ['/orders/1'],
             'order tracking before it moved under /account' => ['/orders/1/track'],
@@ -63,7 +69,7 @@ class NotFoundUrlsTest extends TestCase
         // The plain case, to catch anyone adding a catch-all route that sweeps
         // unknown URLs onto the home page.
         $this->get('/there-is-no-page-here')->assertNotFound();
-        $this->get('/shop/there-is-no-page-here')->assertNotFound();
+        $this->get('/products/there-is-no-such-product')->assertNotFound();
         $this->get('/product/no-such-product')->assertNotFound();
         $this->get('/category/no-such-category')->assertNotFound();
     }
@@ -133,7 +139,7 @@ class NotFoundUrlsTest extends TestCase
         // the real pages with them.
         $this->seedCatalogue();
 
-        $this->get('/shop')->assertOk();
+        $this->get('/products')->assertOk();
         $this->get('/returns-policy')->assertOk();
         $this->get('/product/poplin-shirt')->assertOk();
         $this->get('/category/shirts')->assertOk();
@@ -141,6 +147,21 @@ class NotFoundUrlsTest extends TestCase
         $this->actingAs(User::factory()->create())
             ->get('/account/orders')
             ->assertOk();
+    }
+
+    public function test_the_filter_panel_answers_under_the_products_path(): void
+    {
+        // /products/filters is one segment under /products, which is exactly
+        // where a /products/{slug} wildcard would sit. None is registered today
+        // - the product page is at /product/{slug}, singular - so nothing can
+        // swallow it. If one is ever added it has to come after this literal,
+        // or the request goes looking for a product whose slug is "filters",
+        // 404s, and the Filters drawer opens empty on every page of the site.
+        // That is the ordering bug that once ate /cart/remove-coupon, so it is
+        // asserted rather than assumed.
+        $this->seedCatalogue();
+
+        $this->get('/products/filters')->assertOk();
     }
 
     private function seedCatalogue(): void

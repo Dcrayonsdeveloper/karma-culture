@@ -151,6 +151,12 @@ function kkGoToLogin() {
     window.location.assign('/login?next=' + encodeURIComponent(next));
 }
 
+// Exposed because pages with their own inline handlers need the same trip -
+// /cart builds its calls with raw fetch(), which never passes through the axios
+// interceptor below. Reimplementing it there would duplicate the path-only rule
+// that keeps `next` from becoming an open redirect.
+window.kkGoToLogin = kkGoToLogin;
+
 /**
  * The stale-tab case: signed in when the page loaded, signed out by the time
  * the button was pressed. The gate on the routes answers 401, and this turns
@@ -245,6 +251,13 @@ Alpine.store('cart', {
     },
 
     async update(itemId, quantity) {
+        // Clamped here, where the payload is built, rather than at each button.
+        // /cart validates quantity with V::quantity(max: 99); the cart page guards
+        // its own controls, but the drawer did not, so pressing + on a line
+        // already at 99 sent quantity: 100 and came back 422 - which this catch
+        // could only report as a flat "Failed to update cart".
+        quantity = Math.max(1, Math.min(99, parseInt(quantity, 10) || 1));
+
         this.isLoading = true;
         try {
             const response = await axios.put(`/cart/${itemId}`, {
@@ -504,7 +517,7 @@ Alpine.store('wishlist', {
         if (!this.ids.length) { this.items = []; return; }
         this.isLoading = true;
         try {
-            const res = await axios.get('/wishlist-items', { params: { ids: this.ids.join(',') } });
+            const res = await axios.get('/wishlist/items', { params: { ids: this.ids.join(',') } });
             const byId = {};
             (res.data.items || []).forEach(p => byId[p.id] = p);
             this.items = this.ids.map(id => byId[id]).filter(Boolean);
@@ -785,71 +798,6 @@ Alpine.data('imageGallery', (images = []) => ({
 
     prev() {
         this.currentIndex = (this.currentIndex - 1 + this.images.length) % this.images.length;
-    }
-}));
-
-/**
- * Search component with debounce
- */
-Alpine.data('search', (endpoint = '/api/search') => ({
-    query: '',
-    results: [],
-    isLoading: false,
-    isOpen: false,
-    selectedIndex: -1,
-    endpoint: endpoint,
-
-    async search() {
-        if (this.query.length < 2) {
-            this.results = [];
-            this.isOpen = false;
-            return;
-        }
-
-        this.isLoading = true;
-        this.isOpen = true;
-
-        try {
-            const response = await axios.get(this.endpoint, {
-                params: { q: this.query }
-            });
-            this.results = response.data.results || [];
-        } catch (error) {
-            console.error('Search failed:', error);
-            this.results = [];
-        } finally {
-            this.isLoading = false;
-        }
-    },
-
-    clear() {
-        this.query = '';
-        this.results = [];
-        this.isOpen = false;
-        this.selectedIndex = -1;
-    },
-
-    close() {
-        this.isOpen = false;
-        this.selectedIndex = -1;
-    },
-
-    selectNext() {
-        if (this.selectedIndex < this.results.length - 1) {
-            this.selectedIndex++;
-        }
-    },
-
-    selectPrev() {
-        if (this.selectedIndex > 0) {
-            this.selectedIndex--;
-        }
-    },
-
-    selectCurrent() {
-        if (this.selectedIndex >= 0 && this.results[this.selectedIndex]) {
-            window.location.href = this.results[this.selectedIndex].url;
-        }
     }
 }));
 

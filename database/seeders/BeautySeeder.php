@@ -311,7 +311,7 @@ class BeautySeeder extends Seeder
                 'name' => 'New Kids Collection',
                 'position' => 'hero',
                 'image_url' => 'https://placehold.co/1920x700/6f9ca2/ffffff?text=New+Kids+Collection',
-                'link' => '/shop',
+                'link' => '/products',
                 'priority' => 1,
                 'is_active' => true,
             ],
@@ -371,7 +371,7 @@ class BeautySeeder extends Seeder
                 'type' => 'products',
                 'position' => 2,
                 'button_text' => 'View All',
-                'button_link' => '/shop',
+                'button_link' => '/products',
             ],
             [
                 'key' => 'promo_banner',
@@ -380,7 +380,7 @@ class BeautySeeder extends Seeder
                 'type' => 'cta',
                 'position' => 3,
                 'button_text' => 'Shop Collection',
-                'button_link' => '/shop',
+                'button_link' => '/products',
             ],
             [
                 'key' => 'bestsellers',

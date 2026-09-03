@@ -11,7 +11,7 @@
     <h2 class="text-xl font-bold text-gray-900 mb-4">Similar Products</h2>
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
         <template x-for="product in products" :key="product.id">
-            <a :href="'/products/' + product.slug" class="group block bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-3">
+            <a :href="product.url" class="group block bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-3">
                 {{-- Media well: the square keeps every card in the row the same
                      height, but the shot inside is contained, so a portrait or a
                      wide product photo is shown whole instead of being cropped to

@@ -119,7 +119,10 @@
         {{-- Typed enough, and something came back. --}}
         <template x-if="results.length > 0">
             <ul class="divide-y divide-kk-cream-dark/60">
-                <template x-for="result in results" :key="result.id">
+                {{-- Keyed on type+id: products, categories and brands each have their own id
+                                     sequence, so keying on the id alone made Alpine treat a product
+                                     and a category that happened to share one as the same node. --}}
+                                <template x-for="result in results" :key="result.type + '-' + result.id">
                     <li>
                         <a :href="result.url" class="flex items-center gap-3 px-4 py-3 active:bg-kk-cream-lighter">
                             {{-- Contained, not cropped: a tall product shot cropped to a

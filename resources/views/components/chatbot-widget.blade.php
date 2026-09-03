@@ -617,8 +617,10 @@ function chatbotWidget() {
                     .slice(-10)
                     .map(m => ({ role: m.role, content: m.content }));
 
+                // No _token in the body: bootstrap.js sets X-CSRF-TOKEN on every
+                // axios request from the same meta tag, so sending it here as well
+                // just put a field in the payload the endpoint never reads.
                 const response = await axios.post('/chatbot/message', {
-                    _token:  document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
                     message: text,
                     history: history,
                 });

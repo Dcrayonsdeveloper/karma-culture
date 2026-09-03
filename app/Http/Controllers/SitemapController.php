@@ -34,7 +34,12 @@ class SitemapController extends Controller
         // /products was removed when the all-products page went; leaving it here
         // submitted a 404 to Google on every crawl. The shopping pages below are
         // real, indexable, and were never listed.
+        //
+        // The all-products page is at /products now, and /brands is the other
+        // browse page with a listing of its own. Neither was ever submitted.
         $staticPages = [
+            ['url' => route('shop'), 'freq' => 'daily', 'priority' => '0.9'],
+            ['url' => url('/brands'), 'freq' => 'weekly', 'priority' => '0.6'],
             ['url' => url('/new-arrivals'), 'freq' => 'daily', 'priority' => '0.9'],
             ['url' => url('/bestsellers'), 'freq' => 'daily', 'priority' => '0.9'],
             ['url' => url('/deals'), 'freq' => 'daily', 'priority' => '0.8'],
@@ -65,7 +70,7 @@ class SitemapController extends Controller
             ->chunk(500, function ($products) use ($urls) {
                 foreach ($products as $product) {
                     $urls->push([
-                        'loc' => route('products.show', $product->slug),
+                        'loc' => route('product.show', $product->slug),
                         'lastmod' => $product->updated_at->toW3cString(),
                         'changefreq' => 'weekly',
                         'priority' => '0.8',
@@ -85,7 +90,7 @@ class SitemapController extends Controller
             ->get()
             ->each(function ($category) use ($urls) {
                 $urls->push([
-                    'loc' => url('/products?category=' . $category->slug),
+                    'loc' => route('category.show', $category->slug),
                     'lastmod' => $category->updated_at->toW3cString(),
                     'changefreq' => 'weekly',
                     'priority' => '0.7',
@@ -97,7 +102,7 @@ class SitemapController extends Controller
             ->get()
             ->each(function ($brand) use ($urls) {
                 $urls->push([
-                    'loc' => url('/products?brand=' . $brand->slug),
+                    'loc' => route('brands.show', $brand->slug),
                     'lastmod' => $brand->updated_at->toW3cString(),
                     'changefreq' => 'weekly',
                     'priority' => '0.6',
