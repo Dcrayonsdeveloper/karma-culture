@@ -251,13 +251,11 @@
                 font-family: var(--kk-display);
                 letter-spacing: 0.01em;
             }
-            .kk-syw-tab.is-active { background: var(--kk-brown-dark); color: var(--kk-cream); }
-            .kk-syw-tab.is-active small { color: var(--kk-tan); opacity: 1; }
-            /* Per-tab active background: 1) brown (default) 2) teal 3) green */
-            .kk-syw-tab.is-active--price { background: #14B8A6; }
-            .kk-syw-tab.is-active--shade { background: #2B4A2A; }
-            .kk-syw-tab.is-active--price small,
-            .kk-syw-tab.is-active--shade small { color: var(--kk-cream); opacity: 0.85; }
+            /* One active colour for the whole row - the Shade green. Size, Price and
+               Shade each used to light up a different colour (brown, teal, green),
+               so the pill changed hue as you moved along a single set of tabs. */
+            .kk-syw-tab.is-active { background: #2B4A2A; color: var(--kk-cream); }
+            .kk-syw-tab.is-active small { color: var(--kk-cream); opacity: 0.85; }
             .kk-syw-tab:hover:not(.is-active) { color: var(--kk-brown); }
 
             /* Stage + panel.
@@ -1640,7 +1638,7 @@
                 <div class="kk-syw-tabs">
                     @foreach($kkTabs as $tabKey => $tabCfg)
                         <button class="kk-syw-tab"
-                                :class="tab==='{{ $tabKey }}' ? 'is-active is-active--{{ $tabKey }}' : ''"
+                                :class="tab==='{{ $tabKey }}' ? 'is-active' : ''"
                                 @click="tab='{{ $tabKey }}'">
                             <small>{{ $tabCfg['eyebrow'] }}</small>
                             <span>{{ $tabCfg['title'] }}</span>
