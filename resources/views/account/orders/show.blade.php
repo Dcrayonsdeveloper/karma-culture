@@ -64,6 +64,12 @@
                         </span>
                     </div>
 
+                    {{-- Order Tracking Card. The same timeline the Track page draws,
+                         shown here so the customer sees where the parcel is on the
+                         page they land on. The estimated-delivery strip is left off:
+                         this page already prints the expected date in the sidebar. --}}
+                    @include('account.orders.partials.tracking-timeline', ['showEta' => false])
+
                     {{-- Delivered Confirmation Banner --}}
                     @if($order->status === 'delivered')
                         <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-4 flex items-start gap-3">

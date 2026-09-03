@@ -61,7 +61,11 @@ class OrderController extends Controller
 
         $order->load(['items.product', 'statusHistory', 'coupon', 'deliveryPartner.user']);
 
-        return view('account.orders.show', compact('order'));
+        // The detail page draws the same progress timeline as the Track page, so
+        // the customer can see where the parcel is on the page they land on.
+        $trackingSteps = $order->getTrackingSteps();
+
+        return view('account.orders.show', compact('order', 'trackingSteps'));
     }
 
     public function cancel(Request $request, Order $order): RedirectResponse
