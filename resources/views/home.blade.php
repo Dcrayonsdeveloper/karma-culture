@@ -1707,7 +1707,17 @@
                 <h2>{{ $newsletterTitle }}</h2>
                 <p>{{ $newsletterText }}</p>
 
-                <form @submit.prevent="submit()" novalidate class="kk-newsletter-form" x-show="!done">
+                {{-- data-no-validate: this form reports for itself, in the centred
+                     line below it. Without the opt-out the shared inline validator
+                     in app.js ALSO judged the box on blur and printed its own note -
+                     the same sentence twice, once centred under the pill and once
+                     left-aligned against the section's edge, where it read as a
+                     complaint about something else on the page entirely.
+
+                     `novalidate` alone does not stop it: the submit handler treats
+                     that as "this form validates itself" and stands down, but the
+                     blur handler only checks data-no-validate. --}}
+                <form @submit.prevent="submit()" novalidate data-no-validate class="kk-newsletter-form" x-show="!done">
                     <label for="kk-newsletter-email" class="sr-only">Email address</label>
                     <input id="kk-newsletter-email" type="email" x-model="email" required maxlength="255"
                            placeholder="Your email address" autocomplete="email">

@@ -98,4 +98,39 @@ class NewsletterErrorPlacementTest extends TestCase
             'If the input stopped shrinking, this whole rule could be reconsidered.'
         );
     }
+
+    /**
+     * One complaint per mistake.
+     *
+     * Placing the note correctly still left two of them on screen for the same
+     * typo: the centred line the section prints for itself, and the shared
+     * validator's own note under the pill, left-aligned against the section
+     * edge where it read as a complaint about something else on the page.
+     *
+     * The pill answers for itself, so it opts out of the shared one.
+     */
+    public function test_the_newsletter_pill_opts_out_of_the_shared_validator(): void
+    {
+        $home = file_get_contents(resource_path('views/home.blade.php'));
+
+        $this->assertMatchesRegularExpression(
+            '/<form[^>]*class="kk-newsletter-form"[^>]*data-no-validate|<form[^>]*data-no-validate[^>]*class="kk-newsletter-form"/',
+            $home,
+            'Without the opt-out the shared validator prints a second copy of the message beside the centred one.'
+        );
+    }
+
+    /**
+     * And the opt-out has to be the one the blur handler actually reads.
+     * `novalidate` is not it: the submit handler stands down for that, the
+     * blur handler does not, which is how the second message got in.
+     */
+    public function test_the_blur_handler_honours_that_opt_out(): void
+    {
+        $this->assertMatchesRegularExpression(
+            '/function skipOnBlur\([^)]*\)\s*\{(?:[^}]|\}(?!\s*\n\s*\}))*data-no-validate/s',
+            $this->appJs(),
+            'skipOnBlur no longer reads data-no-validate, so opting a form out does nothing on blur.'
+        );
+    }
 }
