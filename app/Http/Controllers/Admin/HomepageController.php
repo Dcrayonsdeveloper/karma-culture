@@ -585,7 +585,6 @@ class HomepageController extends Controller
         return [
             'type' => V::option(ShopFilterItem::TYPES),
             'label' => V::text(max: 120),
-            'sub_label' => V::text(required: false, max: 120),
             'shade_hex' => ['nullable', 'string', 'max:9', 'regex:/^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/'],
             'query_string' => ['nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9_\-=&%.+,\[\]]+$/'],
         ];

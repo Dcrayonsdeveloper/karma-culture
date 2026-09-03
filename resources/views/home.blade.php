@@ -415,16 +415,6 @@
                 transition: color .3s;
             }
             .kk-rail-cell:hover .kk-rail-label { color: var(--kk-tan-dark); }
-            .kk-rail-count {
-                font-size: clamp(8px, calc(var(--kk-rail-cell) * 0.067), 10px);
-                letter-spacing: 0.18em;
-                text-transform: uppercase;
-                color: var(--kk-text-muted);
-                font-weight: 500;
-                line-height: 1.3;
-                margin-top: -2px;
-                overflow-wrap: anywhere;
-            }
 
             @media (max-width: 1024px) {
                 .kk-syw-heading { font-size: 36px; }
@@ -1599,7 +1589,7 @@
              ============================================ --}}
         @php
             // Filter items come from admin (ShopFilterItem model). Normalise each
-            // group into the {label, shade, count, q} shape the markup expects.
+            // group into the {label, shade, q} shape the markup expects.
             $shopFilters = $shopFilters ?? collect();
             $kkTabs = [
                 'size'  => ['eyebrow' => 'Find Your Fit',       'title' => 'Size',  'items' => []],
@@ -1611,7 +1601,6 @@
                     $kkTabs[$key]['items'][] = [
                         'label' => $row->label,
                         'shade' => $row->shade_hex ?: '#8c5c34',
-                        'count' => $row->sub_label ?: '',
                         'q'     => $row->query_string ?: '',
                     ];
                 }
@@ -1711,12 +1700,6 @@
                                                     </svg>
                                                 </div>
                                                 <div class="kk-rail-label">{{ $item['label'] }}</div>
-                                                {{-- Printed as authored. The admin sub-label field already
-                                                     carries the noun (its placeholder is "120 Styles"), so
-                                                     appending one here read "120 Styles Styles". --}}
-                                                @if($item['count'] !== '')
-                                                    <div class="kk-rail-count">{{ $item['count'] }}</div>
-                                                @endif
                                             </{{ $item['q'] !== '' ? 'a' : 'div' }}>
                                         @endforeach
                                     </div>

@@ -39,15 +39,14 @@
                 <span style="font-size: 11px; color: #616161;">{{ ($items[$type] ?? collect())->count() }} item(s)</span>
             </div>
 
-            {{-- Existing items table. Six columns of inputs never fit a phone,
+            {{-- Existing items table. Five columns of inputs never fit a phone,
                  so the table keeps a floor width and scrolls inside its own box
                  rather than squeezing every field into a sliver. --}}
             <div style="padding: 0; overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                <table style="width: 100%; min-width: 920px; font-size: 13px;">
+                <table style="width: 100%; min-width: 800px; font-size: 13px;">
                     <thead>
                         <tr style="background: #f7f7f7; border-bottom: 1px solid #e3e3e3;">
                             <th style="text-align: left; padding: 0.5rem 1rem; font-weight: 500; color: #616161; font-size: 12px;">Label</th>
-                            <th style="text-align: left; padding: 0.5rem 1rem; font-weight: 500; color: #616161; font-size: 12px;">Sub-label</th>
                             <th style="text-align: left; padding: 0.5rem 1rem; font-weight: 500; color: #616161; font-size: 12px;">Shade</th>
                             <th style="text-align: left; padding: 0.5rem 1rem; font-weight: 500; color: #616161; font-size: 12px;">Query</th>
                             <th style="text-align: center; padding: 0.5rem 1rem; font-weight: 500; color: #616161; font-size: 12px;">Matches</th>
@@ -62,7 +61,6 @@
                                     @csrf @method('PUT')
                                     <input type="hidden" name="type" value="{{ $item->type }}">
                                     <td style="padding: 0.5rem 1rem;"><input type="text" name="label" value="{{ $item->label }}" required maxlength="120" aria-label="Label" class="form-input" style="font-size: 13px;"></td>
-                                    <td style="padding: 0.5rem 1rem;"><input type="text" name="sub_label" value="{{ $item->sub_label }}" maxlength="120" aria-label="Sub-label" class="form-input" style="font-size: 13px;"></td>
                                     <td style="padding: 0.5rem 1rem;">
                                         {{-- The scope has to start inside the cell: the row's <form> is
                                              display:contents and the parser lifts it out of the <tr>, so
@@ -156,7 +154,7 @@
                                     </td>
                             </tr>
                         @empty
-                            <tr><td colspan="7" style="padding: 1.5rem; text-align: center; color: #616161; font-size: 12px;">No {{ $label }} items yet.</td></tr>
+                            <tr><td colspan="6" style="padding: 1.5rem; text-align: center; color: #616161; font-size: 12px;">No {{ $label }} items yet.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -178,9 +176,9 @@
 
             {{-- Add new item form --}}
             <div style="padding: 0.75rem 1rem; border-top: 1px solid #e3e3e3; background: #fafafa;">
-                {{-- auto-fit rather than five fixed tracks: the fields reflow to
+                {{-- auto-fit rather than four fixed tracks: the fields reflow to
                      however many columns the screen can hold instead of only
-                     ever being all-five or, below 768px, all-stacked. --}}
+                     ever being all-four or, below 768px, all-stacked. --}}
                 <form action="{{ route('admin.homepage.shop-filters.store') }}" method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.5rem; align-items: end;">
                     @csrf
                     <input type="hidden" name="type" value="{{ $type }}">
@@ -190,10 +188,6 @@
                     <div>
                         <label for="filter-{{ $type }}-label" class="form-label" style="font-size: 11px; color: #616161;">Label *</label>
                         <input type="text" name="label" id="filter-{{ $type }}-label" required maxlength="120" class="form-input" style="font-size: 13px;" placeholder="@if($type==='size')M @elseif($type==='price')₹1k - 2k @else Tan @endif">
-                    </div>
-                    <div>
-                        <label for="filter-{{ $type }}-sub-label" class="form-label" style="font-size: 11px; color: #616161;">Sub-label</label>
-                        <input type="text" name="sub_label" id="filter-{{ $type }}-sub-label" maxlength="120" class="form-input" style="font-size: 13px;" placeholder="120 Styles">
                     </div>
                     <div>
                         <label for="filter-{{ $type }}-shade-hex" class="form-label" style="font-size: 11px; color: #616161;">Shade hex</label>

@@ -10,7 +10,7 @@ class ShopFilterItem extends Model
     use HasFactory;
 
     protected $fillable = [
-        'type', 'label', 'sub_label', 'shade_hex',
+        'type', 'label', 'shade_hex',
         'query_string', 'position', 'is_active',
     ];
 

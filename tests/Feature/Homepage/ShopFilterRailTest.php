@@ -16,7 +16,6 @@ class ShopFilterRailTest extends TestCase
             ShopFilterItem::create([
                 'type' => 'size',
                 'label' => $label,
-                'sub_label' => (10 * ($i + 1)) . ' Styles',
                 'position' => $i,
                 'is_active' => true,
             ]);
@@ -57,14 +56,21 @@ class ShopFilterRailTest extends TestCase
             ->assertSee('kk-rail-scroll', false);
     }
 
-    public function test_the_sub_label_is_printed_as_the_admin_authored_it(): void
+    public function test_a_sub_label_left_behind_in_the_database_is_not_printed(): void
     {
+        // The hangers carry a label and nothing else now. The column outlived
+        // the field that fed it - every live row still holds whatever an admin
+        // last typed there - so the rail has to ignore it rather than merely
+        // stop offering it. query()->update writes straight past $fillable,
+        // which no longer lists the column.
         $this->seedSizes(['S']);
+        ShopFilterItem::query()->update(['sub_label' => '10 Styles']);
 
         $this->get('/')
             ->assertOk()
-            ->assertSee('>10 Styles<', false)
-            ->assertDontSee('Styles Styles', false);
+            ->assertSee('>S<', false)
+            ->assertDontSee('10 Styles')
+            ->assertDontSee('class="kk-rail-count"', false);
     }
 
     public function test_the_stage_no_longer_pins_a_height_the_rail_can_overflow(): void
