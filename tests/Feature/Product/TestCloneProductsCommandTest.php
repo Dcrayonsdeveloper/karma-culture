@@ -170,6 +170,63 @@ class TestCloneProductsCommandTest extends TestCase
         $this->assertSame([], ProductCollection::pickedProductIds('bestsellers'));
     }
 
+    public function test_it_gives_a_video_to_some_of_the_clones_but_not_all(): void
+    {
+        $this->makeSourceProduct();
+
+        $this->artisan('products:test-clones', ['--count' => 9, '--video-every' => 3, '--video' => '/images/reel.mp4'])
+            ->assertSuccessful();
+
+        $clones = Product::where('sku', 'like', 'TESTCLONE-%')->with('images')->get();
+
+        $withVideo = $clones->filter(fn ($p) => $p->images->contains('media_type', 'video'));
+
+        $this->assertCount(3, $withVideo, 'every third clone, not all nine');
+        $this->assertCount(9, $clones, 'the ones without a video are still made');
+    }
+
+    /**
+     * The product card on every listing paints the primary image. It cannot
+     * play a video, so a video marked primary drops the clone back to the
+     * no-image placeholder on the home page, the shop and every category.
+     */
+    public function test_a_video_is_never_the_primary_image(): void
+    {
+        $this->makeSourceProduct();
+
+        $this->artisan('products:test-clones', ['--count' => 3, '--video-every' => 1, '--video' => '/images/reel.mp4'])
+            ->assertSuccessful();
+
+        foreach (Product::where('sku', 'like', 'TESTCLONE-%')->with('images')->get() as $clone) {
+            $video = $clone->images->firstWhere('media_type', 'video');
+
+            $this->assertNotNull($video);
+            $this->assertFalse((bool) $video->is_primary);
+            $this->assertSame('image', $clone->images->firstWhere('is_primary', true)->media_type);
+
+            // The poster, so the gallery thumb is the garment rather than a
+            // black frame - and what the PDP hands <video poster="...">.
+            $this->assertSame('https://example.test/polo.jpg', $video->thumbnail_url);
+
+            // Last in the gallery, so the photos come first.
+            $this->assertSame($clone->images->max('position'), $video->position);
+        }
+    }
+
+    public function test_video_can_be_switched_off(): void
+    {
+        $this->makeSourceProduct();
+
+        $this->artisan('products:test-clones', ['--count' => 4, '--video-every' => 0])->assertSuccessful();
+
+        $this->assertSame(
+            0,
+            ProductImage::whereIn('product_id', Product::where('sku', 'like', 'TESTCLONE-%')->pluck('id'))
+                ->where('media_type', 'video')
+                ->count(),
+        );
+    }
+
     public function test_delete_removes_every_clone_and_nothing_else(): void
     {
         $source = $this->makeSourceProduct();

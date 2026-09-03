@@ -58,6 +58,8 @@ class SeedTestCloneProducts extends Command
     protected $signature = 'products:test-clones
                             {--count=40 : How many copies to create}
                             {--source= : Slug or id of the product to copy (default: the active product with the most images)}
+                            {--video-every=3 : Give every Nth clone a gallery video (0 for none)}
+                            {--video= : URL or /images path of the video to attach (default: the first one the site already ships)}
                             {--delete : Remove every clone this command has made, and nothing else}';
 
     protected $description = 'Create copies of one product across every category and listing, for testing empty and single-item pages';
@@ -142,6 +144,18 @@ class SeedTestCloneProducts extends Command
         $this->line('  Sizes       : '.implode(', ', $sizes));
         $this->line('  Shades      : '.implode(', ', array_keys($shades)));
         $this->line('  Images      : '.$sourceImages->count().' per clone, reusing the source URLs');
+
+        $videoEvery = max(0, (int) $this->option('video-every'));
+        $videoUrl = $videoEvery > 0 ? $this->resolveVideoUrl() : null;
+
+        if ($videoEvery > 0 && $videoUrl === null) {
+            $this->warn('  Video       : none found under /images - clones will have no video.');
+            $videoEvery = 0;
+        } elseif ($videoEvery > 0) {
+            $this->line('  Video       : '.$videoUrl.' on every '.$videoEvery.$this->ordinal($videoEvery).' clone');
+        } else {
+            $this->line('  Video       : none (--video-every=0)');
+        }
         $this->newLine();
 
         $existing = $this->cloneQuery()->count();
@@ -159,13 +173,14 @@ class SeedTestCloneProducts extends Command
         $bar->start();
 
         $made = [];
+        $withVideo = [];
 
         // One transaction: a half-written batch would leave clones that are in
         // some categories and no collections, which reads as a storefront bug
         // rather than an interrupted command.
         DB::transaction(function () use (
             $count, $source, $categoryIds, $collectionIds, $shades, $shadeNames,
-            $sizes, $sourceImages, $batch, $bar, &$made
+            $sizes, $sourceImages, $batch, $bar, $videoEvery, $videoUrl, &$made, &$withVideo
         ) {
             for ($i = 1; $i <= $count; $i++) {
                 $n = str_pad((string) $i, 3, '0', STR_PAD_LEFT);
@@ -244,6 +259,27 @@ class SeedTestCloneProducts extends Command
                     ]);
                 }
 
+                // Last in the gallery, never primary: the primary image is what
+                // every product card on the site paints, and a card cannot play
+                // a video - it would fall through to the no-image placeholder
+                // on every listing the clone appears in.
+                if ($videoEvery > 0 && $i % $videoEvery === 0) {
+                    ProductImage::create([
+                        'product_id' => $clone->id,
+                        'media_type' => 'video',
+                        'url' => $videoUrl,
+                        // The product's own photo as the poster. Without one the
+                        // gallery thumb is a <video> element scrubbed to 0.1s,
+                        // which on a slow connection is just a black square.
+                        'thumbnail_url' => $sourceImages->first()?->url,
+                        'alt_text' => $clone->name.' video',
+                        'position' => $sourceImages->count(),
+                        'is_primary' => false,
+                    ]);
+
+                    $withVideo[] = $clone->id;
+                }
+
                 // Three consecutive sizes per clone, walking the list, so the
                 // size hangers all resolve and no single clone carries every
                 // size (which would make the size filter useless as a test).
@@ -288,6 +324,9 @@ class SeedTestCloneProducts extends Command
         $this->line('    /deals                '.$why('deals', 'every clone is priced under its MRP'));
         $this->line('    /category/{slug}      all '.$categories->count().' categories');
         $this->line('    /search?q=Test+Copy   by name');
+        if ($withVideo !== []) {
+            $this->line('    product page          '.count($withVideo).' of them carry a gallery video');
+        }
         if ($collectionIds !== []) {
             $this->line('    /collection/{slug}    '.count($collectionIds).' collection(s): '.$collections->pluck('name')->implode(', '));
         }
@@ -345,6 +384,21 @@ class SeedTestCloneProducts extends Command
         return self::SUCCESS;
     }
 
+    /** "1st", "2nd", "3rd", "4th" - only ever used to read a count back to the operator. */
+    private function ordinal(int $n): string
+    {
+        if (in_array($n % 100, [11, 12, 13], true)) {
+            return 'th';
+        }
+
+        return match ($n % 10) {
+            1 => 'st',
+            2 => 'nd',
+            3 => 'rd',
+            default => 'th',
+        };
+    }
+
     /** Every product this command has ever made, across batches, and nothing else. */
     private function cloneQuery()
     {
@@ -392,6 +446,59 @@ class SeedTestCloneProducts extends Command
             ->all();
 
         return $configured !== [] ? $configured : self::FALLBACK_SHADES;
+    }
+
+    /**
+     * A video the site already serves at /images, or null.
+     *
+     * Looks in two places on purpose. Under CLI, public_path() is the checkout's
+     * own public/ directory - but media is gitignored and shipped straight to
+     * the webroot, which on this host is a public_html BESIDE the checkout. So
+     * on production the videos are all in the second directory and none are in
+     * the first, and a resolver that trusted public_path() alone would find
+     * nothing there while working perfectly on a developer's machine.
+     *
+     * Either way the file is served at /images/<name>, because both directories
+     * are the same URL prefix - only the disk layout differs.
+     *
+     * Returns null rather than guessing: a <video> pointed at a file that is
+     * not there renders as a dead black frame with controls, which looks like a
+     * broken player rather than absent test data.
+     */
+    private function resolveVideoUrl(): ?string
+    {
+        $given = trim((string) $this->option('video'));
+
+        if ($given !== '') {
+            return $given;
+        }
+
+        $candidates = [
+            public_path('images'),
+            // The Hostinger layout: <domain>/public_html beside <domain>/<app>.
+            dirname(base_path()).DIRECTORY_SEPARATOR.'public_html'.DIRECTORY_SEPARATOR.'images',
+        ];
+
+        foreach ($candidates as $dir) {
+            if (! is_dir($dir)) {
+                continue;
+            }
+
+            $files = collect(glob($dir.DIRECTORY_SEPARATOR.'*.mp4') ?: [])
+                ->map(fn ($p) => basename($p))
+                // .bak copies are the superseded cut of the same banner, and a
+                // name with a space needs encoding every consumer would have to
+                // remember to do.
+                ->reject(fn ($n) => str_contains($n, '.bak.') || str_contains($n, ' '))
+                ->sort()
+                ->values();
+
+            if ($files->isNotEmpty()) {
+                return '/images/'.$files->first();
+            }
+        }
+
+        return null;
     }
 
     /** @return array<int, string> */
