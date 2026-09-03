@@ -1,47 +1,72 @@
-<!-- Mobile Search Panel -->
+<!-- Mobile Search (in-header) -->
 {{--
     Search, below sm, where the inline header bar is hidden.
 
-    The header's magnifier used to be a plain link to /search. With no query
-    that page has nothing to type into - it renders "Start searching. Enter a
-    keyword to find products." and stops - so tapping search on a phone dropped
-    the shopper on a dead end and asked them to enter a keyword with no field
-    to enter it in.
+    This sits inside the header row rather than at body level so it can take
+    that row over exactly - nothing has to measure where the header ended up,
+    and it travels with the sticky header when the page scrolls behind it.
 
-    This is the same searchBar() component the desktop bar runs on, so
-    suggestions, the typewriter placeholder and voice search behave identically;
-    only the frame is different - full screen, because a phone has no room for
-    a dropdown under a 40px input.
+    It has been three things now, and both reasons are worth keeping. First a
+    plain link to /search: that page has no field to type in until it already
+    has a query, so it dropped the shopper on a dead end that asked for a
+    keyword with nowhere to put one. Then a full-screen panel, which fixed the
+    dead end but read as a separate screen - a phone covered edge to edge is a
+    new page, whatever the URL bar says. Now the row becomes the field and the
+    answers drop underneath it, so the page they were already reading is still
+    there behind.
+
+    Nothing here navigates on its own. The form still points at /search so it
+    works with JavaScript off, but with Alpine up the phone keyboard's Search
+    key answers in place. Only a tap on a product, or on "See all results",
+    leaves the page.
+
+    It runs the same searchBar() component as the desktop bar, so suggestions
+    and voice behave identically; only the frame differs.
 --}}
 <div x-data="{ open: false, ...searchBar() }"
      x-init="stopTypewriter()"
-     {{-- No typewriter here, deliberately. The panel focuses its field the moment
-          it opens, and the desktop bar stops the animation on focus for good
-          reason: a placeholder that is still typing itself out competes with the
-          shopper who is already typing, and it leaves half-words like "Search for"
-          under a live cursor. stopTypewriter() sets the plain full placeholder and
-          cancels the timer, so nothing churns behind a closed panel either. --}}
+     {{-- No typewriter here, deliberately. The field is focused the moment it
+          opens, and the desktop bar stops the animation on focus for good
+          reason: a placeholder that is still typing itself out competes with
+          the shopper who is already typing, and it leaves half-words like
+          "Search for" under a live cursor. stopTypewriter() sets the plain full
+          placeholder and cancels the timer, so nothing churns behind a closed
+          field either. --}}
      @open-mobile-search.window="
         open = true;
         $nextTick(() => $refs.mobileSearchInput.focus());
      "
-     @keydown.escape.window="open = false; stopTypewriter()"
-     x-show="open"
-     x-cloak
-     class="sm:hidden fixed inset-0 z-50 bg-kk-cream flex flex-col"
-     role="dialog"
-     aria-modal="true"
-     {{-- Named "Search", not "Search products": the field inside carries that
-          label, and a screen reader announcing both reads it twice over. --}}
-     aria-label="Search">
+     @keydown.escape.window="open = false"
+     class="sm:hidden">
 
-    {{-- Search bar row: back arrow, field, mic. Mirrors a native search screen,
-         where the field IS the header rather than sitting under one. --}}
-    <div class="shrink-0 bg-kk-cream-lighter border-b border-kk-cream-dark px-2 py-2.5">
-        <form action="{{ route('search') }}" method="GET" class="flex items-center gap-1.5">
+    {{-- The page behind, dimmed and out of reach. Deliberately not an
+         @click.outside on the wrapper: the magnifier that opens this sits
+         outside it, so a single tap would open and close in the same breath.
+         touch-action stops a drag here scrolling the page underneath. --}}
+    <div x-show="open" x-cloak x-transition.opacity
+         @click="open = false"
+         class="fixed inset-0 z-20 bg-black/40"
+         style="touch-action: none;"
+         aria-hidden="true"></div>
+
+    {{-- The header row itself: back, field, mic. Opaque, so the logo and icons
+         underneath are covered rather than showing through it.
+
+         -left-3/-right-3 and its own px-3 cancel and restore the header's
+         padding: without that the cream stops short of both screen edges and
+         the dimmed page shows through as a grey sliver down each side of the
+         search row. The contents land in exactly the same place either way. --}}
+    <div x-show="open" x-cloak class="absolute -left-3 -right-3 top-0 bottom-0 px-3 z-30 bg-kk-cream flex items-center">
+        <form action="{{ route('search') }}" method="GET" role="search"
+              {{-- The blue Search key on a phone keyboard would otherwise load
+                   /search. Flush the debounce instead and drop the keyboard, so
+                   what fills the screen is the answer it was already typing
+                   towards. --}}
+              @submit.prevent="fetchSuggestions(); $refs.mobileSearchInput.blur()"
+              class="flex items-center gap-1.5 w-full">
             <button type="button"
-                    @click="open = false; stopTypewriter()"
-                    class="p-2.5 -ml-1 text-kk-brown shrink-0"
+                    @click="open = false"
+                    class="p-2.5 text-kk-brown shrink-0"
                     aria-label="Close search">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/>
@@ -80,13 +105,17 @@
         </form>
     </div>
 
-    {{-- Permission, listening and failure states. Same panel as the desktop
-         bar: without it the mic button on a phone had no way to say anything,
-         so every refusal was a button that just did nothing. --}}
-    @include('partials.voice-search-panel')
+    {{-- The answers, dropped under the header. -left-3/-right-3 cancels the
+         header's px-3 so the sheet runs edge to edge; capped and scrolled
+         inside itself so the page behind keeps its own scroll position. --}}
+    <div x-show="open" x-cloak x-transition
+         class="absolute -left-3 -right-3 top-full z-30 max-h-[70vh] overflow-y-auto overscroll-contain bg-kk-cream border-t border-kk-cream-dark shadow-lg">
 
-    {{-- Results --}}
-    <div class="flex-1 overflow-y-auto overscroll-contain">
+        {{-- Permission, listening and failure states. Same panel as the desktop
+             bar: without it the mic button on a phone had no way to say
+             anything, so every refusal was a button that just did nothing. --}}
+        @include('partials.voice-search-panel')
+
         {{-- Typed enough, and something came back. --}}
         <template x-if="results.length > 0">
             <ul class="divide-y divide-kk-cream-dark/60">
@@ -117,7 +146,8 @@
                        class="flex items-center justify-center gap-1.5 px-4 py-3.5 text-sm font-semibold text-kk-brown active:bg-kk-cream-lighter">
                         {{-- One span, not three flex items. The row's gap-1.5 applies
                              between flex children, and with the quotes as bare text
-                             nodes either side of the <span> it printed “ shirt ”. --}}
+                             nodes either side of the <span> it printed a space inside
+                             each quotation mark. --}}
                         <span class="truncate">See all results for &ldquo;<span x-text="query"></span>&rdquo;</span>
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/>
@@ -129,7 +159,7 @@
 
         {{-- Searched, found nothing. Offering the whole catalogue beats a dead end. --}}
         <template x-if="query.length >= 2 && results.length === 0 && !loading">
-            <div class="px-6 py-14 text-center">
+            <div class="px-6 py-10 text-center">
                 <p class="text-sm text-kk-text">No matches for &ldquo;<span x-text="query"></span>&rdquo;</p>
                 <p class="text-xs text-kk-text-muted mt-1">Try a shorter word, or a different spelling.</p>
                 <a href="{{ route('shop') }}" class="inline-block mt-5 px-5 py-2.5 bg-kk-brown text-white text-sm font-semibold rounded-full">
@@ -138,17 +168,20 @@
             </div>
         </template>
 
-        {{-- Nothing typed yet. A phone screen this empty needs somewhere to go,
-             so the popular searches double as the first tap. --}}
+        {{-- Nothing typed yet. The popular searches double as the first tap, so
+             an empty field is still somewhere to go. Buttons rather than links:
+             they fill the field and answer here, the way every other route
+             through this panel now does. --}}
         <template x-if="query.length < 2 && !loading">
             <div class="px-4 py-5">
                 <p class="text-[11px] font-semibold uppercase tracking-wide text-kk-text-muted mb-2.5">Popular searches</p>
                 <div class="flex flex-wrap gap-2">
                     @foreach(['Shirts', 'Polo T-Shirts', 'Formal Shirts', 'Linen Shirts', 'Trousers', 'Chinos'] as $kkTerm)
-                        <a href="{{ route('search', ['q' => $kkTerm]) }}"
-                           class="px-3.5 py-2.5 bg-kk-cream-lighter border border-kk-cream-dark rounded-full text-sm text-kk-text">
+                        <button type="button"
+                                @click="query = @js($kkTerm); fetchSuggestions()"
+                                class="px-3.5 py-2.5 bg-kk-cream-lighter border border-kk-cream-dark rounded-full text-sm text-kk-text">
                             {{ $kkTerm }}
-                        </a>
+                        </button>
                     @endforeach
                 </div>
             </div>

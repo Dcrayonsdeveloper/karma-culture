@@ -228,7 +228,7 @@
                 </nav>
 
                 {{-- Mobile search (below sm, where the inline bar is hidden). Opens the
-                     full-screen panel rather than linking to /search: that page has no
+                     field in this row rather than linking to /search: that page has no
                      field to type in until it already has a query, so the link left the
                      shopper on an empty screen asking for a keyword. --}}
                 <button type="button"
@@ -439,6 +439,11 @@
                     </span>
                 </a>
             </div>
+
+            {{-- Search, below sm, takes this row over rather than opening a
+                 screen of its own. It lives inside the row so its `absolute
+                 inset-0` lands on the row exactly, with no measuring. --}}
+            @include('partials.mobile-search')
         </div>
     </div>
 </header>

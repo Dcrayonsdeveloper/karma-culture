@@ -358,9 +358,6 @@
     <!-- Mobile Navigation -->
     @include('partials.mobile-nav')
 
-    <!-- Mobile Search (full-screen panel behind the header's magnifier) -->
-    @include('partials.mobile-search')
-
     <!-- Notify Stock Listener -->
     <div x-data @notify-stock.window="$store.toast.success('We\'ll notify you when this item is back in stock!')"></div>
 
@@ -671,12 +668,13 @@
                             this.listening = false;
                             this.micPanel = null;
                             this.fetchSuggestions();
-                            // Auto-submit after voice input. The mobile panel runs
-                            // this same component under a different ref, so ask the
-                            // field which form it is in rather than assuming.
+                            // Auto-submit after voice input, on the desktop bar
+                            // only: its form IS the way to the results page. The
+                            // mobile field answers where it stands, and submitting
+                            // there would throw the shopper onto /search - the page
+                            // load that search was moved off in the first place.
                             this.$nextTick(() => {
-                                const field = this.$refs.searchInput || this.$refs.mobileSearchInput;
-                                const form = field && field.closest('form');
+                                const form = this.$refs.searchInput?.closest('form');
                                 if (form) form.submit();
                             });
                         };
