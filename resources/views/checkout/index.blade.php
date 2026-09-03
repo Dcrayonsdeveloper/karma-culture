@@ -371,12 +371,44 @@
                                          the summary never showed it and the total never added
                                          it, so an 18% rate on every product reached neither the
                                          customer nor the order. Shown only when there is some:
-                                         a zero line on a tax-free shop is noise. --}}
+                                         a zero line on a tax-free shop is noise.
+
+                                         The row opens to name the components, because one
+                                         figure does not tell a customer what rate they paid,
+                                         and a GST invoice names CGST and SGST rather than the
+                                         sum. <details> rather than Alpine: it is a disclosure,
+                                         it works before any JavaScript loads, and the keyboard
+                                         and screen-reader behaviour comes with it. --}}
                                     @if($kkTax > 0)
-                                        <div class="flex items-center justify-between text-[13px]">
-                                            <span class="text-neutral-600">Tax</span>
-                                            <span class="font-medium text-neutral-900">@price($kkTax)</span>
-                                        </div>
+                                        @php $kkTaxRows = \App\Support\TaxBreakdown::for($cart); @endphp
+
+                                        @if($kkTaxRows !== [])
+                                            <details class="group">
+                                                <summary class="flex items-center justify-between text-[13px] cursor-pointer list-none marker:hidden">
+                                                    <span class="text-neutral-600 inline-flex items-center gap-1">
+                                                        Tax
+                                                        <svg class="w-3 h-3 text-neutral-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+                                                        </svg>
+                                                    </span>
+                                                    <span class="font-medium text-neutral-900">@price($kkTax)</span>
+                                                </summary>
+
+                                                <div class="mt-1.5 pl-3 border-l border-neutral-200 space-y-1">
+                                                    @foreach($kkTaxRows as $kkTaxRow)
+                                                        <div class="flex items-center justify-between text-[12px]">
+                                                            <span class="text-neutral-500">{{ $kkTaxRow['label'] }}</span>
+                                                            <span class="text-neutral-600">@price($kkTaxRow['amount'])</span>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            </details>
+                                        @else
+                                            <div class="flex items-center justify-between text-[13px]">
+                                                <span class="text-neutral-600">Tax</span>
+                                                <span class="font-medium text-neutral-900">@price($kkTax)</span>
+                                            </div>
+                                        @endif
                                     @endif
                                 </div>
 
