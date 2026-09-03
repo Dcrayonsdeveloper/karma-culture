@@ -69,6 +69,31 @@ class CollectionsTest extends TestCase
         ]);
     }
 
+    /**
+     * The three admin screens render at all.
+     *
+     * Every other test here posts to the controller, which never touches the
+     * blades - so a broken view (an unresolvable helper, a missing variable)
+     * would have shipped green.
+     */
+    public function test_the_collection_screens_render(): void
+    {
+        $collection = ProductCollection::create([
+            'name' => 'Summer Picks', 'slug' => 'summer-picks', 'is_active' => true,
+        ]);
+        $collection->products()->sync([$this->makeProduct()->id]);
+
+        $screens = [
+            'index' => route('admin.collections.index'),
+            'create' => route('admin.collections.create'),
+            'edit' => route('admin.collections.edit', $collection),
+        ];
+
+        foreach ($screens as $which => $url) {
+            $this->actingAs($this->adminUser, 'admin')->get($url)->assertOk();
+        }
+    }
+
     public function test_an_admin_can_create_a_collection(): void
     {
         $this->actingAs($this->adminUser, 'admin')
