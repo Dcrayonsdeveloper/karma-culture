@@ -220,8 +220,21 @@ class ProductRequiredSizeColourTest extends TestCase
             ->get(route('admin.products.create'))
             ->assertOk();
 
+        // Save is at the bottom of a very long form and the bounce lands at the
+        // top of it, so the reasons have to be up there too - against the fields
+        // alone they were half a page below the fold and the page came back
+        // looking like the button had done nothing.
+        $page->assertSee('This product was not saved', false);
         $page->assertSee('Add at least one size', false);
         $page->assertSee('Add at least one colour', false);
+    }
+
+    public function test_a_fresh_create_form_carries_no_error_panel(): void
+    {
+        $this->actingAs($this->adminUser, 'admin')
+            ->get(route('admin.products.create'))
+            ->assertOk()
+            ->assertDontSee('This product was not saved', false);
     }
 
     public function test_the_edit_form_shows_why_the_save_was_refused(): void
@@ -241,6 +254,7 @@ class ProductRequiredSizeColourTest extends TestCase
             ->get(route('admin.products.edit', $this->product))
             ->assertOk();
 
+        $page->assertSee('Your changes were not saved', false);
         $page->assertSee('Add at least one size', false);
         $page->assertSee('Add at least one colour', false);
     }

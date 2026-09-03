@@ -12,6 +12,8 @@
             </div>
         </div>
 
+        @include('admin.products.partials.save-errors')
+
         <form id="product-form" action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data">
             @csrf
 

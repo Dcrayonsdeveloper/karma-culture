@@ -16,6 +16,8 @@
             </div>
         </div>
 
+        @include('admin.products.partials.save-errors', ['title' => 'Your changes were not saved'])
+
         <form id="product-form" action="{{ route('admin.products.update', $product) }}" method="POST" enctype="multipart/form-data">
             @csrf
             @method('PUT')
