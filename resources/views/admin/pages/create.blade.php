@@ -86,6 +86,26 @@
                         <label for="is_published" style="font-size: 13px; font-weight: 500; color: #303030;">Published</label>
                     </div>
                 </div>
+                <div class="card" style="padding: 1.25rem; margin-top: 1rem;">
+                    <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin-bottom: 0.75rem;">Show in menu</h2>
+                    {{-- Creating a page and listing it were two unrelated jobs on two
+                         screens: the page existed at its URL and appeared nowhere until
+                         someone hand-added a link under Navigation. Picking a place here
+                         creates, moves or removes that link on save. --}}
+                    <select name="nav_location" class="form-input" style="width: 100%; font-size: 13px;">
+                        <option value="">Not listed in any menu</option>
+                        @foreach($navLocations as $value => $label)
+                            <option value="{{ $value }}" @selected(old('nav_location', null) === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    @error('nav_location')
+                        <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
+                    @enderror
+                    <p style="font-size: 12px; color: #616161; margin-top: 0.5rem;">
+                        The link appears once the page is published, and follows the page if you change its slug.
+                        Reorder or rename it under Online Store &rarr; Homepage &rarr; Navigation.
+                    </p>
+                </div>
             </div>
         </div>
 

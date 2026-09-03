@@ -15,6 +15,18 @@ class Page extends Model
         'published_at',
     ];
 
+    /**
+     * The menu row generated from this page's placement field, if it has one.
+     *
+     * hasOne, not hasMany: the placement field offers a single location, and
+     * syncMenuLink() keeps exactly one row per page. Links an admin hand-adds
+     * in the Navigation editor carry no page_id and are not matched here.
+     */
+    public function menuLink(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(\App\Models\NavigationMenu::class);
+    }
+
     protected function casts(): array
     {
         return [
