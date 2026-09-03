@@ -12,6 +12,7 @@ use App\Models\ProductView;
 use App\Services\RecommendationService;
 use App\Services\ReviewSchemaService;
 use App\Support\ProductFilters;
+use App\Support\ProductOptions;
 use App\Rules\ValidationRules as V;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -233,7 +234,30 @@ class ProductController extends Controller
     {
         abort_unless($product->is_active, 404);
 
-        $product->load(['brand', 'images', 'category']);
+        $product->load(['brand', 'images', 'category', 'variants']);
+
+        // The same list the product page renders and the same one /cart/add
+        // validates against, so the quick-add popup on a listing card can only
+        // ever offer a size and colour the cart will accept.
+        $options = ProductOptions::for($product);
+        $hex = $options->colourHex();
+
+        // Per-size price and stock, so picking a size in the popup updates the
+        // price the way it does on the product page instead of quoting the base
+        // price and charging the row's.
+        $sizes = $options->sizes->map(function (string $label) use ($options, $product) {
+            $variant = $options->rows->firstWhere('id', $options->sizeVariants[$label] ?? null);
+
+            return [
+                'label' => $label,
+                'variant_id' => $variant?->id,
+                'price' => (float) ($variant?->price > 0 ? $variant->price : $product->price),
+                'mrp' => (float) ($variant?->mrp > 0 ? $variant->mrp : $product->mrp),
+                // A product with no size rows falls back to the free-text Size
+                // attribute, and those sizes carry no stock of their own.
+                'stock' => (int) ($variant ? $variant->stock_quantity : $product->stock_quantity),
+            ];
+        })->values();
 
         return response()->json([
             'id' => $product->id,
@@ -252,6 +276,10 @@ class ProductController extends Controller
             'stock_quantity' => $product->stock_quantity,
             'images' => $product->images->pluck('url')->values(),
             'primary_image' => $product->primary_image_url,
+            'sizes' => $sizes,
+            'colours' => $options->colours
+                ->map(fn (array $c) => ['name' => $c['name'], 'hex' => $hex[$c['name']] ?? null])
+                ->values(),
         ]);
     }
 

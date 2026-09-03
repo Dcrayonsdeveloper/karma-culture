@@ -114,7 +114,11 @@ class StockPredicateTest extends TestCase
             'stock_quantity' => 5,
         ]);
 
-        $this->postJson('/cart/add', ['product_id' => $product->id, 'quantity' => 1])
+        // Signed in: putting anything in a cart takes an account now, and an
+        // unauthenticated post is turned away at the route before this guard
+        // gets a chance to run.
+        $this->actingAs(User::factory()->create(['role' => 'customer']))
+            ->postJson('/cart/add', ['product_id' => $product->id, 'quantity' => 1])
             ->assertStatus(422)
             ->assertJsonPath('error', 'This item is currently out of stock.');
 
@@ -126,7 +130,8 @@ class StockPredicateTest extends TestCase
         // The guard above must not shut the ordinary path.
         $product = $this->makeProduct('Buyable Shirt');
 
-        $this->postJson('/cart/add', ['product_id' => $product->id, 'quantity' => 1])
+        $this->actingAs(User::factory()->create(['role' => 'customer']))
+            ->postJson('/cart/add', ['product_id' => $product->id, 'quantity' => 1])
             ->assertSuccessful();
 
         $this->assertDatabaseCount('cart_items', 1);

@@ -9,11 +9,11 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Rules\ValidationRules as V;
 use App\Support\OfferClaims;
+use App\Support\ProductOptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -158,14 +158,19 @@ class CartController extends Controller
         // Bounding the charset is not enough - "Size: XXXL" for a product sold
         // only in S/M, or any string at all, was accepted and shipped. They are
         // held to the same list the product page renders.
-        $options = $this->offeredOptions($product);
+        $options = ProductOptions::for($product);
 
-        foreach (['size' => $size, 'colour' => $colour] as $field => $chosen) {
-            if ($chosen === null || $this->offers($options[$field], $chosen)) {
+        $checks = [
+            'size' => [$size, $options->sizes, fn (string $v) => $options->offersSize($v)],
+            'colour' => [$colour, $options->colourNames(), fn (string $v) => $options->offersColour($v)],
+        ];
+
+        foreach ($checks as $field => [$chosen, $offered, $accepts]) {
+            if ($chosen === null || $accepts($chosen)) {
                 continue;
             }
 
-            $error = $options[$field]->isEmpty()
+            $error = $offered->isEmpty()
                 ? 'This product is not sold by '.$field.'.'
                 : 'That '.$field.' is not available for this product.';
 
@@ -259,66 +264,15 @@ class CartController extends Controller
                 'success' => true,
                 'message' => 'Product added to cart',
                 'cart_count' => $cart->items->sum('quantity'),
-                'cart_total' => $cart->total,
+                // Cast, like the other four. total is a decimal column, so without
+                // this it left as the string "1499.00" while every sibling sent a
+                // number - and a consumer comparing cart_total > 500 got string
+                // semantics from this one endpoint alone.
+                'cart_total' => (float) $cart->total,
             ]);
         }
 
         return back()->with('success', 'Product added to cart.');
-    }
-
-    /**
-     * The sizes and colours a product actually offers.
-     *
-     * Deliberately the same derivation products/show.blade.php uses to render
-     * the size buttons and colour swatches, including both fallbacks, so the
-     * server accepts exactly what the page can offer and nothing else:
-     *  - sizes come from the active "Sizes & pricing" variant rows, falling
-     *    back to a free-text Size attribute on older products;
-     *  - colours come from the product-level Colours attribute, falling back to
-     *    the Colour recorded on the variant rows.
-     *
-     * @return array{size: Collection<int, string>, colour: Collection<int, string>}
-     */
-    private function offeredOptions(Product $product): array
-    {
-        $rows = $product->variants()->where('is_active', true)->get();
-
-        $sizes = $rows->pluck('name')->map(fn ($n) => trim((string) $n))->filter()->unique()->values();
-
-        if ($sizes->isEmpty()) {
-            $sizes = collect($product->attributes ?? [])
-                ->filter(fn ($v, $k) => Str::contains(Str::lower($k), 'size'))
-                ->flatMap(fn ($v) => is_array($v) ? $v : preg_split('/[,\/|]+|\s{2,}/', (string) $v))
-                ->map(fn ($v) => trim((string) $v))
-                ->filter()
-                ->unique()
-                ->values();
-        }
-
-        $colours = collect(data_get($product->attributes, 'Colours', []))
-            ->map(fn ($c) => trim((string) (is_array($c) ? ($c['name'] ?? '') : $c)))
-            ->filter();
-
-        if ($colours->isEmpty()) {
-            $colours = $rows
-                ->map(fn ($v) => trim((string) data_get($v->attributes, 'Colour', '')))
-                ->filter();
-        }
-
-        return ['size' => $sizes, 'colour' => $colours->unique()->values()];
-    }
-
-    /**
-     * Case- and spacing-insensitive membership, so a value that made the round
-     * trip through the page is never rejected over its casing.
-     *
-     * @param  Collection<int, string>  $offered
-     */
-    private function offers(Collection $offered, string $chosen): bool
-    {
-        $needle = Str::lower(trim($chosen));
-
-        return $offered->contains(fn ($option) => Str::lower(trim((string) $option)) === $needle);
     }
 
     public function update(Request $request, CartItem $cartItem): JsonResponse|RedirectResponse

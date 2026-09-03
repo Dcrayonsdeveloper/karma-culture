@@ -19,7 +19,15 @@
               answering it does not read as shopping engagement. The queue holds
               itself until this is answered; see PQ_CONSENT_GRACE_MS in app.js. --}}
          data-kk-popup="cookie"
-         class="fixed bottom-0 left-0 right-0 z-[100] bg-white border-t border-neutral-200 shadow-lg"
+         {{-- z-70, not z-100. The banner is a persistent bottom bar, not a dialog, and
+              at z-100 it outranked every modal on the site - on a phone it covered
+              the bottom of the quick-add popup, the offer popup and the checkout
+              button in the cart drawer, so a visitor could open an action and then
+              not reach the button that completes it. It still sits above the page
+              and the filter drawers, and it still has to be answered; it just
+              stops covering a dialog the shopper opened. --}}
+         class="fixed bottom-0 left-0 right-0 z-[70] bg-white border-t border-neutral-200 shadow-lg"
+
          role="dialog" aria-label="Cookie consent">
         <div class="container mx-auto px-4 py-4">
             <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">

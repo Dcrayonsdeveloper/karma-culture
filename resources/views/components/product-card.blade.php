@@ -106,6 +106,9 @@
         {{-- View Product --}}
         @if($showAddToCart)
             <div class="mt-2 px-1">
+                @unless($outOfStock)
+                    @include('partials.quick-add-button', ['product' => $product])
+                @endunless
                 <a href="{{ route('product.show', $product) }}"
                    class="block w-full py-2.5 text-[12px] font-semibold text-white rounded-md transition-colors duration-200 text-center"
                    style="background:#2D1810;"
@@ -248,6 +251,9 @@
             {{-- View Product --}}
             @if($showAddToCart)
                 <div class="mt-auto pt-2">
+                    @unless($outOfStock)
+                        @include('partials.quick-add-button', ['product' => $product])
+                    @endunless
                     <a href="{{ route('product.show', $product) }}"
                        class="block w-full py-2.5 text-[13px] font-semibold text-white rounded-md transition-colors duration-200 text-center"
                        style="background:#2D1810;"

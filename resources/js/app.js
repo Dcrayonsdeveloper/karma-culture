@@ -299,6 +299,171 @@ Alpine.store('cart', {
 });
 
 /**
+ * Quick-add store — the round cart button on a product card.
+ *
+ * A listing card cannot just POST to /cart/add: nearly everything in this shop
+ * is sold in a size and a colour, and /cart/add refuses a line that names one
+ * the product does not offer (and the packing slip is useless without one). So
+ * the button opens this popup, which asks for exactly what the product page
+ * asks for and then hands the same payload to the cart store.
+ *
+ * The options are fetched per open rather than rendered into every card: a shop
+ * page carries 24 of them, and the size rows and colour list are two more
+ * relations per card for a popup most visits never open.
+ */
+Alpine.store('quickAdd', {
+    isOpen: false,
+    isLoading: false,
+    isAdding: false,
+    product: null,
+    size: null,
+    colour: null,
+    quantity: 1,
+
+    async show(productId) {
+        // Same trip the cart and wishlist buttons take, and taken before the
+        // request rather than after the shopper has picked a size: being sent to
+        // the login page having chosen nothing is better than losing a choice
+        // already made.
+        if (!kkRequireLogin()) return;
+
+        this.isOpen = true;
+        this.isLoading = true;
+        this.product = null;
+        this.size = null;
+        this.colour = null;
+        this.quantity = 1;
+        document.body.style.overflow = 'hidden';
+
+        try {
+            const response = await axios.get(`/product/${productId}/quick-view`);
+            this.product = response.data;
+            // Open on a buyable choice, the way the product page does, so the
+            // popup is one press from done for the common case.
+            this.size = response.data.sizes?.[0]?.label ?? null;
+            this.colour = response.data.colours?.[0]?.name ?? null;
+        } catch (error) {
+            // A 401 has already sent the browser to the login page.
+            if (error.response?.status !== 401) {
+                Alpine.store('toast').error('Could not load this product');
+            }
+            this.close();
+        } finally {
+            this.isLoading = false;
+        }
+    },
+
+    close() {
+        this.isOpen = false;
+        this.isLoading = false;
+        this.product = null;
+        document.body.style.overflow = '';
+    },
+
+    get sizes() {
+        return this.product?.sizes ?? [];
+    },
+
+    get colours() {
+        return this.product?.colours ?? [];
+    },
+
+    /** The size row behind the current selection, when the product has one. */
+    get selectedRow() {
+        return this.sizes.find((s) => s.label === this.size) ?? null;
+    },
+
+    get price() {
+        const row = this.selectedRow;
+
+        return row && row.price > 0 ? row.price : (this.product?.price ?? 0);
+    },
+
+    get mrp() {
+        const row = this.selectedRow;
+
+        return row && row.mrp > 0 ? row.mrp : (this.product?.mrp ?? 0);
+    },
+
+    get variantId() {
+        return this.selectedRow?.variant_id ?? null;
+    },
+
+    /**
+     * Stock for what is currently selected - the size row's when the product is
+     * sold by size rows, the product's otherwise. This is the same number
+     * /cart/add checks, so the popup refuses what the cart would refuse instead
+     * of sending it and showing an error toast.
+     */
+    get available() {
+        const row = this.selectedRow;
+
+        return row ? row.stock : (this.product?.stock_quantity ?? 0);
+    },
+
+    /** 1-10 like the product page, never past what is actually on the shelf. */
+    get quantityOptions() {
+        const max = Math.max(1, Math.min(10, this.available));
+
+        return Array.from({ length: max }, (_, i) => i + 1);
+    },
+
+    get canAdd() {
+        if (!this.product || this.isAdding) return false;
+        if (this.sizes.length && !this.size) return false;
+        if (this.colours.length && !this.colour) return false;
+
+        return this.available > 0;
+    },
+
+    selectSize(label) {
+        this.size = label;
+        // A size with two left must not keep a quantity of five chosen against
+        // the last one.
+        if (this.quantity > this.available) {
+            this.quantity = Math.max(1, this.available);
+        }
+    },
+
+    selectColour(name) {
+        this.colour = name;
+    },
+
+    async submit() {
+        if (!this.product || this.isAdding) return;
+
+        // A product that offers sizes or colours cannot be bought without
+        // picking one - the same rule the product page enforces, for the same
+        // reason: the order reaches packing with no idea what to put in the box.
+        if (this.sizes.length && !this.size) {
+            Alpine.store('toast').error('Please select a size');
+
+            return;
+        }
+        if (this.colours.length && !this.colour) {
+            Alpine.store('toast').error('Please select a colour');
+
+            return;
+        }
+
+        this.isAdding = true;
+        const productId = this.product.id;
+
+        try {
+            const added = await Alpine.store('cart').add(
+                productId, this.quantity, this.variantId, this.size, this.colour
+            );
+            // A failed add has shown its own error toast and the popup stays
+            // open, so the shopper can pick a different size rather than start
+            // again from the card.
+            if (added) this.close();
+        } finally {
+            this.isAdding = false;
+        }
+    },
+});
+
+/**
  * Wishlist store
  */
 Alpine.store('wishlist', {

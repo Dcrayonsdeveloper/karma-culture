@@ -118,8 +118,15 @@
         window.addEventListener('orientationchange', kkViewportWidth);
     })();
 </script>
-    <!-- Toast Notifications -->
-    <div class="fixed top-4 right-4 z-50 flex flex-col gap-2" aria-live="polite">
+    {{-- Toast notifications.
+
+         Above every overlay, not at z-50. A toast is the only thing telling the
+         shopper why an action did not happen ("Please select a size", "Only 2
+         left"), and at z-50 it was under all of them: the cart drawer is also
+         z-50 and later in the document, so it painted straight over its own
+         error messages, and the quick-add popup and the offer popup sit higher
+         still. --}}
+    <div class="fixed top-4 right-4 z-[90] flex flex-col gap-2" aria-live="polite">
         <template x-for="toast in $store.toast.items" :key="toast.id">
             <div x-show="true" role="alert"
                  x-transition:enter="transition ease-out duration-300"
@@ -611,6 +618,121 @@
                     Continue Shopping
                 </button>
             </div>
+        </div>
+    </div>
+
+    {{-- Quick add.
+
+         Opened by the round cart button on a product card. It exists because a
+         card cannot add to the cart on its own: almost everything here is sold
+         in a size and a colour, /cart/add rejects a line naming one the product
+         does not offer, and an order with neither cannot be packed. The options
+         come from the same derivation the product page renders and the cart
+         validates against, so this can only ever offer a choice that will be
+         accepted.
+
+         Mounted once in the layout rather than once per card - a shop page
+         carries 24 cards, and 24 copies of this markup is 24 dialogs for a
+         popup that only ever shows one product at a time. --}}
+    <div x-data
+         x-show="$store.quickAdd.isOpen"
+         x-cloak
+         x-transition.opacity.duration.150ms
+         @keydown.escape.window="$store.quickAdd.isOpen && $store.quickAdd.close()"
+         @click.self="$store.quickAdd.close()"
+         class="kk-qa__backdrop"
+         role="dialog" aria-modal="true" aria-label="Choose options and add to cart">
+        <div class="kk-qa__panel">
+            <button type="button" class="kk-qa__close" @click="$store.quickAdd.close()" aria-label="Close">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+
+            <template x-if="$store.quickAdd.isLoading">
+                <div class="kk-qa__loading">
+                    <div class="kk-qa__spinner"></div>
+                    Loading options&hellip;
+                </div>
+            </template>
+
+            <template x-if="!$store.quickAdd.isLoading && $store.quickAdd.product">
+                <div>
+                    <div class="kk-qa__head">
+                        <a :href="$store.quickAdd.product.url" class="kk-qa__thumb">
+                            <img :src="$store.quickAdd.product.primary_image"
+                                 :alt="$store.quickAdd.product.name"
+                                 data-fallback="{{ asset_v('images/no-product-image.svg') }}">
+                        </a>
+                        <div style="min-width:0;">
+                            <p class="kk-qa__brand" x-show="$store.quickAdd.product.brand" x-text="$store.quickAdd.product.brand"></p>
+                            <h2 class="kk-qa__name" x-text="$store.quickAdd.product.name"></h2>
+                            <div class="kk-qa__price">
+                                <span x-text="formatCurrency($store.quickAdd.price)"></span>
+                                <template x-if="$store.quickAdd.mrp > $store.quickAdd.price">
+                                    <span>
+                                        <del x-text="formatCurrency($store.quickAdd.mrp)"></del>
+                                        <span class="kk-qa__off"
+                                              x-text="Math.round((($store.quickAdd.mrp - $store.quickAdd.price) / $store.quickAdd.mrp) * 100) + '% off'"></span>
+                                    </span>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="kk-qa__body">
+                        <div class="kk-qa__group" x-show="$store.quickAdd.sizes.length">
+                            <p class="kk-qa__label">Size <span x-show="$store.quickAdd.size" x-text="'- ' + $store.quickAdd.size"></span></p>
+                            <div class="kk-qa__row">
+                                <template x-for="s in $store.quickAdd.sizes" :key="s.label">
+                                    <button type="button" class="kk-qa__chip"
+                                            :class="$store.quickAdd.size === s.label ? 'is-selected' : ''"
+                                            :disabled="s.stock <= 0"
+                                            :title="s.stock <= 0 ? 'Out of stock' : ''"
+                                            @click="$store.quickAdd.selectSize(s.label)"
+                                            x-text="s.label"></button>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="kk-qa__group" x-show="$store.quickAdd.colours.length">
+                            <p class="kk-qa__label">Colour <span x-show="$store.quickAdd.colour" x-text="'- ' + $store.quickAdd.colour"></span></p>
+                            <div class="kk-qa__row">
+                                <template x-for="c in $store.quickAdd.colours" :key="c.name">
+                                    <button type="button" class="kk-qa__chip kk-qa__chip--colour"
+                                            :class="$store.quickAdd.colour === c.name ? 'is-selected' : ''"
+                                            @click="$store.quickAdd.selectColour(c.name)"
+                                            :aria-label="c.name">
+                                        <span class="kk-qa__dot" :style="'background-color: ' + (c.hex || '#dddddd')"></span>
+                                        <span x-text="c.name"></span>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="kk-qa__group">
+                            <p class="kk-qa__label">Quantity</p>
+                            <select class="kk-qa__qty" x-model.number="$store.quickAdd.quantity" aria-label="Quantity">
+                                <template x-for="q in $store.quickAdd.quantityOptions" :key="q">
+                                    <option :value="q" x-text="q"></option>
+                                </template>
+                            </select>
+                        </div>
+
+                        <p class="kk-qa__note" x-show="$store.quickAdd.available <= 0" x-cloak>
+                            <span x-text="$store.quickAdd.sizes.length ? 'This size is out of stock.' : 'This item is out of stock.'"></span>
+                        </p>
+                    </div>
+
+                    <div class="kk-qa__foot">
+                        <button type="button" class="kk-qa__cta"
+                                :disabled="!$store.quickAdd.canAdd"
+                                @click="$store.quickAdd.submit()">
+                            <span x-show="!$store.quickAdd.isAdding">Add to Cart</span>
+                            <span x-show="$store.quickAdd.isAdding" x-cloak>Adding&hellip;</span>
+                        </button>
+                        <a :href="$store.quickAdd.product.url" class="kk-qa__link">View full details</a>
+                    </div>
+                </div>
+            </template>
         </div>
     </div>
 
