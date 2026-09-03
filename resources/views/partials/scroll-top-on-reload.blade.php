@@ -10,11 +10,12 @@
      this fixes. A URL that names an anchor (/faq#returns) is asking for that
      section rather than for the top, so its jump is left alone too.
 
-     Everything else - a reload, and an ordinary navigation, where this is a
-     no-op - is forced to the top. Testing for "not back/forward" rather than
-     for "is a reload" on purpose: the reload flavours differ across browsers
-     (F5, the toolbar button, location.reload(), a re-POST) and a missed flavour
-     would silently bring the bug back.
+     Reloads and nothing else. An ordinary navigation is left alone even though
+     it starts at the top and the correction reads like a no-op: it is not one,
+     because the correcting passes run as late as the load event, and on a
+     storefront that is seconds after the page became readable. Anyone who has
+     started scrolling by then keeps their place - see userMoved below, which
+     covers the same window on a real reload.
 
      This has to be an inline script in <head>: it must run before the browser
      lays the page out. The bundle is a deferred module, which runs after
@@ -46,13 +47,19 @@
         var navType = entry ? entry.type : null;
 
         // performance.navigation is long deprecated but is the only reading
-        // available on engines without the navigation timing entry. 2 is
-        // TYPE_BACK_FORWARD.
+        // available on engines without the navigation timing entry.
         if (!navType && window.performance && performance.navigation) {
-            navType = performance.navigation.type === 2 ? 'back_forward' : 'navigate';
+            var legacy = performance.navigation.type;   // 1 RELOAD, 2 BACK_FORWARD
+            navType = legacy === 1 ? 'reload' : (legacy === 2 ? 'back_forward' : 'navigate');
         }
 
-        if (keepScroll || navType === 'back_forward') return;
+        // Reloads only. This used to fire on anything that was not a back or a
+        // forward, on the theory that an ordinary navigation starts at the top
+        // anyway and the correction would be a no-op. It is not a no-op: the
+        // passes below run as late as the load event, so a shopper who followed
+        // a link and started scrolling while the images were still arriving got
+        // yanked back to the top.
+        if (keepScroll || navType !== 'reload') return;
 
         var supported = 'scrollRestoration' in history;
         if (supported) history.scrollRestoration = 'manual';
@@ -70,11 +77,28 @@
 
         if (window.location.hash) { release(); return; }
 
+        // The correcting passes below run as late as the load event, which on a
+        // storefront is seconds after the page is readable. Whoever moved the
+        // page in the meantime owns where it sits: a shopper who has started
+        // reading must never be snapped back. Keyed off input rather than a
+        // scroll flag because the corrections themselves emit scroll events.
+        var userMoved = false;
+        ['wheel', 'touchstart', 'touchmove', 'pointerdown', 'keydown'].forEach(function (type) {
+            window.addEventListener(type, function () { userMoved = true; }, { passive: true, capture: true, once: true });
+        });
+
         function toTop() {
-            // Never scroll when already at the top. Beyond being pointless it
-            // would emit a scroll event, and the exit-intent popup in app.js
-            // reads a large upward jump near the top as an exit signal.
+            if (userMoved) return;
             if (!window.scrollX && !window.scrollY) return;
+
+            // The exit-intent popup in app.js reads a large upward jump ending
+            // near the top as a lunge for the tab bar, which is exactly the
+            // shape of this correction. Say so, so it does not ambush a shopper
+            // with a discount modal for pressing F5. Scroll events land at the
+            // next rendering step rather than inside this call, so the flag has
+            // to outlive it - and a background tab never paints, so this is on
+            // a timer rather than a frame.
+            window.kkScrollTopInProgress = true;
             try {
                 window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
             } catch (e) {
@@ -83,6 +107,7 @@
                 // affected by the scroll-smooth class on <html>.
                 window.scrollTo(0, 0);
             }
+            window.setTimeout(function () { window.kkScrollTopInProgress = false; }, 250);
         }
 
         toTop();

@@ -813,7 +813,7 @@
                     // (tab left open); a fresh load is the only way to renew it.
                     if (res.status === 419) {
                         this.error = 'Your session expired. Refreshing the page…';
-                        setTimeout(() => window.location.reload(), 1200);
+                        setTimeout(() => (window.kkReload ? window.kkReload() : window.location.reload()), 1200);
                         return;
                     }
                     const data = await res.json().catch(() => ({}));

@@ -1496,6 +1496,11 @@ Alpine.data('exitPopup', (code = 'KARMAA10', minutes = 10, accountEmail = '') =>
         if (!q.homePage) {
             this._onScroll = () => {
                 const y = window.scrollY;
+                // A reload correcting itself to the top (see the head script in
+                // partials/scroll-top-on-reload.blade.php) is a large upward
+                // jump ending at zero - this heuristic's exact signature, and
+                // not an exit gesture. Take the reading, draw no conclusion.
+                if (window.kkScrollTopInProgress) { this._lastY = y; return; }
                 if (this._lastY - y > 60 && y < 120) this.trigger();
                 this._lastY = y;
             };
