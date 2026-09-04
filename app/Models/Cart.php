@@ -51,6 +51,19 @@ class Cart extends Model
     }
 
     /**
+     * Every time this cart has been abandoned.
+     *
+     * More than one row is normal, and is the reason that state does not live
+     * on this table: checkout empties a cart without deleting it, so the same
+     * row is refilled for the customer's next basket and can be abandoned
+     * again. See the abandoned_carts migration for the full reasoning.
+     */
+    public function abandonedCarts(): HasMany
+    {
+        return $this->hasMany(AbandonedCart::class);
+    }
+
+    /**
      * Bring every line back to the price it would be added at today.
      *
      * Only flash-sale movement can change a price under the customer, so this

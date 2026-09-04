@@ -212,10 +212,16 @@
         </a>
 
         <!-- Orders Section -->
-        @if($user->canAccessSection('orders'))
+        {{-- The heading follows the Customers block below: it shows when the
+             user can reach ANY item under it, so a recovery-desk staff member
+             holding only `abandoned_carts` still gets a labelled group instead
+             of a stray link floating under Notifications. --}}
+        @if($user->canAccessSection('orders') || $user->canAccessSection('abandoned_carts'))
         <div class="pt-4 pb-1">
             <p class="admin-nav-section">Orders</p>
         </div>
+        @endif
+        @if($user->canAccessSection('orders'))
         <a href="{{ route('admin.orders.index') }}"
            class="admin-nav-item {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}">
             <svg style="width: 18px; height: 18px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -229,6 +235,15 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
             </svg>
             Returns
+        </a>
+        @endif
+        @if($user->canAccessSection('abandoned_carts'))
+        <a href="{{ route('admin.abandoned-carts.index') }}"
+           class="admin-nav-item {{ request()->routeIs('admin.abandoned-carts.*') ? 'active' : '' }}">
+            <svg style="width: 18px; height: 18px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17M9 21a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z"/>
+            </svg>
+            Abandoned Carts
         </a>
         @endif
 

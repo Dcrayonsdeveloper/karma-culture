@@ -213,7 +213,15 @@ class DashboardController extends Controller
         $activeProducts = Product::where('is_active', true)->count();
         $productActiveRate = $totalProducts > 0 ? round(($activeProducts / $totalProducts) * 100) : 0;
 
+        // Abandoned carts. Read back from the abandoned_carts table rather than
+        // recomputed here, so this block and the Abandoned Carts screen can
+        // never quote different numbers. Deliberately NOT date-filtered: the
+        // recovery rate is a lifetime figure and slicing it by the dashboard's
+        // window would make it swing wildly on a quiet week.
+        $abandonedCartStats = app(\App\Services\AbandonedCartService::class)->stats();
+
         return view('admin.dashboard.index', compact(
+            'abandonedCartStats',
             'topOrders',
             'topRevenue',
             'totalOrders',

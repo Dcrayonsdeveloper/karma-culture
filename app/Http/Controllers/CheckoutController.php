@@ -354,6 +354,17 @@ class CheckoutController extends Controller
                     }
                 }
 
+                // Close any open abandoned-cart episode against this order.
+                //
+                // This is the ONLY exact attribution there is. `orders` carries
+                // no cart_id and no session_id, so once this transaction ends
+                // nothing links the basket to the order it became - every other
+                // route to "was this cart recovered?" is a guess. It runs before
+                // the cart is emptied because the episode is found by cart_id,
+                // and it cannot fail the order: the service swallows its own
+                // errors and logs them.
+                app(\App\Services\AbandonedCartService::class)->markRecoveredFromCheckout($cart, $order);
+
                 // Empty the cart.
                 $cart->items()->delete();
                 $cart->update(['coupon_id' => null, 'discount' => 0]);

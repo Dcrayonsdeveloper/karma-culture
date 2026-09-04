@@ -250,6 +250,11 @@ class CheckoutController extends Controller
                     ]);
                 }
 
+                // Same exact attribution the web checkout does - see the comment
+                // there. Must run before the cart is emptied, because the open
+                // episode is found by cart_id.
+                app(\App\Services\AbandonedCartService::class)->markRecoveredFromCheckout($cart, $order);
+
                 $cart->items()->delete();
                 $cart->update(['coupon_id' => null, 'discount' => 0]);
 
