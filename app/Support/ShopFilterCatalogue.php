@@ -42,8 +42,8 @@ class ShopFilterCatalogue
 
     public const TEXTURES_KEY = 'Textures';
 
-    /** How many price bands to aim for before empty ones are dropped. */
-    private const PRICE_BANDS = 4;
+    /** Where the price bands are cut: the quartiles of the live catalogue. */
+    private const PRICE_QUANTILES = [0.25, 0.5, 0.75];
 
     /** Container keys the per-request memo is held under. */
     private const MEMO = ['kk.shop_filters.version', 'kk.shop_filters.derived', 'kk.shop_filters.exclusions'];
@@ -446,52 +446,73 @@ class ShopFilterCatalogue
     }
 
     /**
-     * Price bands across the live spread.
+     * Price bands, cut where the products are rather than where the price axis
+     * is.
      *
      * Exact prices would be hundreds of one-product filters, so the spread is
      * cut into round bands - the shape the hand-typed rail already used
-     * ("Under 1k", "1k - 2k", "7k+"). Two queries, whatever the catalogue
-     * size: one for the spread, one grouped count that drops the empty bands.
-     * A single band is not a filter, so a catalogue with one price offers no
-     * price rail at all rather than one chip that changes nothing.
+     * ("Under 1k", "1k - 2k", "7k+"). The cuts are the quartiles of the live
+     * catalogue, each rounded up to a round number, so the bands hold roughly a
+     * quarter of the shop each.
+     *
+     * Dividing the axis instead - max price over four - was tried and is what
+     * this replaces: one product at 35k stretched the bands to 10k wide, three
+     * of the four came back empty and got dropped, and the rail offered
+     * "Under 10k" (almost everything) beside "30k+" (almost nothing). A band
+     * has to narrow the grid to be worth a chip.
+     *
+     * Cost is four small indexed reads and one grouped count, once per
+     * catalogue change rather than once per request. A single band is not a
+     * filter, so a catalogue that cannot be cut offers no price rail at all.
      *
      * @return array<string, array{label: string, count: int, hex: ?string, query: string}>
      */
     private static function derivePriceBands(): array
     {
-        $spread = self::activeProducts()
-            ->selectRaw('MIN(products.price) as lo, MAX(products.price) as hi, COUNT(*) as n')
-            ->first();
+        $total = (int) self::activeProducts()->count();
 
-        $high = (float) ($spread->hi ?? 0);
-        $total = (int) ($spread->n ?? 0);
-
-        if ($total === 0 || $high <= 0) {
+        if ($total < 2) {
             return [];
         }
 
-        $step = self::niceStep($high / self::PRICE_BANDS);
-        // The band the dearest product falls in, capped so the rail never runs
-        // past five chips however wide the spread is - the top one is left
-        // open-ended and swallows the tail.
-        $cut = min((int) floor($high / $step), self::PRICE_BANDS);
+        // The price a quarter, half and three quarters of the way up the
+        // catalogue. OFFSET on an ordered, indexed column rather than a
+        // percentile function, which MySQL and MariaDB spell differently.
+        $cuts = [];
 
-        $counts = self::activeProducts()
-            ->selectRaw('LEAST(FLOOR(products.price / ?), ?) as band, COUNT(*) as aggregate', [$step, $cut])
-            ->groupBy('band')
-            ->pluck('aggregate', 'band');
+        foreach (self::PRICE_QUANTILES as $quantile) {
+            $price = (float) self::activeProducts()
+                ->orderBy('products.price')
+                ->offset((int) floor($quantile * $total))
+                ->limit(1)
+                ->value('products.price');
 
+            if ($price > 0) {
+                $cuts[] = self::niceRound($price);
+            }
+        }
+
+        // Two quartiles that round to the same figure are one cut: a catalogue
+        // priced tightly enough gets fewer bands rather than repeated ones.
+        $cuts = array_values(array_unique($cuts));
+        sort($cuts);
+
+        if ($cuts === []) {
+            return [];
+        }
+
+        $counts = self::countPerBand($cuts);
         $bands = [];
 
-        for ($i = 0; $i <= $cut; $i++) {
+        foreach (range(0, count($cuts)) as $i) {
             $count = (int) ($counts[$i] ?? $counts[(string) $i] ?? 0);
 
             if ($count === 0) {
-                continue; // an empty band is a promoted dead end
+                continue; // an empty band is a chip that returns nothing
             }
 
-            $min = $i === 0 ? null : $i * $step;
-            $max = $i === $cut ? null : ($i + 1) * $step;
+            $min = $i === 0 ? null : $cuts[$i - 1];
+            $max = $i === count($cuts) ? null : $cuts[$i];
 
             $bands[self::priceKey($min, $max)] = [
                 'label' => self::priceLabel($min, $max),
@@ -502,6 +523,32 @@ class ShopFilterCatalogue
         }
 
         return count($bands) > 1 ? $bands : [];
+    }
+
+    /**
+     * How many active products fall in each band, in one grouped query.
+     *
+     * The CASE is built from the cut count, and every bound is a placeholder -
+     * the figures come from the catalogue, but they reach SQL as parameters
+     * like everything else.
+     *
+     * @param  array<int, float>  $cuts
+     * @return Collection<int|string, int>
+     */
+    private static function countPerBand(array $cuts): Collection
+    {
+        $case = '';
+        $bindings = [];
+
+        foreach ($cuts as $i => $cut) {
+            $case .= 'WHEN products.price < ? THEN '.$i.' ';
+            $bindings[] = $cut;
+        }
+
+        return self::activeProducts()
+            ->selectRaw('CASE '.$case.'ELSE '.count($cuts).' END as band, COUNT(*) as aggregate', $bindings)
+            ->groupBy('band')
+            ->pluck('aggregate', 'band');
     }
 
     /** A band's identity: "0:1000", "1000:2000", "7000:". */
@@ -538,15 +585,18 @@ class ShopFilterCatalogue
         return '₹'.self::compact($min).' - '.self::compact($max);
     }
 
-    /** A round step: 1, 2, 2.5 or 5 times a power of ten. */
-    private static function niceStep(float $raw): float
+    /**
+     * The next round figure at or above this one: 1, 2, 2.5 or 5 times a power
+     * of ten. A band boundary a shopper reads as a boundary - 5,000, not 4,873.
+     */
+    private static function niceRound(float $value): float
     {
-        if ($raw <= 0) {
-            return 1.0;
+        if ($value <= 0) {
+            return 0.0;
         }
 
-        $magnitude = 10 ** floor(log10($raw));
-        $fraction = $raw / $magnitude;
+        $magnitude = 10 ** floor(log10($value));
+        $fraction = $value / $magnitude;
 
         foreach ([1, 2, 2.5, 5] as $multiple) {
             if ($fraction <= $multiple) {

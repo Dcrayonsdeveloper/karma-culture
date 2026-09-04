@@ -336,6 +336,29 @@ class ShopFilterCatalogueTest extends TestCase
     // Price is a spread, not a list of prices
     // ------------------------------------------------------------------
 
+    public function test_price_bands_split_the_catalogue_rather_than_the_price_axis(): void
+    {
+        // The live shape this was rewritten for: almost everything cheap, one
+        // outlier at the top. Cutting the axis into quarters put nearly the
+        // whole shop in one band and left the rest empty, so the rail offered
+        // two chips and one of them was "everything".
+        foreach ([900, 1100, 1400, 1800, 2200, 2900, 3500, 4200] as $i => $price) {
+            $this->product('Cheap '.$i, [], ['M'], $price);
+        }
+        $this->product('The Outlier', [], ['M'], 35000);
+
+        $bands = ShopFilterCatalogue::values('price');
+
+        $this->assertGreaterThanOrEqual(3, $bands->count());
+
+        // No band may hold nearly the whole shop; that is a chip that narrows
+        // nothing.
+        foreach ($bands as $band) {
+            $this->assertGreaterThan(0, $band->count);
+            $this->assertLessThan(8, $band->count, "Band {$band->label} holds almost everything");
+        }
+    }
+
     public function test_price_bands_are_derived_and_never_one_band_per_price(): void
     {
         foreach ([499, 500, 501, 502, 1200, 2400, 4800] as $i => $price) {
