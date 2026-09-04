@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\BackInStockSubscription;
+use App\Models\Category;
 use App\Models\Coupon;
 use App\Models\OrderItem;
 use App\Models\Product;
-use App\Models\ProductCollection;
 use App\Models\ProductQuestion;
 use App\Models\ProductView;
 use App\Services\RecommendationService;
@@ -20,6 +20,20 @@ use Illuminate\View\View;
 
 class ProductController extends Controller
 {
+    /**
+     * The picks for /products, if the admin has made any.
+     *
+     * Shared by index() and filtersPanel() so the grid and the filter drawer
+     * can never describe different sets of products - the drawer is fetched on
+     * every page of the site, so a divergence here shows up everywhere.
+     *
+     * @return array<int, int>
+     */
+    private function shopAllPicks(): array
+    {
+        return Category::pickedProductIds('shop_all');
+    }
+
     public function index(Request $request): View
     {
         // The Shop It Your Way tiles store price_min/price_max/shade, so accept
@@ -29,9 +43,13 @@ class ProductController extends Controller
         // through the same one to know whether it leads anywhere.
         $request->merge(ProductFilters::tileAliases($request));
 
+        $picked = $this->shopAllPicks();
+
         $filters = ProductFilters::for(
             $request,
-            fn () => Product::query()->where('is_active', true),
+            fn () => $picked === []
+                ? Product::query()->where('is_active', true)
+                : Product::query()->where('is_active', true)->whereIn('products.id', $picked),
             ['action' => route('shop'), 'reset' => route('shop')],
         );
 
@@ -59,9 +77,14 @@ class ProductController extends Controller
     {
         $request->merge(ProductFilters::tileAliases($request));
 
+        // Same bound as index(), deliberately. See shopAllPicks().
+        $picked = $this->shopAllPicks();
+
         $filters = ProductFilters::for(
             $request,
-            fn () => Product::query()->where('is_active', true),
+            fn () => $picked === []
+                ? Product::query()->where('is_active', true)
+                : Product::query()->where('is_active', true)->whereIn('products.id', $picked),
             ['action' => route('shop'), 'reset' => route('shop')],
         );
 
@@ -316,7 +339,7 @@ class ProductController extends Controller
         // order; untick them all and it goes back to computing itself.
         $handles = ['new-arrivals' => 'new_in', 'bestsellers' => 'bestsellers'];
         $picked = isset($handles[$routeName])
-            ? ProductCollection::pickedProductIds($handles[$routeName])
+            ? Category::pickedProductIds($handles[$routeName])
             : [];
 
         $filters = ProductFilters::for(

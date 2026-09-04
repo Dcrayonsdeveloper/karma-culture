@@ -26,6 +26,12 @@ class CategoryController extends Controller
 
     public function show(Request $request, Category $category): View
     {
+        // A built-in listing lives in this table too, but it is a destination,
+        // not a classification - it has no subtree, no breadcrumb and no place
+        // in the menu. Its page is /collection/{slug}; serving it here as well
+        // would be a second URL for the same listing.
+        abort_if($category->is_system, 404);
+
         abort_unless($category->is_active, 404);
 
         // Any category that sits UNDER a gender root (Men's/Women's) is browsed within

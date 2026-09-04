@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\ProductCollection;
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
@@ -40,8 +40,16 @@ return new class extends Migration
             $table->boolean('is_system')->default(false)->after('handle');
         });
 
+        // The query builder, not the model. A migration outlives the classes
+        // around it: App\Models\ProductCollection was later deleted when
+        // collections became rows in `categories`, and a migration that named
+        // it stopped being replayable at all - every test run rebuilds the
+        // schema from zero, so the whole suite died on a class that no longer
+        // exists. Migrations describe the database, so they talk to it directly.
+        $now = now();
+
         foreach (self::SYSTEM as $handle => [$name, $slug]) {
-            ProductCollection::updateOrCreate(
+            DB::table('collections')->updateOrInsert(
                 ['handle' => $handle],
                 [
                     'name' => $name,
@@ -52,6 +60,8 @@ return new class extends Migration
                     // listing them again as collections would double them up.
                     'show_in_header' => false,
                     'position' => 0,
+                    'created_at' => $now,
+                    'updated_at' => $now,
                 ]
             );
         }
