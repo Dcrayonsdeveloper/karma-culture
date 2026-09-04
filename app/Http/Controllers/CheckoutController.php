@@ -366,17 +366,6 @@ class CheckoutController extends Controller
                     }
                 }
 
-                // Close any open abandoned-cart episode against this order.
-                //
-                // This is the ONLY exact attribution there is. `orders` carries
-                // no cart_id and no session_id, so once this transaction ends
-                // nothing links the basket to the order it became - every other
-                // route to "was this cart recovered?" is a guess. It runs before
-                // the cart is emptied because the episode is found by cart_id,
-                // and it cannot fail the order: the service swallows its own
-                // errors and logs them.
-                app(\App\Services\AbandonedCartService::class)->markRecoveredFromCheckout($cart, $order);
-
                 // Empty the cart.
                 $cart->items()->delete();
                 $cart->update(['coupon_id' => null, 'discount' => 0]);
@@ -392,6 +381,17 @@ class CheckoutController extends Controller
         } catch (\App\Exceptions\InsufficientStockException $e) {
             return redirect()->route('cart.index')->with('error', $e->getMessage());
         }
+
+        // Link this order to the abandoned-cart record the basket came from, if
+        // there is one. This is the ONLY exact attribution available: `orders`
+        // carries no cart_id and no session_id, so nothing else ever ties the
+        // two together.
+        //
+        // Deliberately AFTER the transaction. Inside it, a deadlock on this
+        // write would poison the transaction and cost the customer their order
+        // for the sake of a reporting row. The record is found by cart_id, which
+        // survives the cart being emptied above, so nothing is lost by waiting.
+        app(\App\Services\AbandonedCartService::class)->markRecoveredFromCheckout($cart, $order);
 
         // Let a guest view this order's confirmation later (session ownership).
         $recent = session('guest_order_ids', []);

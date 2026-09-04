@@ -54,8 +54,18 @@ return new class extends Migration
             // The cart's real last activity when the episode opened, and the
             // moment it crossed the threshold. Both are frozen here so that
             // later cart activity cannot rewrite the history of this episode.
-            $table->timestamp('last_activity_at');
-            $table->timestamp('abandoned_at');
+            //
+            // dateTime(), not timestamp(), and only for these two. With
+            // explicit_defaults_for_timestamp OFF, MySQL/MariaDB silently give
+            // the first NOT NULL TIMESTAMP column in a table
+            // `ON UPDATE CURRENT_TIMESTAMP` - which would quietly rewrite the
+            // frozen clock on every save and reintroduce the exact corruption
+            // this table exists to avoid. Both servers here have it ON, so this
+            // is insurance rather than a fix, but the invariant is too central
+            // to leave resting on a server variable. The nullable timestamps
+            // below never attract that behaviour.
+            $table->dateTime('last_activity_at');
+            $table->dateTime('abandoned_at');
 
             $table->unsignedInteger('item_count')->default(0);
             $table->unsignedInteger('quantity')->default(0);

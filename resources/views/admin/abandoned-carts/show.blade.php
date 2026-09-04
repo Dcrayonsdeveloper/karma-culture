@@ -31,8 +31,12 @@
                 @if($blockedReason)
                     <span class="btn btn-secondary btn-sm" style="opacity: 0.55; cursor: not-allowed;" title="{{ $blockedReason }}">Send recovery email</span>
                 @else
+                    {{-- The address is deliberately NOT interpolated into the
+                         confirm() string. Blade escapes an apostrophe to &#039;,
+                         the HTML parser turns it back into ', and it then closes
+                         the JS string literal - the guard silently disappears. --}}
                     <form action="{{ route('admin.abandoned-carts.remind', $abandonedCart) }}" method="POST" style="display: inline;"
-                          onsubmit="return confirm('Send a recovery email to {{ $email }}?')">
+                          onsubmit="return confirm('Send the recovery email to this customer now?')">
                         @csrf
                         <button type="submit" class="btn btn-primary btn-sm">Send recovery email</button>
                     </form>
@@ -86,8 +90,10 @@
                             @endif
                         </div>
                         <div style="flex: 1; min-width: 0;">
-                            @if($product)
+                            @if($product && auth('admin')->user()->canAccessSection('catalog'))
                                 <a href="{{ route('admin.products.edit', $product) }}" style="font-size: 13px; font-weight: 500;">{{ $product->name }}</a>
+                            @elseif($product)
+                                <p style="font-size: 13px; font-weight: 500; color: #303030;">{{ $product->name }}</p>
                             @else
                                 {{-- cart_items.product_id cascades on delete, so a
                                      missing product here means the row was left by
@@ -205,7 +211,11 @@
                             {{ $email ?: 'No email on file' }}
                         </p>
                         <p style="font-size: 13px; color: #616161;">{{ $abandonedCart->contactPhone() ?: 'No phone on file' }}</p>
-                        @if(! $customer->trashed())
+                        {{-- Gated on the section that owns the page, not on this
+                             one: a recovery-desk staff member may hold
+                             `abandoned_carts` without `customers`, and an
+                             ungated link would just 403 them. --}}
+                        @if(! $customer->trashed() && auth('admin')->user()->canAccessSection('customers'))
                             <a href="{{ route('admin.customers.show', $customer) }}" class="btn btn-secondary btn-sm" style="margin-top: 0.25rem; text-align: center;">View customer</a>
                         @endif
                     @else
@@ -253,10 +263,12 @@
                     <p>Last contact attempt: <span style="color: #303030;">{{ $abandonedCart->last_contacted_at?->format('M d, Y g:i A') ?? 'None' }}</span></p>
                     @if($abandonedCart->isRecovered())
                         <p>Recovered: <span style="color: #303030;">{{ $abandonedCart->recovered_at?->format('M d, Y g:i A') ?? '-' }}</span></p>
-                        @if($abandonedCart->recoveredOrder)
+                        @if($abandonedCart->recoveredOrder && auth('admin')->user()->canAccessSection('orders'))
                             <a href="{{ route('admin.orders.show', $abandonedCart->recoveredOrder) }}" class="btn btn-secondary btn-sm" style="text-align: center;">
                                 View order {{ $abandonedCart->recoveredOrder->order_number }}
                             </a>
+                        @elseif($abandonedCart->recoveredOrder)
+                            <p>Order: <span style="color: #303030;">{{ $abandonedCart->recoveredOrder->order_number }}</span></p>
                         @else
                             <p style="font-size: 12px; color: #999;">Recorded by hand, with no order attached.</p>
                         @endif

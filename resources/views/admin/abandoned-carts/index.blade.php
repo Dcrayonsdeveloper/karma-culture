@@ -150,18 +150,24 @@
         {{-- Bulk actions. Native submit with one hidden ids[] per row and a
              named submit button, which is the Newsletter pattern - the Products
              one posts a JSON string and loses the button's name. --}}
-        <form action="{{ route('admin.abandoned-carts.bulk-action') }}" method="POST"
-              x-show="selected.length > 0" x-cloak
-              onsubmit="return confirm('Apply this action to the selected carts?')"
-              style="padding: 0.625rem 1rem; border-bottom: 1px solid #e3e3e3; background: #f7f7f7; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-            @csrf
-            <template x-for="id in selected" :key="id"><input type="hidden" name="ids[]" :value="id"></template>
-            <span style="font-size: 13px; color: #616161;" x-text="selected.length + ' selected'"></span>
-            <button type="submit" name="action" value="remind" class="btn btn-secondary btn-sm">Send reminder</button>
-            <button type="submit" name="action" value="contacted" class="btn btn-secondary btn-sm">Mark contacted</button>
-            <button type="submit" name="action" value="archive" class="btn btn-secondary btn-sm">Archive</button>
-            <span style="font-size: 12px; color: #999;">Reminders are sent one at a time, so a large batch takes a moment.</span>
-        </form>
+        {{-- x-show sits on the wrapper, never on the flex row itself. Alpine
+             shows an element by calling removeProperty('display'), so an
+             element that declares its own inline `display: flex` loses that
+             layout the first time it is revealed. --}}
+        <div x-show="selected.length > 0" x-cloak
+             style="padding: 0.625rem 1rem; border-bottom: 1px solid #e3e3e3; background: #f7f7f7;">
+            <form action="{{ route('admin.abandoned-carts.bulk-action') }}" method="POST"
+                  onsubmit="return confirm('Apply this action to the selected carts?')"
+                  style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                @csrf
+                <template x-for="id in selected" :key="id"><input type="hidden" name="ids[]" :value="id"></template>
+                <span style="font-size: 13px; color: #616161;" x-text="selected.length + ' selected'"></span>
+                <button type="submit" name="action" value="remind" class="btn btn-secondary btn-sm">Send reminder</button>
+                <button type="submit" name="action" value="contacted" class="btn btn-secondary btn-sm">Mark contacted</button>
+                <button type="submit" name="action" value="archive" class="btn btn-secondary btn-sm">Archive</button>
+                <span style="font-size: 12px; color: #999;">Up to 25 at a time. Each reminder is a live send, so a full batch takes a moment.</span>
+            </form>
+        </div>
 
         {{-- Table --}}
         <div style="overflow-x: auto;">

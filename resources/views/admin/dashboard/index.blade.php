@@ -171,17 +171,19 @@
 
     {{-- Abandoned carts.
 
-         A separate card rather than a sixth tile in the stat grid: those tiles
-         paint their own white background inside a grey container, so a partial
-         last row shows the container through the gap. The figures are lifetime,
-         not date-filtered - see the comment in DashboardController. --}}
-    @if(auth('admin')->user()->canAccessSection('abandoned_carts'))
+         A separate card rather than extra tiles in the stat grid: those tiles
+         paint their own white background inside a grey container, so a row that
+         does not divide evenly shows the container through the empty cell.
+         Four tiles is what repeat(4, 1fr) collapses cleanly to at every width
+         the admin responsive rules handle. The figures are lifetime, not
+         date-filtered - see the comment in DashboardController. --}}
+    @if($abandonedCartStats)
     <div class="card" style="margin-top: 1.25rem;">
         <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3; display: flex; align-items: center; justify-content: space-between;">
             <h2 style="font-size: 13px; font-weight: 600; color: #303030;">Abandoned carts</h2>
             <a href="{{ route('admin.abandoned-carts.index') }}" style="font-size: 13px; font-weight: 500;">View all</a>
         </div>
-        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: #e3e3e3;">
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: #e3e3e3;">
             <div style="background: white; padding: 0.875rem 1rem;">
                 <p style="font-size: 13px; color: #616161; margin-bottom: 2px;">Open carts</p>
                 <p style="font-size: 1.25rem; font-weight: 600; color: #303030;">{{ number_format($abandonedCartStats['open']) }}</p>
@@ -189,10 +191,6 @@
             <div style="background: white; padding: 0.875rem 1rem;">
                 <p style="font-size: 13px; color: #616161; margin-bottom: 2px;">Value at risk</p>
                 <p style="font-size: 1.25rem; font-weight: 600; color: #b98900;">@price($abandonedCartStats['open_value'])</p>
-            </div>
-            <div style="background: white; padding: 0.875rem 1rem;">
-                <p style="font-size: 13px; color: #616161; margin-bottom: 2px;">Abandoned today</p>
-                <p style="font-size: 1.25rem; font-weight: 600; color: #005bd3;">{{ number_format($abandonedCartStats['today']) }}</p>
             </div>
             <div style="background: white; padding: 0.875rem 1rem;">
                 <p style="font-size: 13px; color: #616161; margin-bottom: 2px;">Recovery rate</p>

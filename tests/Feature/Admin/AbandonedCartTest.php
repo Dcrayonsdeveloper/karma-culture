@@ -245,6 +245,93 @@ class AbandonedCartTest extends TestCase
         $this->assertNotNull($episode->recovered_at);
     }
 
+    public function test_an_unpaid_prepaid_order_is_not_yet_counted_as_a_recovery(): void
+    {
+        // Prepaid checkout creates the order and THEN sends the customer to the
+        // gateway. Treating the order row as proof of recovery would score every
+        // abandoned payment - the exact behaviour this feature exists to chase -
+        // as a success, and it would never be chased again.
+        $cart = $this->abandonedCart($this->customer);
+        $this->service->detect();
+
+        $unpaid = Order::create([
+            'user_id' => $this->customer->id,
+            'order_number' => 'ORD-UNPAID-1',
+            'status' => 'pending',
+            'payment_status' => 'pending',
+            'subtotal' => 2000, 'discount' => 0, 'tax' => 0, 'shipping_cost' => 0, 'total' => 2000,
+            'metadata' => ['payment_method' => 'online'],
+        ]);
+
+        $this->service->markRecoveredFromCheckout($cart, $unpaid);
+
+        $episode = AbandonedCart::firstWhere('cart_id', $cart->id);
+        $this->assertNotSame(AbandonedCart::STATUS_RECOVERED, $episode->recovery_status);
+        $this->assertSame($unpaid->id, $episode->recovered_order_id,
+            'The order link should still be recorded - it is the only moment the two can be tied together.');
+
+        // Once the money lands, the next reconcile promotes it.
+        $unpaid->update(['payment_status' => 'paid', 'status' => 'confirmed']);
+        $cart->items()->delete();
+        $this->service->reconcile();
+
+        $this->assertSame(AbandonedCart::STATUS_RECOVERED, $episode->fresh()->recovery_status);
+    }
+
+    public function test_a_cancelled_order_never_becomes_a_recovery(): void
+    {
+        $cart = $this->abandonedCart($this->customer);
+        $this->service->detect();
+
+        $cancelled = Order::create([
+            'user_id' => $this->customer->id,
+            'order_number' => 'ORD-CANCELLED-1',
+            'status' => 'cancelled',
+            'payment_status' => 'paid',
+            'subtotal' => 2000, 'discount' => 0, 'tax' => 0, 'shipping_cost' => 0, 'total' => 2000,
+        ]);
+
+        $this->service->markRecoveredFromCheckout($cart, $cancelled);
+        $cart->items()->delete();
+        $this->service->reconcile();
+
+        $this->assertNotSame(
+            AbandonedCart::STATUS_RECOVERED,
+            AbandonedCart::firstWhere('cart_id', $cart->id)->recovery_status,
+            'A cancelled order was counted as a recovered cart.'
+        );
+    }
+
+    public function test_a_cart_the_customer_is_still_shopping_is_not_listed_as_abandoned_or_emailed(): void
+    {
+        Mail::fake();
+
+        $cart = $this->abandonedCart($this->customer);
+        $this->service->detect();
+
+        // They came back and added something a minute ago.
+        CartItem::create([
+            'cart_id' => $cart->id,
+            'product_id' => $this->product->id,
+            'size' => 'L',
+            'quantity' => 1,
+            'price' => $this->product->price,
+            'total' => $this->product->price,
+        ]);
+        Cart::withoutTimestamps(fn () => $cart->newQuery()->where('id', $cart->id)->update(['updated_at' => now()->subMinute()]));
+
+        $this->service->reconcile();
+
+        $episode = AbandonedCart::firstWhere('cart_id', $cart->id)->fresh();
+
+        $this->assertTrue($episode->abandoned_at->isPast(),
+            'Re-snapshotting a live cart put abandoned_at in the future, so the list shows a basket the customer has open.');
+
+        $reason = $this->service->sendReminder($episode);
+        $this->assertNotNull($reason, 'A customer shopping right now was sent "You left something in your cart!".');
+        Mail::assertNothingSent();
+    }
+
     public function test_an_emptied_cart_with_no_matching_order_is_not_counted_as_recovered(): void
     {
         // A customer who clears their own basket has not been recovered, and
@@ -597,6 +684,70 @@ class AbandonedCartTest extends TestCase
         $episode->refresh();
         $this->assertNotSame(AbandonedCart::STATUS_RECOVERED, $episode->recovery_status,
             'Another customer order was accepted as this cart\'s recovery, crediting the wrong account.');
+    }
+
+    public function test_one_order_cannot_be_credited_to_two_carts(): void
+    {
+        // Otherwise the same order's total is added to "Recovered revenue" once
+        // per cart it is linked to.
+        $first = $this->abandonedCart($this->customer);
+        $this->service->detect();
+        $firstEpisode = AbandonedCart::firstWhere('cart_id', $first->id);
+
+        $order = Order::create([
+            'user_id' => $this->customer->id,
+            'order_number' => 'ORD-ONCE-1',
+            'status' => 'delivered',
+            'payment_status' => 'paid',
+            'subtotal' => 2000, 'discount' => 0, 'tax' => 0, 'shipping_cost' => 0, 'total' => 2000,
+        ]);
+
+        $this->actingAsAdmin()
+            ->post("/admin/abandoned-carts/{$firstEpisode->id}/recovered", ['order_id' => $order->id])
+            ->assertRedirect();
+        $this->assertSame(AbandonedCart::STATUS_RECOVERED, $firstEpisode->fresh()->recovery_status);
+
+        $second = $this->abandonedCart($this->customer, hoursIdle: 9);
+        $this->service->detect();
+        $secondEpisode = AbandonedCart::firstWhere('cart_id', $second->id);
+
+        $this->actingAsAdmin()
+            ->post("/admin/abandoned-carts/{$secondEpisode->id}/recovered", ['order_id' => $order->id])
+            ->assertRedirect();
+
+        $this->assertNotSame(AbandonedCart::STATUS_RECOVERED, $secondEpisode->fresh()->recovery_status,
+            'The same order was credited to a second cart, double-counting recovered revenue.');
+    }
+
+    public function test_settings_that_would_switch_detection_off_are_refused(): void
+    {
+        // Detection wants carts idle LONGER than the threshold but NEWER than
+        // the write-off window. Threshold past the window is an empty range, and
+        // nothing would ever be detected again with no error to say why.
+        $this->actingAsAdmin()->put('/admin/abandoned-carts/settings', [
+            'threshold_hours' => 720,
+            'expiry_days' => 7,
+            'reminder_cooldown_hours' => 48,
+            'max_reminders' => 2,
+            'recovery_link_days' => 21,
+            'recent_hours' => 12,
+        ])->assertSessionHasErrors('threshold_hours');
+    }
+
+    public function test_a_deleted_customer_is_never_emailed(): void
+    {
+        Mail::fake();
+
+        $cart = $this->abandonedCart($this->customer);
+        $this->service->detect();
+        $episode = AbandonedCart::firstWhere('cart_id', $cart->id);
+
+        $this->customer->delete();
+
+        $reason = $this->service->sendReminder($episode->fresh());
+
+        $this->assertStringContainsString('deleted', (string) $reason);
+        Mail::assertNothingSent();
     }
 
     public function test_a_recovered_cart_cannot_be_archived_out_of_the_figures(): void

@@ -250,11 +250,6 @@ class CheckoutController extends Controller
                     ]);
                 }
 
-                // Same exact attribution the web checkout does - see the comment
-                // there. Must run before the cart is emptied, because the open
-                // episode is found by cart_id.
-                app(\App\Services\AbandonedCartService::class)->markRecoveredFromCheckout($cart, $order);
-
                 $cart->items()->delete();
                 $cart->update(['coupon_id' => null, 'discount' => 0]);
 
@@ -271,6 +266,11 @@ class CheckoutController extends Controller
             }
             throw $e;
         }
+
+        // Same attribution the web checkout records, and outside the transaction
+        // for the same reason - see the comment there. The abandoned-cart record
+        // is found by cart_id, which outlives the cart being emptied above.
+        app(\App\Services\AbandonedCartService::class)->markRecoveredFromCheckout($cart, $order);
 
         // COD has no gateway to wait on, so placement is confirmation. Prepaid
         // orders stay pending until their payment callback lands.

@@ -177,15 +177,23 @@ class CartRecoveryLinkTest extends TestCase
             ->assertSessionHas('error');
     }
 
-    public function test_an_already_emptied_cart_says_so_rather_than_restoring_nothing(): void
+    public function test_an_already_emptied_cart_is_refused_indistinguishably_from_a_bad_token(): void
     {
+        // Same message as an unknown token: a different one would confirm to
+        // somebody guessing that this token is real, just already spent.
         $episode = $this->episodeFor($this->owner);
         $episode->cart->items()->delete();
 
-        $this->actingAs($this->owner)
-            ->get($episode->recoveryUrl())
-            ->assertRedirect(route('cart.index'))
-            ->assertSessionHas('info');
+        $spent = $this->actingAs($this->owner)->get($episode->recoveryUrl());
+        $spent->assertRedirect(route('cart.index'))->assertSessionHas('error');
+
+        $unknown = $this->get('/cart/recover/'.str_repeat('c', 64));
+
+        $this->assertSame(
+            $unknown->getSession()->get('error'),
+            $spent->getSession()->get('error'),
+            'A spent token gives a different message from an unknown one, which confirms it exists.'
+        );
     }
 
     public function test_a_guest_cart_is_adopted_into_the_visitors_session(): void
@@ -218,6 +226,51 @@ class CartRecoveryLinkTest extends TestCase
         $this->assertNotNull($ownCart);
         $this->assertSame(1, $ownCart->items()->count());
         $this->assertNull($episode->cart->fresh()->user_id);
+    }
+
+    public function test_following_a_guest_link_twice_does_not_duplicate_the_quantity(): void
+    {
+        // The merge branch used to leave the line in the source cart, so every
+        // reload of the emailed link added its quantity to the target again.
+        $episode = $this->episodeFor(null);
+        $shopper = User::factory()->create(['role' => 'customer']);
+
+        $this->actingAs($shopper)->get($episode->recoveryUrl());
+        $this->actingAs($shopper)->get($episode->recoveryUrl());
+
+        $ownCart = Cart::where('user_id', $shopper->id)->first();
+
+        $this->assertSame(1, $ownCart->items()->count());
+        $this->assertSame(1, (int) $ownCart->items()->first()->quantity,
+            'Reloading the recovery link added the same line to the cart twice.');
+    }
+
+    public function test_adopting_a_guest_cart_leaves_the_session_with_exactly_one_cart(): void
+    {
+        // Every page load firstOrCreates a cart row for the session, so the
+        // visitor almost certainly has an empty one already. Two rows on one
+        // session id and getOrCreateCart() may hand back the empty one, making
+        // the recovered basket look like it vanished again.
+        $episode = $this->episodeFor(null);
+
+        $this->withSession([])->get('/cart/data');
+        $this->get($episode->recoveryUrl())->assertRedirect(route('cart.index'));
+
+        $sessionId = $episode->cart->fresh()->session_id;
+
+        $this->assertSame(1, Cart::where('session_id', $sessionId)->count(),
+            'The visitor session ended up owning two carts.');
+    }
+
+    public function test_a_guest_cart_merged_into_an_account_does_not_stay_open_forever(): void
+    {
+        $episode = $this->episodeFor(null);
+        $shopper = User::factory()->create(['role' => 'customer']);
+
+        $this->actingAs($shopper)->get($episode->recoveryUrl());
+
+        $this->assertFalse($episode->fresh()->isOpen(),
+            'The basket moved to another cart, but the record still sits in the admin list pointing at an empty one.');
     }
 
     public function test_the_route_is_rate_limited(): void

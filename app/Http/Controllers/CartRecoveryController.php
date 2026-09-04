@@ -47,9 +47,12 @@ class CartRecoveryController extends Controller
 
         $cart = $episode->cart()->with('items')->first();
 
+        // Same wording as the unknown-token branch on purpose. A different
+        // message here would tell somebody guessing tokens that this one is
+        // real, just spent.
         if (! $cart || $cart->items->isEmpty()) {
             return redirect()->route('cart.index')
-                ->with('info', 'That cart is already empty - nothing left to restore.');
+                ->with('error', 'That cart link is no longer valid. Your current cart is shown below.');
         }
 
         return $cart->user_id
@@ -93,17 +96,49 @@ class CartRecoveryController extends Controller
         if ($user = $request->user()) {
             $this->mergeInto($cart, $user->id);
 
+            // The basket has moved to their account cart, so this episode is
+            // over. Left open it would sit in the admin list pointing at an
+            // empty cart until it expired.
+            $this->closeEpisodesFor($cart);
+
             return redirect()->route('cart.index')
                 ->with('success', 'Welcome back! Your saved items have been added to your cart.');
         }
 
+        $sessionId = $request->session()->getId();
+
+        // This browser almost certainly already has a cart row: every page load
+        // fires GET /cart/data, which firstOrCreates one on the session id.
+        // Leaving it there would give the session two rows, and
+        // getOrCreateCart() takes the first - quite possibly the empty one, so
+        // the recovered basket would appear to vanish again.
+        Cart::where('session_id', $sessionId)
+            ->whereNull('user_id')
+            ->where('id', '!=', $cart->id)
+            ->whereDoesntHave('items')
+            ->delete();
+
         // Adopt it into this browser's session. This does bump the cart's
         // updated_at, which is correct here and nowhere else in this feature:
         // the customer really is active again.
-        $cart->update(['session_id' => $request->session()->getId()]);
+        $cart->update(['session_id' => $sessionId]);
 
         return redirect()->route('cart.index')
             ->with('success', 'Welcome back! Your saved cart is ready.');
+    }
+
+    /**
+     * The basket has been taken somewhere else, so the episode is finished.
+     *
+     * Not marked "recovered" - nothing has been bought yet. Checkout is what
+     * decides that, and it will find no open episode for a cart that has been
+     * emptied here, which is correct: this row is no longer the basket.
+     */
+    private function closeEpisodesFor(Cart $cart): void
+    {
+        AbandonedCart::where('cart_id', $cart->id)
+            ->open()
+            ->update(['recovery_status' => AbandonedCart::STATUS_EXPIRED]);
     }
 
     /**
@@ -132,6 +167,11 @@ class CartRecoveryController extends Controller
 
             if ($existing) {
                 $existing->update(['quantity' => $existing->quantity + $item->quantity]);
+                // The source line MUST go. LoginController gets away without
+                // this because it deletes the whole guest cart afterwards; here
+                // the cart survives, so a line left behind would be added to the
+                // quantity again on every reload of the link.
+                $item->delete();
             } else {
                 $item->update(['cart_id' => $target->id]);
             }

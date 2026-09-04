@@ -208,11 +208,12 @@ class AbandonedCartService
         $expired = 0;
         $refreshed = 0;
         $expiryCutoff = now()->subDays($this->expiryDays());
+        $idleCutoff = now()->subHours($this->thresholdHours());
 
         AbandonedCart::query()
             ->open()
-            ->with(['cart.items'])
-            ->chunkById(200, function ($episodes) use (&$recovered, &$expired, &$refreshed, $expiryCutoff) {
+            ->with(['cart.items', 'recoveredOrder'])
+            ->chunkById(200, function ($episodes) use (&$recovered, &$expired, &$refreshed, $expiryCutoff, $idleCutoff) {
                 foreach ($episodes as $episode) {
                     $cart = $episode->cart;
 
@@ -220,12 +221,30 @@ class AbandonedCartService
                         continue;
                     }
 
+                    // An episode already linked to an order is waiting on that
+                    // order to become a sale. Prepaid checkout hands the
+                    // customer to the gateway with the order still unpaid, so
+                    // this is where an abandoned PAYMENT finally settles one way
+                    // or the other.
+                    if ($episode->recovered_order_id) {
+                        if ($episode->recoveredOrder && $this->orderCountsAsRecovery($episode->recoveredOrder)) {
+                            $this->closeAsRecovered($episode, $episode->recoveredOrder);
+                            $recovered++;
+                        }
+
+                        continue;
+                    }
+
                     $liveItems = $cart->items->count();
 
                     if ($liveItems === 0) {
                         if ($order = $this->findConvertingOrder($episode)) {
-                            $this->closeAsRecovered($episode, $order);
-                            $recovered++;
+                            $this->attachOrder($episode, $order);
+
+                            if ($this->orderCountsAsRecovery($order)) {
+                                $this->closeAsRecovered($episode, $order);
+                                $recovered++;
+                            }
 
                             continue;
                         }
@@ -234,8 +253,16 @@ class AbandonedCartService
                         // one continuing episode, not a new one - re-snapshot it
                         // so the clock and the figures describe the basket that
                         // is actually sitting there.
-                        $this->refresh($episode, $cart);
-                        $refreshed++;
+                        //
+                        // Only once the NEW basket has itself gone quiet, though.
+                        // Refreshing while they are still shopping would set
+                        // abandoned_at in the future, and the screen would list -
+                        // and the reminder job would email - a cart the customer
+                        // has in front of them right now.
+                        if ($cart->updated_at->lte($idleCutoff)) {
+                            $this->refresh($episode, $cart);
+                            $refreshed++;
+                        }
 
                         continue;
                     }
@@ -248,6 +275,22 @@ class AbandonedCartService
             });
 
         return ['recovered' => $recovered, 'expired' => $expired, 'refreshed' => $refreshed];
+    }
+
+    /**
+     * Is this order actually a recovery, or just an order that exists?
+     *
+     * Prepaid checkout creates the order BEFORE handing the customer to the
+     * gateway, so an order row on its own proves nothing: the customer can walk
+     * away at the payment page, which is the exact behaviour this feature is
+     * meant to chase. Cancelled and returned orders are not recoveries either.
+     * Order::applySaleFilter is the store-wide definition of a sale (it counts
+     * COD, where the cash follows the parcel), so reuse it rather than writing
+     * a second one that can drift.
+     */
+    private function orderCountsAsRecovery(Order $order): bool
+    {
+        return Order::query()->whereKey($order->getKey())->countsAsSale()->exists();
     }
 
     /**
@@ -264,7 +307,19 @@ class AbandonedCartService
                 ->where('cart_id', $cart->id)
                 ->open()
                 ->get()
-                ->each(fn (AbandonedCart $episode) => $this->closeAsRecovered($episode, $order));
+                ->each(function (AbandonedCart $episode) use ($order) {
+                    // Record which order this basket became straight away - that
+                    // link is only knowable here. Whether it COUNTS as a recovery
+                    // waits on the money: a prepaid order is created before the
+                    // customer reaches the gateway, so calling it recovered now
+                    // would score every abandoned payment as a success. reconcile()
+                    // promotes it once the order qualifies as a sale.
+                    $this->attachOrder($episode, $order);
+
+                    if ($this->orderCountsAsRecovery($order)) {
+                        $this->closeAsRecovered($episode, $order);
+                    }
+                });
         } catch (\Throwable $e) {
             // Recovery bookkeeping must never be able to fail a customer's
             // order. Losing the attribution is a reporting gap; losing the
@@ -291,6 +346,22 @@ class AbandonedCartService
 
         if ($episode->liveItemCount() === 0) {
             return 'This cart is now empty, so there is nothing to remind the customer about.';
+        }
+
+        // The customer is shopping right now. Reconcile only re-snapshots an
+        // episode once the new basket has itself gone quiet, so an episode can
+        // legitimately be open while its cart is live - and "You left something
+        // in your cart!" to somebody looking at that cart is the worst email
+        // this feature could send.
+        $cart = $episode->cart;
+        if ($cart && $cart->updated_at->gt(now()->subHours($this->thresholdHours()))) {
+            return 'The customer is active in this cart right now, so a reminder would be premature.';
+        }
+
+        if ($episode->user && $episode->user->trashed()) {
+            // The account is closed. Mailing it is at best pointless and at
+            // worst a privacy problem, and the recovery link would not open.
+            return 'This customer account has been deleted, so no reminder can be sent.';
         }
 
         if (! $episode->contactEmail()) {
@@ -456,10 +527,32 @@ class AbandonedCartService
 
     private function refresh(AbandonedCart $episode, Cart $cart): void
     {
-        $episode->update($this->snapshot($cart) + [
-            'last_activity_at' => $cart->updated_at,
-            'abandoned_at' => $cart->updated_at->copy()->addHours($this->thresholdHours()),
-        ]);
+        try {
+            $episode->update($this->snapshot($cart) + [
+                'last_activity_at' => $cart->updated_at,
+                'abandoned_at' => $cart->updated_at->copy()->addHours($this->thresholdHours()),
+            ]);
+        } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+            // (cart_id, abandoned_at) already exists - lowering the threshold
+            // can move a refreshed episode onto a timestamp a closed one already
+            // holds. Leaving the snapshot stale for one cycle is harmless;
+            // letting it bubble would abort the whole reconcile pass, and
+            // sync() reconciles before it detects, so it would stop detection too.
+            Log::warning('Abandoned cart refresh collided with an existing episode', [
+                'abandoned_cart_id' => $episode->id,
+                'cart_id' => $cart->id,
+            ]);
+        }
+    }
+
+    /** Record which order a basket became, without yet calling it a recovery. */
+    private function attachOrder(AbandonedCart $episode, Order $order): void
+    {
+        if ($episode->recovered_order_id === $order->id) {
+            return;
+        }
+
+        $episode->update(['recovered_order_id' => $order->id]);
     }
 
     private function closeAsRecovered(AbandonedCart $episode, ?Order $order): void
@@ -467,7 +560,7 @@ class AbandonedCartService
         $episode->update([
             'recovery_status' => AbandonedCart::STATUS_RECOVERED,
             'recovered_at' => now(),
-            'recovered_order_id' => $order?->id,
+            'recovered_order_id' => $order?->id ?? $episode->recovered_order_id,
         ]);
     }
 

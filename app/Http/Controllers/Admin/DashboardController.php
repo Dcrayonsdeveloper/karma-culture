@@ -218,7 +218,13 @@ class DashboardController extends Controller
         // never quote different numbers. Deliberately NOT date-filtered: the
         // recovery rate is a lifetime figure and slicing it by the dashboard's
         // window would make it swing wildly on a quiet week.
-        $abandonedCartStats = app(\App\Services\AbandonedCartService::class)->stats();
+        //
+        // Skipped entirely for anyone who cannot open the section - the card is
+        // gated in the view, and this is three aggregate queries on a dashboard
+        // that already runs about twenty.
+        $abandonedCartStats = auth('admin')->user()?->canAccessSection('abandoned_carts')
+            ? app(\App\Services\AbandonedCartService::class)->stats()
+            : null;
 
         return view('admin.dashboard.index', compact(
             'abandonedCartStats',

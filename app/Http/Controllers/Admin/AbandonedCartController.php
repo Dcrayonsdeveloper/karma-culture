@@ -9,6 +9,7 @@ use App\Models\Setting;
 use App\Models\User;
 use App\Services\AbandonedCartService;
 use App\Services\ReportExportService;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -152,11 +153,25 @@ class AbandonedCartController extends Controller
 
         $order = isset($validated['order_id']) ? Order::find($validated['order_id']) : null;
 
-        // Guard the one thing that must never be wrong: an order belonging to
-        // somebody else would credit this recovery to the wrong customer and
-        // inflate recovered revenue.
-        if ($order && $abandonedCart->user_id && $order->user_id !== $abandonedCart->user_id) {
-            return back()->with('error', 'That order belongs to a different customer, so it cannot be linked to this cart.');
+        if ($order) {
+            // Guard the one thing that must never be wrong: an order belonging
+            // to somebody else would credit this recovery to the wrong customer
+            // and inflate recovered revenue.
+            if ($abandonedCart->user_id && $order->user_id !== $abandonedCart->user_id) {
+                return back()->with('error', 'That order belongs to a different customer, so it cannot be linked to this cart.');
+            }
+
+            // A guest episode has no owner to check against, so the only guard
+            // left is that one order cannot pay for two recoveries - without
+            // this, linking the same order to several carts multiplies the
+            // recovered revenue it contributes.
+            $alreadyCredited = AbandonedCart::where('recovered_order_id', $order->id)
+                ->where('id', '!=', $abandonedCart->id)
+                ->exists();
+
+            if ($alreadyCredited) {
+                return back()->with('error', 'That order is already recorded as the recovery for another cart.');
+            }
         }
 
         $this->service->markRecoveredManually($abandonedCart, $order);
@@ -183,7 +198,7 @@ class AbandonedCartController extends Controller
             // The ceiling matters more here than there: each reminder is a
             // blocking SMTP round trip, so an unbounded list would hang the
             // request until it timed out.
-            'ids' => ['required', 'array', 'min:1', 'max:50'],
+            'ids' => ['required', 'array', 'min:1', 'max:25'],
             'ids.*' => ['integer', Rule::exists('abandoned_carts', 'id')],
         ]);
 
@@ -221,10 +236,13 @@ class AbandonedCartController extends Controller
         // disagree with the list it was taken from.
         $filters = $request->validate($this->filterRules());
 
+        // lazy(), not get(): an export of a busy store would otherwise hold
+        // every episode AND every one of their cart items in memory before the
+        // first byte is written.
         $rows = $this->filtered($filters)
             ->with(['user', 'cart.items', 'recoveredOrder'])
             ->orderByDesc('abandoned_at')
-            ->get()
+            ->lazy()
             ->map(fn (AbandonedCart $c) => [
                 $c->id,
                 $c->cart_id,
@@ -279,6 +297,16 @@ class AbandonedCartController extends Controller
             'recent_hours' => ['required', 'integer', 'min:1', 'max:720'],
         ]);
 
+        // Detection looks for carts idle LONGER than the threshold but NEWER
+        // than the write-off window. Set the threshold past the window and that
+        // is an empty range: nothing is ever detected again, silently, with no
+        // error anywhere to say why.
+        if ($validated['threshold_hours'] >= $validated['expiry_days'] * 24) {
+            return back()->withInput()->withErrors([
+                'threshold_hours' => 'The idle threshold must be shorter than the write-off window, or no cart can ever fall between the two and nothing will be detected.',
+            ]);
+        }
+
         foreach ($validated as $field => $value) {
             Setting::set(self::SETTING_KEYS[$field], (string) $value, 'integer', 'abandoned_cart');
         }
@@ -323,7 +351,7 @@ class AbandonedCartController extends Controller
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date', 'after_or_equal:from'],
             'min_total' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
-            'max_total' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+            'max_total' => ['nullable', 'numeric', 'min:0', 'max:99999999', 'gte:min_total'],
             'min_items' => ['nullable', 'integer', 'min:1', 'max:999'],
             'customer' => ['nullable', 'integer', Rule::exists('users', 'id')],
             'product' => ['nullable', 'integer', Rule::exists('products', 'id')],
@@ -370,12 +398,15 @@ class AbandonedCartController extends Controller
             });
         }
 
+        // Bare range comparisons, not whereDate(): DATE(abandoned_at) is a
+        // function on the column, and the index the migration added for it
+        // cannot be used through one.
         if (! empty($filters['from'])) {
-            $query->whereDate('abandoned_at', '>=', $filters['from']);
+            $query->where('abandoned_at', '>=', Carbon::parse($filters['from'])->startOfDay());
         }
 
         if (! empty($filters['to'])) {
-            $query->whereDate('abandoned_at', '<=', $filters['to']);
+            $query->where('abandoned_at', '<=', Carbon::parse($filters['to'])->endOfDay());
         }
 
         if (isset($filters['min_total']) && $filters['min_total'] !== null) {
