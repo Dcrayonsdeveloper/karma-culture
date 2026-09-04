@@ -316,24 +316,40 @@ class ChatbotController extends Controller
         }
 
         try {
-            $lead = Lead::updateOrCreate(
-                [
-                    'platform' => 'website_chat',
-                    'platform_id' => $email ?: $phone,
-                ],
-                [
-                    'name' => $user?->full_name,
-                    'email' => $email ?: $user?->email,
-                    'phone' => $phone ?: $user?->phone,
-                    'stage' => $isLead ? 'qualified' : 'new',
-                    'notes' => Str::limit('From the shopping assistant. Last message: ' . $message, 480),
-                    'tags' => array_values(array_filter(array_map(fn ($p) => $p['name'] ?? null, $products))) ?: null,
-                ]
-            );
+            $lead = Lead::firstOrNew([
+                'platform' => 'website_chat',
+                'platform_id' => $email ?: $phone,
+            ]);
+
+            $lead->email = $email ?: $user?->email;
+            $lead->phone = $phone ?: $user?->phone;
+            $lead->notes = Str::limit('From the shopping assistant. Last message: ' . $message, 480);
+
+            // A name already on the lead was put there by a human working the
+            // pipeline; the account's name is only a starting point for one
+            // that has none. This used to be assigned unconditionally, so every
+            // later message overwrote whatever sales had corrected it to.
+            $lead->name = $lead->name ?: $user?->full_name;
+
+            // Same for the products discussed: a turn that mentions none must
+            // not erase the ones an earlier turn recorded.
+            $tags = array_values(array_filter(array_map(fn ($p) => $p['name'] ?? null, $products)));
+            $lead->tags = $tags ?: $lead->tags;
+
+            // The stage only ever moves forward. Intent promotes a lead to
+            // "qualified"; an ordinary question afterwards must not send it back
+            // to "new", which is what assigning the ternary on every message did
+            // - a won lead was demoted by the customer asking about delivery.
+            $lead->stage = self::forwardStage($lead->stage, $isLead ? 'qualified' : 'new');
+
+            $lead->save();
 
             $conversation->forceFill([
                 'lead_id' => $lead->id,
-                'is_lead' => true,
+                // is_lead is what the leads dashboard filters on. Setting it for
+                // every signed-in chat - which is every chat, the assistant
+                // being signed-in only - made the filter select everything.
+                'is_lead' => (bool) ($conversation->is_lead || $isLead),
             ])->save();
         } catch (\Throwable $e) {
             Log::error('Chatbot: could not capture lead', ['message' => $e->getMessage()]);
@@ -455,7 +471,7 @@ class ChatbotController extends Controller
         $products = Product::query()
             ->whereIn('id', $ids)
             ->where('is_active', true)
-            ->with(['category:id,name', 'brand:id,name', 'primaryImage', 'variants'])
+            ->with(['category:id,name', 'brand:id,name', 'images', 'variants'])
             ->get()
             ->map(fn (Product $p) => $this->mapProduct($p))
             ->all();
@@ -757,7 +773,7 @@ class ChatbotController extends Controller
             // assistant could never surface a product the customer can actually buy.
             ->where('is_active', true)
             ->inStock()
-            ->with(['category:id,name', 'brand:id,name', 'primaryImage', 'variants'])
+            ->with(['category:id,name', 'brand:id,name', 'images', 'variants'])
             ->where(function ($q) use ($topTerms) {
                 foreach ($topTerms as $term) {
                     $q->orWhere('name', 'like', "%{$term}%")
@@ -791,7 +807,7 @@ class ChatbotController extends Controller
         return Product::query()
             ->where('is_active', true)
             ->inStock()
-            ->with(['category:id,name', 'brand:id,name', 'primaryImage', 'variants'])
+            ->with(['category:id,name', 'brand:id,name', 'images', 'variants'])
             ->whereNotIn('id', $productIds)
             ->when($categoryIds, fn ($q) => $q->whereNotIn('category_id', $categoryIds))
             ->orderBy('sales_count', 'desc')
@@ -809,7 +825,7 @@ class ChatbotController extends Controller
             // assistant could never surface a product the customer can actually buy.
             ->where('is_active', true)
             ->inStock()
-            ->with(['category:id,name', 'brand:id,name', 'primaryImage', 'variants'])
+            ->with(['category:id,name', 'brand:id,name', 'images', 'variants'])
             ->orderBy('sales_count', 'desc')
             ->limit(4)
             ->get()

@@ -49,7 +49,7 @@ class ProductController extends Controller
             $query->orderBy('created_at', 'desc');
         }
 
-        $products = $query->paginate($request->per_page ?? 20);
+        $products = $query->paginate($this->perPage($request));
 
         return response()->json($products);
     }
@@ -134,7 +134,10 @@ class ProductController extends Controller
     public function questions(Product $product): JsonResponse
     {
         $questions = $product->questions()
-            ->where('is_published', true)
+            // is_approved, not is_published: product_questions has never had an
+            // is_published column, so this endpoint answered every call with a
+            // 500 from MySQL rather than with the product's questions.
+            ->where('is_approved', true)
             ->with(['user:id,first_name,last_name', 'answers'])
             ->latest()
             ->paginate(10);

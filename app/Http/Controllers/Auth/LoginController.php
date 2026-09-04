@@ -26,6 +26,16 @@ class LoginController extends Controller
     private const CREDENTIALS_FAILED = 'The provided credentials do not match our records.';
 
     /**
+     * Said when the password was right but the account has been switched off.
+     *
+     * Distinct from CREDENTIALS_FAILED on purpose: the credentials WERE correct,
+     * and telling the customer "wrong password" would send them round the reset
+     * flow forever. Nothing is disclosed that the correct password did not
+     * already prove.
+     */
+    private const ACCOUNT_DISABLED = 'This account has been deactivated. Please contact support.';
+
+    /**
      * ?next= brings a customer back to the page they were sent here from.
      *
      * The cart and wishlist buttons are asynchronous, so the `auth` middleware
@@ -82,6 +92,27 @@ class LoginController extends Controller
         $guestSessionId = $request->session()->getId();
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
+            // Admin > Customers has an activate/deactivate toggle that writes
+            // users.is_active, and the mobile API login honours it - this one
+            // did not, so a deactivated customer was shut out of the app and
+            // still signed in on the website. Reject before the session is
+            // regenerated and before the guest cart is merged into the account.
+            if (! Auth::user()->is_active) {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                if ($request->wantsJson()) {
+                    return response()->json([
+                        'message' => self::ACCOUNT_DISABLED,
+                        'errors' => ['email' => [self::ACCOUNT_DISABLED]],
+                    ], 403);
+                }
+
+                return back()->withErrors(['email' => self::ACCOUNT_DISABLED])
+                    ->onlyInput('email');
+            }
+
             $request->session()->regenerate();
 
             // Merge guest cart into user cart

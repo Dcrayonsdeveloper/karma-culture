@@ -48,5 +48,5 @@ foreach ($items as $i => $item) {
 }
 @endphp
 <script type="application/ld+json">
-{!! json_encode($breadcrumbJsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
+{!! json_encode($breadcrumbJsonLd, JSON_HEX_TAG | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
 </script>

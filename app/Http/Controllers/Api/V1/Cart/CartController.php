@@ -8,6 +8,7 @@ use App\Models\CartItem;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CartController extends Controller
 {
@@ -33,7 +34,19 @@ class CartController extends Controller
         $validated = $request->validate([
             'product_id' => 'required|exists:products,id',
             'quantity' => 'required|integer|min:1|max:100',
-            'variant_id' => 'nullable|exists:product_variants,id',
+            // Scoped to the submitted product. `exists:product_variants,id`
+            // on its own accepted ANY variant id, including one belonging to a
+            // different product - and both checkout paths follow
+            // cart_items.variant_id unscoped, so stock was checked and
+            // decremented against the foreign variant and the order line was
+            // priced from it. A cheap product's variant could be attached to an
+            // expensive one and bought at the cheap price.
+            'variant_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('product_variants', 'id')
+                    ->where('product_id', $request->input('product_id')),
+            ],
         ]);
 
         $cart = $this->getOrCreateCart($request);

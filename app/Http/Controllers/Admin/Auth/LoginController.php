@@ -35,6 +35,17 @@ class LoginController extends Controller
                 ])->onlyInput('email');
             }
 
+            // A deactivated account must not be able to sign in to the panel
+            // either. The admin guard shares the users provider with `web`, so
+            // without this the deactivate toggle stopped nobody here.
+            if (! $user->is_active) {
+                Auth::guard('admin')->logout();
+
+                return back()->withErrors([
+                    'email' => 'This account has been deactivated.',
+                ])->onlyInput('email');
+            }
+
             $request->session()->regenerate();
 
             return redirect()->intended(route('admin.dashboard'));

@@ -62,15 +62,15 @@ Route::prefix('product/{product}')->name('product.')->whereNumber('product')->gr
     Route::get('/quick-view', [App\Http\Controllers\ProductController::class, 'quickView'])->name('quick-view');
 
     Route::post('/guest-review', [App\Http\Controllers\GuestReviewController::class, 'store'])
-        ->middleware('throttle:3,60')
+        ->middleware('throttle:3,60,guest-review')
         ->name('guest-review');
 
     Route::post('/ask-question', [App\Http\Controllers\ProductController::class, 'askQuestion'])
-        ->middleware('throttle:5,60')
+        ->middleware('throttle:5,60,ask-question')
         ->name('ask-question');
 
     Route::post('/notify-back-in-stock', [App\Http\Controllers\ProductController::class, 'notifyBackInStock'])
-        ->middleware('throttle:5,60')
+        ->middleware('throttle:5,60,back-in-stock')
         ->name('notify-back-in-stock');
 });
 
@@ -80,7 +80,7 @@ Route::prefix('product/{product}')->name('product.')->whereNumber('product')->gr
 // way through filling in. A redirect would not help - a 301 turns their POST
 // into a GET and their review would be lost.
 Route::post('/products/{product}/guest-review', [App\Http\Controllers\GuestReviewController::class, 'store'])
-    ->middleware('throttle:3,60');
+    ->middleware('throttle:3,60,guest-review');
 
 // Categories. Same rule as products above: /category/{slug} is the one path,
 // the plural is not registered and 404s.
@@ -171,7 +171,7 @@ Route::prefix('cart')->name('cart.')->group(function () {
     // the same trip to the login page.
     Route::middleware('auth')->group(function () {
         Route::post('/add', [App\Http\Controllers\CartController::class, 'add'])->name('add');
-        Route::post('/apply-coupon', [App\Http\Controllers\CartController::class, 'applyCoupon'])->middleware('throttle:10,1')->name('apply-coupon');
+        Route::post('/apply-coupon', [App\Http\Controllers\CartController::class, 'applyCoupon'])->middleware('throttle:10,1,apply-coupon')->name('apply-coupon');
         Route::delete('/remove-coupon', [App\Http\Controllers\CartController::class, 'removeCoupon'])->name('remove-coupon');
         Route::delete('/', [App\Http\Controllers\CartController::class, 'clear'])->name('clear');
         Route::put('/{cartItem}', [App\Http\Controllers\CartController::class, 'update'])->whereNumber('cartItem')->name('update');
@@ -191,7 +191,7 @@ Route::prefix('cart')->name('cart.')->group(function () {
 Route::prefix('checkout')->name('checkout.')->group(function () {
     Route::middleware('auth')->group(function () {
         Route::get('/', [App\Http\Controllers\CheckoutController::class, 'index'])->name('index');
-        Route::post('/process', [App\Http\Controllers\CheckoutController::class, 'process'])->middleware('throttle:10,1')->name('process');
+        Route::post('/process', [App\Http\Controllers\CheckoutController::class, 'process'])->middleware('throttle:10,1,checkout')->name('process');
     });
 
     Route::get('/success/{order}', [App\Http\Controllers\CheckoutController::class, 'success'])->name('success');
@@ -319,7 +319,7 @@ Route::middleware('auth')->group(function () {
 });
 
 // Newsletter
-Route::post('/newsletter/subscribe', [App\Http\Controllers\NewsletterController::class, 'subscribe'])->middleware('throttle:5,1')->name('newsletter.subscribe');
+Route::post('/newsletter/subscribe', [App\Http\Controllers\NewsletterController::class, 'subscribe'])->middleware('throttle:5,1,newsletter')->name('newsletter.subscribe');
 
 // Recommendations (AJAX)
 Route::prefix('recommendations')->name('recommendations.')->group(function () {
@@ -338,8 +338,8 @@ Route::prefix('recommendations')->name('recommendations.')->group(function () {
 // has to live here too: an open endpoint would let anyone spend the store's
 // AI quota without ever loading the page.
 Route::middleware('auth')->group(function () {
-    Route::post('/chatbot/message', [App\Http\Controllers\ChatbotController::class, 'message'])->middleware('throttle:20,1')->name('chatbot.message');
-    Route::post('/chatbot/product-click', [App\Http\Controllers\ChatbotController::class, 'productClick'])->middleware('throttle:60,1')->name('chatbot.product-click');
+    Route::post('/chatbot/message', [App\Http\Controllers\ChatbotController::class, 'message'])->middleware('throttle:20,1,chatbot-message')->name('chatbot.message');
+    Route::post('/chatbot/product-click', [App\Http\Controllers\ChatbotController::class, 'productClick'])->middleware('throttle:60,1,chatbot-click')->name('chatbot.product-click');
 
     // Reading the saved conversation. Without this the widget had no way to
     // recover a conversation after a page navigation, so it always looked
@@ -352,17 +352,17 @@ Route::middleware('auth')->group(function () {
 
 // Track Order (Public with order number)
 Route::get('/track-order', [App\Http\Controllers\TrackOrderController::class, 'index'])->name('track-order');
-Route::post('/track-order', [App\Http\Controllers\TrackOrderController::class, 'track'])->middleware('throttle:10,1')->name('track-order.track');
+Route::post('/track-order', [App\Http\Controllers\TrackOrderController::class, 'track'])->middleware('throttle:10,1,track-order')->name('track-order.track');
 
 // Guest return requests. Reachable only after the order has been verified on
 // the tracking page above, which records it in the session.
 Route::get('/track-order/{order}/return', [App\Http\Controllers\GuestReturnController::class, 'create'])->name('track-order.return');
-Route::post('/track-order/{order}/return', [App\Http\Controllers\GuestReturnController::class, 'store'])->middleware('throttle:5,1')->name('track-order.return.store');
+Route::post('/track-order/{order}/return', [App\Http\Controllers\GuestReturnController::class, 'store'])->middleware('throttle:5,1,guest-return')->name('track-order.return.store');
 
 // Static/CMS Pages
 Route::get('/about', [App\Http\Controllers\PageController::class, 'about'])->name('about');
 Route::get('/contact', [App\Http\Controllers\PageController::class, 'contact'])->name('contact');
-Route::post('/contact', [App\Http\Controllers\PageController::class, 'sendContact'])->middleware('throttle:5,1')->name('contact.send');
+Route::post('/contact', [App\Http\Controllers\PageController::class, 'sendContact'])->middleware('throttle:5,1,contact')->name('contact.send');
 Route::get('/faq', [App\Http\Controllers\PageController::class, 'faq'])->name('faq');
 Route::get('/blog', [App\Http\Controllers\PageController::class, 'blog'])->name('blog');
 Route::get('/blog/{slug}', [App\Http\Controllers\PageController::class, 'blogShow'])->name('blog.show');

@@ -145,6 +145,17 @@ class CheckoutController extends Controller
 
         try {
             $order = DB::transaction(function () use ($cart, $shippingAddress, $billingAddress, $validated, $request) {
+                // Recompute the money from the live product rows, the way web
+                // checkout does. The order LINES below are re-read from the
+                // products, but subtotal and discount were taken from the cart
+                // as last stored - so an order placed after a flash sale
+                // started or ended carried a total that did not match the sum
+                // of its own items. skipAutoApply: an order is not the place to
+                // attach a coupon the customer was never shown.
+                $cart->recalculate(skipAutoApply: true);
+                $cart->refresh();
+                $cart->load(['items.product', 'items.variant', 'coupon']);
+
                 // Lock coupon row to prevent concurrent over-redemption
                 $lockedCoupon = null;
                 if ($cart->coupon_id) {
@@ -180,9 +191,13 @@ class CheckoutController extends Controller
                     'payment_status' => 'pending',
                     'subtotal' => $cart->subtotal,
                     'discount' => $cart->discount,
-                    'shipping_cost' => 0,
-                    'tax' => 0,
-                    'total' => $cart->subtotal - $cart->discount,
+                    // Were both hardcoded to 0, with the total ignoring them, so
+                    // an order placed from the app was billed neither delivery
+                    // nor tax while the same basket on the website was billed
+                    // both. Same fields, same formula as web checkout.
+                    'shipping_cost' => $cart->shipping,
+                    'tax' => $cart->tax,
+                    'total' => $cart->subtotal - $cart->discount + $cart->shipping + $cart->tax,
                     'coupon_id' => $cart->coupon_id,
                     'shipping_address_id' => $shippingAddress->id,
                     'billing_address_id' => $billingAddress->id,
