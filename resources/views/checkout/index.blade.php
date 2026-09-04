@@ -346,8 +346,8 @@
                                             </div>
                                             <div class="flex-1 min-w-0">
                                                 <p class="text-[13px] font-medium text-neutral-800 line-clamp-1">{{ $item->product->name }}</p>
-                                                @if($item->size || $item->colour)
-                                                    <p class="text-[11px] text-neutral-600 mt-0.5">{{ collect([$item->size ? 'Size: ' . $item->size : null, $item->colour ? 'Colour: ' . $item->colour : null])->filter()->join(' · ') }}</p>
+                                                @if($item->size || $item->colour || $item->texture)
+                                                    <p class="text-[11px] text-neutral-600 mt-0.5">{{ collect([$item->size ? 'Size: ' . $item->size : null, $item->colour ? 'Colour: ' . $item->colour : null, $item->texture ? 'Texture: ' . $item->texture : null])->filter()->join(' · ') }}</p>
                                                 @endif
                                                 <div class="flex items-center justify-between mt-0.5">
                                                     <span class="text-[11px] text-neutral-600">Qty: {{ $item->quantity }}</span>

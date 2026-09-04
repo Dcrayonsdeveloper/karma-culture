@@ -24,6 +24,12 @@ class ProductVariant extends Model
      */
     public static function bumpFilterCache(): void
     {
+        // The derived filter rails hold a per-request memo of what they last
+        // read, so retiring the cached arrays is only half of it: without this
+        // an admin who saves a product and is redirected onto a page that draws
+        // the rails would still be shown the answer from before the save.
+        \App\Support\ShopFilterCatalogue::forget();
+
         $cache = \Illuminate\Support\Facades\Cache::getFacadeRoot();
 
         if (! $cache->has('kk_filter_ver')) {

@@ -108,6 +108,7 @@ class CartController extends Controller
                 'variant_id' => $item->variant_id,
                 'size' => $item->size,
                 'colour' => $item->colour,
+                'texture' => $item->texture,
                 'quantity' => $item->quantity,
                 'price' => (float) $item->price,
                 'product_name' => $item->product->name ?? '',
@@ -159,6 +160,7 @@ class CartController extends Controller
             // ACTUALLY OFFERS is checked below, once the product is loaded.
             'size' => V::text(required: false, max: 50),
             'colour' => V::text(required: false, max: 60),
+            'texture' => V::text(required: false, max: 60),
             'quantity' => V::quantity(max: 99),
         ]);
 
@@ -168,6 +170,7 @@ class CartController extends Controller
         $variantId = $validated['variant_id'] ?? null;
         $size = $validated['size'] ?? null;
         $colour = $validated['colour'] ?? null;
+        $texture = $validated['texture'] ?? null;
 
         // exists:product_variants,id proves the variant exists, not that it
         // belongs to THIS product. A mismatched pair used to make find()
@@ -187,8 +190,8 @@ class CartController extends Controller
             return back()->with('error', $error);
         }
 
-        // size and colour are free-text POST fields that get written to the
-        // cart line, carried onto order_items and printed on the invoice.
+        // size, colour and texture are free-text POST fields that get written to
+        // the cart line, carried onto order_items and printed on the invoice.
         // Bounding the charset is not enough - "Size: XXXL" for a product sold
         // only in S/M, or any string at all, was accepted and shipped. They are
         // held to the same list the product page renders.
@@ -197,6 +200,7 @@ class CartController extends Controller
         $checks = [
             'size' => [$size, $options->sizes, fn (string $v) => $options->offersSize($v)],
             'colour' => [$colour, $options->colourNames(), fn (string $v) => $options->offersColour($v)],
+            'texture' => [$texture, $options->textures, fn (string $v) => $options->offersTexture($v)],
         ];
 
         foreach ($checks as $field => [$chosen, $offered, $accepts]) {
@@ -248,12 +252,17 @@ class CartController extends Controller
 
         $cart = $this->getOrCreateCart();
 
-        // Check if item already in cart (same product + variant + size + colour = same line)
+        // Check if item already in cart (same product + variant + size + colour
+        // + texture = same line). texture belongs in the lookup as much as the
+        // other four: without it a second texture of a size and colour already
+        // in the cart finds that row, fails to merge into it and hits
+        // cart_items_line_texture_unique as a 1062 instead.
         $existingItem = $cart->items()
             ->where('product_id', $validated['product_id'])
             ->where('variant_id', $variantId)
             ->where('size', $size)
             ->where('colour', $colour)
+            ->where('texture', $texture)
             ->first();
 
         if ($existingItem) {
@@ -286,6 +295,7 @@ class CartController extends Controller
                 'variant_id' => $variantId,
                 'size' => $size,
                 'colour' => $colour,
+                'texture' => $texture,
                 'quantity' => $validated['quantity'],
                 'price' => $price,
             ]);

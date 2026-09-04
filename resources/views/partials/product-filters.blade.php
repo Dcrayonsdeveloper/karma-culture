@@ -37,6 +37,7 @@
         'subcategory' => (bool) $kkValues['subcategory'],
         'size' => (bool) $kkValues['size'],
         'colour' => (bool) $kkValues['colour'],
+        'texture' => (bool) $kkValues['texture'],
         'brand' => (bool) $kkValues['brand'],
         'price' => $kkValues['min_price'] !== null || $kkValues['max_price'] !== null,
         'rating' => $kkValues['rating'] !== null,
@@ -251,6 +252,47 @@
                                          peer-focus-visible:ring-2 peer-focus-visible:ring-[#6F9CA2] peer-focus-visible:ring-offset-1">
                                 <span style="width:12px;height:12px;border-radius:50%;background-color: {{ $kkC['hex'] ?: '#ddd' }}; border:1px solid rgba(0,0,0,.2);"></span>
                                 <span>{{ $kkC['name'] }}</span>
+                            </span>
+                        </label>
+                    @endforeach
+                </div>
+            </div>
+        </details>
+    @endif
+
+    {{-- Texture.
+
+         Guarded with a fallback collection rather than a bare key read: a page
+         can hand the panel an empty facet of its own, and a compiled view left
+         over from before the deploy would otherwise fatal on the missing key
+         instead of simply drawing no section. --}}
+    @if(($filterPanel['textures'] ?? collect())->isNotEmpty())
+        <details class="kk-filter-section" {{ $kkOpen['texture'] ? 'open' : '' }}>
+            <summary class="kk-filter-head">
+                Texture
+                <svg class="kk-filter-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </summary>
+            <div class="kk-filter-body">
+                <div class="flex flex-wrap gap-1.5">
+                    @foreach($filterPanel['textures'] as $kkTexture)
+                        <label class="cursor-pointer select-none">
+                            <input type="checkbox" name="texture[]" value="{{ $kkTexture }}"
+                                   @checked(in_array($kkTexture, $kkValues['texture'], true))
+                                   onchange="this.form.submit()" class="sr-only peer">
+                            {{-- A texture is a plain word with nothing to show beside it, so
+                                 this is the Size chip rather than the Colour one - including
+                                 the peer-checked:hover pair, which is here for the same
+                                 reason: Tailwind v4 wraps peer-* in :where(), so the plain
+                                 hover:text-* rule would win on source order and repaint a
+                                 selected chip's label near-black on black. --}}
+                            <span class="inline-flex items-center min-h-10 lg:min-h-0 px-2.5 py-1 text-xs rounded-md border transition-colors
+                                         border-neutral-200 text-neutral-700 hover:border-neutral-500 hover:text-neutral-900
+                                         peer-checked:border-neutral-900 peer-checked:bg-neutral-900 peer-checked:text-white
+                                         peer-checked:hover:text-white peer-checked:hover:border-neutral-900
+                                         peer-focus-visible:ring-2 peer-focus-visible:ring-[#6F9CA2] peer-focus-visible:ring-offset-1">
+                                {{ $kkTexture }}
                             </span>
                         </label>
                     @endforeach

@@ -56,7 +56,7 @@
             </div>
             <div>
                 <div style="font-size: 13px; font-weight: 600; color: #303030;">Shop Filters</div>
-                <div style="font-size: 12px; color: #616161;">Size, Price, Shade</div>
+                <div style="font-size: 12px; color: #616161;">Size, Price, Shade, Texture &mdash; from your products</div>
             </div>
         </a>
 

@@ -136,8 +136,21 @@ class OrderController extends Controller
                 continue;
             }
 
+            // This lookup has to mirror cart_items_line_texture_unique, which
+            // identifies a line by product + variant + size + colour + texture.
+            // Keyed on product and variant alone it matched more lines than the
+            // index calls equal, so reordering an order that held the same
+            // product in two sizes - or the same size and colour in Matte and
+            // Glossy - folded the second line into the first and gave the
+            // customer one double-quantity line instead of two. The create()
+            // below then wrote none of the three back, so the reordered line
+            // landed in the cart sizeless and colourless, no longer describing
+            // what had actually been bought.
             $existing = $cart->items()->where('product_id', $item->product_id)
                 ->where('variant_id', $item->variant_id)
+                ->where('size', $item->size)
+                ->where('colour', $item->colour)
+                ->where('texture', $item->texture)
                 ->first();
 
             if ($existing) {
@@ -146,6 +159,9 @@ class OrderController extends Controller
                 $cart->items()->create([
                     'product_id' => $item->product_id,
                     'variant_id' => $item->variant_id,
+                    'size' => $item->size,
+                    'colour' => $item->colour,
+                    'texture' => $item->texture,
                     'quantity' => $item->quantity,
                     'price' => $item->product->price,
                     'total' => $item->product->price * $item->quantity,

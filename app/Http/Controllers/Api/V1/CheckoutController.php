@@ -223,6 +223,13 @@ class CheckoutController extends Controller
                         'product_name' => $item->product->name,
                         'sku' => $item->product->sku ?? '',
                         'variant_name' => $item->variant?->attributeValues->pluck('value')->join(' / '),
+                        // The choices the shopper made on the line itself. They
+                        // were never copied across, so an API-placed order for
+                        // Matte in M/Black reached the warehouse as a bare
+                        // product name and nobody could tell what to pack.
+                        'size' => $item->size,
+                        'colour' => $item->colour,
+                        'texture' => $item->texture,
                         'quantity' => $item->quantity,
                         'mrp' => $item->product->mrp ?? $currentPrice,
                         'price' => $currentPrice,

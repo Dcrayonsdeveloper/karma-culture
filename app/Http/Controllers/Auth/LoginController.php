@@ -126,15 +126,19 @@ class LoginController extends Controller
         );
 
         // Move guest items into user cart. A cart line is identified by product
-        // + variant + size + colour everywhere else; matching on only the first
-        // two collapsed "Blue / M" and "Red / L" of the same product into one
-        // line and silently lost the guest's selection.
+        // + variant + size + colour + texture everywhere else; matching on only
+        // the first two collapsed "Blue / M" and "Red / L" of the same product
+        // into one line and silently lost the guest's selection. Leaving texture
+        // out is worse still: the no-match branch below MOVES the guest row into
+        // the user cart, so a texture the user already holds in that size and
+        // colour breaks cart_items_line_texture_unique and 500s the sign-in.
         foreach ($guestCart->items as $item) {
             $existing = $userCart->items()
                 ->where('product_id', $item->product_id)
                 ->where('variant_id', $item->variant_id)
                 ->where('size', $item->size)
                 ->where('colour', $item->colour)
+                ->where('texture', $item->texture)
                 ->first();
 
             if ($existing) {

@@ -27,7 +27,7 @@
         <meta name="twitter:card" content="summary">
         <meta name="twitter:title" content="{{ $metaCat ?? ($metaBrand ?? 'Kids Clothing & Accessories') }} - {{ config('app.name') }}">
         <meta name="twitter:description" content="{{ $metaDesc }}">
-        @if(request()->anyFilled(['category', 'brand', 'size', 'colour', 'min_price', 'max_price', 'rating', 'in_stock', 'on_sale', 'sort']))
+        @if(request()->anyFilled(['category', 'brand', 'size', 'colour', 'texture', 'min_price', 'max_price', 'rating', 'in_stock', 'on_sale', 'sort']))
         <meta name="robots" content="noindex, follow">
         @endif
     @endpush

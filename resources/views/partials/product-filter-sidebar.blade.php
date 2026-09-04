@@ -21,7 +21,7 @@
     // a category page passes owns_category => false, so a stray ?category= in
     // the URL is inert there and must not be advertised as an active filter.
     $kkOwnsCategory = $filterPanel['categories']->isNotEmpty();
-    $kkActiveCount = count($kkV['brand']) + count($kkV['size']) + count($kkV['colour'])
+    $kkActiveCount = count($kkV['brand']) + count($kkV['size']) + count($kkV['colour']) + count($kkV['texture'])
         + count($kkV['subcategory'])
         + count(array_filter([
             $kkOwnsCategory ? $kkV['category'] : null, $kkV['min_price'], $kkV['max_price'],

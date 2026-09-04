@@ -133,6 +133,9 @@
                                                 @if($item->variant_name)
                                                     <p class="text-[12px] text-neutral-600 mt-0.5">{{ $item->variant_name }}</p>
                                                 @endif
+                                                @if($item->size || $item->colour || $item->texture)
+                                                    <p class="text-[12px] text-neutral-600 mt-0.5">{{ collect([$item->size ? 'Size: ' . $item->size : null, $item->colour ? 'Colour: ' . $item->colour : null, $item->texture ? 'Texture: ' . $item->texture : null])->filter()->join(' · ') }}</p>
+                                                @endif
                                                 @if($item->sku)
                                                     <p class="text-[11px] text-neutral-600 mt-0.5">SKU: {{ $item->sku }}</p>
                                                 @endif

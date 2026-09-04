@@ -157,6 +157,14 @@ class ProductController extends Controller
             'delete' => $products->delete(),
         };
 
+        // Those are query-builder writes: they touch the rows directly and fire
+        // no model events, so the Product saved/deleted hooks that bump the
+        // filter cache version never run. Without this, activating, hiding or
+        // deleting a batch leaves the shop's size, colour and texture rails
+        // still offering products nobody can buy - until some unrelated save
+        // happens to refresh them.
+        ProductVariant::bumpFilterCache();
+
         $actionLabel = match ($validated['action']) {
             'activate' => 'activated',
             'deactivate' => 'deactivated',
@@ -236,6 +244,11 @@ class ProductController extends Controller
             // Required, and no longer defaulted: a swatch the admin never picked
             // used to be stored as black, a colour nobody chose.
             'colours.*.hex' => ['required', ...self::HEX_RULES],
+            // A texture is a name and nothing else - there is no swatch to pick,
+            // so no hex to validate - and unlike a colour a product may honestly
+            // have none. Same 60 as the cart_items.texture column it ends up in.
+            'textures' => ['nullable', 'array', 'max:50'],
+            'textures.*' => ['nullable', 'string', 'max:60', new NoHtml],
         ], self::CHOICE_MESSAGES);
 
         $validated['slug'] = $validated['slug'] ?? Str::slug($validated['name']);
@@ -277,6 +290,26 @@ class ProductController extends Controller
             unset($productAttributes['Colours']);
         }
 
+        // Textures sit beside the colours, but as bare names: there is no swatch
+        // to carry, so the list is plain strings. "Matte" and "matte" are one
+        // texture told twice - stored as two they would open two rows in the shop
+        // filter rail - so the de-duplication ignores case. values() keeps it a
+        // JSON array; a gap in the keys would encode it as an object instead.
+        $textures = collect($request->input('textures', []))
+            ->map(fn ($t) => trim((string) $t))
+            ->filter(fn (string $t) => $t !== '')
+            ->unique(fn (string $t) => mb_strtolower($t))
+            ->values()
+            ->all();
+        if ($textures) {
+            $productAttributes['Textures'] = $textures;
+        } else {
+            // Removing every row posts no textures at all, so without this the
+            // previous list would simply survive and the admin could never
+            // empty it.
+            unset($productAttributes['Textures']);
+        }
+
         $validated['attributes'] = ! empty($productAttributes) ? $productAttributes : null;
 
         // Held back from the mass-assign: sizes are their own table, and are
@@ -289,6 +322,7 @@ class ProductController extends Controller
             $validated['main_image'],
             $validated['product_attributes'],
             $validated['colours'],
+            $validated['textures'],
             $validated['variants'],
         );
 
@@ -436,6 +470,11 @@ class ProductController extends Controller
             'colours' => ['bail', 'required', 'array', 'max:50'],
             'colours.*.name' => ['required', 'string', 'max:60', new NoHtml],
             'colours.*.hex' => ['required', ...self::HEX_RULES],
+            // A texture is a name and nothing else - there is no swatch to pick,
+            // so no hex to validate - and unlike a colour a product may honestly
+            // have none. Same 60 as the cart_items.texture column it ends up in.
+            'textures' => ['nullable', 'array', 'max:50'],
+            'textures.*' => ['nullable', 'string', 'max:60', new NoHtml],
             // Both models land on the PUBLIC disk, so the extension has to be
             // pinned: `file|max:10240` alone accepted a .php upload into a
             // web-served directory.
@@ -482,6 +521,26 @@ class ProductController extends Controller
             unset($productAttributes['Colours']);
         }
 
+        // Textures sit beside the colours, but as bare names: there is no swatch
+        // to carry, so the list is plain strings. "Matte" and "matte" are one
+        // texture told twice - stored as two they would open two rows in the shop
+        // filter rail - so the de-duplication ignores case. values() keeps it a
+        // JSON array; a gap in the keys would encode it as an object instead.
+        $textures = collect($request->input('textures', []))
+            ->map(fn ($t) => trim((string) $t))
+            ->filter(fn (string $t) => $t !== '')
+            ->unique(fn (string $t) => mb_strtolower($t))
+            ->values()
+            ->all();
+        if ($textures) {
+            $productAttributes['Textures'] = $textures;
+        } else {
+            // Removing every row posts no textures at all, so without this the
+            // previous list would simply survive and the admin could never
+            // empty it.
+            unset($productAttributes['Textures']);
+        }
+
         $validated['attributes'] = ! empty($productAttributes) ? $productAttributes : null;
 
         // Extract variants data before unsetting
@@ -492,6 +551,7 @@ class ProductController extends Controller
             $validated['delete_images'],
             $validated['product_attributes'],
             $validated['colours'],
+            $validated['textures'],
             $validated['variants'],
             $validated['model_glb'],
             $validated['model_usdz'],

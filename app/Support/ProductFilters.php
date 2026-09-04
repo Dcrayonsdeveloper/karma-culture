@@ -41,7 +41,7 @@ class ProductFilters
 
     /** Query keys the sidebar owns - the "is anything filtered" checks read this. */
     public const KEYS = [
-        'category', 'subcategory', 'brand', 'size', 'colour',
+        'category', 'subcategory', 'brand', 'size', 'colour', 'texture',
         'min_price', 'max_price', 'rating', 'in_stock', 'on_sale',
     ];
 
@@ -98,6 +98,14 @@ class ProductFilters
     private ?array $categoryIds;
 
     private ?array $subcategoryIds;
+
+    /**
+     * Attribute blobs already read for this listing, keyed by which query read
+     * them. @see attributeBlobs()
+     *
+     * @var array<string, Collection<int, mixed>>
+     */
+    private array $blobs = [];
 
     /**
      * @param  Closure(array): Builder  $base
@@ -207,15 +215,22 @@ class ProductFilters
             $colours = $f['colour'];
             $query->where(function ($q) use ($colours) {
                 foreach ($colours as $colour) {
-                    // Matches the name inside the Colours JSON, and the legacy colour
-                    // stored on a variant for older products.
-                    //
-                    // The value is a bound parameter, so this was never an injection -
-                    // but % and _ are LIKE wildcards, and a colour of "%" quietly
-                    // matched every product on the site.
-                    $needle = '%"'.self::escapeLike($colour).'"%';
-                    $q->orWhere('products.attributes', 'like', $needle)
-                        ->orWhereHas('variants', fn ($vq) => $vq->where('attributes', 'like', $needle));
+                    // Matches the name inside the product's Colours list, and the
+                    // legacy colour stored on a variant for older products.
+                    $q->orWhere(fn ($cq) => self::whereJsonListHas($cq, 'products.attributes', 'Colours', $colour))
+                        ->orWhereHas('variants', fn ($vq) => self::whereJsonListHas($vq, 'product_variants.attributes', 'Colour', $colour));
+                }
+            });
+        }
+
+        // Textures are a product-level list like colours, so they match the same
+        // way - scoped to their own JSON key, which is what keeps a texture named
+        // Ivory from answering a search for the colour Ivory.
+        if ($f['texture'] !== [] && ! in_array('texture', $except, true)) {
+            $textures = $f['texture'];
+            $query->where(function ($q) use ($textures) {
+                foreach ($textures as $texture) {
+                    $q->orWhere(fn ($tq) => self::whereJsonListHas($tq, 'products.attributes', ShopFilterCatalogue::TEXTURES_KEY, $texture));
                 }
             });
         }
@@ -305,6 +320,7 @@ class ProductFilters
             'active_subcategories' => $this->filters['subcategory'],
             'sizes' => $this->sizes(),
             'colours' => $this->colours(),
+            'textures' => $this->textures(),
             'brands' => $this->brands(),
             'show_rating' => ($this->options['rating'] ?? true) && $this->hasRatedProducts(),
         ];
@@ -416,8 +432,8 @@ class ProductFilters
      */
     public function sizes(): Collection
     {
-        return $this->sizesOf($this->query(['size']))
-            ->merge($this->stocked($this->filters['size'], fn () => $this->sizesOf($this->catalogue())))
+        return $this->offered('size', $this->sizesOf($this->query(['size']))
+            ->merge($this->stocked($this->filters['size'], fn () => $this->sizesOf($this->catalogue()))))
             ->unique()
             ->sortBy(fn ($s) => ProductVariant::sizeRank($s))
             ->values();
@@ -482,24 +498,156 @@ class ProductFilters
             fn () => $this->coloursOf($this->catalogue())->pluck('name'),
         );
 
-        return $this->coloursOf($this->query(['colour']))
-            ->concat(collect($ticked)->map(fn ($n) => ['name' => $n, 'hex' => null]))
+        return $this->offered(
+            'shade',
+            self::coloursIn($this->attributeBlobs('colour'))
+                ->concat(collect($ticked)->map(fn ($n) => ['name' => $n, 'hex' => null])),
+            fn ($c) => $c['name'],
+        )
             ->unique('name')
             ->sortBy('name')
             ->values();
     }
 
+    /**
+     * Textures carried by the products the shopper is currently looking at.
+     *
+     * Product-level, exactly like colours - a texture is a property of the
+     * garment, not of one size of it - so the list is read off the same JSON
+     * blob under its own key. Plain names, no swatch, so the sidebar renders
+     * them as chips like the sizes rather than as dots like the colours.
+     */
+    public function textures(): Collection
+    {
+        // A shop that lists no textures anywhere cannot have one on this page
+        // either, so the facet answers from the catalogue summary - which is
+        // already in memory - instead of reading a column off every product in
+        // the listing. Texture is new, so on a catalogue that has not started
+        // using it this is the whole cost of the feature on a listing page.
+        if (ShopFilterCatalogue::values('texture', includeHidden: true)->isEmpty()) {
+            return collect();
+        }
+
+        $ticked = $this->stocked(
+            $this->filters['texture'],
+            fn () => $this->texturesOf($this->catalogue()),
+        );
+
+        return $this->offered(
+            'texture',
+            self::texturesIn($this->attributeBlobs('texture'))->concat($ticked),
+        )
+            ->unique()
+            ->sortBy(fn ($t) => mb_strtolower((string) $t, 'UTF-8'))
+            ->values();
+    }
+
+    /** The texture names listed by the products a query matches. */
+    private function texturesOf(Builder $query): Collection
+    {
+        return self::texturesIn($query->reorder()->pluck('attributes'));
+    }
+
+    /** @param  Collection<int, mixed>  $blobs */
+    private static function texturesIn(Collection $blobs): Collection
+    {
+        return $blobs
+            ->flatMap(fn ($a) => collect(ShopFilterCatalogue::listFrom($a, ShopFilterCatalogue::TEXTURES_KEY))
+                ->map(fn ($entry) => $entry[0]))
+            ->filter();
+    }
+
+    /**
+     * One facet's values with the admin's hidden ones taken out.
+     *
+     * Hiding a value on Homepage > Shop Filters takes it off the storefront
+     * everywhere it is offered, not only off the home page rail - a colour an
+     * admin has decided not to promote should not come back as a checkbox two
+     * clicks later. It only ever removes a way to NARROW the grid: the
+     * products keep the value, and a URL that names it still filters, which is
+     * what leaves the Active Filters chip above the grid able to undo it.
+     *
+     * @param  Collection<int, mixed>  $values
+     * @param  ?Closure(mixed): string  $name  reads the label out of a richer row
+     * @return Collection<int, mixed>
+     */
+    private function offered(string $type, Collection $values, ?Closure $name = null): Collection
+    {
+        $hidden = ShopFilterCatalogue::hiddenKeys($type);
+
+        if ($hidden === []) {
+            return $values;
+        }
+
+        return $values->reject(fn ($value) => in_array(
+            ShopFilterCatalogue::normaliseKey((string) ($name ? $name($value) : $value)),
+            $hidden,
+            true,
+        ))->values();
+    }
+
+    /**
+     * Match one value inside a named list in a JSON column.
+     *
+     * Scoped to that one key rather than run over the whole blob. products
+     * .attributes now holds two lists, and an unscoped LIKE '%"Ivory"%' over
+     * it answered a colour filter with a product whose TEXTURE is Ivory - and
+     * would have done the reverse just as readily.
+     *
+     * Folded to lower case on both sides, so Black, black and BLACK are one
+     * filter: the same rule the facet lists are normalised by, which is what
+     * stops the sidebar offering the same value twice under two spellings.
+     *
+     * The value is a bound parameter, so this was never an injection - but %
+     * and _ are LIKE wildcards, and a colour of "%" quietly matched every
+     * product on the site before they were escaped.
+     */
+    private static function whereJsonListHas(mixed $query, string $column, string $jsonKey, string $value): mixed
+    {
+        $needle = '%"'.mb_strtolower(self::escapeLike(trim($value)), 'UTF-8').'"%';
+
+        return $query->whereRaw(
+            'LOWER(CAST(JSON_EXTRACT('.$column.', ?) AS CHAR)) LIKE ?',
+            ['$."'.str_replace(['"', '\\'], '', $jsonKey).'"', $needle],
+        );
+    }
+
     /** The colours listed by the products a query matches, name and swatch. */
     private function coloursOf(Builder $query): Collection
     {
-        return $query
-            ->reorder()
-            ->pluck('attributes')
+        return self::coloursIn($query->reorder()->pluck('attributes'));
+    }
+
+    /** @param  Collection<int, mixed>  $blobs */
+    private static function coloursIn(Collection $blobs): Collection
+    {
+        return $blobs
             ->flatMap(fn ($a) => collect(data_get($a, 'Colours', []))
                 ->map(fn ($c) => is_array($c)
                     ? ['name' => trim((string) ($c['name'] ?? '')), 'hex' => $c['hex'] ?? null]
                     : ['name' => trim((string) $c), 'hex' => null]))
             ->filter(fn ($c) => $c['name'] !== '');
+    }
+
+    /**
+     * The attributes JSON of every product one facet's query matches, read
+     * once.
+     *
+     * Colours and textures share a column, and a facet only lifts its OWN
+     * dimension off the query - so on a page where neither is ticked, which is
+     * most of them, the two facets ask for exactly the same rows. Reading twice
+     * meant a second full scan of the listing and a second pass of JSON
+     * decoding for an answer already in hand; on a 2,000-product shop that was
+     * about half a second of the page. A facet whose dimension IS ticked still
+     * gets its own read, because then the two queries really do differ.
+     *
+     * @return Collection<int, mixed>
+     */
+    private function attributeBlobs(string $facet): Collection
+    {
+        $key = $this->filters[$facet] === [] ? 'base' : $facet;
+
+        return $this->blobs[$key] ??= $this->query([$facet])->reorder()->pluck('attributes');
     }
 
     /**
@@ -533,7 +681,7 @@ class ProductFilters
      * one of its elements fails `size.*` - it would have handed the bad element
      * straight back.
      *
-     * @return array{category: ?string, subcategory: array<int, string>, size: array<int, string>, colour: array<int, string>, brand: array<int, string>, min_price: ?float, max_price: ?float, rating: ?int, in_stock: bool, on_sale: bool, sort: string}
+     * @return array{category: ?string, subcategory: array<int, string>, size: array<int, string>, colour: array<int, string>, texture: array<int, string>, brand: array<int, string>, min_price: ?float, max_price: ?float, rating: ?int, in_stock: bool, on_sale: bool, sort: string}
      */
     public static function normalise(Request $request): array
     {
@@ -569,6 +717,7 @@ class ProductFilters
             'subcategory' => self::stringList($request->input('subcategory'), 120),
             'size' => self::stringList($request->input('size'), 40),
             'colour' => self::stringList($request->input('colour'), 60),
+            'texture' => self::stringList($request->input('texture'), 60),
             'brand' => self::stringList($request->input('brand'), 120),
             'min_price' => $minPrice,
             'max_price' => $maxPrice,

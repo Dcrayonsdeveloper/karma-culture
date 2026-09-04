@@ -122,6 +122,9 @@
                                                 <template x-if="item.colour">
                                                     <p class="text-[11px] text-neutral-600 mt-0.5">Colour: <span class="font-medium text-neutral-800" x-text="item.colour"></span></p>
                                                 </template>
+                                                <template x-if="item.texture">
+                                                    <p class="text-[11px] text-neutral-600 mt-0.5">Texture: <span class="font-medium text-neutral-800" x-text="item.texture"></span></p>
+                                                </template>
 
                                                 <!-- Price -->
                                                 <div class="flex items-center gap-1.5 mt-1">
@@ -414,6 +417,7 @@
                 'variant_label' => $item->variant ? $item->variant->attributeValues->pluck('value')->join(' / ') : null,
                 'size' => $item->size,
                 'colour' => $item->colour,
+                'texture' => $item->texture,
                 'price' => (float) $item->price,
                 'mrp' => (float) $item->product->mrp,
                 'discount_pct' => $item->product->discount_percentage ?? 0,

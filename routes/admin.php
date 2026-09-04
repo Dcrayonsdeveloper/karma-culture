@@ -318,13 +318,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::put('/sections/{section}', [HomepageController::class, 'updateSection'])->name('sections.update');
                 Route::put('/sections/{section}/toggle', [HomepageController::class, 'toggleSection'])->name('sections.toggle');
 
-                // Shop It Your Way filter items
+                // Shop It Your Way filters. The values themselves are derived from
+                // the catalogue and have no rows of their own, so the only thing
+                // there is to create or delete here is an EXCLUSION - the record
+                // that an admin does not want one of them offered.
                 Route::get('/shop-filters', [HomepageController::class, 'shopFilters'])->name('shop-filters');
-                Route::post('/shop-filters', [HomepageController::class, 'storeShopFilter'])->name('shop-filters.store');
-                Route::put('/shop-filters/{shopFilter}', [HomepageController::class, 'updateShopFilter'])->name('shop-filters.update');
-                Route::put('/shop-filters/{shopFilter}/toggle', [HomepageController::class, 'toggleShopFilter'])->name('shop-filters.toggle');
-                Route::put('/shop-filters/{shopFilter}/move', [HomepageController::class, 'moveShopFilter'])->name('shop-filters.move');
-                Route::delete('/shop-filters/{shopFilter}', [HomepageController::class, 'deleteShopFilter'])->name('shop-filters.destroy');
+                Route::post('/shop-filter-exclusions', [HomepageController::class, 'storeShopFilterExclusion'])->name('shop-filter-exclusions.store');
+                Route::delete('/shop-filter-exclusions/{exclusion}', [HomepageController::class, 'destroyShopFilterExclusion'])->name('shop-filter-exclusions.destroy');
 
                 // About Us reels - the clip strip under "Crafted to Last"
                 Route::get('/about-reels', [HomepageController::class, 'aboutReels'])->name('about-reels');

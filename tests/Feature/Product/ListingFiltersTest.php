@@ -71,7 +71,10 @@ class ListingFiltersTest extends TestCase
             'rating' => 4,
             'status' => 'approved',
             'is_active' => true,
-            'attributes' => ['Colours' => [['name' => 'Black', 'hex' => '#000000']]],
+            'attributes' => [
+                'Colours' => [['name' => 'Black', 'hex' => '#000000']],
+                'Textures' => ['Matte'],
+            ],
         ]);
 
         ProductVariant::create([
@@ -107,13 +110,14 @@ class ListingFiltersTest extends TestCase
     {
         $response = $this->get($url)->assertOk();
 
-        foreach (['Size', 'Colour', 'Price Range', 'Rating', 'Availability', 'In Stock Only'] as $section) {
+        foreach (['Size', 'Colour', 'Texture', 'Price Range', 'Rating', 'Availability', 'In Stock Only'] as $section) {
             $response->assertSee($section, false);
         }
 
         // The controls themselves, not just the headings.
         $response->assertSee('name="size[]" value="M"', false)
             ->assertSee('name="colour[]" value="Black"', false)
+            ->assertSee('name="texture[]" value="Matte"', false)
             ->assertSee('name="min_price"', false)
             ->assertSee('name="max_price"', false)
             ->assertSee('name="in_stock"', false);
