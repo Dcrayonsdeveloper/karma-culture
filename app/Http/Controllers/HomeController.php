@@ -87,12 +87,21 @@ class HomeController extends Controller
             ->take(8)
             ->get();
 
-        // Banners
+        // Banners. `visible` is the model's one definition of what a shopper
+        // should be seeing right now - switched on, started, not yet ended - and
+        // the API reads the same scope, so a scheduled campaign cannot go live
+        // on the website an hour before it goes live in the app.
+        //
+        // A banner carrying no artwork at all is dropped here rather than in the
+        // view: the slide count decides how many dots the carousel draws, so a
+        // banner filtered out downstream would leave a dot pointing at nothing.
         $banners = Banner::query()
-            ->where('is_active', true)
+            ->visible()
             ->where('position', 'hero')
             ->orderBy('priority')
-            ->get();
+            ->get()
+            ->filter(fn (Banner $banner) => $banner->has_media)
+            ->values();
 
         // Homepage sections. Inactive rows are loaded too, not filtered out: the
         // home page markup is hand-built rather than generated from this table,

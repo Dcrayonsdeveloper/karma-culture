@@ -6,9 +6,11 @@ use App\Http\Controllers\Admin\AttributeValueController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\Auth\LoginController;
 use App\Http\Controllers\Admin\BannerController;
+use App\Http\Controllers\Admin\BannerPreviewController;
 use App\Http\Controllers\Admin\BlogPostController;
 use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\ChatbotAnalyticsController;
 use App\Http\Controllers\Admin\CollectionController;
 use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\CurrencyController;
@@ -114,10 +116,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             });
 
             // Chat analytics
-            Route::get('chatbot/analytics', [App\Http\Controllers\Admin\ChatbotAnalyticsController::class, 'index'])->name('chatbot.analytics');
-            Route::get('chatbot/leads', [App\Http\Controllers\Admin\ChatbotAnalyticsController::class, 'leads'])->name('chatbot.leads');
-            Route::get('chatbot/conversations/{conversation}', [App\Http\Controllers\Admin\ChatbotAnalyticsController::class, 'show'])->name('chatbot.conversation');
-            Route::put('chatbot/conversations/{conversation}/lead-status', [App\Http\Controllers\Admin\ChatbotAnalyticsController::class, 'updateLeadStatus'])->name('chatbot.lead-status');
+            Route::get('chatbot/analytics', [ChatbotAnalyticsController::class, 'index'])->name('chatbot.analytics');
+            Route::get('chatbot/leads', [ChatbotAnalyticsController::class, 'leads'])->name('chatbot.leads');
+            Route::get('chatbot/conversations/{conversation}', [ChatbotAnalyticsController::class, 'show'])->name('chatbot.conversation');
+            Route::put('chatbot/conversations/{conversation}/lead-status', [ChatbotAnalyticsController::class, 'updateLeadStatus'])->name('chatbot.lead-status');
         });
 
         // Abandoned carts
@@ -208,8 +210,21 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::middleware('admin.section:marketing')->group(function () {
             Route::resource('coupons', CouponController::class)->except(['show']);
             Route::resource('flash-sales', FlashSaleController::class)->except(['show']);
-            Route::resource('banners', BannerController::class)->except(['show']);
+            // Declared ahead of the resource, so `reorder` is not swallowed by
+            // `banners/{banner}` as a banner id.
             Route::post('/banners/reorder', [BannerController::class, 'reorder'])->name('banners.reorder');
+            // Its own read-only controller: the preview screen resolves both
+            // breakpoints up front so the template does not re-run frameFor()
+            // and its disk lookups on every use.
+            Route::get('/banners/{banner}/preview', BannerPreviewController::class)->name('banners.preview');
+            // The Active switch has its own route rather than going through
+            // update(): that form posts the whole record, so a row-level toggle
+            // sent through it would blank every field the button does not carry.
+            Route::put('/banners/{banner}/toggle', [BannerController::class, 'toggle'])->name('banners.toggle');
+            // withTrashed, because the row this acts on is by definition one the
+            // default binding refuses to find.
+            Route::put('/banners/{banner}/restore', [BannerController::class, 'restore'])->withTrashed()->name('banners.restore');
+            Route::resource('banners', BannerController::class)->except(['show']);
 
             // Newsletter
             Route::prefix('newsletter')->name('newsletter.')->group(function () {
