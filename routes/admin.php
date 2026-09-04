@@ -384,10 +384,21 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 // About Us reels - the clip strip under "Crafted to Last"
                 Route::get('/about-reels', [HomepageController::class, 'aboutReels'])->name('about-reels');
                 Route::post('/about-reels', [HomepageController::class, 'storeAboutReel'])->name('about-reels.store');
-                Route::put('/about-reels/{aboutReel}', [HomepageController::class, 'updateAboutReel'])->name('about-reels.update');
-                Route::put('/about-reels/{aboutReel}/toggle', [HomepageController::class, 'toggleAboutReel'])->name('about-reels.toggle');
-                Route::put('/about-reels/{aboutReel}/move', [HomepageController::class, 'moveAboutReel'])->name('about-reels.move');
-                Route::delete('/about-reels/{aboutReel}', [HomepageController::class, 'deleteAboutReel'])->name('about-reels.destroy');
+
+                // Instagram, BEFORE the {aboutReel} wildcard and with that
+                // wildcard pinned to digits. Declared the other way round,
+                // PUT /about-reels/instagram matches {aboutReel} first, tries to
+                // bind an AboutReel with the id "instagram" and 404s - the same
+                // ordering bug that once ate /cart/remove-coupon.
+                Route::put('/about-reels/instagram', [HomepageController::class, 'updateInstagram'])->name('about-reels.instagram');
+                Route::post('/about-reels/instagram/sync', [HomepageController::class, 'syncInstagram'])->name('about-reels.instagram.sync');
+                Route::post('/about-reels/instagram/refresh-token', [HomepageController::class, 'refreshInstagramToken'])->name('about-reels.instagram.refresh');
+                Route::delete('/about-reels/instagram', [HomepageController::class, 'disconnectInstagram'])->name('about-reels.instagram.disconnect');
+
+                Route::put('/about-reels/{aboutReel}', [HomepageController::class, 'updateAboutReel'])->whereNumber('aboutReel')->name('about-reels.update');
+                Route::put('/about-reels/{aboutReel}/toggle', [HomepageController::class, 'toggleAboutReel'])->whereNumber('aboutReel')->name('about-reels.toggle');
+                Route::put('/about-reels/{aboutReel}/move', [HomepageController::class, 'moveAboutReel'])->whereNumber('aboutReel')->name('about-reels.move');
+                Route::delete('/about-reels/{aboutReel}', [HomepageController::class, 'deleteAboutReel'])->whereNumber('aboutReel')->name('about-reels.destroy');
 
                 // Our Qualities cards
                 Route::get('/qualities', [HomepageController::class, 'qualities'])->name('qualities');

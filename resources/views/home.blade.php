@@ -1598,8 +1598,15 @@
                         @foreach($aboutReels as $aboutReel)
                             {{-- Admin-set clips of any ratio, so they are shown whole: a
                                  landscape capture used to be cropped to a ribbon of its
-                                 middle by the 9/16 reel. --}}
-                            <x-media class="kk-about-reel" :src="$aboutReel->url" video dark />
+                                 middle by the 9/16 reel.
+
+                                 The poster is what a reel synced from Instagram brings
+                                 with it. Without one the card is a dark rectangle until
+                                 the clip decodes its first frame, which on a phone is
+                                 most of the time anyone spends looking at this strip.
+                                 An uploaded clip has none and renders exactly as before. --}}
+                            <x-media class="kk-about-reel" :src="$aboutReel->url"
+                                     :poster="$aboutReel->poster_url" video dark />
                         @endforeach
                     </div>
                 </div>
