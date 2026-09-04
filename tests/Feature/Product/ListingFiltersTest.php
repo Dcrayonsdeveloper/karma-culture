@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\FlashSale;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Support\ProductFilters;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -141,6 +142,94 @@ class ListingFiltersTest extends TestCase
     {
         $response = $this->get('/products?max_price=1000')->assertOk();
 
+        $this->assertSame(
+            ['Oxford Shirt'],
+            $response->viewData('products')->pluck('name')->all()
+        );
+    }
+
+    /**
+     * The two price boxes filled in the wrong order are named as a mistake, not
+     * quietly repaired.
+     *
+     * Min 1000 with Max 0 asks for `price >= 1000 AND price <= 0`, a range
+     * nothing can be in, so the shop answered "0 products found" and said
+     * nothing about why. Swapping the pair was tried and is worse: it hands back
+     * results for ₹0-₹1,000, an answer to a question nobody asked. The numbers
+     * stay as typed and the sidebar says which one to fix.
+     */
+    public function test_a_backwards_price_range_is_reported_not_swapped(): void
+    {
+        $response = $this->get('/products?min_price=1000&max_price=0')->assertOk();
+
+        $values = $response->viewData('filterPanel')['values'];
+
+        $this->assertSame(1000.0, $values['min_price'], 'the typed minimum was not kept');
+        $this->assertSame(0.0, $values['max_price'], 'the typed maximum was not kept');
+        $this->assertSame(ProductFilters::PRICE_ORDER_ERROR, $values['price_error']);
+
+        $response->assertSee(self::renderedPriceError(), false);
+    }
+
+    /**
+     * The message as the sidebar renders it, closing tag and all.
+     *
+     * The bare string is on every listing whatever the filters say - the Alpine
+     * handler that repeats the check as the shopper types carries the same
+     * wording - so asserting on it alone can neither prove it was rendered nor
+     * prove it was not.
+     */
+    private static function renderedPriceError(): string
+    {
+        return '>'.ProductFilters::PRICE_ORDER_ERROR.'</p>';
+    }
+
+    /**
+     * The message reaches the page without JS, and the boxes still hold the
+     * numbers the shopper typed so they can correct the one they meant.
+     */
+    public function test_a_backwards_price_range_keeps_the_boxes_as_typed(): void
+    {
+        $this->get('/products?min_price=1000&max_price=0')
+            ->assertOk()
+            ->assertSee('name="min_price" value="1000"', false)
+            ->assertSee('name="max_price" value="0"', false);
+    }
+
+    /**
+     * A hanger an admin typed backwards is the same range arriving under a name
+     * the form never uses, so it is reported at the same place rather than in
+     * the two boxes.
+     */
+    public function test_a_backwards_hanger_price_range_is_reported(): void
+    {
+        $response = $this->get('/products?price_min=2000&price_max=1000')->assertOk();
+
+        $this->assertSame(
+            ProductFilters::PRICE_ORDER_ERROR,
+            $response->viewData('filterPanel')['values']['price_error']
+        );
+    }
+
+    /** A range the right way round says nothing, and filters as it always did. */
+    public function test_a_valid_price_range_reports_nothing(): void
+    {
+        $response = $this->get('/products?min_price=0&max_price=1000')->assertOk();
+
+        $this->assertNull($response->viewData('filterPanel')['values']['price_error']);
+        $this->assertSame(
+            ['Oxford Shirt'],
+            $response->viewData('products')->pluck('name')->all()
+        );
+        $response->assertDontSee(self::renderedPriceError(), false);
+    }
+
+    /** An exact-price range is a real filter, not a mistake, so it stands. */
+    public function test_an_equal_price_range_is_left_alone(): void
+    {
+        $response = $this->get('/products?min_price=799&max_price=799')->assertOk();
+
+        $this->assertNull($response->viewData('filterPanel')['values']['price_error']);
         $this->assertSame(
             ['Oxford Shirt'],
             $response->viewData('products')->pluck('name')->all()

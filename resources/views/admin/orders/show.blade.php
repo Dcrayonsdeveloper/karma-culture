@@ -440,6 +440,22 @@
                     <h2 style="font-size: 13px; font-weight: 600; color: #303030;">Customer</h2>
                 </div>
                 <div style="padding: 1rem;">
+                    {{-- The number to ring about THIS order, which is the one given
+                         at checkout - not the one on the account, which may be an
+                         old handset or belong to whoever set the account up. The
+                         customer can give a different number per delivery, so this
+                         card shows the order's own rather than sending the shop off
+                         to the customer page to find one. --}}
+                    @php
+                        $kkOrderPhone = data_get($order->shipping_address_snapshot, 'phone')
+                            ?: data_get($order->metadata, 'guest_phone');
+                    @endphp
+                    @if($kkOrderPhone)
+                        <div style="margin-bottom: 0.75rem;">
+                            <p style="font-size: 11px; color: #616161; text-transform: uppercase; letter-spacing: 0.03em;">Contact for this order</p>
+                            <a href="tel:{{ $kkOrderPhone }}" style="font-size: 13px; font-weight: 500; color: #005bd3; overflow-wrap: anywhere;">{{ $kkOrderPhone }}</a>
+                        </div>
+                    @endif
                     @if($order->user)
                         <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
                             <div style="width: 2rem; height: 2rem; border-radius: 50%; background: #e3e3e3; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">

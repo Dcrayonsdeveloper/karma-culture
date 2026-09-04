@@ -190,10 +190,23 @@ class CheckoutController extends Controller
             ? $request->user()->addresses()->find($validated['address_id'])
             : null;
 
+        // The contact number belongs to the ORDER, not to the account or to the
+        // address book: it is the number the shop and the delivery partner ring
+        // about this delivery. The box is outside the new-address form now and
+        // is always submitted, so a saved-address order carries the number the
+        // customer gave at checkout rather than whatever that address happened
+        // to be saved with. Stored as the canonical ten digits so the
+        // order-tracking lookup and the Shiprocket handoff all see one shape.
+        //
+        // The fallback covers a POST that carries no phone at all - the page
+        // always sends one, so that is only an old form or an API-shaped
+        // request, and the address's own number is the best answer there.
+        $orderPhone = IndianMobile::normalize($validated['phone'] ?? null);
+
         $addressSnapshot = $savedAddress ? [
             'name'           => trim($savedAddress->first_name . ' ' . $savedAddress->last_name),
             'email'          => $validated['email'],
-            'phone'          => $savedAddress->phone,
+            'phone'          => $orderPhone ?: $savedAddress->phone,
             'address_line_1' => $savedAddress->address_line_1,
             'address_line_2' => $savedAddress->address_line_2,
             'city'           => $savedAddress->city,
@@ -203,10 +216,7 @@ class CheckoutController extends Controller
         ] : [
             'name'           => $validated['full_name'],
             'email'          => $validated['email'],
-            // Store the canonical ten digits, not the decorated input, so the
-            // order-tracking lookup and the SMS/Shiprocket handoff all see one
-            // shape. IndianMobile has already proved it normalises.
-            'phone'          => IndianMobile::normalize($validated['phone'] ?? null),
+            'phone'          => $orderPhone,
             'address_line_1' => $validated['address_line_1'],
             'address_line_2' => $validated['address_line_2'] ?? null,
             'city'           => $validated['city'],
@@ -274,11 +284,13 @@ class CheckoutController extends Controller
                     'source'                   => 'web',
                     'metadata'                 => [
                         'guest_email'     => $validated['email'],
-                        // phone is required_without:address_id, so it is absent
-                        // from $validated whenever a saved address is chosen -
-                        // reading it directly 500'd every saved-address order.
-                        // Fall back to the phone on the address snapshot.
-                        'guest_phone'     => $validated['phone'] ?? $addressSnapshot['phone'] ?? null,
+                        // The same number the snapshot carries, in the same
+                        // canonical shape - reading the raw request value here
+                        // meant this copy and the one the admin, the invoice and
+                        // Shiprocket all read could disagree about the same
+                        // order (and, before the snapshot was consulted at all,
+                        // 500'd every saved-address order).
+                        'guest_phone'     => $addressSnapshot['phone'] ?? null,
                         'guest_checkout'  => ! auth()->check(),
                         'payment_pending' => true,
                         'payment_method'  => $validated['payment_method'],
