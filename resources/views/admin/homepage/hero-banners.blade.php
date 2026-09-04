@@ -286,7 +286,24 @@
                                 <div style="flex: 1 1 14rem; min-width: 0;">
                                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem;">
                                         <span style="font-size: 13px; font-weight: 600; color: #303030;">{{ $banner->name ?: $banner->title ?: 'Banner #' . $banner->id }}</span>
-                                        @php([$kkChipText, $kkChipBg, $kkChipFg] = $kkStateChips[$banner->state] ?? $kkStateChips['hidden'])
+                                        {{-- A block assignment, deliberately. Blade's one-line
+                                             directive form does not survive a destructuring
+                                             assignment: it emits an opening PHP tag with no
+                                             closing one, which turns the rest of the file into
+                                             PHP source and 500s this screen on any shop that
+                                             actually has a banner. It compiled and passed
+                                             locally because an empty banners table never enters
+                                             this loop.
+
+                                             Note also that a directive name must not be written
+                                             inside a Blade comment: statements are compiled
+                                             BEFORE comments are stripped, so the name is turned
+                                             into real PHP first and the half-eaten comment then
+                                             swallows the markup below it. Both halves of that
+                                             lesson were learned here, one after the other. --}}
+                                        @php
+                                            [$kkChipText, $kkChipBg, $kkChipFg] = $kkStateChips[$banner->state] ?? $kkStateChips['hidden'];
+                                        @endphp
                                         <span title="{{ $banner->state_label }}" style="display: inline-block; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 12px; font-weight: 500; background: {{ $kkChipBg }}; color: {{ $kkChipFg }};">{{ $kkChipText }}</span>
                                     </div>
                                     @if($banner->title)
