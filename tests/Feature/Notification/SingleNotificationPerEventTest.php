@@ -13,6 +13,7 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Tests\Concerns\VerifiesSignupEmails;
 use Tests\TestCase;
 
 /**
@@ -32,7 +33,7 @@ use Tests\TestCase;
  */
 class SingleNotificationPerEventTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, VerifiesSignupEmails;
 
     /**
      * The map in App\Providers\EventServiceProvider is the whole story, so the
@@ -72,10 +73,28 @@ class SingleNotificationPerEventTest extends TestCase
         );
     }
 
-    /** The symptom, end to end: one signup, one verification email. */
-    public function test_registering_sends_one_verification_email(): void
+    /**
+     * The symptom, end to end - and it has changed shape.
+     *
+     * When this was written, signup created an unverified account and mailed it
+     * a link, and the bug was that it mailed TWO. Signup now proves the address
+     * before the account exists, so the account is created verified and the
+     * framework's listener - which is guarded on ! hasVerifiedEmail() - stands
+     * itself down. The right number is therefore zero, and asserting it keeps
+     * the original guarantee intact from the other side: if the listener were
+     * ever hooked up twice again, or if signup stopped recording the address as
+     * verified, this would go red.
+     *
+     * The listener registration itself is still pinned by the test above, which
+     * is the half of this that discovery could break.
+     */
+    public function test_registering_does_not_re_ask_for_an_address_already_proved(): void
     {
         \Illuminate\Support\Facades\Notification::fake();
+
+        // The helper writes the row AND claims it for this session, which is
+        // both halves of what signup checks.
+        $this->verifiedSignupEmail('asha.menon@example.com');
 
         $this->post(route('register'), [
             'full_name' => 'Asha Menon',
@@ -88,7 +107,8 @@ class SingleNotificationPerEventTest extends TestCase
 
         $user = User::where('email', 'asha.menon@example.com')->firstOrFail();
 
-        \Illuminate\Support\Facades\Notification::assertSentToTimes($user, VerifyEmail::class, 1);
+        $this->assertNotNull($user->email_verified_at, 'A signup that proved its address created an unverified account.');
+        \Illuminate\Support\Facades\Notification::assertSentToTimes($user, VerifyEmail::class, 0);
     }
 
     /** The symptom, end to end: one order, one row per person. */

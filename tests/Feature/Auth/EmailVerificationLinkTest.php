@@ -30,15 +30,20 @@ class EmailVerificationLinkTest extends TestCase
     {
         Notification::fake();
 
+        // The fixture used to be POST /register, which fired Registered and so
+        // sent this notification. Signup proves the address BEFORE the account
+        // exists now, so a new account is already verified and the framework's
+        // listener stands itself down - there is no longer a VerifyEmail to
+        // capture from that route. The subject of this test is the URL builder,
+        // not registration, so it asks for the notification the way the other
+        // three tests in this file do. What signup itself now does about the
+        // host is covered in SignupEmailVerificationTest.
+        $user = User::factory()->create(['email_verified_at' => null]);
+
         $this->withServerVariables(['HTTP_X_FORWARDED_HOST' => 'attacker.invalid'])
-            ->post(route('register'), [
-                'full_name' => 'Asha Menon',
-                'email' => 'shopper@example.com',
-                'phone' => '9876543210',
-                'password' => 'Correct-Horse-14',
-                'password_confirmation' => 'Correct-Horse-14',
-                'terms' => 'on',
-            ])->assertSessionHasNoErrors();
+            ->get('/');
+
+        $user->sendEmailVerificationNotification();
 
         $url = $this->capturedVerificationUrl();
 

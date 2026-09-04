@@ -30,6 +30,7 @@ use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PageController;
 use App\Http\Controllers\Admin\ProductAplusImageController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\ProductImportController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ReturnController;
@@ -165,6 +166,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::patch('/products/aplus/{aplusImage}', [ProductAplusImageController::class, 'update'])->name('products.aplus.update');
             Route::delete('/products/aplus/{aplusImage}', [ProductAplusImageController::class, 'destroy'])->name('products.aplus.destroy');
             Route::post('/products/bulk-action', [ProductController::class, 'bulkAction'])->name('products.bulk-action');
+
+            // Product Import from External Sources (House of Rare)
+            Route::prefix('products/import-external')->name('products.import-external.')->group(function () {
+                Route::get('/', [ProductImportController::class, 'index'])->name('index');
+                Route::get('/fetch', [ProductImportController::class, 'fetchProducts'])->name('fetch');
+                Route::post('/import', [ProductImportController::class, 'importProducts'])->name('import');
+                Route::post('/create-categories', [ProductImportController::class, 'createCategories'])->name('create-categories');
+            });
 
             // Categories
             Route::resource('categories', CategoryController::class);

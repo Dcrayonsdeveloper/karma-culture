@@ -267,7 +267,46 @@ Route::middleware('guest')->group(function () {
     Route::post('/password/email', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'sendResetLinkEmail'])->middleware('throttle:password-reset')->name('password.email');
     Route::get('/password/reset/{token}', [App\Http\Controllers\Auth\ResetPasswordController::class, 'showResetForm'])->name('password.reset');
     Route::post('/password/reset', [App\Http\Controllers\Auth\ResetPasswordController::class, 'reset'])->middleware('throttle:password-reset')->name('password.update');
+
+    // The address half of Create Account, proved before the account is made.
+    //
+    // A pending signup's email verification is the resource: POST creates one,
+    // and posting the same address again IS the resend. GET reads whether the
+    // link has been clicked yet. Neither touches a user account.
+    //
+    // Inside the guest group with the rest of signup - somebody already signed
+    // in has no signup form open to verify for. The LINK itself is not, and
+    // must not be: it is opened from a mail client on whatever device is to
+    // hand, and bouncing a signed-in reader to the homepage would strand the
+    // signup waiting on it.
+    //
+    // A named limiter rather than a bare `throttle:6,60`: an unnamed limiter's
+    // guest bucket keys on domain|ip and ignores the URI, so it would share one
+    // counter with every other unnamed guest throttle the visitor passes -
+    // including the login form. The real protection against mail-bombing one
+    // mailbox is the per-address bucket inside the controller, because
+    // bootstrap/app.php trusts every proxy and request()->ip() is therefore
+    // whatever the caller's X-Forwarded-For says.
+    Route::prefix('signup')->name('signup.')->group(function () {
+        Route::post('/email-verifications', [App\Http\Controllers\Auth\SignupEmailVerificationController::class, 'store'])
+            ->middleware('throttle:signup-verification')
+            ->name('email-verifications.store');
+
+        Route::get('/email-verifications/{uuid}', [App\Http\Controllers\Auth\SignupEmailVerificationController::class, 'show'])
+            ->whereUuid('uuid')
+            ->middleware('throttle:signup-verification-status')
+            ->name('email-verifications.show');
+    });
 });
+
+// The verification link itself. Public, and deliberately outside the `guest`
+// group above - see the note there. The token shape is pinned in the route so a
+// truncated or mistyped link 404s here rather than reaching a database lookup,
+// the same guard /cart/recover/{token} uses.
+Route::get('/verify-email/{token}', [App\Http\Controllers\Auth\SignupEmailVerificationController::class, 'verify'])
+    ->where('token', '[A-Za-z0-9]{64}')
+    ->middleware('throttle:signup-verification-link')
+    ->name('signup.verify-email');
 
 // Authenticated User Routes
 Route::middleware('auth')->group(function () {
