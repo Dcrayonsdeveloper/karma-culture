@@ -153,5 +153,12 @@
             toastr.info(@json(session('info')));
         @endif
     </script>
+
+    {{-- The admin session's one notification poller. It is included here, in
+         the shell, rather than on any page, so it keeps working as the admin
+         moves around the panel and no page can start a second timer of its own.
+         Its position matters: toastr and its options are set immediately above,
+         and the poller raises toasts through them. --}}
+    @include('admin.partials.notification-poller')
 </body>
 </html>

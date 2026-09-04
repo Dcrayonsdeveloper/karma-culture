@@ -125,6 +125,29 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('password-reset', fn (Request $request) => Limit::perMinute(6)->by($request->ip()));
 
+        // The admin bell's ten-second poll - the one route in the panel a
+        // browser calls on its own, so the only one where a stuck tab or a
+        // shortened interval multiplies into the database with nothing to stop
+        // it. One tab asks six times a minute; sixty is a ceiling on a runaway,
+        // not a shaper of normal traffic, and leaves room for the handful of
+        // admin windows someone might genuinely keep open.
+        //
+        // Named, not `throttle:60,1`. An unnamed limiter's bucket key is the
+        // authenticated user's id and nothing else - no route, no limit, no name
+        // (ThrottleRequests::resolveRequestSignature) - so it would share one
+        // counter with every other unnamed throttle this person passes through,
+        // including the storefront's apply-coupon and checkout limits. A named
+        // limiter's key is prefixed with the limiter's own name, which is what
+        // gives the poll a bucket of its own.
+        //
+        // Keyed on the admin, never on the IP: bootstrap/app.php trusts every
+        // proxy, so request()->ip() is whatever X-Forwarded-For claims, and one
+        // office behind a single NAT would otherwise share a bucket.
+        RateLimiter::for(
+            'admin-notification-poll',
+            fn (Request $request) => Limit::perMinute(60)->by('admin-poll:'.($request->user('admin')?->id ?: $request->ip()))
+        );
+
         Blade::directive('price', function (string $expression) {
             return "<?php echo format_price({$expression}); ?>";
         });
