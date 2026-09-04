@@ -69,6 +69,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Notifications
         Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications');
+        // What has arrived since a given moment - the sub-collection the admin
+        // shell polls every ten seconds so the bell no longer needs a page load
+        // to change. Declared before /notifications/{notification}/read only for
+        // readability; the two patterns cannot collide.
+        //
+        // Throttled because this is the one admin route a browser calls on its
+        // own. The limiter is defined in AppServiceProvider, which is where the
+        // reasoning about its key and its ceiling lives.
+        Route::get('/notifications/updates', [NotificationController::class, 'updates'])
+            ->middleware('throttle:admin-notification-poll')
+            ->name('notifications.updates');
         Route::get('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
         // POST because it mutates, which also puts it in front of LogAdminActions.
         Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');

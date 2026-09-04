@@ -271,7 +271,17 @@ Route::middleware('auth')->group(function () {
     // Email Verification
     Route::get('/email/verify', [App\Http\Controllers\Auth\VerificationController::class, 'show'])->name('verification.notice');
     Route::get('/email/verify/{id}/{hash}', [App\Http\Controllers\Auth\VerificationController::class, 'verify'])->middleware('signed')->name('verification.verify');
-    Route::post('/email/resend', [App\Http\Controllers\Auth\VerificationController::class, 'resend'])->name('verification.resend');
+    // Throttled, because every hit sends a real message. The shop authenticates
+    // to Gmail with one app password and one daily send quota, and this is the
+    // only mail route a signed-in visitor can fire at will: unmetered, a script
+    // posting here in a loop spends the whole quota, and then nothing else the
+    // shop sends leaves the server - order confirmations and password resets
+    // included. Six an hour is far more than a customer waiting on a link needs
+    // and far less than a quota costs. The forgot-password form is already
+    // metered this way; this route was the gap.
+    Route::post('/email/resend', [App\Http\Controllers\Auth\VerificationController::class, 'resend'])
+        ->middleware('throttle:6,60')
+        ->name('verification.resend');
 
     // Account Routes
     Route::prefix('account')->name('account.')->group(function () {

@@ -102,13 +102,21 @@
                     :aria-expanded="open ? 'true' : 'false'"
                     aria-haspopup="true"
                     aria-controls="admin-notifications-panel"
+                    data-admin-bell-button
                     class="relative p-2 rounded-lg text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 transition-colors" aria-label="{{ $bellLabel }}">
                 <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                 </svg>
-                @if($unreadCount > 0)
-                    <span aria-hidden="true" class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style="background: #e74c3c;"></span>
-                @endif
+                {{-- A number rather than the bare dot it replaced: the poller
+                     rewrites this every ten seconds, and "something is unread"
+                     going to "something else is unread" is a change the dot
+                     could not show. Hidden rather than absent at zero, so the
+                     poller has a node to write into without rebuilding the
+                     button. The accessible count lives on the button's
+                     aria-label, which the poller keeps in step. --}}
+                <span data-admin-bell-badge
+                      aria-hidden="true"
+                      style="position: absolute; top: 0.125rem; right: 0.125rem; min-width: 1rem; height: 1rem; padding: 0 0.25rem; border-radius: 9999px; background: #e74c3c; color: #fff; font-size: 10px; font-weight: 700; line-height: 1rem; text-align: center;{{ $unreadCount > 0 ? '' : ' display: none;' }}">{{ $unreadCount > 99 ? '99+' : $unreadCount }}</span>
             </button>
 
             {{-- The panel is a flex column capped against the viewport so that only the
@@ -125,16 +133,15 @@
                  class="fixed left-3 right-3 top-14 mt-2 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:w-80 flex flex-col max-h-[calc(100vh-5rem)] overflow-hidden bg-white rounded-xl z-50" style="border: 1px solid #e3e3e3; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
                 <div class="px-4 py-3 shrink-0 flex items-center justify-between" style="border-bottom: 1px solid #e3e3e3;">
                     <h3 id="admin-notifications-heading" class="text-sm font-semibold" style="color: #303030;">Notifications</h3>
-                    @if($unreadCount > 0)
-                        <span class="text-xs font-medium" style="color: #6F9CA2;">{{ $unreadCount }} new</span>
-                    @endif
+                    <span data-admin-bell-unread-label class="text-xs font-medium" style="color: #6F9CA2;{{ $unreadCount > 0 ? '' : ' display: none;' }}">{{ $unreadCount }} new</span>
                 </div>
-                <div class="min-h-0 max-h-96 overflow-y-auto">
+                <div data-admin-bell-list class="min-h-0 max-h-96 overflow-y-auto">
                     @forelse($bellNotifications as $notification)
                         {{-- Read rows stay on the bell, on a plain background; the
                              dot beside the title is what separates them from the
                              ones still waiting. --}}
                         <a href="{{ route('admin.notifications.read', $notification) }}"
+                           data-notification-uuid="{{ $notification->uuid }}"
                            class="block px-4 py-3 hover:bg-neutral-50 transition-colors"
                            style="border-bottom: 1px solid #f5f5f5;{{ $notification->is_read ? '' : ' background: #f7fbfb;' }}">
                             <div class="flex items-start gap-3">
@@ -170,10 +177,55 @@
                             </div>
                         </a>
                     @empty
-                        <div class="p-4 text-center text-sm" style="color: #999;">
+                        <div data-admin-bell-empty class="p-4 text-center text-sm" style="color: #999;">
                             No notifications yet
                         </div>
                     @endforelse
+
+                    {{-- The shape the poller stamps out for a notification that
+                         arrives between page loads. It lives here, beside the
+                         rows it has to sit next to, rather than being built as a
+                         string in JavaScript: the markup stays in Blade with the
+                         rest of the bell, and every field is written with
+                         textContent rather than innerHTML, so a customer who
+                         names their enquiry "<img onerror=...>" cannot reach the
+                         DOM through it. All three icons are present and hidden;
+                         the poller reveals the one matching the type. --}}
+                    <template data-admin-bell-row-template>
+                        <a href="#"
+                           data-notification-uuid=""
+                           class="block px-4 py-3 hover:bg-neutral-50 transition-colors"
+                           style="border-bottom: 1px solid #f5f5f5; background: #f7fbfb;">
+                            <div class="flex items-start gap-3">
+                                <div data-slot="icon-wrap" style="width: 2rem; height: 2rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: #f5f5f5;">
+                                    <span data-icon="new_enquiry" data-bg="#e8f5f5" hidden>
+                                        <svg style="width: 1rem; height: 1rem; color: #6F9CA2; display: block;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                        </svg>
+                                    </span>
+                                    <span data-icon="new_ticket" data-bg="#f3e8ff" hidden>
+                                        <svg style="width: 1rem; height: 1rem; color: #8b5cf6; display: block;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
+                                        </svg>
+                                    </span>
+                                    <span data-icon="default" data-bg="#f5f5f5" hidden>
+                                        <svg style="width: 1rem; height: 1rem; color: #999; display: block;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                                        </svg>
+                                    </span>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium" style="color: #303030;">
+                                        <span data-slot="title"></span>
+                                        <span aria-hidden="true" style="display: inline-block; width: 0.4rem; height: 0.4rem; border-radius: 9999px; background: #2563eb; vertical-align: middle; margin-left: 0.25rem;"></span>
+                                        <span class="sr-only">(unread)</span>
+                                    </p>
+                                    <p data-slot="content" class="text-xs mt-0.5 truncate" style="color: #999;"></p>
+                                    <p data-slot="time" class="text-[10px] mt-1" style="color: #bbb;"></p>
+                                </div>
+                            </div>
+                        </a>
+                    </template>
                 </div>
                 <div class="px-4 py-3 shrink-0" style="border-top: 1px solid #e3e3e3;">
                     <a href="{{ route('admin.notifications') }}" class="text-sm font-medium" style="color: #6F9CA2;">
