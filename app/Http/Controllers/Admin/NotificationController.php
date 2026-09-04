@@ -195,6 +195,13 @@ class NotificationController extends Controller
             return null;
         }
 
+        // "+05:30" travels through a query string as "%2B05:30", and a "+" that
+        // was not encoded arrives as a space. The poller encodes properly, but a
+        // cursor mangled that way parses as nothing and quietly puts the client
+        // back on a baseline - no rows, no error, forever - which is a great deal
+        // worse than a rejected request. Put the sign back.
+        $since = preg_replace('/ (\d{2}:?\d{2})$/', '+$1', $since);
+
         try {
             $cursor = \Illuminate\Support\Carbon::parse($since);
         } catch (\Exception) {

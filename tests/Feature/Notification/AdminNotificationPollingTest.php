@@ -237,6 +237,29 @@ class AdminNotificationPollingTest extends TestCase
         $response->assertJsonPath('notifications.0.uuid', $recent->uuid);
     }
 
+    /**
+     * A "+05:30" that reached the query string unencoded arrives as a space.
+     * Parsed literally that is not a timestamp, so the client would be put back
+     * on a baseline and handed nothing, every ten seconds, with no error to say
+     * why. Seen for real against production while verifying this endpoint.
+     */
+    public function test_a_cursor_whose_zone_sign_became_a_space_is_still_understood(): void
+    {
+        $this->adminRow($this->adminUser, [
+            'title' => 'Older Order',
+            'created_at' => now()->subMinutes(10),
+        ]);
+        $fresh = $this->adminRow($this->adminUser, ['title' => 'Newer Order']);
+
+        $mangled = str_replace('+', ' ', now()->subMinute()->toIso8601String());
+
+        $response = $this->poll($mangled);
+
+        $response->assertOk();
+        $response->assertJsonCount(1, 'notifications');
+        $response->assertJsonPath('notifications.0.uuid', $fresh->uuid);
+    }
+
     public function test_an_unparseable_cursor_is_treated_as_no_cursor_at_all(): void
     {
         $this->adminRow($this->adminUser);
