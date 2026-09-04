@@ -454,19 +454,16 @@
                                 {!! $mediaFallback !!}
                             </div>
                         @else
-                            {{-- The whole photo, over a blurred copy of itself. A cropped hero
-                                 is the worst version of this bug: whatever the 4/5 frame cut
-                                 off is the one thing the shopper came here to look at. --}}
-                            <div class="kk-media kk-pdp__slide"
+                            {{-- Single image with object-fit cover for full display --}}
+                            <div class="kk-pdp__slide"
                                  @click="showZoom = true"
                                  x-show="currentImage === {{ $i }}" @if($i !== 0) x-cloak @endif>
-                                <img class="kk-media__fill" src="{{ $m['url'] }}" alt="" aria-hidden="true"
-                                     loading="{{ $i === 0 ? 'eager' : 'lazy' }}" decoding="async">
                                 <img src="{{ $m['url'] }}" alt="{{ $product->name }}"
                                      data-fallback="{{ $noMediaFallback }}"
+                                     onerror="this.onerror=null;this.src='{{ $noMediaFallback }}';"
+                                     class="w-full h-full object-cover"
                                      sizes="(max-width: 1024px) 100vw, 50vw" decoding="async"
                                      loading="{{ $i === 0 ? 'eager' : 'lazy' }}" @if($i === 0) fetchpriority="high" @endif>
-                                {!! $mediaFallback !!}
                             </div>
                         @endif
                     @endforeach

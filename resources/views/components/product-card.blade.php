@@ -30,14 +30,15 @@
     {{-- Compact card for horizontal scrollable rows --}}
     <div {{ $attributes->merge(['class' => 'group shrink-0 w-full']) }}>
         <a href="{{ route('product.show', $product) }}" class="block relative">
-            {{-- Same square tile as before, but the shot is contained over a
-                 blurred copy of itself so nothing gets cropped away, and the
-                 placeholder is tried via data-fallback when the URL 404s. --}}
-            <x-media :src="$product->primary_image_url"
-                     :alt="$product->name"
-                     :fallback="$placeholderImage"
-                     zoom
-                     class="aspect-square bg-neutral-50 rounded-[20px] overflow-hidden mb-2" />
+            {{-- Single image with object-fit cover for clean display --}}
+            <div class="aspect-[4/5] bg-neutral-50 rounded-[20px] overflow-hidden mb-2">
+                <img src="{{ $product->primary_image_url ?: $placeholderImage }}"
+                     alt="{{ $product->name }}"
+                     loading="lazy"
+                     decoding="async"
+                     onerror="this.onerror=null;this.src='{{ $placeholderImage }}';"
+                     class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            </div>
             @if($hasDiscount)
                 <span class="absolute top-2 left-2 bg-[#F8931D] text-white font-bold rounded-full text-[8px] w-8 h-8 flex items-center justify-center sm:w-auto sm:h-auto sm:text-[10px] sm:px-2 sm:py-0.5 sm:rounded-md">{{ round($discount) }}%<span class="hidden sm:inline">&nbsp;Off</span></span>
             @endif
@@ -110,7 +111,7 @@
                     @include('partials.quick-add-button', ['product' => $product])
                 @endunless
                 <a href="{{ route('product.show', $product) }}"
-                   class="block w-full py-2.5 text-[12px] font-semibold text-white rounded-md transition-colors duration-200 text-center"
+                   class="block w-full py-2 text-[10px] font-semibold text-white rounded-md transition-colors duration-200 text-center"
                    style="background:#2D1810;"
                    onmouseover="this.style.background='#1F1109'"
                    onmouseout="this.style.background='#2D1810'">
@@ -123,19 +124,15 @@
     {{-- Full product card - MudKid style --}}
     <div {{ $attributes->merge(['class' => 'group card-product flex flex-col bg-white rounded-[20px] overflow-hidden']) }}>
         {{-- Image Section --}}
-        <div class="relative aspect-square overflow-hidden bg-neutral-50">
-            {{-- The square frame is kept so every card in a row stays the same
-                 height, but the shot inside it is contained over a blurred copy
-                 of itself - an off-ratio product photo is shown whole instead of
-                 having its edges cut off. The placeholder rides on data-fallback
-                 so a broken URL falls back once and then degrades to a designed
-                 frame rather than an empty rectangle. --}}
+        <div class="relative aspect-[4/5] overflow-hidden bg-neutral-50">
+            {{-- Single image with object-fit cover for clean display --}}
             <a href="{{ route('product.show', $product) }}" class="block h-full">
-                <x-media :src="$product->primary_image_url"
-                         :alt="$product->name"
-                         :fallback="$placeholderImage"
-                         zoom
-                         class="h-full" />
+                <img src="{{ $product->primary_image_url ?: $placeholderImage }}"
+                     alt="{{ $product->name }}"
+                     loading="lazy"
+                     decoding="async"
+                     onerror="this.onerror=null;this.src='{{ $placeholderImage }}';"
+                     class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
             </a>
 
             {{-- Top-left badges --}}
@@ -150,10 +147,10 @@
                 <div class="absolute top-3 right-3 flex flex-col gap-1.5 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
                     @if($showWishlist)
                         <button @click="$store.wishlist.toggle({{ $product->id }})"
-                                class="w-10 h-10 bg-white rounded-full shadow-sm flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-[#6F9CA2] focus:ring-offset-1"
+                                class="w-8 h-8 bg-white rounded-full shadow-sm flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-[#6F9CA2] focus:ring-offset-1"
                                 :style="$store.wishlist.has({{ $product->id }}) ? 'color: #ef4444;' : 'color: #737373;'"
                                 aria-label="Toggle wishlist">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                             </svg>
                         </button>
@@ -255,7 +252,7 @@
                         @include('partials.quick-add-button', ['product' => $product])
                     @endunless
                     <a href="{{ route('product.show', $product) }}"
-                       class="block w-full py-2.5 text-[13px] font-semibold text-white rounded-md transition-colors duration-200 text-center"
+                       class="block w-full py-2 text-[11px] font-semibold text-white rounded-md transition-colors duration-200 text-center"
                        style="background:#2D1810;"
                        onmouseover="this.style.background='#1F1109'"
                        onmouseout="this.style.background='#2D1810'">

@@ -494,7 +494,7 @@ body:not(.layout-admin) a.text-white {
     margin-bottom: 8px;
 }
 .kk-quickadd {
-    width: 40px; height: 40px;
+    width: 32px; height: 32px;
     display: inline-flex; align-items: center; justify-content: center;
     border-radius: 999px;
     background: var(--kk-cream-lighter, #fbf5e8);
@@ -503,7 +503,7 @@ body:not(.layout-admin) a.text-white {
     padding: 0;
     transition: background .18s ease, color .18s ease, transform .18s ease;
 }
-.kk-quickadd svg { width: 19px; height: 19px; }
+.kk-quickadd svg { width: 15px; height: 15px; }
 .kk-quickadd:hover { background: var(--kk-brown-dark, #2d1810); color: var(--kk-cream, #efe2cb); }
 .kk-quickadd:active { transform: scale(.94); }
 .kk-quickadd:focus-visible { outline: 2px solid var(--kk-tan-dark, #8c5c34); outline-offset: 2px; }

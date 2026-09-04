@@ -62,10 +62,20 @@
     @endif
 
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="{{ asset_v('favicon.ico') }}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset_v('favicon-32x32.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset_v('favicon-16x16.png') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset_v('apple-touch-icon.png') }}">
+    @php
+        $siteFavicon = \App\Models\Setting::get('site_favicon', '');
+        $faviconUrl = $siteFavicon ? asset_v('storage/' . $siteFavicon) : null;
+    @endphp
+    @if($faviconUrl)
+        <link rel="icon" type="image/png" href="{{ $faviconUrl }}">
+        <link rel="apple-touch-icon" href="{{ $faviconUrl }}">
+    @else
+        <link rel="icon" type="image/svg+xml" href="{{ asset_v('favicon.svg') }}">
+        <link rel="icon" type="image/x-icon" href="{{ asset_v('favicon.ico') }}">
+        <link rel="icon" type="image/png" sizes="32x32" href="{{ asset_v('favicon-32x32.png') }}">
+        <link rel="icon" type="image/png" sizes="16x16" href="{{ asset_v('favicon-16x16.png') }}">
+        <link rel="apple-touch-icon" sizes="180x180" href="{{ asset_v('apple-touch-icon.png') }}">
+    @endif
     <link rel="manifest" href="{{ asset_v('site.webmanifest') }}">
     <meta name="theme-color" content="#6F9CA2">
 

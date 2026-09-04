@@ -12,7 +12,7 @@
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
             @foreach($categories as $category)
                 <a href="{{ route('category.show', $category) }}" class="group bg-white rounded-lg border border-neutral-100 overflow-hidden hover:shadow-md hover:border-neutral-200 transition-all duration-200">
-                    {{-- The tiles stay 4:3 so a row lines up, but the uploads are
+                    {{-- The tiles stay 4:5 portrait so a row lines up, but the uploads are
                          not, so the image is shown whole over a blurred copy of
                          itself instead of being cropped to the frame. A path that
                          404s lands on the placeholder once and then on the frame's
@@ -21,7 +21,7 @@
                              :alt="$category->name"
                              :fallback="asset_v('images/no-product-image.svg')"
                              zoom
-                             class="aspect-[4/3]">
+                             class="aspect-[4/5]">
                         @unless($category->image_url)
                             <div class="absolute inset-0 flex items-center justify-center bg-neutral-50 bg-gradient-to-br from-[#6F9CA2]/5 to-[#6F9CA2]/10">
                                 <svg class="w-12 h-12 text-[#6F9CA2]/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
