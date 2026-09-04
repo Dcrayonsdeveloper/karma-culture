@@ -256,9 +256,12 @@
                             if (old('_register') && is_string(old('email'))) {
                                 $normalized = \App\Models\SignupEmailVerification::normalizeEmail(old('email'));
 
+                                // claimedProofFor(), the same question Create
+                                // Account asks - including "did THIS browser ask
+                                // for it" - so the tick is never shown for a
+                                // proof the server would refuse to spend.
                                 if ($normalized !== null
-                                    && \App\Models\SignupEmailVerification::where('email', $normalized)
-                                        ->first()?->provesOwnership()) {
+                                    && \App\Models\SignupEmailVerification::claimedProofFor($normalized, request()) !== null) {
                                     $provedSignupEmail = $normalized;
                                 }
                             }

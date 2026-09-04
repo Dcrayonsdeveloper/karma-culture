@@ -35,6 +35,15 @@ class SignupEmailVerification extends Model
     /** Seconds a customer must wait between two verification emails. */
     public const RESEND_COOLDOWN_SECONDS = 60;
 
+    /**
+     * Where a browser keeps the attempts it is entitled to spend.
+     *
+     * NOT prefixed `login_`: App\Http\Controllers\Auth\LoginController's
+     * endSessionKeeping() carries every key with that prefix across a logout,
+     * and a claim has no business surviving one.
+     */
+    public const SESSION_CLAIMS = 'signup.email_verifications';
+
     protected $fillable = [
         'uuid',
         'email',
@@ -176,6 +185,67 @@ class SignupEmailVerification extends Model
         }
 
         return $this->isExpired() ? 'expired' : 'pending';
+    }
+
+    /**
+     * Whether the browser making this request is the one that asked for it.
+     *
+     * A proof is a fact about an ADDRESS - that is what makes it work when the
+     * link is opened on a phone while the form waits on a laptop - but it must
+     * not be a fact anyone can SPEND. Without this, someone who knows an address
+     * could poll the send endpoint until it reported a live proof, then post
+     * Create Account for that address with a password of their own and take the
+     * account before its owner finished typing. The address stays the thing that
+     * is proved; the session is the thing entitled to spend the proof.
+     *
+     * The claim is deliberately not re-issued to whoever asks: a request from a
+     * browser that does not hold it is treated as a fresh send, which rotates
+     * the token and clears the proof, so it can be a nuisance to a signup in
+     * flight but never a way to inherit one.
+     */
+    public function isClaimedBy(?\Illuminate\Http\Request $request): bool
+    {
+        $claims = $request?->hasSession() ? $request->session()->get(self::SESSION_CLAIMS, []) : [];
+
+        return is_array($claims) && in_array($this->uuid, $claims, true);
+    }
+
+    /** Record this attempt as one this browser may spend. */
+    public function claimFor(\Illuminate\Http\Request $request): void
+    {
+        if (! $request->hasSession()) {
+            return;
+        }
+
+        $claims = $request->session()->get(self::SESSION_CLAIMS, []);
+        $claims = is_array($claims) ? $claims : [];
+
+        if (! in_array($this->uuid, $claims, true)) {
+            $claims[] = $this->uuid;
+            // Bounded: a browser that has tried a dozen addresses does not need
+            // to carry the first of them around for the rest of the session.
+            $request->session()->put(self::SESSION_CLAIMS, array_slice($claims, -10));
+        }
+    }
+
+    /**
+     * The proof this request may spend for this address, or null.
+     *
+     * The one question both register controllers ask, so they cannot come to
+     * different answers. Locking is for the copy inside the account-creation
+     * transaction, where the row is about to be consumed.
+     */
+    public static function claimedProofFor(string $normalizedEmail, \Illuminate\Http\Request $request, bool $locking = false): ?self
+    {
+        $query = static::where('email', $normalizedEmail);
+
+        $attempt = ($locking ? $query->lockForUpdate() : $query)->first();
+
+        if ($attempt === null || ! $attempt->provesOwnership() || ! $attempt->isClaimedBy($request)) {
+            return null;
+        }
+
+        return $attempt;
     }
 
     /**

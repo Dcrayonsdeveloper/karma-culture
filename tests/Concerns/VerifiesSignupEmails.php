@@ -21,10 +21,18 @@ use Illuminate\Support\Str;
  */
 trait VerifiesSignupEmails
 {
-    /** A proved, unspent, unexpired verification for this address. */
+    /**
+     * A proved, unspent, unexpired verification for this address, claimed by
+     * the test's own session.
+     *
+     * The claim is half of what the server checks: a proof is a fact about an
+     * address, but only the browser that ASKED for it may spend it. Without the
+     * session half, every payload built on this would be refused for a reason
+     * the test is not about.
+     */
     protected function verifiedSignupEmail(string $email): SignupEmailVerification
     {
-        return SignupEmailVerification::create([
+        $attempt = SignupEmailVerification::create([
             'email' => SignupEmailVerification::normalizeEmail($email),
             'token_hash' => SignupEmailVerification::hashToken(Str::random(64)),
             'expires_at' => now()->addMinutes(SignupEmailVerification::VERIFIED_TTL_MINUTES),
@@ -32,6 +40,15 @@ trait VerifiesSignupEmails
             'last_sent_at' => now()->subMinutes(5),
             'send_count' => 1,
         ]);
+
+        $this->withSession([
+            SignupEmailVerification::SESSION_CLAIMS => array_merge(
+                session(SignupEmailVerification::SESSION_CLAIMS, []),
+                [$attempt->uuid],
+            ),
+        ]);
+
+        return $attempt;
     }
 
     /**

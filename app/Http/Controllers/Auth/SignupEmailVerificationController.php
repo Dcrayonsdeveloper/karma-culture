@@ -9,7 +9,9 @@ use App\Models\User;
 use App\Rules\ValidationRules as V;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
@@ -99,23 +101,6 @@ class SignupEmailVerificationController extends Controller
             ], 409);
         }
 
-        $attempt = SignupEmailVerification::firstOrNew(['email' => $email]);
-
-        // Already proved, still good, not yet spent: say so instead of sending
-        // another message. A customer whose tab lost the state (a reload, a
-        // second window) gets their verified badge straight back.
-        if ($attempt->exists && $attempt->provesOwnership()) {
-            return response()->json(self::statusPayload($attempt), 200);
-        }
-
-        if (($wait = $attempt->exists ? $attempt->resendCooldownRemaining() : 0) > 0) {
-            return self::tooMany(
-                'Please wait a few seconds before asking for another verification email.',
-                $wait,
-                $attempt,
-            );
-        }
-
         // The route limiter is keyed on the IP, and bootstrap/app.php trusts
         // every proxy - so request()->ip() is whatever X-Forwarded-For claims
         // and a single machine can wear as many as it likes. This bucket is
@@ -123,32 +108,112 @@ class SignupEmailVerificationController extends Controller
         // and the one part of the request the sender cannot vary for free.
         $bucket = 'signup-email-verification:'.sha1($email);
 
-        if (RateLimiter::tooManyAttempts($bucket, self::PER_ADDRESS_LIMIT)) {
-            return self::tooMany(
-                'Too many verification emails have been sent to this address. Please try again later.',
-                RateLimiter::availableIn($bucket),
-                $attempt->exists ? $attempt : null,
-            );
-        }
-
         $token = Str::random(64);
 
-        $attempt->fill([
-            'token_hash' => SignupEmailVerification::hashToken($token),
-            'expires_at' => now()->addMinutes(SignupEmailVerification::LINK_TTL_MINUTES),
-            // A resend re-arms the attempt: whatever was proved by the old link
-            // is stood down with it, so a rotation can never leave a verified
-            // flag behind a token nobody holds any more.
-            'verified_at' => null,
-            'consumed_at' => null,
-            'last_sent_at' => now(),
-            'send_count' => ($attempt->send_count ?? 0) + 1,
-            'last_request_ip' => $request->ip(),
-        ]);
+        // Everything that decides whether to send, and the write that records
+        // the decision, inside one transaction with the attempt row locked.
+        //
+        // Two tabs, or one double-tap on a slow connection, are the ordinary
+        // case here, and read-modify-write without the lock got both of them
+        // wrong: for an address with no row yet, both requests built one and the
+        // second INSERT hit the unique index and answered 500; for an address
+        // whose signup was committing in the other tab, the resend could reset
+        // consumed_at and put a fresh link in the inbox for an account that now
+        // exists.
+        //
+        // Returns either a response to send back as-is, or null to mean "the
+        // message is ours to send".
+        $outcome = DB::transaction(function () use ($email, $token, $bucket, $request) {
+            $attempt = SignupEmailVerification::where('email', $email)->lockForUpdate()->first();
 
-        $attempt->save();
+            // Re-asked inside the lock, and a LOCKING read: a plain SELECT would
+            // answer from this transaction's snapshot, and the account this
+            // address just got in another request would be invisible to it.
+            if (self::addressIsRegistered($email, locking: true)) {
+                return response()->json([
+                    'message' => self::EMAIL_TAKEN,
+                    'errors' => ['email' => [self::EMAIL_TAKEN]],
+                ], 409);
+            }
 
-        RateLimiter::hit($bucket, self::PER_ADDRESS_WINDOW);
+            // Already proved, still good, not yet spent, AND asked for by this
+            // browser: say so instead of sending another message. A customer
+            // whose tab lost the state - a reload, a second window - gets their
+            // verified badge straight back.
+            //
+            // The claim is what stops this being an oracle. Without it, anyone
+            // who knew the address could poll here until it answered "verified"
+            // and then race the owner to Create Account. A browser without the
+            // claim falls through to an ordinary send: it rotates the token,
+            // clears the proof and posts a fresh link to the address - which
+            // tells the caller nothing, and leaves them holding nothing.
+            if ($attempt !== null && $attempt->provesOwnership() && $attempt->isClaimedBy($request)) {
+                return response()->json(self::statusPayload($attempt), 200);
+            }
+
+            // The cooldown is answered for everyone, claim or no claim: it is
+            // about the mailbox, not about the browser, and it is what stops the
+            // fall-through above from becoming a way to mail-bomb an address.
+            if ($attempt !== null && ($wait = $attempt->resendCooldownRemaining()) > 0) {
+                return self::tooMany(
+                    'Please wait a few seconds before asking for another verification email.',
+                    $wait,
+                    $attempt,
+                );
+            }
+
+            if (RateLimiter::tooManyAttempts($bucket, self::PER_ADDRESS_LIMIT)) {
+                return self::tooMany(
+                    'Too many verification emails have been sent to this address. Please try again later.',
+                    RateLimiter::availableIn($bucket),
+                    $attempt,
+                );
+            }
+
+            $attempt ??= new SignupEmailVerification(['email' => $email]);
+
+            $attempt->fill([
+                'token_hash' => SignupEmailVerification::hashToken($token),
+                'expires_at' => now()->addMinutes(SignupEmailVerification::LINK_TTL_MINUTES),
+                // A resend re-arms the attempt: whatever was proved by the old
+                // link is stood down with it, so a rotation can never leave a
+                // verified flag behind a token nobody holds any more.
+                'verified_at' => null,
+                'consumed_at' => null,
+                'last_sent_at' => now(),
+                'send_count' => ($attempt->send_count ?? 0) + 1,
+                'last_request_ip' => $request->ip(),
+            ]);
+
+            try {
+                $attempt->save();
+            } catch (UniqueConstraintViolationException) {
+                // A first request for this address committed its row between the
+                // lock attempt above (which had nothing to lock) and this
+                // insert. That request is sending the message; this one says so
+                // rather than sending a second.
+                $winner = SignupEmailVerification::where('email', $email)->first();
+
+                return $winner === null
+                    ? response()->json(['message' => 'Please try again in a moment.'], 503)
+                    : self::tooMany(
+                        'A verification email is already on its way to that address.',
+                        max(1, $winner->resendCooldownRemaining()),
+                        $winner,
+                    );
+            }
+
+            $attempt->claimFor($request);
+
+            // Null means: nothing to report yet, the message is ours to send.
+            return null;
+        });
+
+        if ($outcome !== null) {
+            return $outcome;
+        }
+
+        $attempt = SignupEmailVerification::where('email', $email)->firstOrFail();
 
         try {
             Mail::to($email)->send(new VerifySignupEmail(
@@ -165,10 +230,21 @@ class SignupEmailVerificationController extends Controller
                 'exception' => $e->getMessage(),
             ]);
 
+            // Nothing was delivered, so nothing is charged: the cooldown is
+            // stood down and the address's hourly quota is not spent. Otherwise
+            // a broken transport would leave the customer with no working link
+            // AND a minute of being told to wait for one. The rotated token
+            // stays rotated - the previous link is unrecoverable either way, and
+            // the retry mints another.
+            $attempt->forceFill(['last_sent_at' => null])->save();
+
             return response()->json([
                 'message' => 'We could not send the verification email just now. Please try again in a moment.',
             ], 502);
         }
+
+        // Charged only once the transport has taken the message.
+        RateLimiter::hit($bucket, self::PER_ADDRESS_WINDOW);
 
         // 202: the message has been handed to the transport, and the thing the
         // caller is actually waiting for - a click - has not happened yet.
@@ -221,10 +297,16 @@ class SignupEmailVerificationController extends Controller
             return self::result('expired', 410, $attempt->email);
         }
 
-        // Conditional, so two clicks landing together still produce one
-        // verification and one rewritten deadline.
-        SignupEmailVerification::query()
+        // Conditional on three things, so two clicks landing together produce
+        // one verification and one rewritten deadline - and, in particular,
+        // conditional on the token this request was opened WITH. A resend
+        // arriving between the lookup above and this update rotates the row's
+        // hash; without that clause the superseded link would still verify the
+        // attempt, and the address would read as proved by a link the customer
+        // had already been told to replace.
+        $verified = SignupEmailVerification::query()
             ->whereKey($attempt->getKey())
+            ->where('token_hash', SignupEmailVerification::hashToken($token))
             ->whereNull('verified_at')
             ->whereNull('consumed_at')
             ->update([
@@ -234,6 +316,21 @@ class SignupEmailVerificationController extends Controller
                 'expires_at' => now()->addMinutes(SignupEmailVerification::VERIFIED_TTL_MINUTES),
                 'updated_at' => now(),
             ]);
+
+        // The row moved under us - a resend rotated it, or another click got
+        // there first. Read it again and answer for what it actually says now
+        // rather than claiming a verification this request did not perform.
+        if ($verified !== 1) {
+            $fresh = $attempt->fresh();
+
+            if ($fresh === null || $fresh->isConsumed()) {
+                return self::result('invalid', 404);
+            }
+
+            return $fresh->isVerified() && ! $fresh->isExpired()
+                ? self::result('already_verified', 200, $fresh->email)
+                : self::result('expired', 410, $fresh->email);
+        }
 
         return self::result('verified', 200, $attempt->email);
     }
@@ -249,11 +346,11 @@ class SignupEmailVerificationController extends Controller
      * still owns its address as far as an INSERT is concerned, so a check that
      * ignores it would promise an address it cannot deliver.
      */
-    private static function addressIsRegistered(string $normalizedEmail): bool
+    private static function addressIsRegistered(string $normalizedEmail, bool $locking = false): bool
     {
-        return User::withTrashed()
-            ->whereRaw('LOWER(TRIM(email)) = ?', [$normalizedEmail])
-            ->exists();
+        $query = User::withTrashed()->whereRaw('LOWER(TRIM(email)) = ?', [$normalizedEmail]);
+
+        return ($locking ? $query->lockForUpdate() : $query)->exists();
     }
 
     /** The absolute link, anchored to the configured site address. */

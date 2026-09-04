@@ -76,12 +76,19 @@ class RegisterController extends Controller
 
         // Server state, never a request field - and there is deliberately no
         // parameter here through which a caller could offer an opinion.
-        if ($email === null || SignupEmailVerification::where('email', $email)->first()?->provesOwnership() !== true) {
+        //
+        // The claim is required here as well as on the web route, and for the
+        // same reason: this endpoint is session-stateful in a browser, so
+        // leaving it out would leave the whole hole open through a different
+        // URL. A caller with no session holds no claims and can spend no proof,
+        // which is correct - there is no way to ask for one over this API
+        // either.
+        if ($email === null || SignupEmailVerification::claimedProofFor($email, $request) === null) {
             throw ValidationException::withMessages(['email' => self::UNVERIFIED]);
         }
 
         try {
-            $user = DB::transaction(function () use ($validated, $email, $phone) {
+            $user = DB::transaction(function () use ($request, $validated, $email, $phone) {
                 // Re-read inside the transaction, and the proof locked, for the
                 // reason the web controller gives: everything checked above was
                 // true when it was checked and need not still be.
@@ -93,9 +100,9 @@ class RegisterController extends Controller
                     throw ValidationException::withMessages(['phone' => WebRegisterController::MOBILE_TAKEN]);
                 }
 
-                $attempt = SignupEmailVerification::where('email', $email)->lockForUpdate()->first();
+                $attempt = SignupEmailVerification::claimedProofFor($email, $request, locking: true);
 
-                if ($attempt === null || ! $attempt->provesOwnership()) {
+                if ($attempt === null) {
                     throw ValidationException::withMessages(['email' => self::UNVERIFIED]);
                 }
 
@@ -167,11 +174,14 @@ class RegisterController extends Controller
         } catch (UniqueConstraintViolationException) {
             $errors = [];
 
-            if (self::addressIsRegistered($email)) {
+            // Locking reads: see the note on the web controller's copy. A plain
+            // SELECT here would answer from a snapshot taken before the request
+            // that beat us committed, and report that nothing owns the address.
+            if (self::addressIsRegistered($email, locking: true)) {
                 $errors['email'] = [WebRegisterController::EMAIL_TAKEN];
             }
 
-            if ($phone !== null && self::mobileIsRegistered($phone)) {
+            if ($phone !== null && self::mobileIsRegistered($phone, locking: true)) {
                 $errors['phone'] = [WebRegisterController::MOBILE_TAKEN];
             }
 
@@ -184,13 +194,17 @@ class RegisterController extends Controller
     }
 
     /** withTrashed(): users are soft-deleted, the unique index is not. */
-    private static function addressIsRegistered(string $normalizedEmail): bool
+    private static function addressIsRegistered(string $normalizedEmail, bool $locking = false): bool
     {
-        return User::withTrashed()->whereRaw('LOWER(TRIM(email)) = ?', [$normalizedEmail])->exists();
+        $query = User::withTrashed()->whereRaw('LOWER(TRIM(email)) = ?', [$normalizedEmail]);
+
+        return ($locking ? $query->lockForUpdate() : $query)->exists();
     }
 
-    private static function mobileIsRegistered(string $normalizedPhone): bool
+    private static function mobileIsRegistered(string $normalizedPhone, bool $locking = false): bool
     {
-        return User::withTrashed()->where('phone', $normalizedPhone)->exists();
+        $query = User::withTrashed()->where('phone', $normalizedPhone);
+
+        return ($locking ? $query->lockForUpdate() : $query)->exists();
     }
 }

@@ -13,6 +13,7 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Tests\Concerns\VerifiesSignupEmails;
 use Tests\TestCase;
 
 /**
@@ -32,7 +33,7 @@ use Tests\TestCase;
  */
 class SingleNotificationPerEventTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, VerifiesSignupEmails;
 
     /**
      * The map in App\Providers\EventServiceProvider is the whole story, so the
@@ -91,14 +92,9 @@ class SingleNotificationPerEventTest extends TestCase
     {
         \Illuminate\Support\Facades\Notification::fake();
 
-        \App\Models\SignupEmailVerification::create([
-            'email' => 'asha.menon@example.com',
-            'token_hash' => \App\Models\SignupEmailVerification::hashToken(\Illuminate\Support\Str::random(64)),
-            'expires_at' => now()->addDay(),
-            'verified_at' => now(),
-            'last_sent_at' => now()->subMinutes(5),
-            'send_count' => 1,
-        ]);
+        // The helper writes the row AND claims it for this session, which is
+        // both halves of what signup checks.
+        $this->verifiedSignupEmail('asha.menon@example.com');
 
         $this->post(route('register'), [
             'full_name' => 'Asha Menon',

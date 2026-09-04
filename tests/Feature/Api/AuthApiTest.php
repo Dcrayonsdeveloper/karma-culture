@@ -24,24 +24,60 @@ class AuthApiTest extends TestCase
         ]);
     }
 
+    /**
+     * Registering over the API needs a proved address, like registering
+     * anywhere else.
+     *
+     * This endpoint is the same act as the web form and is session-stateful in
+     * a browser - Sanctum's EnsureFrontendRequestsAreStateful is prepended to
+     * the api group and config/sanctum.php's stateful list includes this app's
+     * own URL - so a verification gate on POST /register alone would be no gate:
+     * skipping the emailed link would be a matter of changing the URL you post
+     * to. The Origin header is what makes the request stateful, and therefore
+     * what gives it the session its proof was claimed in.
+     */
     public function test_api_register(): void
     {
-        // The API is the same act of signing up as the web form and is held to
-        // the same condition - it is session-stateful in a browser (Sanctum's
-        // EnsureFrontendRequestsAreStateful is prepended to the api group), so
-        // a gate on the web route alone would be no gate at all.
         $this->verifiedSignupEmail('newuser@example.com');
 
-        $response = $this->postJson('/api/v1/auth/register', [
-            'first_name' => 'Api',
-            'last_name' => 'User',
-            'email' => 'newuser@example.com',
-            'password' => 'Password123!',
-            'password_confirmation' => 'Password123!',
-        ]);
+        $response = $this->withHeaders(['Origin' => config('app.url')])
+            ->postJson('/api/v1/auth/register', [
+                'first_name' => 'Api',
+                'last_name' => 'User',
+                'email' => 'newuser@example.com',
+                'phone' => '9876500011',
+                'password' => 'Password123!',
+                'password_confirmation' => 'Password123!',
+            ]);
 
         $response->assertStatus(201);
-        $this->assertDatabaseHas('users', ['email' => 'newuser@example.com']);
+        $this->assertDatabaseHas('users', ['email' => 'newuser@example.com', 'phone' => '9876500011']);
+    }
+
+    /**
+     * A stateless caller cannot register, and that is the intended outcome.
+     *
+     * It has no session, so it holds no claim and can spend no proof - and it
+     * has no way to obtain one either, because asking for a verification email
+     * is a web route. A bearer-token client has therefore not lost a working
+     * signup; it has been told plainly that this endpoint is part of the browser
+     * flow. Building an API-native verification exchange is a separate piece of
+     * work, and doing it badly here would mean leaving the endpoint able to
+     * create accounts for addresses nobody has proved.
+     */
+    public function test_api_register_without_a_session_is_refused(): void
+    {
+        $this->verifiedSignupEmail('stateless@example.com');
+
+        $this->postJson('/api/v1/auth/register', [
+            'first_name' => 'Api',
+            'last_name' => 'User',
+            'email' => 'stateless@example.com',
+            'password' => 'Password123!',
+            'password_confirmation' => 'Password123!',
+        ])->assertStatus(422)->assertJsonValidationErrors('email');
+
+        $this->assertDatabaseMissing('users', ['email' => 'stateless@example.com']);
     }
 
     public function test_api_register_fails_with_existing_email(): void

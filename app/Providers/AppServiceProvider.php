@@ -192,7 +192,14 @@ class AppServiceProvider extends ServiceProvider
         // daily-quota half of the problem.
         RateLimiter::for('signup-verification', fn (Request $request) => [
             Limit::perMinute(8)->by($request->ip()),
-            Limit::perMinute(3)->by('signup-verification:'.Str::lower(trim((string) $request->input('email')))),
+            // is_string first: the limiter runs BEFORE validation, so
+            // `email[]=a&email[]=b` reaches it as an array, and casting that to
+            // string raises "Array to string conversion" - which this app's
+            // error handler turns into a 500 on a request the validator was
+            // about to reject with a 422.
+            Limit::perMinute(3)->by('signup-verification:'.Str::lower(trim(
+                is_string($email = $request->input('email')) ? $email : ''
+            ))),
         ]);
 
         // Reading whether the link has been clicked. No mail, no writes - the

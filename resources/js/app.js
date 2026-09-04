@@ -1309,9 +1309,22 @@ const kkSignupVerification = (routes = {}) => ({
             }
 
             if (res.status === 429) {
+                // A cooldown refusal still describes a live attempt, and says
+                // which one - so adopt it and start watching. Without this a
+                // customer who pressed the button twice was left on a form that
+                // had a link waiting in the inbox and no intention of ever
+                // noticing it had been clicked.
+                if (data.id) {
+                    this.attemptId = data.id;
+                    this.verifyFor = email;
+                }
+
                 this.verifyState = this.attemptId ? 'sent' : '';
                 this.verifyError = data.message || 'Please wait a moment before trying again.';
                 this._startCooldown(data.retry_after || 60);
+
+                if (this.verifyState === 'sent') this._startPolling();
+
                 return;
             }
 
@@ -1379,6 +1392,10 @@ const kkSignupVerification = (routes = {}) => ({
                 this.verifyNotice = '';
                 this.verifyError = 'This verification link has expired. Please request a new verification email.';
                 this.resendIn = 0;
+                // The attempt goes with the state. Left set, a later cooldown
+                // refusal would read it as evidence of a live send and put the
+                // form back into "waiting" for a link that had expired.
+                this.attemptId = '';
             }
         } catch (e) {
             // A dropped poll is not worth a message: the next one is four

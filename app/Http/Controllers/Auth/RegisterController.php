@@ -167,7 +167,13 @@ class RegisterController extends Controller
         // address that is malformed or already taken says only that. A rule
         // would print "verify your email" underneath, about an address the
         // customer is being told to change anyway.
-        if ($email === null || ! self::ownershipProved($email)) {
+        //
+        // claimedProofFor() also requires the proof to have been ASKED FOR by
+        // this browser. The address is what gets proved - that is what lets the
+        // link be opened on a phone - but the session is what may spend the
+        // proof, or anyone who knew the address could poll the send endpoint
+        // until it reported one and then race its owner to Create Account.
+        if ($email === null || SignupEmailVerification::claimedProofFor($email, $request) === null) {
             throw ValidationException::withMessages(['email' => self::EMAIL_UNVERIFIED]);
         }
 
@@ -175,7 +181,7 @@ class RegisterController extends Controller
             // One transaction around the whole thing. A signup that got as far
             // as a users row and then failed to spend its verification would
             // leave the proof lying around for a second account to use.
-            $user = DB::transaction(function () use ($firstName, $lastName, $email, $phone, $validated) {
+            $user = DB::transaction(function () use ($request, $firstName, $lastName, $email, $phone, $validated) {
                 // Re-checked here, inside the transaction, and not because the
                 // rules above were wrong: they were right when they ran. Between
                 // then and now is a window - a slow password hash is enough -
@@ -191,11 +197,9 @@ class RegisterController extends Controller
 
                 // Locked for the rest of the transaction, so two requests
                 // holding one verified address cannot both read it as unspent.
-                $attempt = SignupEmailVerification::where('email', $email)
-                    ->lockForUpdate()
-                    ->first();
+                $attempt = SignupEmailVerification::claimedProofFor($email, $request, locking: true);
 
-                if ($attempt === null || ! $attempt->provesOwnership()) {
+                if ($attempt === null) {
                     throw ValidationException::withMessages(['email' => self::EMAIL_UNVERIFIED]);
                 }
 
@@ -255,20 +259,6 @@ class RegisterController extends Controller
     }
 
     /**
-     * Has this shop posted a link to this address, and did somebody open it?
-     *
-     * The only source of truth for "verified" anywhere in the signup path.
-     * Reads the row every time - a proof that expired a second ago is not a
-     * proof, and neither is one that has already been spent on an account.
-     */
-    private static function ownershipProved(string $normalizedEmail): bool
-    {
-        return SignupEmailVerification::where('email', $normalizedEmail)
-            ->first()
-            ?->provesOwnership() === true;
-    }
-
-    /**
      * LOWER(TRIM(...)) rather than a plain where, and withTrashed().
      *
      * The production collation compares case-insensitively on its own, but the
@@ -276,17 +266,19 @@ class RegisterController extends Controller
      * on saying so explicitly rather than leaning on it. withTrashed() because
      * users are soft-deleted and the unique index is not.
      */
-    private static function addressIsRegistered(string $normalizedEmail): bool
+    private static function addressIsRegistered(string $normalizedEmail, bool $locking = false): bool
     {
-        return User::withTrashed()
-            ->whereRaw('LOWER(TRIM(email)) = ?', [$normalizedEmail])
-            ->exists();
+        $query = User::withTrashed()->whereRaw('LOWER(TRIM(email)) = ?', [$normalizedEmail]);
+
+        return ($locking ? $query->lockForUpdate() : $query)->exists();
     }
 
     /** The canonical ten digits are what the column holds, so that is what is compared. */
-    private static function mobileIsRegistered(string $normalizedPhone): bool
+    private static function mobileIsRegistered(string $normalizedPhone, bool $locking = false): bool
     {
-        return User::withTrashed()->where('phone', $normalizedPhone)->exists();
+        $query = User::withTrashed()->where('phone', $normalizedPhone);
+
+        return ($locking ? $query->lockForUpdate() : $query)->exists();
     }
 
     /**
@@ -313,11 +305,22 @@ class RegisterController extends Controller
             // Read back from the table rather than parsed out of the driver's
             // message: that message is a vendor string, and the answer is one
             // query away.
-            if (self::addressIsRegistered($email)) {
+            //
+            // LOCKING reads, and that is the whole of why this works. InnoDB's
+            // default isolation is REPEATABLE READ, and a plain SELECT inside a
+            // transaction answers from the snapshot taken at its first read -
+            // which here was BEFORE the other request committed. Asking again
+            // with an ordinary query would faithfully report that nothing owns
+            // the address, and the customer would get "please try again"
+            // instead of the one sentence that tells them what to do. A locking
+            // read reads the latest committed version. It cannot block: the row
+            // that beat us must already be committed, or our INSERT would have
+            // waited on it rather than failing.
+            if (self::addressIsRegistered($email, locking: true)) {
                 $errors['email'] = [self::EMAIL_TAKEN];
             }
 
-            if ($phone !== null && self::mobileIsRegistered($phone)) {
+            if ($phone !== null && self::mobileIsRegistered($phone, locking: true)) {
                 $errors['phone'] = [self::MOBILE_TAKEN];
             }
 

@@ -360,6 +360,201 @@ class SignupEmailVerificationTest extends TestCase
         $this->assertLessThanOrEqual(5, $sent, 'One address could be mailed without limit.');
     }
 
+    // ---- whose proof is it -------------------------------------------------
+
+    /**
+     * A proof may be SPENT only by the browser that asked for it.
+     *
+     * The address is what gets proved - that is what lets the link be opened on
+     * a phone while the form waits on a laptop - but if the address were also
+     * all it took to spend, anyone who knew it could poll the send endpoint
+     * until it reported a live proof and then post Create Account with a
+     * password of their own, taking the account out from under the person who
+     * was mid-signup. The proof stays; the session is the entitlement.
+     */
+    public function test_a_stranger_cannot_spend_a_proof_they_did_not_ask_for(): void
+    {
+        // Verified, and NOT claimed by this session: exactly the row an
+        // attacker would find waiting for its owner.
+        SignupEmailVerification::create([
+            'email' => 'asha@example.test',
+            'token_hash' => SignupEmailVerification::hashToken(Str::random(64)),
+            'expires_at' => now()->addDay(),
+            'verified_at' => now(),
+            'last_sent_at' => now()->subMinutes(5),
+            'send_count' => 1,
+        ]);
+
+        $this->post('/register', $this->signupPayload())
+            ->assertSessionHasErrors('email');
+
+        $this->assertDatabaseMissing('users', ['email' => 'asha@example.test']);
+    }
+
+    /** And the API is the same door, so it asks the same question. */
+    public function test_a_stranger_cannot_spend_a_proof_through_the_api_either(): void
+    {
+        SignupEmailVerification::create([
+            'email' => 'asha@example.test',
+            'token_hash' => SignupEmailVerification::hashToken(Str::random(64)),
+            'expires_at' => now()->addDay(),
+            'verified_at' => now(),
+            'last_sent_at' => now()->subMinutes(5),
+            'send_count' => 1,
+        ]);
+
+        $this->postJson('/api/v1/auth/register', [
+            'first_name' => 'Not',
+            'last_name' => 'Asha',
+            'email' => 'asha@example.test',
+            'phone' => '9812345678',
+            'password' => 'Password123!',
+            'password_confirmation' => 'Password123!',
+        ])->assertStatus(422)->assertJsonValidationErrors('email');
+
+        $this->assertDatabaseMissing('users', ['email' => 'asha@example.test']);
+    }
+
+    /**
+     * And the send endpoint does not tell a stranger that a proof exists.
+     *
+     * Answering "verified" to whoever asks is the oracle that makes the theft
+     * above cheap to time. A browser without the claim gets an ordinary send.
+     */
+    public function test_the_send_endpoint_does_not_report_a_proof_to_a_stranger(): void
+    {
+        Mail::fake();
+
+        $attempt = SignupEmailVerification::create([
+            'email' => 'asha@example.test',
+            'token_hash' => SignupEmailVerification::hashToken(Str::random(64)),
+            'expires_at' => now()->addDay(),
+            'verified_at' => now(),
+            'last_sent_at' => now()->subMinutes(5),
+            'send_count' => 1,
+        ]);
+
+        $this->postJson(route('signup.email-verifications.store'), ['email' => 'asha@example.test'])
+            ->assertStatus(202)
+            ->assertJsonPath('status', 'pending');
+
+        // And the stranger has not inherited anything: the proof is stood down
+        // and a fresh link goes to the address itself.
+        $this->assertNull($attempt->fresh()->verified_at);
+        Mail::assertSent(VerifySignupEmail::class, 1);
+    }
+
+    /** A non-string email must not reach the limiter as one. */
+    public function test_an_array_email_is_a_validation_error_and_not_a_crash(): void
+    {
+        Mail::fake();
+
+        $this->postJson(route('signup.email-verifications.store'), ['email' => ['a@b.test', 'c@d.test']])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('email');
+
+        Mail::assertNothingSent();
+    }
+
+    // ---- two requests at once ----------------------------------------------
+
+    /**
+     * Two tabs asking to validate the same brand-new address.
+     *
+     * There is no row to lock yet, so both requests build one and the second
+     * INSERT meets the unique index on `email`. That used to be an uncaught
+     * duplicate key and a 500. The loser now says a message is already on its
+     * way, and does not send a second one.
+     */
+    public function test_two_requests_for_one_new_address_produce_one_attempt_and_one_email(): void
+    {
+        Mail::fake();
+
+        // Slip the winner's row in from inside the loser's transaction, at the
+        // moment between finding nothing to lock and inserting - which is the
+        // window a real race occupies.
+        $armed = true;
+        SignupEmailVerification::creating(function () use (&$armed) {
+            if (! $armed) {
+                return;
+            }
+
+            $armed = false;
+
+            DB::table('signup_email_verifications')->insert([
+                'uuid' => (string) Str::uuid7(),
+                'email' => 'asha@example.test',
+                'token_hash' => hash('sha256', Str::random(64)),
+                'expires_at' => now()->addHour(),
+                'last_sent_at' => now(),
+                'send_count' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        });
+
+        $this->postJson(route('signup.email-verifications.store'), ['email' => 'asha@example.test'])
+            ->assertStatus(429);
+
+        Mail::assertNothingSent();
+        $this->assertSame(1, SignupEmailVerification::where('email', 'asha@example.test')->count());
+    }
+
+    /**
+     * A resend must not resurrect an attempt that a signup has just spent.
+     *
+     * The other tab's Create Account consumed the proof and made the account;
+     * this request must see that and refuse, rather than clearing consumed_at,
+     * minting a new token and posting a link for an address that now has an
+     * owner.
+     */
+    public function test_a_resend_cannot_un_consume_a_spent_verification(): void
+    {
+        Mail::fake();
+
+        $attempt = $this->verifiedSignupEmail('asha@example.test');
+
+        $this->post('/register', $this->signupPayload())->assertSessionHasNoErrors();
+
+        $this->travel(SignupEmailVerification::RESEND_COOLDOWN_SECONDS + 5)->seconds();
+
+        $this->postJson(route('signup.email-verifications.store'), ['email' => 'asha@example.test'])
+            ->assertStatus(409);
+
+        $attempt->refresh();
+
+        Mail::assertNothingSent();
+        $this->assertNotNull($attempt->consumed_at, 'A resend cleared a proof that had already been spent.');
+        $this->assertNull($attempt->token_hash, 'A resend put a live link back on a consumed attempt.');
+    }
+
+    /**
+     * A link whose token has been rotated away is dead, and opening it does not
+     * verify the attempt that replaced it.
+     *
+     * A resend rotates the row's hash, and the point of rotating is that the
+     * previous message stops working. The update that marks an attempt verified
+     * is pinned to the token the request was opened with for the same reason.
+     */
+    public function test_a_superseded_link_neither_works_nor_verifies_its_replacement(): void
+    {
+        Mail::fake();
+
+        [$attempt, $first] = $this->pendingSignupEmail('asha@example.test');
+
+        $this->travel(SignupEmailVerification::RESEND_COOLDOWN_SECONDS + 5)->seconds();
+
+        $this->postJson(route('signup.email-verifications.store'), ['email' => 'asha@example.test'])
+            ->assertStatus(202);
+
+        $this->get(route('signup.verify-email', ['token' => $first]))->assertStatus(404);
+
+        $this->assertNull(
+            $attempt->fresh()->verified_at,
+            'A link that had been replaced still verified the attempt.'
+        );
+    }
+
     // ---- creating the account ---------------------------------------------
 
     public function test_an_account_cannot_be_created_for_an_unproved_address(): void
