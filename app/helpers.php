@@ -62,9 +62,19 @@ if (!function_exists('format_date')) {
 }
 
 if (!function_exists('currency_config')) {
+    /**
+     * The shop's currency symbol, position and code.
+     *
+     * Held for the request in a static as well as in the cache. format_price()
+     * calls this twice for every price on the page, and the cache store is the
+     * database on shared hosting, so without the static a product listing spent
+     * a couple of hundred `select * from cache` round trips answering the same
+     * question. The static lives one request; an admin changing the currency is
+     * picked up on the next one, exactly as the hour-long cache already implied.
+     */
     function currency_config(?string $key = null): mixed
     {
-        $config = Cache::remember('currency_config', 3600, function () {
+        $config = Setting::remembered('currency_config', function () {
             return [
                 'symbol' => Setting::get('currency_symbol', '₹'),
                 'position' => Setting::get('currency_position', 'before'),
@@ -97,28 +107,41 @@ if (!function_exists('safe_html')) {
 
         $clean = strip_tags($html, $allowed);
 
+        // What separates one attribute from the next.
+        //
+        // These used to require whitespace. An HTML parser does not: it ends an
+        // attribute at the closing quote, so `<img src="x"onerror="alert(1)">`
+        // and `<img/onerror=alert(1)>` are both two attributes to a browser and
+        // a single unmatched blob to a `\s`-anchored regex - the handler
+        // survived the strip and ran. Matched as a lookbehind so the boundary
+        // character itself is left in place; consuming it would eat the quote
+        // that closed the previous attribute.
+        $boundary = '(?<=[\s"\'\/])';
+
         // on*="..." / on*='...' / on*=value - inline event handlers.
-        $clean = preg_replace('/\son[a-z-]+\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $clean);
+        $clean = preg_replace('/'.$boundary.'on[a-z-]+\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $clean);
 
         // href/src/action pointing at javascript:, vbscript: or data: (data:
         // image/* is kept - it is the only common legitimate use).
         $clean = preg_replace_callback(
-            '/\s(href|src|action|formaction)\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))/i',
+            '/'.$boundary.'(href|src|action|formaction)\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))/i',
             function (array $m): string {
                 $value = $m[2] ?: ($m[3] ?: ($m[4] ?? ''));
-                $scheme = strtolower(preg_replace('/[\s\x00-\x1F]+/', '', $value));
+                $scheme = strtolower(preg_replace('/[\s\x00-\x1F]+/', '', html_entity_decode($value, ENT_QUOTES | ENT_HTML5)));
 
                 $blocked = str_starts_with($scheme, 'javascript:')
                     || str_starts_with($scheme, 'vbscript:')
                     || (str_starts_with($scheme, 'data:') && ! str_starts_with($scheme, 'data:image/'));
 
-                return $blocked ? ' ' . strtolower($m[1]) . '="#"' : $m[0];
+                // The boundary character is no longer part of the match, so the
+                // replacement must not re-emit one.
+                return $blocked ? strtolower($m[1]) . '="#"' : $m[0];
             },
             $clean
         ) ?? '';
 
         // style="" can carry url(javascript:...) and expression() on old engines.
-        $clean = preg_replace('/\sstyle\s*=\s*(?:"[^"]*"|\'[^\']*\')/i', '', $clean);
+        $clean = preg_replace('/'.$boundary.'style\s*=\s*(?:"[^"]*"|\'[^\']*\')/i', '', $clean);
 
         return $clean;
     }

@@ -72,7 +72,22 @@ class PayUController extends Controller
 
         $expectedHash = strtolower(hash('sha512', $hashString));
 
-        return $expectedHash === ($params['hash'] ?? '');
+        return hash_equals($expectedHash, strtolower((string) ($params['hash'] ?? '')));
+    }
+
+    /**
+     * Whether the credentials needed to trust a callback are actually present.
+     *
+     * verifyHash() builds the reverse hash out of the merchant salt. With a
+     * blank salt that hash is one anybody can compute, so an unconfigured or
+     * half-configured gateway turned the PayU callbacks - which are necessarily
+     * CSRF-exempt, being posted by PayU - into an unauthenticated way to mark
+     * any order paid or cancelled. initiate() has always refused to run without
+     * these; the callbacks did not check at all.
+     */
+    private function gatewayConfigured(array $config): bool
+    {
+        return ! empty($config['key']) && ! empty($config['salt']);
     }
 
     /**
@@ -152,6 +167,13 @@ class PayUController extends Controller
         $params = $request->all();
 
         Log::info('PayU Success Callback', ['params' => $params]);
+
+        if (! $this->gatewayConfigured($config)) {
+            Log::error('PayU success callback received while the gateway is not configured; refusing to trust it.');
+
+            return redirect()->route('checkout.failed')
+                ->with('error', 'Payment could not be verified. Please contact support.');
+        }
 
         // Verify hash
         if (!$this->verifyHash($params, $config['salt'])) {
@@ -257,7 +279,16 @@ class PayUController extends Controller
 
         // This route is CSRF-exempt and cancels an order + restores its stock,
         // so it must prove the POST came from PayU. Without the hash check any
-        // visitor could cancel any order by guessing its (sequential) id.
+        // visitor could cancel any order by guessing its (sequential) id. The
+        // check is only worth anything with a real salt behind it - a blank one
+        // makes the expected hash computable by the caller too.
+        if (! $this->gatewayConfigured($config)) {
+            Log::error('PayU failure callback received while the gateway is not configured; refusing to trust it.');
+
+            return redirect()->route('checkout.failed')
+                ->with('error', 'Payment could not be verified. Please contact support.');
+        }
+
         if (! $this->verifyHash($params, $config['salt'])) {
             Log::warning('PayU hash verification failed on failure callback', [
                 'txnid' => $params['txnid'] ?? 'unknown',

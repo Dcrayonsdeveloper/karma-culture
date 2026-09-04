@@ -280,7 +280,7 @@ class ProductFilters
     }
 
     /** The grid: the full filter set, sorted and paginated. */
-    public function results(int $perPage = 24, array $with = ['category', 'brand', 'primaryImage']): LengthAwarePaginator
+    public function results(int $perPage = 24, array $with = ['category', 'brand', 'images']): LengthAwarePaginator
     {
         return $this->sort($this->query()->with($with))->paginate($perPage)->withQueryString();
     }

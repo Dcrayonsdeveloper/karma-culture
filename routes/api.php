@@ -37,7 +37,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 // ─── Meta Webhooks (Nia AI Chatbot) ─────────────────────────────────────
-Route::prefix('webhook')->middleware([VerifyMetaWebhookSignature::class, 'throttle:60,1'])->group(function () {
+Route::prefix('webhook')->middleware([VerifyMetaWebhookSignature::class, 'throttle:60,1,meta-webhook'])->group(function () {
     Route::get('meta', [WebhookController::class, 'verify'])->name('webhook.meta.verify');
     Route::post('meta', [WebhookController::class, 'handle'])->name('webhook.meta.handle');
 });
@@ -46,7 +46,7 @@ Route::prefix('webhook')->middleware([VerifyMetaWebhookSignature::class, 'thrott
 Route::prefix('v1')->name('api.v1.')->group(function () {
 
     // Public authentication routes
-    Route::prefix('auth')->name('auth.')->middleware('throttle:10,1')->group(function () {
+    Route::prefix('auth')->name('auth.')->middleware('throttle:10,1,api-auth')->group(function () {
         Route::post('register', RegisterController::class)->name('register');
         Route::post('login', LoginController::class)->name('login');
     });
@@ -103,8 +103,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
         // Checkout (rate-limited to prevent abuse)
         Route::prefix('checkout')->name('checkout.')->group(function () {
-            Route::post('validate', [CheckoutController::class, 'validate'])->middleware('throttle:10,1')->name('validate');
-            Route::post('/', [CheckoutController::class, 'process'])->middleware('throttle:5,1')->name('process');
+            Route::post('validate', [CheckoutController::class, 'validate'])->middleware('throttle:10,1,api-checkout-validate')->name('validate');
+            Route::post('/', [CheckoutController::class, 'process'])->middleware('throttle:5,1,api-checkout')->name('process');
         });
 
         // User Preferences

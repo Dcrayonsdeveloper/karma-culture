@@ -62,7 +62,7 @@ class CartController extends Controller
     private function recommendedForCart(Cart $cart): Collection
     {
         $productIds = $cart->items->pluck('product_id')->filter()->unique()->all();
-        $with = ['category', 'brand', 'primaryImage', 'images'];
+        $with = ['category', 'brand', 'images'];
 
         $query = Product::where('is_active', true)->with($with)->whereHas('images');
         if (! empty($productIds)) {
@@ -613,7 +613,7 @@ class CartController extends Controller
             ->whereNotIn('id', $productIds)
             ->whereIn('category_id', $categoryIds)
             ->whereHas('images')
-            ->with('primaryImage')
+            ->with('images')
             // Filtered, not merely sorted: every tile in the drawer is a bare
             // "Add to Cart" with no room for an Out of Stock badge, so a sold-out
             // one is a button that can only ever return an error toast. The cart

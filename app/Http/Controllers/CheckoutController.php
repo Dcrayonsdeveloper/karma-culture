@@ -227,6 +227,26 @@ class CheckoutController extends Controller
 
         try {
             $order = DB::transaction(function () use ($cart, $addressSnapshot, $savedAddress, $validated, $request) {
+                // Take the cart row itself before anything else, so two
+                // submissions of the SAME cart run one after the other instead
+                // of side by side.
+                //
+                // The product/variant locks further down stop the shop
+                // overselling, but they do not stop a double-submit - a
+                // slow connection, an impatient second click, a browser
+                // retrying the POST - from producing TWO orders for one
+                // basket and deducting the stock twice. The cart is loaded
+                // outside this transaction, so without this lock the second
+                // request happily rebuilt an order from a basket the first had
+                // already emptied.
+                $locked = \App\Models\Cart::whereKey($cart->getKey())->lockForUpdate()->first();
+
+                if (! $locked || $locked->items()->count() === 0) {
+                    throw new \App\Exceptions\InsufficientStockException(
+                        'This order has already been placed. Please check My Orders before trying again.'
+                    );
+                }
+
                 // Recompute the money from the live product rows before any of
                 // it is copied onto the order. Nothing here has ever been read
                 // from the request, but the cart's stored subtotal/discount are
@@ -241,6 +261,15 @@ class CheckoutController extends Controller
                 $cart->recalculate(skipAutoApply: true);
                 $cart->refresh();
                 $cart->load(['items.product', 'items.variant', 'coupon']);
+
+                // Re-check after the reload: recalculate() prunes lines whose
+                // product has since been deactivated or deleted, and an order
+                // with no lines is not an order.
+                if ($cart->items->isEmpty()) {
+                    throw new \App\Exceptions\InsufficientStockException(
+                        'Your cart is no longer available. Please add the items again.'
+                    );
+                }
 
                 // Re-validate stock inside the transaction with row locks.
                 foreach ($cart->items as $item) {

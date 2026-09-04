@@ -29,6 +29,21 @@ class SendCouponAfterReview implements ShouldQueue
             return;
         }
 
+        // The reward thanks someone who bought the thing; it is not a prize for
+        // typing.
+        //
+        // This closes the hole the $alreadyRewarded guard could not reach. That
+        // guard only bites once an address has a review_invitations row to be
+        // marked against, and a guest reviewer never has one - so a visitor
+        // could still mint a live, immediately usable percentage coupon with no
+        // minimum order, once per product, for as long as they cared to type.
+        // is_verified_purchase is false for every guest and true only when the
+        // reviewer actually bought that product, which is the line this reward
+        // was always meant to sit behind.
+        if (! $review->is_verified_purchase) {
+            return;
+        }
+
         // One reward per address. This query was already here, assigned to
         // $alreadyRewarded, and then never read - so the guard existed in every
         // sense except the one that counts. Every review a customer wrote minted
@@ -37,16 +52,9 @@ class SendCouponAfterReview implements ShouldQueue
         // because the mail went out over a `log` mailer; it is a real coupon in
         // a real inbox now.
         //
-        // Two things this does not fix, both wider than a dead variable. The
-        // query is per address, while the comment above it always claimed "for
-        // this product" - the author's own query is what runs here rather than a
-        // rule invented after the fact. And it only bites once the address has a
-        // review_invitations row to be marked against: the update below matches
-        // nothing for a reviewer who never received an invitation, and nothing
-        // sends invitations today because SendReviewInvitationAfterDelivery is a
-        // queued listener on a server with no worker. Recording a reward for a
-        // reviewer with no invitation would mean inventing an order_id and a
-        // token for a row the schema requires both on.
+        // The query is per address, while the comment above it always claimed
+        // "for this product" - the author's own query is what runs here rather
+        // than a rule invented after the fact.
         $alreadyRewarded = DB::table('review_invitations')
             ->where('email', $email)
             ->whereNotNull('coupon_id')

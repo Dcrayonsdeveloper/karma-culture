@@ -20,7 +20,7 @@ class HomeController extends Controller
         $featuredProducts = Product::query()
             ->where('is_active', true)
             ->where('is_featured', true)
-            ->with(['category', 'brand', 'primaryImage'])
+            ->with(['category', 'brand', 'images'])
             ->inStockFirst()
             ->orderBy('created_at', 'desc')
             ->take(10)
@@ -29,7 +29,7 @@ class HomeController extends Controller
         // New arrivals
         $newArrivals = Product::query()
             ->where('is_active', true)
-            ->with(['category', 'brand', 'primaryImage'])
+            ->with(['category', 'brand', 'images'])
             ->inStockFirst()
             ->orderBy('created_at', 'desc')
             ->take(10)
@@ -38,7 +38,7 @@ class HomeController extends Controller
         // Bestsellers
         $bestsellers = Product::query()
             ->where('is_active', true)
-            ->with(['category', 'brand', 'primaryImage'])
+            ->with(['category', 'brand', 'images'])
             ->inStockFirst()
             ->orderBy('sales_count', 'desc')
             ->take(10)
@@ -49,7 +49,7 @@ class HomeController extends Controller
         // Falls back to recent sellers so the row is never empty on a quiet week.
         $trending = Product::query()
             ->where('is_active', true)
-            ->with(['category', 'brand', 'primaryImage'])
+            ->with(['category', 'brand', 'images'])
             ->withCount(['views as recent_views' => fn ($q) => $q->where('product_views.created_at', '>=', now()->subDays(30))])
             ->having('recent_views', '>', 0)
             ->inStockFirst()
@@ -60,7 +60,7 @@ class HomeController extends Controller
         if ($trending->count() < 4) {
             $trending = Product::query()
                 ->where('is_active', true)
-                ->with(['category', 'brand', 'primaryImage'])
+                ->with(['category', 'brand', 'images'])
                 ->inStockFirst()
                 ->orderByDesc('sales_count')
                 ->orderByDesc('created_at')
@@ -72,7 +72,7 @@ class HomeController extends Controller
         $deals = Product::query()
             ->where('is_active', true)
             ->whereColumn('price', '<', 'mrp')
-            ->with(['category', 'brand', 'primaryImage'])
+            ->with(['category', 'brand', 'images'])
             ->inStockFirst()
             ->orderByRaw('(mrp - price) / mrp DESC')
             ->take(10)

@@ -107,7 +107,7 @@ class ProductController extends Controller
             $fill = Product::query()
                 ->where('is_active', true)
                 ->whereNotIn('id', $exclude)
-                ->with(['category', 'primaryImage'])
+                ->with(['category', 'images'])
                 ->withCount('images')
                 ->inStockFirst()
                 ->orderByDesc('images_count')
@@ -126,7 +126,7 @@ class ProductController extends Controller
             ->values();
 
         // Ensure the relations the product card needs are loaded (cached models may be lean).
-        $relatedProducts->loadMissing(['category', 'brand', 'primaryImage', 'images']);
+        $relatedProducts->loadMissing(['category', 'brand', 'images']);
 
         // Breadcrumbs
         $breadcrumbs = [];
@@ -146,7 +146,7 @@ class ProductController extends Controller
             ->where('id', '!=', $product->id)
             ->where('category_id', $product->category_id)
             ->whereHas('images')
-            ->with(['primaryImage'])
+            ->with(['images'])
             ->inStockFirst()
             ->inRandomOrder()
             ->take(3)
@@ -157,7 +157,7 @@ class ProductController extends Controller
                 ->where('is_active', true)
                 ->where('id', '!=', $product->id)
                 ->where('category_id', $product->category_id)
-                ->with(['primaryImage'])
+                ->with(['images'])
                 ->inStockFirst()
                 ->inRandomOrder()
                 ->take(3)
@@ -170,7 +170,7 @@ class ProductController extends Controller
             ->where('id', '!=', $product->id)
             ->where('category_id', $product->category_id)
             ->whereHas('images')
-            ->with(['brand', 'primaryImage'])
+            ->with(['brand', 'images'])
             ->inStockFirst()
             ->inRandomOrder()
             ->take(4)
@@ -181,7 +181,7 @@ class ProductController extends Controller
                 ->where('is_active', true)
                 ->where('id', '!=', $product->id)
                 ->where('category_id', $product->category_id)
-                ->with(['brand', 'primaryImage'])
+                ->with(['brand', 'images'])
                 ->inStockFirst()
                 ->inRandomOrder()
                 ->take(4)
@@ -332,7 +332,7 @@ class ProductController extends Controller
         );
 
         $products = $filters
-            ->sort($filters->query()->with(['category', 'brand', 'primaryImage'])->inStockFirst())
+            ->sort($filters->query()->with(['category', 'brand', 'images'])->inStockFirst())
             ->paginate(24)
             ->withQueryString();
 

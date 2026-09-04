@@ -53,8 +53,14 @@ class ReviewController extends Controller
         ], 201);
     }
 
-    public function show(Review $review): JsonResponse
+    public function show(Request $request, Review $review): JsonResponse
     {
+        // index() lists only the caller's own reviews, and update()/destroy()
+        // both check ownership. show() did not, so any signed-in customer could
+        // walk the id and read anybody's review - including one still pending
+        // moderation, and the reviewer's contact details with it.
+        abort_if($review->user_id !== $request->user()->id, 403);
+
         return response()->json([
             'data' => $review->load('product:id,name,slug'),
         ]);

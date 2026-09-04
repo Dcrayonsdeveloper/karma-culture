@@ -196,9 +196,19 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     // Helper methods
+
+    /*
+     * These gate the admin panel through EnsureUserIsAdmin, so a row that has
+     * been switched off must stop counting. Both `admins` and `staff` carry an
+     * is_active flag that the admin screens write - Admin > Staff has an
+     * activate/deactivate control - and the bare ->exists() checks ignored it,
+     * so deactivating a staff member left their admin-panel access exactly as
+     * it was. Their password still worked and every screen still opened.
+     */
+
     public function isAdmin(): bool
     {
-        return $this->role === 'admin' || $this->admin()->exists();
+        return $this->role === 'admin' || $this->admin()->where('is_active', true)->exists();
     }
 
     public function isSeller(): bool
@@ -208,7 +218,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function isStaff(): bool
     {
-        return $this->role === 'staff' || $this->staff()->exists();
+        return $this->role === 'staff' || $this->staff()->where('is_active', true)->exists();
     }
 
     public function isWholesaler(): bool

@@ -2186,8 +2186,16 @@
             },
 
             init() {
-                this.$el.addEventListener('mobile-add-to-cart', () => this.addToCart());
-                this.$el.addEventListener('mobile-buy-now', () => this.buyNow());
+                // Bound on window, not on this.$el.
+                //
+                // The mobile sticky bar sits OUTSIDE the productPage() element -
+                // it is a sibling of .pdp-wrapper, rendered after that div has
+                // closed - so the CustomEvent $dispatch fires bubbles bar ->
+                // body -> window and never passes through this.$el at all. Both
+                // buttons were therefore completely inert: on a phone, the Add
+                // to Cart and Buy Now a shopper actually reaches did nothing.
+                window.addEventListener('mobile-add-to-cart', () => this.addToCart());
+                window.addEventListener('mobile-buy-now', () => this.buyNow());
                 // Pause any playing gallery/zoom video when the active item or zoom changes,
                 // so audio never keeps playing after the user navigates away.
                 this.$watch('currentImage', () => this.pauseVideos());

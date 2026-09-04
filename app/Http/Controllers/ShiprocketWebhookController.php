@@ -106,7 +106,19 @@ class ShiprocketWebhookController extends Controller
                 $currentIndex = array_search($order->status, $statusOrder);
                 $newIndex = array_search($newStatus, $statusOrder);
 
-                if ($newIndex !== false && ($currentIndex === false || $newIndex > $currentIndex)) {
+                // Terminal statuses are not points on the forward path, so they
+                // are absent from $statusOrder and array_search returned false
+                // for them - the branch below never ran and the update was
+                // dropped on the floor. A returned-to-origin parcel therefore
+                // stayed booked as a delivered sale, in the order list and in
+                // every revenue report built on it.
+                if (in_array($newStatus, ['cancelled', 'returned'], true)) {
+                    $order->updateStatus($newStatus, null, "Shiprocket: {$currentStatus}");
+
+                    if ($shipment) {
+                        $shipment->update(['status' => 'failed']);
+                    }
+                } elseif ($newIndex !== false && ($currentIndex === false || $newIndex > $currentIndex)) {
                     $order->updateStatus($newStatus, null, "Shiprocket: {$currentStatus}");
 
                     if ($newStatus === 'delivered' && $shipment) {

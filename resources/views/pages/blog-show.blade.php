@@ -59,7 +59,7 @@
             'articleSection' => $post->category,
             'keywords' => $post->tags ? implode(', ', $post->tags) : null,
             'wordCount' => str_word_count(strip_tags($post->content ?? '')),
-        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
+        ], JSON_HEX_TAG | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
         </script>
     @endpush
 

@@ -18,13 +18,17 @@ class VerifyMetaWebhookSignature
         $signature = $request->header('X-Hub-Signature-256');
         $appSecret = config('services.meta.app_secret');
 
-        // Skip verification if app secret isn't configured (dev mode)
-        if (empty($appSecret)) {
-            return $next($request);
-        }
-
-        if (empty($signature)) {
-            abort(403, 'Missing webhook signature');
+        // Fail closed, not open.
+        //
+        // This waved the request through whenever META_APP_SECRET was unset,
+        // "for dev". The secret is unset on any install that has not wired Meta
+        // up yet, which left POST /api/webhook/meta as a public, unauthenticated
+        // way into the assistant: anyone could post a message payload, drive the
+        // bot, spend Anthropic credits, and have replies delivered from the
+        // brand's own Meta page. An unconfigured webhook has to refuse traffic,
+        // not accept all of it.
+        if (empty($appSecret) || empty($signature)) {
+            abort(403, 'Webhook signature required');
         }
 
         $expected = 'sha256=' . hash_hmac('sha256', $request->getContent(), $appSecret);

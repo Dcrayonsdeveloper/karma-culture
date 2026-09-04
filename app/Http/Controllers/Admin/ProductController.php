@@ -1172,6 +1172,12 @@ class ProductController extends Controller
                 'sku' => $blankToNull($record['sku'] ?? null),
                 'slug' => $blankToNull($record['slug'] ?? null),
                 'price' => $blankToNull($record['price'] ?? null),
+                // products.mrp is NOT NULL with no default and was never part of
+                // this payload, so the first valid row failed its insert and the
+                // whole import answered 500. Optional in the file: a row that
+                // does not state one is simply not on sale, so the MRP is the
+                // price - the same thing the product form stores in that case.
+                'mrp' => $blankToNull($record['mrp'] ?? null),
                 'sale_price' => $blankToNull($record['sale_price'] ?? null),
                 'cost_price' => $blankToNull($record['cost_price'] ?? null),
                 'stock_quantity' => $blankToNull($record['stock_quantity'] ?? null),
@@ -1187,6 +1193,7 @@ class ProductController extends Controller
                 'sku' => [...self::SKU_RULES, 'required'],
                 'slug' => self::SLUG_RULES,
                 'price' => V::money(),
+                'mrp' => [...V::money(required: false), 'gte:price'],
                 'sale_price' => V::money(required: false),
                 'cost_price' => V::money(required: false),
                 'stock_quantity' => ['nullable', 'integer', 'min:0', 'max:1000000'],
@@ -1230,6 +1237,14 @@ class ProductController extends Controller
                 'sku' => $sku,
                 'slug' => $candidate['slug'] ?? Str::slug($name),
                 'price' => (float) $price,
+                'mrp' => (float) ($candidate['mrp'] ?? $price),
+                // sale_price, meta_title and meta_description are not columns on
+                // products and are not in $fillable, so these three are dropped
+                // on the floor by mass assignment. Left in place rather than
+                // silently removed: the CSV template still offers the headings,
+                // and pruning them here is a separate decision about the
+                // template. They do no harm - unlike the missing mrp above,
+                // which is the field that actually broke the import.
                 'sale_price' => $candidate['sale_price'] !== null ? (float) $candidate['sale_price'] : null,
                 'cost_price' => $candidate['cost_price'] !== null ? (float) $candidate['cost_price'] : null,
                 'stock_quantity' => (int) ($candidate['stock_quantity'] ?? 0),
