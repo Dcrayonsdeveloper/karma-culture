@@ -3,6 +3,7 @@
 namespace Tests\Feature\Banner;
 
 use App\Models\Banner;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -110,6 +111,55 @@ class BannerScheduleTest extends TestCase
         // The theme's own clip is what a store with no usable banner falls back
         // to, so the box never collapses.
         $this->assertStringContainsString('karmaa-kulture-web-banner-v3.mp4', $html);
+    }
+
+    public function test_both_admin_banner_screens_render_with_a_banner_on_them(): void
+    {
+        // The gap that let a 500 reach production. RouteSmokeTest walks every
+        // parameterless admin GET route, but it walks them against an EMPTY
+        // database - so a row loop whose markup does not compile is never
+        // entered and the screen passes. Both screens are asked for here with
+        // banners present, in each of the states the row markup branches on.
+        // Not through banner(), which clears the hero position first so the
+        // storefront cases each get one slide. Here all three have to coexist.
+        Banner::where('position', 'hero')->delete();
+
+        foreach ([
+            ['name' => 'Waiting', 'starts_at' => now()->addWeek()],
+            ['name' => 'Ended', 'starts_at' => now()->subMonth(), 'ends_at' => now()->subDay()],
+            ['name' => 'Live now'],
+        ] as $i => $attributes) {
+            Banner::create($attributes + [
+                'position' => 'hero',
+                'image_url' => 'banners/desktop.jpg',
+                'priority' => $i,
+                'is_active' => true,
+            ]);
+        }
+
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('admin.homepage.hero-banners'))
+            ->assertOk()
+            ->assertSee('Scheduled')
+            ->assertSee('Expired');
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('admin.banners.index'))
+            ->assertOk()
+            ->assertSee('Live now');
+    }
+
+    public function test_the_preview_screen_shows_both_devices(): void
+    {
+        $banner = $this->banner(['title' => 'Summer', 'mobile_image_url' => 'banners/mobile/portrait.jpg']);
+
+        $this->actingAs(User::factory()->create(['role' => 'admin']), 'admin')
+            ->get(route('admin.banners.preview', $banner))
+            ->assertOk()
+            ->assertSee('storage/banners/desktop.jpg', false)
+            ->assertSee('storage/banners/mobile/portrait.jpg', false);
     }
 
     public function test_deleting_a_banner_keeps_the_row_so_it_can_come_back(): void
