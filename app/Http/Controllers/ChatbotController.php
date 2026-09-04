@@ -340,7 +340,7 @@ class ChatbotController extends Controller
             // "qualified"; an ordinary question afterwards must not send it back
             // to "new", which is what assigning the ternary on every message did
             // - a won lead was demoted by the customer asking about delivery.
-            $lead->stage = self::forwardStage($lead->stage, $isLead ? 'qualified' : 'new');
+            $lead->stage = $this->forwardStage($lead->stage, $isLead ? 'qualified' : 'new');
 
             $lead->save();
 
@@ -355,6 +355,31 @@ class ChatbotController extends Controller
             Log::error('Chatbot: could not capture lead', ['message' => $e->getMessage()]);
         }
     }
+
+    /** The leads pipeline, in order. Matches the `stage` ENUM on leads. */
+    private const LEAD_STAGES = ['new', 'qualifying', 'qualified', 'proposal', 'closed'];
+
+    /**
+     * The later of two stages.
+     *
+     * A lead's stage is progress someone has made, not a property of the
+     * message being processed. Assigning `$isLead ? 'qualified' : 'new'` on
+     * every turn meant a lead that had reached "qualified" - or that sales had
+     * moved on to "proposal" - dropped back to "new" the moment the customer
+     * asked an ordinary question like when delivery arrives.
+     */
+    private function forwardStage(?string $current, string $candidate): string
+    {
+        $currentIndex = array_search($current, self::LEAD_STAGES, true);
+        $candidateIndex = array_search($candidate, self::LEAD_STAGES, true);
+
+        if ($currentIndex === false) {
+            return $candidate;
+        }
+
+        return $candidateIndex > $currentIndex ? $candidate : $current;
+    }
+
     /**
      * A click on a suggested product - the clearest signal the assistant moved
      * someone towards a purchase.
