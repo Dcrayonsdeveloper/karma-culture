@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
-use App\Models\ProductCollection;
+use App\Models\Category;
 use App\Support\ProductFilters;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -19,9 +19,24 @@ class CollectionController extends Controller
      * a second listing implementation is how two pages start disagreeing about
      * what "In Stock Only" means.
      */
-    public function show(Request $request, ProductCollection $collection): View
+    public function show(Request $request, string $collection): View
     {
-        // A deactivated collection is not a 404 for an admin who is checking it,
+        // Resolved here rather than by route model binding, which would run an
+        // ordinary Category query - and the global scope hides system rows from
+        // those, so binding would 404 the one kind of row this page serves.
+        //
+        // system() is also the authorisation: /collection/... belongs to the
+        // built-in listings only. A real category has its own address at
+        // /category/{slug} and is not served from two URLs - that is duplicate
+        // content, and RouteIntegrityTest fails the build when two paths answer
+        // 200 from the same action.
+        $collection = Category::system()->where('slug', $collection)->first();
+
+        if (! $collection) {
+            throw new NotFoundHttpException;
+        }
+
+        // A deactivated listing is not a 404 for an admin who is checking it,
         // but it must not be browsable by customers - the link is gone from the
         // header the moment it is switched off, and typing the URL matches that.
         if (! $collection->is_active) {
@@ -30,7 +45,7 @@ class CollectionController extends Controller
 
         $request->merge(ProductFilters::tileAliases($request));
 
-        $productIds = $collection->products()->pluck('products.id')->all();
+        $productIds = $collection->shownProducts()->pluck('products.id')->all();
 
         $filters = ProductFilters::for(
             $request,

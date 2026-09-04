@@ -4,7 +4,6 @@ namespace Tests\Feature\Product;
 
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\ProductCollection;
 use App\Models\ProductImage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -64,10 +63,21 @@ class TestCloneProductsCommandTest extends TestCase
             'bestsellers' => ['Bestsellers', 'bestsellers-picks'],
             'deals' => ['Introductory Offer', 'introductory-offer'],
         ] as $handle => [$name, $slug]) {
-            ProductCollection::updateOrCreate(
-                ['handle' => $handle],
-                ['name' => $name, 'slug' => $slug, 'is_system' => true, 'is_active' => true]
-            );
+            // Through the system scope, not updateOrCreate. Category hides
+            // system rows from ordinary queries, so updateOrCreate never finds
+            // the row the migration already created and tries to insert a
+            // second one - which the unique handle then rejects.
+            $row = Category::system()->where('handle', $handle)->first();
+
+            $row
+                ? $row->update(['name' => $name, 'slug' => $slug, 'is_active' => true])
+                : Category::create([
+                    'handle' => $handle,
+                    'name' => $name,
+                    'slug' => $slug,
+                    'is_system' => true,
+                    'is_active' => true,
+                ]);
         }
     }
 
@@ -139,7 +149,7 @@ class TestCloneProductsCommandTest extends TestCase
         foreach (['new_in', 'bestsellers', 'deals'] as $handle) {
             $this->assertSame(
                 [],
-                ProductCollection::pickedProductIds($handle),
+                Category::pickedProductIds($handle),
                 "ticking a clone into the empty '{$handle}' would replace the catalogue on that page",
             );
         }
@@ -155,19 +165,19 @@ class TestCloneProductsCommandTest extends TestCase
         $source = $this->makeSourceProduct();
         $this->systemCollections();
 
-        $curated = ProductCollection::where('handle', 'deals')->first();
-        $curated->products()->attach($source->id);
+        $curated = Category::system()->where('handle', 'deals')->first();
+        $curated->shownProducts()->attach($source->id);
 
         $this->artisan('products:test-clones', ['--count' => 4])->assertSuccessful();
 
-        $picked = ProductCollection::pickedProductIds('deals');
+        $picked = Category::pickedProductIds('deals');
 
         $this->assertContains($source->id, $picked, 'the admin\'s own pick must survive');
         $this->assertCount(5, $picked, 'the four clones joined it rather than replacing it');
 
         // The other two were empty, so they are still computing.
-        $this->assertSame([], ProductCollection::pickedProductIds('new_in'));
-        $this->assertSame([], ProductCollection::pickedProductIds('bestsellers'));
+        $this->assertSame([], Category::pickedProductIds('new_in'));
+        $this->assertSame([], Category::pickedProductIds('bestsellers'));
     }
 
     public function test_it_gives_a_video_to_some_of_the_clones_but_not_all(): void

@@ -11,7 +11,6 @@ use App\Http\Controllers\Admin\BlogPostController;
 use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ChatbotAnalyticsController;
-use App\Http\Controllers\Admin\CollectionController;
 use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\CurrencyController;
 use App\Http\Controllers\Admin\CustomerController;
@@ -247,13 +246,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Content
         Route::middleware('admin.section:content')->group(function () {
-            // Collections: hand-picked product groups with their own page and
-            // an optional header link. Filed under Content next to Pages, which
-            // is the other thing here that puts something in the navigation.
-            Route::resource('collections', CollectionController::class)
-                ->parameters(['collections' => 'collection'])
-                ->except(['show']);
-
             Route::resource('pages', PageController::class)->except(['show']);
             Route::put('/pages/{page}/toggle-status', [PageController::class, 'toggleStatus'])->name('pages.toggle-status');
 

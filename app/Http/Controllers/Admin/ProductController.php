@@ -7,7 +7,6 @@ use App\Models\Attribute;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\ProductCollection;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use App\Models\Seller;
@@ -179,7 +178,7 @@ class ProductController extends Controller
     {
         $categories = Category::assignableOptions();
         $extraCategoryIds = [];
-        $collections = ProductCollection::orderBy('position')->orderBy('name')->get();
+        $collections = Category::system()->orderBy('position')->orderBy('name')->get();
         $selectedCollectionIds = [];
         $sellers = Seller::with('user')->orderBy('store_name')->get();
         $brands = Brand::where('is_active', true)->orderBy('name')->get();
@@ -216,7 +215,7 @@ class ProductController extends Controller
             'extra_category_ids.*' => V::foreignId('categories'),
 
             'collection_ids' => ['nullable', 'array', 'max:20'],
-            'collection_ids.*' => V::foreignId('collections'),
+            'collection_ids.*' => V::foreignId('categories'),
             'seller_id' => V::foreignId('sellers', required: false),
             'brand_id' => V::foreignId('brands', required: false),
             'is_active' => V::boolean(),
@@ -401,8 +400,8 @@ class ProductController extends Controller
             ->values()
             ->all();
 
-        $collections = ProductCollection::orderBy('position')->orderBy('name')->get();
-        $selectedCollectionIds = $product->collections()->pluck('collections.id')->all();
+        $collections = Category::system()->orderBy('position')->orderBy('name')->get();
+        $selectedCollectionIds = $product->collections()->pluck('categories.id')->all();
 
         return view('admin.products.edit', compact(
             'product', 'categories', 'sellers', 'brands', 'attributes',
@@ -433,7 +432,7 @@ class ProductController extends Controller
             'extra_category_ids.*' => V::foreignId('categories'),
 
             'collection_ids' => ['nullable', 'array', 'max:20'],
-            'collection_ids.*' => V::foreignId('collections'),
+            'collection_ids.*' => V::foreignId('categories'),
             'seller_id' => V::foreignId('sellers', required: false),
             'brand_id' => V::foreignId('brands', required: false),
             'is_active' => V::boolean(),
@@ -1001,13 +1000,19 @@ class ProductController extends Controller
             ->unique()
             ->all();
 
-        $product->categories()->sync($ids);
+        // ONE sync, because there is now one pivot. Two syncs against
+        // `category_product` would fight: the second would detach everything the
+        // first had just attached, so ticking a built-in listing would silently
+        // clear the product's shelves.
+        //
+        // Absent input means "none ticked", which is what an untouched set of
+        // checkboxes posts - so clearing them all really does clear them.
+        $ids = array_values(array_unique(array_merge(
+            $ids,
+            collect($request->input('collection_ids', []))->map(fn ($id) => (int) $id)->filter()->all(),
+        )));
 
-        // Absent input means "no collections", which is what an untouched set
-        // of checkboxes posts - so clearing them all really does clear them.
-        $product->collections()->sync(
-            collect($request->input('collection_ids', []))->map(fn ($id) => (int) $id)->filter()->unique()->all()
-        );
+        $product->categories()->sync($ids);
     }
 
     public function toggleStatus(Product $product): RedirectResponse

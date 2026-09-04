@@ -57,6 +57,20 @@ class CategoryController extends Controller
 
         $parentCategories = Category::whereNull('parent_id')->orderBy('name')->get();
 
+        // The built-in listings, listed separately rather than mixed into the
+        // tree. They are rows in this table now, but they are a different kind
+        // of thing - a destination with a hand-picked list, not something a
+        // product IS - so putting them among the categories would invite
+        // somebody to file a product under "Bestsellers".
+        //
+        // shownProducts is the pivot; products() would be products.category_id,
+        // which a system row never holds.
+        $systemRows = Category::system()
+            ->withCount('shownProducts')
+            ->orderBy('position')
+            ->orderBy('name')
+            ->get();
+
         // Stats
         $stats = [
             'total' => Category::count(),
@@ -64,7 +78,7 @@ class CategoryController extends Controller
             'root' => Category::whereNull('parent_id')->count(),
         ];
 
-        return view('admin.categories.index', compact('categories', 'parentCategories', 'stats'));
+        return view('admin.categories.index', compact('categories', 'parentCategories', 'stats', 'systemRows'));
     }
 
     public function create(): View
@@ -142,6 +156,18 @@ class CategoryController extends Controller
 
     public function update(Request $request, Category $category): RedirectResponse
     {
+        // The name is what ties a built-in listing to the page it overrides in
+        // the admin's head, and giving one a parent would file it into the tree
+        // as though a product could BE a Bestseller. Everything else about it
+        // stays editable.
+        if ($category->is_system) {
+            $request->merge([
+                'name' => $category->name,
+                'slug' => $category->slug,
+                'parent_id' => null,
+            ]);
+        }
+
         $validated = $request->validate([
             'name' => V::text(max: 255, min: 2),
             'slug' => [...self::SLUG_RULES, Rule::unique('categories', 'slug')->ignore($category->id)],
@@ -199,6 +225,13 @@ class CategoryController extends Controller
 
     public function destroy(Category $category): RedirectResponse
     {
+        // A built-in listing is part of the storefront, not a shelf somebody
+        // added: /products, /new-arrivals, /bestsellers and /deals are wired to
+        // these rows, and deleting one would take a page with it.
+        if ($category->is_system) {
+            return back()->with('error', 'Built-in listings cannot be deleted. Untick the products in it instead, and the page goes back to working itself out.');
+        }
+
         // Move children to parent (or root)
         $category->children()->update(['parent_id' => $category->parent_id]);
 

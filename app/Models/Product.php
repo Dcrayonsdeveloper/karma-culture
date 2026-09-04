@@ -174,7 +174,13 @@ class Product extends Model
      */
     public function categories(): BelongsToMany
     {
-        return $this->belongsToMany(Category::class, 'category_product');
+        // withSystem: this is the membership pivot, and a product ticked into
+        // "Bestsellers" is stored here exactly like one shelved under "Kurtas".
+        // Leaving the global scope on would hide those rows from sync(), which
+        // then never detaches them - unticking a system row would silently do
+        // nothing.
+        return $this->belongsToMany(Category::class, 'category_product')
+            ->withoutGlobalScope('kk_real_categories');
     }
 
     /**
@@ -186,7 +192,12 @@ class Product extends Model
      */
     public function collections(): BelongsToMany
     {
-        return $this->belongsToMany(ProductCollection::class, 'collection_product', 'product_id', 'collection_id');
+        // Kept as a name for "the built-in listings this product was ticked
+        // into" now that collections are rows in `categories`. Same pivot as
+        // categories(), narrowed to the system rows.
+        return $this->belongsToMany(Category::class, 'category_product')
+            ->withoutGlobalScope('kk_real_categories')
+            ->where('categories.is_system', true);
     }
 
     /**

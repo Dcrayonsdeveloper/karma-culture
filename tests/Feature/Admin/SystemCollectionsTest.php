@@ -5,7 +5,6 @@ namespace Tests\Feature\Admin;
 use App\Models\Admin;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\ProductCollection;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -63,7 +62,7 @@ class SystemCollectionsTest extends TestCase
     public function test_the_three_built_ins_exist_as_collections(): void
     {
         foreach (['new_in' => 'New In', 'bestsellers' => 'Bestsellers', 'deals' => 'Introductory Offer'] as $handle => $name) {
-            $collection = ProductCollection::where('handle', $handle)->first();
+            $collection = Category::system()->where('handle', $handle)->first();
 
             $this->assertNotNull($collection, "The {$name} collection is missing.");
             $this->assertSame($name, $collection->name);
@@ -102,7 +101,7 @@ class SystemCollectionsTest extends TestCase
         $picked = $this->makeProduct('P-1', 'Linen Shirt');
         $this->makeProduct('P-2', 'Woollen Coat');
 
-        ProductCollection::where('handle', 'new_in')->firstOrFail()->products()->sync([$picked->id]);
+        Category::system()->where('handle', 'new_in')->firstOrFail()->shownProducts()->sync([$picked->id]);
 
         $html = $this->get(route('new-arrivals'))->assertOk()->getContent();
 
@@ -115,9 +114,9 @@ class SystemCollectionsTest extends TestCase
         $picked = $this->makeProduct('P-1', 'Linen Shirt');
         $this->makeProduct('P-2', 'Woollen Coat');
 
-        $collection = ProductCollection::where('handle', 'new_in')->firstOrFail();
-        $collection->products()->sync([$picked->id]);
-        $collection->products()->sync([]);
+        $collection = Category::system()->where('handle', 'new_in')->firstOrFail();
+        $collection->shownProducts()->sync([$picked->id]);
+        $collection->shownProducts()->sync([]);
 
         $html = $this->get(route('new-arrivals'))->assertOk()->getContent();
 
@@ -129,7 +128,7 @@ class SystemCollectionsTest extends TestCase
         $picked = $this->makeProduct('P-1', 'Linen Shirt');
         $this->makeProduct('P-2', 'Woollen Coat');
 
-        ProductCollection::where('handle', 'bestsellers')->firstOrFail()->products()->sync([$picked->id]);
+        Category::system()->where('handle', 'bestsellers')->firstOrFail()->shownProducts()->sync([$picked->id]);
 
         $html = $this->get(route('bestsellers'))->assertOk()->getContent();
 
@@ -146,7 +145,7 @@ class SystemCollectionsTest extends TestCase
         $fullPrice = $this->makeProduct('P-1', 'Linen Shirt', ['price' => 999, 'mrp' => 999]);
         $this->makeProduct('P-2', 'Woollen Coat', ['price' => 500, 'mrp' => 999]);
 
-        ProductCollection::where('handle', 'deals')->firstOrFail()->products()->sync([$fullPrice->id]);
+        Category::system()->where('handle', 'deals')->firstOrFail()->shownProducts()->sync([$fullPrice->id]);
 
         $html = $this->get(route('deals'))->assertOk()->getContent();
 
@@ -162,7 +161,7 @@ class SystemCollectionsTest extends TestCase
         $picked = $this->makeProduct('P-1', 'Linen Shirt');
         $this->makeProduct('P-2', 'Woollen Coat');
 
-        ProductCollection::where('handle', 'new_in')->firstOrFail()->products()->sync([$picked->id]);
+        Category::system()->where('handle', 'new_in')->firstOrFail()->shownProducts()->sync([$picked->id]);
 
         $html = $this->get(route('bestsellers'))->assertOk()->getContent();
 
@@ -171,12 +170,12 @@ class SystemCollectionsTest extends TestCase
 
     public function test_a_built_in_cannot_be_deleted(): void
     {
-        $collection = ProductCollection::where('handle', 'new_in')->firstOrFail();
+        $collection = Category::system()->where('handle', 'new_in')->firstOrFail();
 
         $this->actingAs($this->adminUser, 'admin')
-            ->delete(route('admin.collections.destroy', $collection));
+            ->delete(route('admin.categories.destroy', $collection));
 
-        $this->assertDatabaseHas('collections', ['handle' => 'new_in']);
+        $this->assertDatabaseHas('categories', ['handle' => 'new_in']);
     }
 
     /**
@@ -185,14 +184,13 @@ class SystemCollectionsTest extends TestCase
      */
     public function test_a_built_in_keeps_its_name_but_stays_otherwise_editable(): void
     {
-        $collection = ProductCollection::where('handle', 'new_in')->firstOrFail();
+        $collection = Category::system()->where('handle', 'new_in')->firstOrFail();
 
         $this->actingAs($this->adminUser, 'admin')
-            ->put(route('admin.collections.update', $collection), [
+            ->put(route('admin.categories.update', $collection), [
                 'name' => 'Renamed By Hand',
                 'slug' => 'renamed-by-hand',
                 'is_active' => 1,
-                'show_in_header' => 1,
                 'position' => 5,
             ])
             ->assertSessionHasNoErrors();
@@ -201,8 +199,7 @@ class SystemCollectionsTest extends TestCase
 
         $this->assertSame('New In', $collection->name, 'A built-in was renamed out from under the header.');
         $this->assertSame('new-in', $collection->slug);
-        $this->assertTrue($collection->show_in_header, 'The rest of the row stopped being editable.');
-        $this->assertSame(5, $collection->position);
+        $this->assertSame(5, $collection->position, 'The rest of the row stopped being editable.');
     }
 
     /**
@@ -212,7 +209,7 @@ class SystemCollectionsTest extends TestCase
     public function test_a_deactivated_pick_drops_out(): void
     {
         $picked = $this->makeProduct('P-1', 'Linen Shirt');
-        ProductCollection::where('handle', 'new_in')->firstOrFail()->products()->sync([$picked->id]);
+        Category::system()->where('handle', 'new_in')->firstOrFail()->shownProducts()->sync([$picked->id]);
 
         $picked->update(['is_active' => false]);
 
