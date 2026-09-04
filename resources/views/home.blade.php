@@ -418,14 +418,21 @@
 
             @media (max-width: 1024px) {
                 .kk-syw-heading { font-size: 36px; }
+                /* The pills give up their fixed 170px here rather than at 767px.
+                   A fourth tab took the row past the width it is given: between
+                   768px and 1023px the container hands this section 736px, and
+                   four desktop-sized pills ask for roughly 785px, so the longest
+                   eyebrow ("Perfectly Portioned") broke onto a second line and
+                   pushed its own title a line below the other three. Sharing the
+                   row out equally puts every eyebrow back on one line. */
+                .kk-syw-tab { padding: 10px 16px; min-width: 0; flex: 1 1 0; }
+                .kk-syw-tab small { font-size: 8px; letter-spacing: 0.22em; }
+                .kk-syw-tab span { font-size: 14px; }
             }
             @media (max-width: 767px) {
                 .kk-shop-your-way { padding: 16px 0 20px; }
                 .kk-syw-heading { font-size: 28px; }
                 .kk-syw-tabs { padding: 4px; gap: 2px; margin-top: 24px; max-width: 100%; }
-                .kk-syw-tab { padding: 10px 16px; min-width: 0; flex: 1 1 0; }
-                .kk-syw-tab small { font-size: 8px; letter-spacing: 0.22em; }
-                .kk-syw-tab span { font-size: 14px; }
                 .kk-syw-stage { margin-top: 36px; }
                 .kk-rail-wrap { --kk-rail-pad: 12px; }
             }
@@ -1550,7 +1557,7 @@
                                     last = now;
 
                                     if (!this.paused) {
-                                        x -= 90 * dt;
+                                        x -= 45 * dt;
 
                                         const first = lead();
                                         if (-x >= first) {
@@ -1588,13 +1595,19 @@
              SHOP IT YOUR WAY - Rail of hangers per tab
              ============================================ --}}
         @php
-            // Filter items come from admin (ShopFilterItem model). Normalise each
-            // group into the {label, shade, q} shape the markup expects.
+            // Hangers are derived from the live catalogue by ShopFilterCatalogue,
+            // with the values an admin has hidden already taken out. Nothing is
+            // typed into a filter table any more, so a hanger can no longer be a
+            // dead end: every label on a rail is one some active product actually
+            // carries, and the last product carrying it takes it off the rail.
+            // Normalise each group into the {label, shade, q} shape the markup
+            // expects.
             $shopFilters = $shopFilters ?? collect();
             $kkTabs = [
-                'size'  => ['eyebrow' => 'Find Your Fit',       'title' => 'Size',  'items' => []],
-                'price' => ['eyebrow' => 'Perfectly Portioned', 'title' => 'Price', 'items' => []],
-                'shade' => ['eyebrow' => 'The Dye Lab',         'title' => 'Shade', 'items' => []],
+                'size'    => ['eyebrow' => 'Find Your Fit',       'title' => 'Size',    'items' => []],
+                'price'   => ['eyebrow' => 'Perfectly Portioned', 'title' => 'Price',   'items' => []],
+                'shade'   => ['eyebrow' => 'The Dye Lab',         'title' => 'Shade',   'items' => []],
+                'texture' => ['eyebrow' => 'The Touch Test',      'title' => 'Texture', 'items' => []],
             ];
             foreach ($kkTabs as $key => $_) {
                 foreach (($shopFilters[$key] ?? collect()) as $row) {
@@ -1622,7 +1635,7 @@
             <div class="container mx-auto px-4 text-center">
                 <span class="kk-eyebrow">Curate The Edit</span>
                 <h2 class="kk-syw-heading">Shop It Your <em>Way</em></h2>
-                <p class="kk-syw-sub">Pick a size off the rail - every cut is tailored for a flattering drape.</p>
+                <p class="kk-syw-sub">Take any hanger off the rail and the shop opens on everything that matches it.</p>
 
                 <div class="kk-syw-tabs">
                     @foreach($kkTabs as $tabKey => $tabCfg)

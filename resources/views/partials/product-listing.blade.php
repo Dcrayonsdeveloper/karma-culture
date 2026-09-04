@@ -19,7 +19,7 @@
     // page passes owns_category => false, so ?category= never reaches its query
     // and must not be read as the shopper having narrowed anything.
     $kkNarrowed = ($kkV['category'] !== null && $filterPanel['categories']->isNotEmpty())
-        || $kkV['brand'] || $kkV['size'] || $kkV['colour']
+        || $kkV['brand'] || $kkV['size'] || $kkV['colour'] || $kkV['texture']
         || $kkV['min_price'] !== null || $kkV['max_price'] !== null || $kkV['rating'] !== null
         || $kkV['in_stock'] || $kkV['on_sale'] || $kkV['subcategory'];
     $kkEmpty = $filterPanel['empty'] ?? [];

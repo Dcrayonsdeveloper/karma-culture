@@ -81,4 +81,39 @@ class ProductApiTest extends TestCase
 
         $response->assertStatus(404);
     }
+
+    /**
+     * A wrong-way-round pair is answered as asked, not swapped into one that
+     * works. `price >= 1500 AND price <= 500` matches nothing, and nothing is
+     * what comes back - the shop says so in words under its two boxes, but an
+     * endpoint has none, and guessing at the caller's meaning would answer a
+     * question they did not ask.
+     */
+    public function test_a_backwards_price_range_is_answered_as_asked(): void
+    {
+        $this->getJson('/api/v1/products?min_price=1500&max_price=500')
+            ->assertStatus(200)
+            ->assertJsonCount(0, 'data');
+    }
+
+    /** And the same pair the right way round still finds the product. */
+    public function test_a_valid_price_range_still_filters(): void
+    {
+        $response = $this->getJson('/api/v1/products?min_price=500&max_price=1500');
+
+        $response->assertStatus(200);
+        $this->assertSame(['Building Blocks'], array_column($response->json('data'), 'name'));
+    }
+
+    /**
+     * A bound that is not a number is not a bound. `?max_price=` compared price
+     * against the empty string and `?min_price[]=1` handed an array to the query
+     * builder, which 500'd the endpoint.
+     */
+    public function test_a_price_bound_that_is_not_a_number_is_ignored(): void
+    {
+        $this->getJson('/api/v1/products?min_price[]=1&max_price=')
+            ->assertStatus(200)
+            ->assertJsonCount(1, 'data');
+    }
 }

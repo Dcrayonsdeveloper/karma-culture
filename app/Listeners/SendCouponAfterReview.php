@@ -32,11 +32,11 @@ class SendCouponAfterReview implements ShouldQueue
         // The reward thanks someone who bought the thing; it is not a prize for
         // typing.
         //
-        // This listener runs from Review::created for EVERY review - approved or
-        // not, guest or not - and mints a live, immediately usable percentage
-        // coupon with no minimum order. A visitor posting a guest review got
-        // one, and there is a product to review for each of them, so anyone
-        // could mint working discount codes for as long as they cared to type.
+        // This closes the hole the $alreadyRewarded guard could not reach. That
+        // guard only bites once an address has a review_invitations row to be
+        // marked against, and a guest reviewer never has one - so a visitor
+        // could still mint a live, immediately usable percentage coupon with no
+        // minimum order, once per product, for as long as they cared to type.
         // is_verified_purchase is false for every guest and true only when the
         // reviewer actually bought that product, which is the line this reward
         // was always meant to sit behind.
@@ -44,12 +44,17 @@ class SendCouponAfterReview implements ShouldQueue
             return;
         }
 
-        // Whether this address has already been rewarded.
+        // One reward per address. This query was already here, assigned to
+        // $alreadyRewarded, and then never read - so the guard existed in every
+        // sense except the one that counts. Every review a customer wrote minted
+        // another single-use percentage coupon and mailed it to them, which is a
+        // discount generator with a review form in front of it. Nobody noticed
+        // because the mail went out over a `log` mailer; it is a real coupon in
+        // a real inbox now.
         //
-        // This was computed and then never consulted, so a customer reviewing a
-        // second delivered order was issued a second coupon, and a third for a
-        // third. One reward per address is what the query says; now it is also
-        // what happens.
+        // The query is per address, while the comment above it always claimed
+        // "for this product" - the author's own query is what runs here rather
+        // than a rule invented after the fact.
         $alreadyRewarded = DB::table('review_invitations')
             ->where('email', $email)
             ->whereNotNull('coupon_id')

@@ -24,18 +24,24 @@ use Illuminate\Support\Str;
  *    a free-text Size attribute on older products;
  *  - colours come from the product-level Colours attribute, falling back to the
  *    Colour recorded on the variant rows.
+ *
+ * Textures are the same kind of product-level list as colours, but plain names
+ * with no swatch, and they have no fallback: nothing has ever written a texture
+ * onto a variant row, so there is no older shape to read.
  */
 final class ProductOptions
 {
     /**
      * @param  Collection<int, string>  $sizes
      * @param  Collection<int, array{name: string, hex: ?string}>  $colours
+     * @param  Collection<int, string>  $textures
      * @param  Collection<string, int>  $sizeVariants  size label => variant id
      * @param  Collection<int, ProductVariant>  $rows
      */
     private function __construct(
         public readonly Collection $sizes,
         public readonly Collection $colours,
+        public readonly Collection $textures,
         public readonly Collection $sizeVariants,
         public readonly Collection $rows,
     ) {}
@@ -76,6 +82,15 @@ final class ProductOptions
                 ->filter(fn ($c) => $c['name'] !== '');
         }
 
+        // Textures read through the catalogue's own list reader, so the shop
+        // rail and the cart cannot come to different conclusions about what a
+        // product offers - and so a hand-edited {name: ...} entry is still
+        // understood.
+        $textures = collect(ShopFilterCatalogue::listFrom($product->attributes, ShopFilterCatalogue::TEXTURES_KEY))
+            ->map(fn (array $entry) => $entry[0])
+            ->unique()
+            ->values();
+
         // reverse() so the FIRST row wins a duplicated size label: mapWithKeys
         // keeps the last write, and the page has always pointed a repeated size
         // at the row nearest the top of the admin list.
@@ -86,6 +101,7 @@ final class ProductOptions
         return new self(
             $sizes,
             $colours->unique('name')->values(),
+            $textures,
             $sizeVariants,
             $rows,
         );
@@ -111,6 +127,11 @@ final class ProductOptions
     public function offersColour(string $chosen): bool
     {
         return self::contains($this->colourNames(), $chosen);
+    }
+
+    public function offersTexture(string $chosen): bool
+    {
+        return self::contains($this->textures, $chosen);
     }
 
     /**

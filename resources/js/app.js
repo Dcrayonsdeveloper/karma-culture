@@ -213,7 +213,13 @@ Alpine.store('cart', {
     // the recommendations request that normally confirm it. Buy Now needs that:
     // it is about to navigate to checkout, so opening the drawer only flashes it
     // on screen for a frame. Returns whether the item actually made it in.
-    async add(productId, quantity = 1, variantId = null, size = null, colour = null, { reveal = true } = {}) {
+    //
+    // Texture rides in that same options object rather than becoming a sixth
+    // positional argument, because buyNow() in products/show.blade.php already
+    // passes `{ reveal: false }` in that slot: a positional texture would take the
+    // options object itself as the texture string and lose the quiet add along
+    // with it, and nothing would throw to say so.
+    async add(productId, quantity = 1, variantId = null, size = null, colour = null, { reveal = true, texture = null } = {}) {
         // A cart takes an account. Sent to the login page from here rather than
         // after a round trip, so the customer is not told "added" by a toast and
         // then handed an empty cart, and so the page they were shopping on is
@@ -227,7 +233,8 @@ Alpine.store('cart', {
                 variant_id: variantId,
                 quantity: quantity,
                 size: size,
-                colour: colour
+                colour: colour,
+                texture: texture
             });
             // Update count immediately from response
             if (response.data.cart_count !== undefined) {

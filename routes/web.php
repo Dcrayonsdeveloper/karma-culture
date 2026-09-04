@@ -155,6 +155,25 @@ Route::prefix('cart')->name('cart.')->group(function () {
     // literal route being swallowed the same way.
     Route::get('/data', [App\Http\Controllers\CartController::class, 'data'])->name('data');
     Route::get('/recommendations', [App\Http\Controllers\CartController::class, 'recommendations'])->name('recommendations');
+
+    // Reopening an abandoned cart from the link in a recovery email. Open to
+    // guests because the whole point is a customer whose session has expired;
+    // the controller re-checks ownership before it binds anything. Throttled
+    // because the 64-character token in the URL is the only credential, and an
+    // unthrottled route would be a free oracle for guessing one.
+    //
+    // The route sends X-Robots-Tag itself rather than relying on robots.txt.
+    // The Disallow list in the dynamic /robots.txt route below does name /cart,
+    // but production serves a STATIC public_html/robots.txt that overrides it
+    // and allows everything, so that cover does not actually exist. (Token
+    // leakage through the Referer header is separately handled: SecurityHeaders
+    // sets Referrer-Policy: strict-origin-when-cross-origin, so a third party
+    // never sees the path.)
+    Route::get('/recover/{token}', App\Http\Controllers\CartRecoveryController::class)
+        ->middleware('throttle:10,1')
+        ->where('token', '[A-Za-z0-9]{64}')
+        ->name('recover');
+
     Route::get('/', [App\Http\Controllers\CartController::class, 'index'])->name('index');
 
     // Putting something in a cart takes an account. The store owner asked for
@@ -257,7 +276,17 @@ Route::middleware('auth')->group(function () {
     // Email Verification
     Route::get('/email/verify', [App\Http\Controllers\Auth\VerificationController::class, 'show'])->name('verification.notice');
     Route::get('/email/verify/{id}/{hash}', [App\Http\Controllers\Auth\VerificationController::class, 'verify'])->middleware('signed')->name('verification.verify');
-    Route::post('/email/resend', [App\Http\Controllers\Auth\VerificationController::class, 'resend'])->name('verification.resend');
+    // Throttled, because every hit sends a real message. The shop authenticates
+    // to Gmail with one app password and one daily send quota, and this is the
+    // only mail route a signed-in visitor can fire at will: unmetered, a script
+    // posting here in a loop spends the whole quota, and then nothing else the
+    // shop sends leaves the server - order confirmations and password resets
+    // included. Six an hour is far more than a customer waiting on a link needs
+    // and far less than a quota costs. The forgot-password form is already
+    // metered this way; this route was the gap.
+    Route::post('/email/resend', [App\Http\Controllers\Auth\VerificationController::class, 'resend'])
+        ->middleware('throttle:6,60')
+        ->name('verification.resend');
 
     // Account Routes
     Route::prefix('account')->name('account.')->group(function () {

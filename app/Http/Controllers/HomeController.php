@@ -9,7 +9,7 @@ use App\Models\HomepageSection;
 use App\Models\Product;
 use App\Models\Quality;
 use App\Models\Setting;
-use App\Models\ShopFilterItem;
+use App\Support\ShopFilterCatalogue;
 use Illuminate\View\View;
 
 class HomeController extends Controller
@@ -107,15 +107,14 @@ class HomeController extends Controller
             ->withCount('products')
             ->first();
 
-        // Shop It Your Way filter items grouped by type (size|price|shade).
-        // Every active hanger is hung, whether or not the listing behind it
-        // has anything on it today. Hiding the empty ones took the whole
-        // Shade tab off the live storefront - six hangers, all naming colours
-        // the catalogue does not carry - and a rail the admin curated
-        // disappearing without being edited is worse than a rail that opens
-        // an empty listing. The count still shows against every row in
-        // Homepage > Shop Filters, which is where a dead hanger gets fixed.
-        $shopFilters = ShopFilterItem::active()->ordered()->get()->groupBy('type');
+        // Shop It Your Way rails, worked out from the catalogue rather than
+        // from a list an admin retyped: Size off the variants, Shade and
+        // Texture off each product's own lists, Price off the live spread. A
+        // hanger can no longer be a dead end, because a value only exists here
+        // while a product carries it - which is what the old screen printed a
+        // "0 - hidden" badge to warn about. Values the admin has hidden on
+        // Homepage > Shop Filters are already taken out.
+        $shopFilters = collect(ShopFilterCatalogue::groups());
 
         // Our Qualities cards
         $qualities = Quality::active()->ordered()->get();

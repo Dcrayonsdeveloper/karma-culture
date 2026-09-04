@@ -57,7 +57,7 @@
     // change nothing. One flag keeps the chip row honest about what is running.
     $kkOwnsCategory = $filterPanel['categories']->isNotEmpty();
     $kkShowCategory = $kkOwnsCategory && $kkV['category'] !== null;
-    $kkHasAny = $kkShowCategory || $kkV['subcategory'] || $kkV['brand'] || $kkV['size'] || $kkV['colour']
+    $kkHasAny = $kkShowCategory || $kkV['subcategory'] || $kkV['brand'] || $kkV['size'] || $kkV['colour'] || $kkV['texture']
         || $kkV['min_price'] !== null || $kkV['max_price'] !== null || $kkV['rating'] !== null
         || $kkV['in_stock'] || $kkV['on_sale'];
 @endphp
@@ -97,6 +97,16 @@
         @foreach($kkV['colour'] as $kkColour)
             <a href="{{ $kkWithout('colour', $kkColour) }}" class="{{ $kkChip }} hover:bg-[#6F9CA2]/10 transition-colors">
                 {{ $kkColour }}
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </a>
+        @endforeach
+
+        {{-- Labelled, unlike the colour chip above it: "Matte" sitting beside
+             "Indigo" says nothing about which facet it came from, and the two
+             crosses look identical. --}}
+        @foreach($kkV['texture'] as $kkTexture)
+            <a href="{{ $kkWithout('texture', $kkTexture) }}" class="{{ $kkChip }} hover:bg-[#6F9CA2]/10 transition-colors">
+                Texture: {{ $kkTexture }}
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </a>
         @endforeach

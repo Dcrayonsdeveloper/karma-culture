@@ -54,8 +54,28 @@
                             </div>
                             @php
                                 $kkDefaultAddr = $addresses->firstWhere('is_default', true)?->id ?? $addresses->first()?->id;
+                                // The contact number is asked for the ORDER, not for the account,
+                                // so the box below starts from whichever address is selected and
+                                // is editable from there. These feed the Alpine state.
+                                $kkAddrPhones  = $addresses->pluck('phone', 'id');
+                                $kkStartAddr   = old('address_id', $addresses->isNotEmpty() ? $kkDefaultAddr : '');
+                                $kkStartPhone  = old('phone', $kkAddrPhones->get($kkStartAddr) ?? $prefill?->phone ?? '');
                             @endphp
-                            <div class="p-4 space-y-3" x-data="{ addrId: '{{ old('address_id', $addresses->isNotEmpty() ? $kkDefaultAddr : '') }}' }">
+                            <div class="p-4 space-y-3"
+                                 x-data="{
+                                    addrId: '{{ $kkStartAddr }}',
+                                    phone: @js($kkStartPhone),
+                                    addrPhones: @js($kkAddrPhones),
+                                    accountPhone: @js($prefill?->phone ?? ''),
+                                    /* Picking a different address offers that address's number as
+                                       the starting point; the customer can still type over it, and
+                                       whatever is in the box when they submit is the number the
+                                       order is delivered on. */
+                                    syncPhone() {
+                                        const next = this.addrId === '' ? this.accountPhone : this.addrPhones[this.addrId];
+                                        this.phone = next || this.phone;
+                                    }
+                                 }">
                                 @if($addresses->isNotEmpty())
                                     {{-- Saved addresses, so a returning customer does not retype
                                          details the account already holds. --}}
@@ -63,7 +83,7 @@
                                         @foreach($addresses as $kkAddr)
                                             <label class="flex items-start gap-3 border rounded-lg px-4 py-3 cursor-pointer transition-colors"
                                                    :class="addrId === '{{ $kkAddr->id }}' ? 'border-primary-500 ring-1 ring-primary-200 bg-primary-50' : 'border-neutral-200 hover:border-neutral-300'">
-                                                <input type="radio" name="address_id" value="{{ $kkAddr->id }}" x-model="addrId" class="mt-1 accent-primary-600">
+                                                <input type="radio" name="address_id" value="{{ $kkAddr->id }}" x-model="addrId" @change="syncPhone()" class="mt-1 accent-primary-600">
                                                 {{-- overflow-wrap:anywhere, and it inherits, so all three lines
                                                      below are covered by the one declaration. min-w-0 alone is not
                                                      enough: a label or street line saved as one unbroken string has
@@ -84,7 +104,7 @@
                                         @endforeach
                                         <label class="flex items-center gap-3 border rounded-lg px-4 py-3 cursor-pointer transition-colors"
                                                :class="addrId === '' ? 'border-primary-500 ring-1 ring-primary-200 bg-primary-50' : 'border-neutral-200 hover:border-neutral-300'">
-                                            <input type="radio" name="address_id" value="" x-model="addrId" class="accent-primary-600">
+                                            <input type="radio" name="address_id" value="" x-model="addrId" @change="syncPhone()" class="accent-primary-600">
                                             <span class="text-sm font-semibold text-neutral-900">Use a new address</span>
                                         </label>
                                     </div>
@@ -112,8 +132,37 @@
                                     </p>
                                 </div>
 
+                                {{-- The number this order is delivered on. It used to sit inside
+                                     the new-address form below, so choosing a saved address meant
+                                     the order silently carried whatever number that address (or
+                                     the account behind it) was saved with, and there was no way
+                                     to say "call this number for this delivery" - an order sent
+                                     to a parent's house, or placed from a phone the customer is
+                                     not carrying today, had no number the shop could ring.
+                                     Outside the form it is always shown and always submitted, and
+                                     process() writes it onto the order's address snapshot: what
+                                     is in this box is what the shop and the courier call.
+                                     Editing it changes this order only - the saved address and
+                                     the account's own number are left alone. --}}
+                                <div>
+                                    <label for="kk-co-phone" class="block text-[11px] font-medium text-neutral-600 mb-1">Phone for this order *</label>
+                                    {{-- maxlength was 10, which made the box reject the
+                                         "+91 98765 43210" form the server happily accepts.
+                                         The pattern tolerates exactly what IndianMobile
+                                         strips before testing the ten digits. --}}
+                                    <input type="tel" name="phone" id="kk-co-phone" x-model="phone"
+                                           required maxlength="20" inputmode="numeric" autocomplete="tel"
+                                           pattern="(\+?91[\s\-]?)?0?[6-9][0-9\s\-]{9,}"
+                                           title="Enter a 10-digit Indian mobile number starting with 6, 7, 8 or 9."
+                                           class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
+                                           placeholder="10-digit mobile number">
+                                    <p class="mt-1 text-[11px] text-neutral-500">
+                                        We and the delivery partner will call this number about this order.
+                                    </p>
+                                    @error('phone')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
+                                </div>
+
                                 <div x-show="addrId === ''" x-cloak class="space-y-3">
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
                                         <label for="kk-co-name" class="block text-[11px] font-medium text-neutral-600 mb-1">Full Name *</label>
                                         {{-- Length was the only thing this box asked for, so
@@ -130,22 +179,6 @@
                                                placeholder="Full name" :required="addrId === ''" :disabled="addrId !== ''">
                                         @error('full_name')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
                                     </div>
-                                    <div>
-                                        <label for="kk-co-phone" class="block text-[11px] font-medium text-neutral-600 mb-1">Phone *</label>
-                                        {{-- maxlength was 10, which made the box reject the
-                                             "+91 98765 43210" form the server happily accepts.
-                                             The pattern tolerates exactly what IndianMobile
-                                             strips before testing the ten digits. --}}
-                                        <input type="tel" name="phone" id="kk-co-phone" value="{{ old('phone') }}"
-                                               maxlength="20" inputmode="numeric" autocomplete="tel"
-                                               pattern="(\+?91[\s\-]?)?0?[6-9][0-9\s\-]{9,}"
-                                               title="Enter a 10-digit Indian mobile number starting with 6, 7, 8 or 9."
-                                               class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
-                                               placeholder="10-digit mobile number" :required="addrId === ''" :disabled="addrId !== ''">
-                                        @error('phone')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
-                                    </div>
-                                </div>
-
 
                                 <div>
                                     <label for="kk-co-addr1" class="block text-[11px] font-medium text-neutral-600 mb-1">Address Line 1 *</label>
@@ -313,8 +346,8 @@
                                             </div>
                                             <div class="flex-1 min-w-0">
                                                 <p class="text-[13px] font-medium text-neutral-800 line-clamp-1">{{ $item->product->name }}</p>
-                                                @if($item->size || $item->colour)
-                                                    <p class="text-[11px] text-neutral-600 mt-0.5">{{ collect([$item->size ? 'Size: ' . $item->size : null, $item->colour ? 'Colour: ' . $item->colour : null])->filter()->join(' · ') }}</p>
+                                                @if($item->size || $item->colour || $item->texture)
+                                                    <p class="text-[11px] text-neutral-600 mt-0.5">{{ collect([$item->size ? 'Size: ' . $item->size : null, $item->colour ? 'Colour: ' . $item->colour : null, $item->texture ? 'Texture: ' . $item->texture : null])->filter()->join(' · ') }}</p>
                                                 @endif
                                                 <div class="flex items-center justify-between mt-0.5">
                                                     <span class="text-[11px] text-neutral-600">Qty: {{ $item->quantity }}</span>

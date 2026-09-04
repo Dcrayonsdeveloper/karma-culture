@@ -7,9 +7,16 @@ use App\Models\ShopFilterItem;
 use Illuminate\Database\Seeder;
 
 /**
- * Seeds the default "Shop It Your Way" filter rails (Size / Price / Shade)
- * and the six "Our Qualities" cards. Idempotent - re-running just no-ops on
- * existing rows (matched by type + label / by title).
+ * Seeds the six "Our Qualities" cards, and the legacy "Shop It Your Way"
+ * filter rows. Idempotent - re-running just no-ops on existing rows (matched by
+ * type + label / by title).
+ *
+ * The filter rows no longer reach the storefront: the rails are derived from
+ * the catalogue by {@see \App\Support\ShopFilterCatalogue}, so a size only
+ * appears on the home page while a product is actually sold in it. They are
+ * still seeded because SeedTestCloneProducts reads the labels as a palette when
+ * it generates demo products, and because dropping them from a seeder that has
+ * already run on production would not remove them anyway.
  */
 class KarmaaHomepageSeeder extends Seeder
 {

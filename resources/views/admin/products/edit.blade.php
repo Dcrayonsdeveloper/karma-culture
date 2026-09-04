@@ -552,6 +552,69 @@
                         }
                     </script>
 
+                    <!-- Textures -->
+                    @php
+                        // Textures live on the product, not on a size row, exactly as the
+                        // colours above do - a texture is offered in every size the product
+                        // ships in. The textures the admin just typed when a save bounced
+                        // back, otherwise the ones on the product. A texture is a name and
+                        // nothing else, so there is no swatch to carry back; an entry is
+                        // tolerated in map form too, since hand-edited JSON has been found
+                        // written that way.
+                        $kkTextureRows = collect(old('textures', data_get($product->attributes, 'Textures', [])))
+                            ->map(fn ($t) => is_array($t) ? (string) ($t['name'] ?? '') : (string) $t)
+                            ->values();
+                        // @error cannot name an indexed key like "textures.0", so the row
+                        // messages are lifted out of the bag by hand and shown together.
+                        $kkTextureErrors = collect($errors->getMessages())
+                            ->filter(fn ($messages, $key) => $key === 'textures' || str_starts_with($key, 'textures.'))
+                            ->flatten();
+                    @endphp
+                    <div class="card p-5" x-data="kkTextures()">
+                        <div class="flex items-center justify-between mb-1">
+                            <h2 class="text-[13px] font-semibold" style="color: #303030;">Textures</h2>
+                            <button type="button" @click="add()" class="btn btn-secondary" style="font-size:12px; padding:4px 10px;">+ Add texture</button>
+                        </div>
+                        <p class="text-xs mb-4" style="color: #616161;">Optional - a texture is a name on its own, with no swatch to pick. They show on the product page under the colours, and become a filter on the shop.</p>
+
+                        @if($kkTextureErrors->isNotEmpty())
+                            <div class="mb-3">
+                                @foreach($kkTextureErrors as $kkTextureError)
+                                    <p class="form-error">{{ $kkTextureError }}</p>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        <p class="text-xs" style="color:#616161; padding:6px 0;" x-show="rows.length === 0" x-cloak>No textures - click &ldquo;Add texture&rdquo; to offer one.</p>
+
+                        <div x-show="rows.length > 0" x-cloak style="display:flex;flex-direction:column;gap:8px;">
+                            <template x-for="(t, i) in rows" :key="t.uid">
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <input type="text" x-bind:name="'textures[' + i + ']'" x-model="t.name" placeholder="Matte"
+                                           maxlength="60" aria-label="Texture name"
+                                           style="flex:1 1 auto;max-width:240px;font-size:13px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.4rem .6rem;">
+                                    <button type="button" @click="rows.splice(i, 1)" title="Remove" class="btn-icon"
+                                            style="color:#d72c0d;background:none;border:0;cursor:pointer;font-size:16px;line-height:1;">&times;</button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    <script>
+                        function kkTextures() {
+                            return {
+                                seq: 0,
+                                rows: [],
+                                init() {
+                                    // uid, not the index, keys the x-for: removing a middle row
+                                    // otherwise renumbers the rest and Alpine reuses the wrong
+                                    // input for them.
+                                    this.rows = (@json($kkTextureRows)).map(name => ({ uid: ++this.seq, name }));
+                                },
+                                add() { this.rows.push({ uid: ++this.seq, name: '' }); },
+                            };
+                        }
+                    </script>
+
 
                     {{-- A+ Content (Amazon-style banner images) - replaces the old Feature Highlights --}}
                     @include('admin.products.partials.aplus-content')

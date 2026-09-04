@@ -268,13 +268,23 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /**
      * Get default section permissions for a staff role.
+     *
+     * Only consulted for staff whose `permissions` column is empty - a
+     * populated array is a total override, not a merge. Adding a section here
+     * therefore reaches new staff and staff still on role defaults, but an
+     * existing member with custom permissions has to be re-saved with the new
+     * box ticked before they can see it.
+     *
+     * `abandoned_carts` goes to manager and support: they are the people who
+     * chase a basket back. Warehouse and cashier hold `orders` for fulfilment
+     * and till work and have no reason to read customer contact details.
      */
     public static function getDefaultStaffPermissions(string $role): array
     {
         return match ($role) {
-            'manager' => ['dashboard', 'orders', 'catalog', 'customers', 'marketing', 'content', 'reports'],
+            'manager' => ['dashboard', 'orders', 'abandoned_carts', 'catalog', 'customers', 'marketing', 'content', 'reports'],
             'cashier' => ['dashboard', 'orders', 'customers'],
-            'support' => ['dashboard', 'orders', 'customers', 'content'],
+            'support' => ['dashboard', 'orders', 'abandoned_carts', 'customers', 'content'],
             'warehouse' => ['dashboard', 'catalog', 'orders'],
             default => ['dashboard'],
         };
@@ -286,7 +296,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function getAccessibleSections(): array
     {
         if ($this->isAdmin()) {
-            return ['dashboard', 'orders', 'catalog', 'customers', 'staff', 'marketing', 'storefront', 'content', 'reports', 'settings'];
+            return ['dashboard', 'orders', 'abandoned_carts', 'catalog', 'customers', 'staff', 'marketing', 'storefront', 'content', 'reports', 'settings'];
         }
 
         if ($this->isStaff()) {

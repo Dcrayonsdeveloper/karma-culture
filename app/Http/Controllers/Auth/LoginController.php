@@ -157,15 +157,19 @@ class LoginController extends Controller
         );
 
         // Move guest items into user cart. A cart line is identified by product
-        // + variant + size + colour everywhere else; matching on only the first
-        // two collapsed "Blue / M" and "Red / L" of the same product into one
-        // line and silently lost the guest's selection.
+        // + variant + size + colour + texture everywhere else; matching on only
+        // the first two collapsed "Blue / M" and "Red / L" of the same product
+        // into one line and silently lost the guest's selection. Leaving texture
+        // out is worse still: the no-match branch below MOVES the guest row into
+        // the user cart, so a texture the user already holds in that size and
+        // colour breaks cart_items_line_texture_unique and 500s the sign-in.
         foreach ($guestCart->items as $item) {
             $existing = $userCart->items()
                 ->where('product_id', $item->product_id)
                 ->where('variant_id', $item->variant_id)
                 ->where('size', $item->size)
                 ->where('colour', $item->colour)
+                ->where('texture', $item->texture)
                 ->first();
 
             if ($existing) {
@@ -185,11 +189,49 @@ class LoginController extends Controller
 
     public function logout(Request $request): RedirectResponse
     {
-        Auth::logout();
+        // Named rather than left to the default guard, so it reads the same way
+        // as the line below it and cannot drift if the default ever changes.
+        Auth::guard('web')->logout();
 
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        $this->endSessionKeeping($request, 'admin');
 
         return redirect('/');
     }
+
+    /**
+     * Sign this guard out without taking the other one with it.
+     *
+     * One session cookie carries both guards: config/auth.php gives `admin` and
+     * `web` the same users provider, and Laravel keeps each guard's login state
+     * under its own `login_<guard>_<hash>` key in the one session. Throwing the
+     * whole session away therefore signed out whoever was working in the other
+     * tab as well - a shopper logging out took the admin panel down with them,
+     * notification polling and all, and an admin logging out emptied a
+     * shopper's session mid-checkout.
+     *
+     * Everything else still goes. This is invalidate() - flush plus a new
+     * session id, so nothing the departing side left behind can be read by
+     * whoever uses the browser next - with only the other guard's own login
+     * keys carried across into the fresh session.
+     */
+    private function endSessionKeeping(Request $request, string $guard): void
+    {
+        $prefix = 'login_'.$guard.'_';
+
+        $keep = [];
+        foreach ($request->session()->all() as $key => $value) {
+            if (str_starts_with($key, $prefix)) {
+                $keep[$key] = $value;
+            }
+        }
+
+        $request->session()->invalidate();
+
+        foreach ($keep as $key => $value) {
+            $request->session()->put($key, $value);
+        }
+
+        $request->session()->regenerateToken();
+    }
+
 }

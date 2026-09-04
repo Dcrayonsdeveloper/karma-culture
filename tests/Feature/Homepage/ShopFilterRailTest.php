@@ -2,21 +2,56 @@
 
 namespace Tests\Feature\Homepage;
 
-use App\Models\ShopFilterItem;
+use App\Models\Category;
+use App\Models\Product;
+use App\Models\ProductVariant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
+/**
+ * The rail's layout, now that its hangers come from the catalogue.
+ *
+ * These are the same geometry assertions as before - the rail sizes itself to
+ * what it holds, a long list scrolls rather than wrapping, an empty tab draws
+ * no bar - but the fixture underneath them has changed. Hangers used to be rows
+ * an admin typed into `shop_filter_items`; they are derived from the products
+ * now, so the way to put seven hangers on the rail is to sell seven sizes.
+ */
 class ShopFilterRailTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * One product carrying the given sizes, which is what puts them on the Size
+     * rail. It lists no colours and no textures and there is only one price, so
+     * the other three tabs have nothing to show and the assertions below are
+     * about the Size rail alone.
+     *
+     * @param  array<int, string>  $labels
+     */
     private function seedSizes(array $labels): void
     {
+        $category = Category::create(['name' => 'Men', 'slug' => 'men', 'is_active' => true]);
+
+        $product = Product::create([
+            'name' => 'Oxford Shirt',
+            'slug' => 'oxford-shirt',
+            'sku' => 'OXFORD',
+            'price' => 799,
+            'mrp' => 999,
+            'stock_quantity' => 20,
+            'category_id' => $category->id,
+            'status' => 'approved',
+            'is_active' => true,
+        ]);
+
         foreach ($labels as $i => $label) {
-            ShopFilterItem::create([
-                'type' => 'size',
-                'label' => $label,
-                'position' => $i,
+            ProductVariant::create([
+                'product_id' => $product->id,
+                'name' => $label,
+                'sku' => 'OXFORD-'.$i,
+                'price' => 799,
+                'stock_quantity' => 5,
                 'is_active' => true,
             ]);
         }
@@ -56,20 +91,16 @@ class ShopFilterRailTest extends TestCase
             ->assertSee('kk-rail-scroll', false);
     }
 
-    public function test_a_sub_label_left_behind_in_the_database_is_not_printed(): void
+    public function test_a_hanger_carries_a_label_and_nothing_under_it(): void
     {
-        // The hangers carry a label and nothing else now. The column outlived
-        // the field that fed it - every live row still holds whatever an admin
-        // last typed there - so the rail has to ignore it rather than merely
-        // stop offering it. query()->update writes straight past $fillable,
-        // which no longer lists the column.
+        // The hangers used to print a sub-label an admin typed ("120 Styles"),
+        // a number nobody kept up to date. A derived hanger has no such field at
+        // all, so the rail must still draw the label on its own.
         $this->seedSizes(['S']);
-        ShopFilterItem::query()->update(['sub_label' => '10 Styles']);
 
         $this->get('/')
             ->assertOk()
             ->assertSee('>S<', false)
-            ->assertDontSee('10 Styles')
             ->assertDontSee('class="kk-rail-count"', false);
     }
 
@@ -88,12 +119,22 @@ class ShopFilterRailTest extends TestCase
 
     public function test_an_emptied_tab_does_not_leave_a_bare_rail_hanging(): void
     {
-        // Price and shade have no rows at all here, so their panels must not
+        // Three of the four tabs have nothing at all here, and none of them may
         // render the bar on its own with nothing hooked over it.
         $this->seedSizes(['S', 'M']);
 
         $html = $this->get('/')->assertOk()->getContent();
 
         $this->assertSame(1, substr_count($html, 'kk-rail-bar"'));
+    }
+
+    public function test_a_shop_with_nothing_in_it_draws_no_rail_at_all(): void
+    {
+        // Every tab is derived now, so an empty catalogue is an empty section
+        // rather than a row of buttons onto four bare rails.
+        $html = $this->get('/')->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('kk-rail-bar"', $html);
+        $this->assertStringNotContainsString("tab='size'", $html);
     }
 }

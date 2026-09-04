@@ -9,10 +9,13 @@ use App\Models\HomepageSection;
 use App\Models\NavigationMenu;
 use App\Models\Quality;
 use App\Models\Setting;
-use App\Models\ShopFilterItem;
+use App\Models\ShopFilterExclusion;
 use App\Rules\ValidationRules as V;
-use App\Support\ShopFilterTiles;
+use App\Support\ShopFilterCatalogue;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -257,7 +260,7 @@ class HomepageController extends Controller
      * public disk would either miss or, with the right name, delete the wrong
      * file entirely.
      */
-    private function replaceHeroFile(?\Illuminate\Http\UploadedFile $file, ?string $previous, string $directory): string
+    private function replaceHeroFile(?UploadedFile $file, ?string $previous, string $directory): string
     {
         $this->deleteHeroFile($previous);
 
@@ -393,7 +396,7 @@ class HomepageController extends Controller
 
     public function toggleHeroBanner(Banner $banner)
     {
-        $banner->update(['is_active' => !$banner->is_active]);
+        $banner->update(['is_active' => ! $banner->is_active]);
         Cache::flush();
 
         return back()->with('success', 'Banner status updated.');
@@ -504,7 +507,7 @@ class HomepageController extends Controller
     {
         $this->abortIfRetired($section);
 
-        $section->update(['is_active' => !$section->is_active]);
+        $section->update(['is_active' => ! $section->is_active]);
         Cache::flush();
 
         return back()->with('success', 'Section visibility updated.');
@@ -525,8 +528,8 @@ class HomepageController extends Controller
      * so each ran in creation order permanently. Swapping with the adjacent row
      * keeps the numbers contiguous and needs no drag surface.
      *
-     * @param  \Illuminate\Database\Eloquent\Model  $row
-     * @param  \Illuminate\Database\Eloquent\Builder  $scope  the list $row belongs to
+     * @param  Model  $row
+     * @param  Builder  $scope  the list $row belongs to
      */
     private function swapPosition($row, $scope, string $direction): void
     {
@@ -569,111 +572,64 @@ class HomepageController extends Controller
     }
 
     // ============================================================
-    // Shop It Your Way - Size / Price / Shade filter items
+    // Shop It Your Way - the filter rails, derived from the catalogue
     // ============================================================
 
     /**
-     * shade_hex is interpolated into `style="color: ..."` on the home page.
-     * Blade escapes the value, so the attribute cannot be broken out of, but
-     * anything that is not a colour is still arbitrary CSS in the page. Hex
-     * only - which is all the field was ever meant to hold.
+     * The rails, as the catalogue currently spells them.
      *
-     * @return array<string, mixed>
+     * Nothing here is a stored list any more. Size comes off the variants,
+     * Shade and Texture off each product's own lists, Price off the live
+     * spread - so a value an admin types into a product is on the rail the
+     * moment it is saved, and the last product carrying a value takes it away
+     * again. What the admin owns on this screen is the other half: whether a
+     * value the catalogue carries should be offered to a shopper.
      */
-    private function shopFilterRules(): array
-    {
-        return [
-            'type' => V::option(ShopFilterItem::TYPES),
-            'label' => V::text(max: 120),
-            'shade_hex' => ['nullable', 'string', 'max:9', 'regex:/^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/'],
-            'query_string' => ['nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9_\-=&%.+,\[\]]+$/'],
-        ];
-    }
-
-    private function shopFilterMessages(): array
-    {
-        return [
-            'shade_hex.regex' => 'Enter a hex colour such as #b8895a.',
-            'query_string.regex' => 'Enter a query string such as size=M or price_min=1000&price_max=2000.',
-        ];
-    }
-
     public function shopFilters()
     {
-        $items = ShopFilterItem::ordered()->get();
-
         return view('admin.homepage.shop-filters', [
-            'items' => $items->groupBy('type'),
-            // What each hanger's query string actually returns. A hanger that
-            // returns nothing is left off the home page, so the screen that
-            // owns it has to say so - and say which values would work.
-            'matches' => ShopFilterTiles::counts($items),
-            // Keys the shop ignores. A hanger carrying one filters nothing while
-            // its count reads as healthy, which is the quieter half of the bug.
-            'unread' => $items->mapWithKeys(
-                fn ($item) => [$item->id => ShopFilterTiles::unreadKeys($item->query_string)]
-            )->all(),
-            'suggestions' => ShopFilterTiles::suggestions(),
+            // Hidden values included: the screen has to show what has been
+            // taken away in order to offer it back.
+            'groups' => ShopFilterCatalogue::groups(includeHidden: true),
         ]);
     }
 
-    public function storeShopFilter(Request $request)
-    {
-        $data = $request->validate($this->shopFilterRules(), $this->shopFilterMessages());
-
-        $data['position'] = (ShopFilterItem::where('type', $data['type'])->max('position') ?? 0) + 1;
-        $data['is_active'] = true;
-        ShopFilterItem::create($data);
-        Cache::flush();
-
-        return back()->with('success', 'Filter item added.');
-    }
-
-    public function updateShopFilter(Request $request, ShopFilterItem $shopFilter)
-    {
-        $data = $request->validate($this->shopFilterRules(), $this->shopFilterMessages());
-
-        $shopFilter->update($data);
-        Cache::flush();
-
-        return back()->with('success', 'Filter item updated.');
-    }
-
     /**
-     * Swap a filter item with its neighbour inside its own tab.
+     * Hide one derived value.
      *
-     * The page says the hangers are "ordered by position" and nothing could set
-     * one after creation, so the rails ran in creation order for good.
+     * The value is not deleted from anything - no product loses its colour,
+     * its size or its texture. Only the offer is withdrawn, and it stays
+     * withdrawn: a new product arriving with the same value does not quietly
+     * put it back, which is the whole reason this is a stored decision rather
+     * than a flag on a row that is itself derived.
      */
-    public function moveShopFilter(Request $request, ShopFilterItem $shopFilter)
+    public function storeShopFilterExclusion(Request $request)
     {
-        $validated = $request->validate(['direction' => V::option(['up', 'down'])]);
+        $data = $request->validate([
+            'type' => V::option(ShopFilterExclusion::TYPES),
+            // The normalised key, not the label: it is what identifies the
+            // value across every spelling of it the catalogue holds.
+            'value_key' => ['required', 'string', 'max:191'],
+            'label' => V::text(max: 191),
+        ]);
 
-        // Scoped to the item's own type: the three rails are numbered separately.
-        $this->swapPosition(
-            $shopFilter,
-            ShopFilterItem::where('type', $shopFilter->type),
-            $validated['direction'],
+        // firstOrCreate, not create: the unique index is the real guard, and
+        // two admins hiding the same value at the same moment should both
+        // succeed rather than one of them meeting a 500.
+        ShopFilterExclusion::firstOrCreate(
+            ['type' => $data['type'], 'value_key' => $data['value_key']],
+            ['label' => $data['label']],
         );
-        Cache::flush();
 
-        return back()->with('success', 'Filter order updated.');
+        return back()->with('success', 'Hidden from the shop filters. The products keep the value.');
     }
 
-    public function toggleShopFilter(ShopFilterItem $shopFilter)
+    /** Offer a hidden value again. Bound on the uuid, never on a row id. */
+    public function destroyShopFilterExclusion(ShopFilterExclusion $exclusion)
     {
-        $shopFilter->update(['is_active' => !$shopFilter->is_active]);
-        Cache::flush();
+        $exclusion->delete();
 
-        return back()->with('success', 'Filter visibility updated.');
-    }
-
-    public function deleteShopFilter(ShopFilterItem $shopFilter)
-    {
-        $shopFilter->delete();
-        Cache::flush();
-
-        return back()->with('success', 'Filter item deleted.');
+        return back()->with('success', 'Shown in the shop filters again.');
     }
 
     // ============================================================
@@ -853,7 +809,7 @@ class HomepageController extends Controller
 
     public function toggleQuality(Quality $quality)
     {
-        $quality->update(['is_active' => !$quality->is_active]);
+        $quality->update(['is_active' => ! $quality->is_active]);
         Cache::flush();
 
         return back()->with('success', 'Quality visibility updated.');

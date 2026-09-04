@@ -24,12 +24,32 @@ class ProductController extends Controller
             $query->whereHas('brand', fn($q) => $q->where('slug', $request->brand));
         }
 
-        if ($request->has('min_price')) {
-            $query->where('price', '>=', $request->min_price);
+        // has() let a bound that is not a number reach the comparison:
+        // `?max_price=` compared price against the empty string, and
+        // `?min_price[]=1` handed an array to the query builder and 500'd the
+        // endpoint. A bound that is not a number is not a bound.
+        //
+        // A wrong-way-round pair is passed through as given, exactly as the
+        // storefront does: `price >= 1000 AND price <= 0` returns nothing, which
+        // is the honest answer to an impossible range. The shop says so in words
+        // under its two boxes; an endpoint has no boxes to say it under, and
+        // quietly swapping the pair would answer a question the caller did not
+        // ask.
+        $bound = function (string $key) use ($request): ?float {
+            $value = $request->input($key);
+
+            return is_numeric($value) ? (float) $value : null;
+        };
+
+        $minPrice = $bound('min_price');
+        $maxPrice = $bound('max_price');
+
+        if ($minPrice !== null) {
+            $query->where('price', '>=', $minPrice);
         }
 
-        if ($request->has('max_price')) {
-            $query->where('price', '<=', $request->max_price);
+        if ($maxPrice !== null) {
+            $query->where('price', '<=', $maxPrice);
         }
 
         // Sold-out products sort to the back of the page, whatever sort was
