@@ -483,15 +483,73 @@ body:not(.layout-admin) a.text-white {
    Quick add — the round cart button on a product card, and the popup
    it opens.
 
-   The button is deliberately icon-only and circular: it sits directly
-   above the full-width "View Product" bar, and a second lettered bar
-   there read as two competing primary actions rather than one CTA with
-   a shortcut beside it.
+   The button is deliberately icon-only and circular: it shares a line
+   with the "View Product" bar, and a second lettered bar there read as
+   two competing primary actions rather than one CTA with a shortcut
+   beside it.
    =================================================================== */
 .kk-quickadd-row {
     display: flex;
     justify-content: flex-end;
     margin-bottom: 8px;
+}
+
+/* The card's action strip: the CTA and the add-to-cart shortcut on one
+   line, rather than the shortcut stacked above the bar.
+
+   The CTA takes the room that is left and the button squares itself off
+   against whatever height the bar ends up - `aspect-ratio` with a
+   stretched height, so it stays a circle if the bar's padding or font
+   size ever changes rather than turning into an oval that has to be
+   re-measured by hand.
+
+   The width/height overrides need the two-class selector to beat
+   `.kk-quickadd`'s own 40px, which still applies anywhere the button is
+   used outside this strip. */
+.kk-card-actions {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+}
+.kk-card-actions__cta {
+    flex: 1 1 auto;
+    /* Without this the anchor refuses to shrink below its text and pushes
+       the button off the card on a two-column phone grid. */
+    min-width: 0;
+    white-space: nowrap;
+}
+.kk-card-actions .kk-quickadd-row {
+    flex: 0 0 auto;
+    margin-bottom: 0;
+}
+.kk-card-actions .kk-quickadd {
+    width: auto;
+    height: auto;
+    align-self: stretch;
+    aspect-ratio: 1 / 1;
+}
+
+/* Two cards to a row on a 360px phone leaves the CTA 78px, and "View
+   Product" at 12px semibold needs about 85 - so the label was being
+   clipped by its own box. Measured, not guessed: at 390px it fits with
+   room to spare, and only the narrowest common phones need this.
+
+   The label keeps its words. Shrinking the shortcut and the gap hands
+   the bar 14px back and dropping to 11px costs the text about 7, which
+   clears it - and that is better than truncating "View Product" to
+   "View", which reads like a different action. */
+@media (max-width: 380px) {
+    .kk-card-actions { gap: 6px; }
+    .kk-card-actions__cta { font-size: 11px; letter-spacing: -0.01em; }
+    /* Both axes and no stretch: width alone, against a height still
+       filling the 42px bar, would have made an oval. */
+    .kk-card-actions .kk-quickadd {
+        aspect-ratio: auto;
+        align-self: center;
+        width: 34px;
+        height: 34px;
+    }
+    .kk-card-actions .kk-quickadd svg { width: 16px; height: 16px; }
 }
 .kk-quickadd {
     width: 40px; height: 40px;
