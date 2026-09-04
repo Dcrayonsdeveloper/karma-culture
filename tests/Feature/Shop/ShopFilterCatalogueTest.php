@@ -233,6 +233,38 @@ class ShopFilterCatalogueTest extends TestCase
         $this->get(route('shop').'?shade=Pink')->assertOk()->assertSee('Pink Shirt');
     }
 
+    public function test_hiding_reaches_a_storefront_whose_answer_is_already_cached(): void
+    {
+        $this->product('Pink Shirt', ['Colours' => [['name' => 'Pink', 'hex' => '#ff69b4']]], ['M']);
+        $this->product('Blue Shirt', ['Colours' => [['name' => 'Blue', 'hex' => '#0000ff']]], ['L']);
+
+        // Warm the rails first. This is the state a live shop is always in and
+        // the state the tests were never in: every earlier case hid a value
+        // before anything had read one. On production the first hide after a
+        // deploy wrote its row and changed nothing on the storefront, because
+        // the version counter the cache keys off had been cleared by the
+        // deploy and the "bump" wrote back the value readers already assumed.
+        $this->assertContains('Pink', $this->shown('shade'));
+
+        $this->hide('shade', 'Pink');
+
+        $this->assertSame(['Blue'], $this->shown('shade'));
+        $this->get(route('shop'))
+            ->assertOk()
+            ->assertDontSee('name="colour[]" value="Pink"', false);
+    }
+
+    public function test_saving_a_product_reaches_a_storefront_whose_answer_is_already_cached(): void
+    {
+        $product = $this->product('Shirt', ['Textures' => ['Matte']], ['M']);
+
+        $this->assertSame(['Matte'], $this->shown('texture'));
+
+        $product->update(['attributes' => ['Textures' => ['Matte', 'Ribbed']]]);
+
+        $this->assertEqualsCanonicalizing(['Matte', 'Ribbed'], $this->shown('texture'));
+    }
+
     public function test_a_hidden_value_does_not_come_back_with_the_next_product(): void
     {
         $this->product('Rough One', ['Textures' => ['Rough']], ['M']);

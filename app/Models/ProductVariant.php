@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use App\Models\Concerns\TracksWarehouseStock;
+use App\Support\ShopFilterCatalogue;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Cache;
 
 class ProductVariant extends Model
 {
@@ -28,22 +30,24 @@ class ProductVariant extends Model
         // read, so retiring the cached arrays is only half of it: without this
         // an admin who saves a product and is redirected onto a page that draws
         // the rails would still be shown the answer from before the save.
-        \App\Support\ShopFilterCatalogue::forget();
+        ShopFilterCatalogue::forget();
 
-        $cache = \Illuminate\Support\Facades\Cache::getFacadeRoot();
+        $cache = Cache::getFacadeRoot();
 
-        if (! $cache->has('kk_filter_ver')) {
-            $cache->forever('kk_filter_ver', 1);
-
-            return;
-        }
-
+        // A missing counter reads as 1, because that is what every reader
+        // defaults to - so it is incremented like any other value rather than
+        // being seeded AT the default. Writing 1 here was a bump that changed
+        // nothing: `artisan optimize:clear` runs on every deploy and takes the
+        // counter with it, so the first edit afterwards left every cached
+        // answer still looking current and did not reach the storefront until
+        // the entries aged out six hours later. Caught on production: hiding a
+        // shade wrote its row and the rail went on offering it.
         $cache->forever('kk_filter_ver', ((int) $cache->get('kk_filter_ver', 1)) + 1);
     }
 
     public static function filterCacheVersion(): int
     {
-        return (int) \Illuminate\Support\Facades\Cache::get('kk_filter_ver', 1);
+        return (int) Cache::get('kk_filter_ver', 1);
     }
 
     /**
@@ -74,7 +78,7 @@ class ProductVariant extends Model
         return $query->where(function ($q) use ($sizes) {
             foreach ($sizes as $size) {
                 $q->orWhere('name', $size)
-                  ->orWhere('name', 'like', '% - ' . $size);
+                    ->orWhere('name', 'like', '% - '.$size);
             }
         });
     }
@@ -162,7 +166,7 @@ class ProductVariant extends Model
     public function getAttributeValuesAttribute()
     {
         $attrs = $this->getAttribute('attributes');
-        if (!is_array($attrs)) {
+        if (! is_array($attrs)) {
             return collect();
         }
 
