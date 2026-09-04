@@ -143,14 +143,27 @@
     </div>
 
 @php
-    // Hoisted out of the dialog's x-data: an arrow inside the tag ends it as
-    // far as any HTML-ish scan is concerned, which hid the whole modal - and
-    // its x-show - from the guard that keeps it centred.
+    // Everything the dialog's x-data needs, resolved BEFORE the tag rather than
+    // inside it.
+    //
+    // An object arrow carries a ">", and a ">" ends the tag as far as any
+    // HTML-ish scan is concerned - so `{{ $restockProduct?->name }}` written in
+    // the attribute hid the rest of the element, x-show included, from
+    // InventoryModalCenteringTest, the guard that stops this exact dialog losing
+    // its centring again. Hoisting is also the reason the tag below is readable
+    // at all: it was a single 400-character line of interleaved PHP and JS.
     $defaultLocationId = $locations->firstWhere('is_default', true)?->id ?? $locations->first()?->id;
+
+    $restockOpen = $restockProduct ? 'true' : 'false';
+    $restockId = $restockProduct ? (int) $restockProduct->id : 'null';
+    $restockName = $restockProduct?->name ?? '';
+    $restockStock = (int) ($restockProduct?->stock_quantity ?? 0);
+    $restockByLocation = $restockProduct?->heldByLocation() ?? [];
+    $restockLocationId = (string) old('location_id', $defaultLocationId);
 @endphp
 
     <!-- Stock Modal -->
-    <div x-data="{ open: {{ $restockProduct ? 'true' : 'false' }}, productId: {{ $restockProduct ? (int) $restockProduct->id : 'null' }}, productName: {{ Js::from($restockProduct?->name ?? '') }}, currentStock: {{ (int) ($restockProduct?->stock_quantity ?? 0) }}, byLocation: {{ Js::from($restockProduct?->heldByLocation() ?? []) }}, locationId: {{ Js::from((string) old('location_id', $defaultLocationId)) }}, get heldHere() { return this.byLocation[String(this.locationId)] ?? 0 } }"
+    <div x-data="{ open: {{ $restockOpen }}, productId: {{ $restockId }}, productName: {{ Js::from($restockName) }}, currentStock: {{ $restockStock }}, byLocation: {{ Js::from($restockByLocation) }}, locationId: {{ Js::from($restockLocationId) }}, get heldHere() { return this.byLocation[String(this.locationId)] ?? 0 } }"
          x-on:open-stock-modal.window="open = true; productId = $event.detail.id; productName = $event.detail.name; currentStock = $event.detail.stock; byLocation = $event.detail.byLocation || {}"
          x-show="open" x-cloak
          x-transition.opacity.duration.150ms

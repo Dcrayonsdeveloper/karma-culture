@@ -45,19 +45,28 @@ class DuplicateErrorTest extends TestCase
         ]);
     }
 
+    /** How many times a string occurs anywhere in the response body. */
+    private function occurrences(string $html, string $needle): int
+    {
+        return substr_count($html, $needle);
+    }
+
     /**
-     * How many times a string is VISIBLE in the response body.
+     * How many times a MESSAGE is visible in the response body.
      *
      * Attribute values are stripped first, and that is not a nicety. The signup
      * panel seeds its Alpine component with the server's messages -
-     * x-data="kkRegisterForm({&quot;full_name&quot;:&quot;Please enter your full name.&quot;, ...})"
-     * - so every message it is about to render appears once in that attribute
-     * as well as once in the paragraph it ends up in. Counting the raw HTML
-     * therefore reports two of everything on that page and calls a correct
-     * render a duplicate. What this asks is how many times a visitor can READ
-     * the sentence, which is the thing under test.
+     * x-data="kkRegisterForm({...'Please enter your full name.'...})" - so every
+     * message it is about to render appears once in that attribute as well as
+     * once in the paragraph it ends up in. Counting the raw HTML therefore
+     * reports two of everything on that page and calls a correct render a
+     * duplicate. What this asks is how many times a visitor can READ the
+     * sentence, which is the thing under test.
+     *
+     * Use occurrences() for markup - data-kk-field-error and the like - because
+     * that IS an attribute and this would strip it away.
      */
-    private function occurrences(string $html, string $needle): int
+    private function visible(string $html, string $needle): int
     {
         $text = preg_replace('/\s[:@a-zA-Z][-.:\w]*="[^"]*"/', '', $html);
 
@@ -75,7 +84,7 @@ class DuplicateErrorTest extends TestCase
 
         $this->assertSame(
             1,
-            $this->occurrences($html, self::CREDENTIALS_FAILED),
+            $this->visible($html, self::CREDENTIALS_FAILED),
             'The credentials message must be printed once, not once inline and once in a banner.'
         );
 
@@ -169,7 +178,7 @@ class DuplicateErrorTest extends TestCase
 
             $this->assertSame(
                 1,
-                $this->occurrences($html, e($message)),
+                $this->visible($html, e($message)),
                 "The message for {$field} is printed twice: once in the banner and once under the field.",
             );
         }
@@ -219,7 +228,7 @@ class DuplicateErrorTest extends TestCase
         foreach ($errors->keys() as $key) {
             $this->assertSame(
                 1,
-                $this->occurrences($html, e($errors->first($key))),
+                $this->visible($html, e($errors->first($key))),
                 "The message for {$key} appears more than once on the reset page.",
             );
         }
@@ -236,7 +245,7 @@ class DuplicateErrorTest extends TestCase
 
         $this->assertSame(
             1,
-            $this->occurrences($html, 'This password reset link is invalid or has expired.'),
+            $this->visible($html, 'This password reset link is invalid or has expired.'),
         );
     }
 

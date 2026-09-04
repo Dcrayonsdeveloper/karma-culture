@@ -2038,7 +2038,14 @@ Alpine.start();
     // form, so the input's name is brought to the same shape before matching.
     function fieldKey(field) {
         const name = (field.getAttribute && field.getAttribute('name')) || '';
-        return name.replace(/\[/g, '.').replace(/\]/g, '');
+
+        // A multi-file input is named "images[]", and Laravel reports the rules
+        // that judge the SELECTION - max:10, and the like - under the bare key
+        // "images". Left as-is, the bracket pair became a trailing dot and
+        // matched nothing, so the one message about the upload as a whole was
+        // the one message this module could not retire. The empty pair names
+        // the collection itself, so it is dropped rather than translated.
+        return name.replace(/\[\]$/, '').replace(/\[/g, '.').replace(/\]/g, '');
     }
 
     // Scoped to the field's own form so two forms on one page - the sign-in and

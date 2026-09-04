@@ -208,13 +208,18 @@ class ProductMediaLimitTest extends TestCase
         // the edit form did not.
         $html = $this->formHtml('edit');
 
+        // Matched on the opening of the binding rather than the whole
+        // attribute: the gallery and video zones now also retire the field's
+        // error note as the drop lands, so the handler no longer ends at the
+        // closing bracket. What this test is for is that the drop is HANDLED
+        // rather than left to the browser, and that is what the prefix proves.
         foreach ([
             'handleMainImage($event.dataTransfer.files[0])',
             'handleGalleryFiles($event.dataTransfer.files)',
             'handleVideoFiles($event.dataTransfer.files)',
         ] as $handler) {
             $this->assertStringContainsString(
-                '@drop.prevent="'.$handler.'"',
+                '@drop.prevent="'.$handler,
                 $html,
                 'An edit-form upload zone still lets the browser handle the drop.'
             );
@@ -236,12 +241,28 @@ class ProductMediaLimitTest extends TestCase
         $this->assertStringContainsString('Up to 10 per save', $html);
         $this->assertStringContainsString('Up to 5 per save', $html);
 
+        // The hand-rolled @error blocks this used to look for are gone: every
+        // field message on the site is now printed by <x-field-error>, which is
+        // the only renderer the client-side validator can retire. The capability
+        // under test is unchanged - the form can still show the message that
+        // arrives under `images` or `videos` rather than under `images.*` - so
+        // the check follows it to the component, and to the key-picking that
+        // decides which of the two to show.
         $source = file_get_contents(resource_path('views/admin/products/edit.blade.php'));
-        foreach (["@error('images')", "@error('videos')"] as $block) {
-            $this->assertStringContainsString(
-                $block,
+
+        foreach (['images', 'videos'] as $field) {
+            $this->assertMatchesRegularExpression(
+                "/\\\$kk".ucfirst($field)."Key = \\\$errors->has\\('{$field}'\\)/",
                 $source,
-                "The edit form cannot render the array-level {$block} message."
+                "The edit form no longer decides between the {$field} and {$field}.* messages."
+            );
+        }
+
+        foreach (['$kkImagesKey', '$kkVideosKey'] as $key) {
+            $this->assertStringContainsString(
+                '<x-field-error :field="'.$key.'"',
+                $source,
+                "The edit form cannot render the array-level message held in {$key}."
             );
         }
     }
