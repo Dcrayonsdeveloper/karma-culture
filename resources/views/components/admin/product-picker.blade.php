@@ -275,8 +275,6 @@
             <button type="button" class="mselect__clear" @click="clearAll()">Clear all</button>
         </div>
 
-        @error($errorKey)
-            <p class="form-error">{{ $message }}</p>
-        @enderror
+        <x-field-error :field="$errorKey" />
     </div>
 </div>

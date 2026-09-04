@@ -18,11 +18,9 @@
                  and a client pattern must never be stricter than the server. --}}
             <input type="text" name="full_name" id="full_name" value="{{ old('full_name') }}"
                    required autofocus autocomplete="name" minlength="2" maxlength="100"
-                   class="form-input w-full @error('full_name') border-error-300 @enderror"
+                   class="form-input w-full"
                    placeholder="e.g. Priya Sharma">
-            @error('full_name')
-                <p class="mt-1 text-sm text-error-600">{{ $message }}</p>
-            @enderror
+            <x-field-error field="full_name" />
         </div>
 
         <!-- Email -->
@@ -30,11 +28,9 @@
             <label for="email" class="block text-sm font-medium text-neutral-700 mb-1">Email address</label>
             <input type="email" name="email" id="email" value="{{ old('email') }}"
                    required autocomplete="email" inputmode="email" maxlength="255"
-                   class="form-input w-full @error('email') border-error-300 @enderror"
+                   class="form-input w-full"
                    placeholder="you@example.com">
-            @error('email')
-                <p class="mt-1 text-sm text-error-600">{{ $message }}</p>
-            @enderror
+            <x-field-error field="email" />
         </div>
 
         <!-- Mobile number -->
@@ -53,11 +49,9 @@
                    required autocomplete="tel" inputmode="numeric" maxlength="20"
                    pattern="(\+?91[\s\-]?)?0?[6-9][0-9\s\-]{9,}"
                    title="Enter a 10-digit Indian mobile number starting with 6, 7, 8 or 9."
-                   class="form-input w-full @error('phone') border-error-300 @enderror"
+                   class="form-input w-full"
                    placeholder="98765 43210">
-            @error('phone')
-                <p class="mt-1 text-sm text-error-600">{{ $message }}</p>
-            @enderror
+            <x-field-error field="phone" />
         </div>
 
         <!-- Password -->
@@ -65,11 +59,9 @@
             <label for="password" class="block text-sm font-medium text-neutral-700 mb-1">Password</label>
             <input type="password" name="password" id="password"
                    required autocomplete="new-password" minlength="10" maxlength="255"
-                   class="form-input w-full @error('password') border-error-300 @enderror"
+                   class="form-input w-full"
                    placeholder="Create a strong password">
-            @error('password')
-                <p class="mt-1 text-sm text-error-600">{{ $message }}</p>
-            @enderror
+            <x-field-error field="password" />
             <p class="mt-1 text-xs text-neutral-600">
                 At least 10 characters, including an uppercase and a lowercase letter,
                 a number and a special character.

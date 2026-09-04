@@ -25,9 +25,7 @@
                             <input type="text" name="name" id="banner-name" value="{{ old('name') }}" required
                                    minlength="2" maxlength="255"
                                    class="form-input" style="width: 100%;" placeholder="e.g. Summer Sale Hero Banner">
-                            @error('name')
-                                <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="name" />
                         </div>
 
                         <div>
@@ -35,9 +33,7 @@
                             <input type="url" name="link" id="banner-link" value="{{ old('link') }}"
                                    maxlength="255" pattern="https?://.+" title="Enter a full web address starting with http:// or https://"
                                    class="form-input" style="width: 100%;" placeholder="https://example.com/page">
-                            @error('link')
-                                <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="link" />
                         </div>
                     </div>
                 </div>
@@ -52,9 +48,7 @@
                             <input type="file" name="image" id="banner-image" required
                                    accept="image/jpeg,image/png,image/webp,image/gif" style="font-size: 13px; color: #616161;">
                             <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">JPG, PNG, WebP or GIF. Max 5MB. Recommended: 1920x600px</p>
-                            @error('image')
-                                <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="image" />
                         </div>
 
                         <div>
@@ -62,9 +56,7 @@
                             <input type="file" name="mobile_image" id="banner-mobile-image"
                                    accept="image/jpeg,image/png,image/webp,image/gif" style="font-size: 13px; color: #616161;">
                             <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Optional. JPG, PNG, WebP or GIF. Max 5MB. Recommended: 768x400px</p>
-                            @error('mobile_image')
-                                <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="mobile_image" />
                         </div>
                     </div>
                 </div>
@@ -84,9 +76,7 @@
                                 <option value="category" @selected(old('position') == 'category')>Category</option>
                                 <option value="popup" @selected(old('position') == 'popup')>Popup</option>
                             </select>
-                            @error('position')
-                                <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="position" />
                         </div>
 
                         <div>
@@ -96,9 +86,7 @@
                                    title="Enter a whole number between 0 and 65535."
                                    class="form-input" style="width: 100%;">
                             <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Lower number = higher priority</p>
-                            @error('priority')
-                                <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="priority" />
                         </div>
                     </div>
                 </div>

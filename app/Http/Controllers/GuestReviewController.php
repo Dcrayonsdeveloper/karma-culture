@@ -20,6 +20,39 @@ class GuestReviewController extends Controller
         // on user_id, told every customer they had never reviewed anything.
         $user = $request->user();
 
+        // The anti-spam trap, answered here rather than by the validator.
+        //
+        // It used to be a rule - 'honeypot' => 'max:0' with no message - so a
+        // filled trap printed "The honeypot field must not be greater than 0
+        // characters." into the form's error banner. That names the trap and its
+        // rule to whoever tripped it, which tells a bot exactly what to leave
+        // alone next time, and is meaningless to the shopper who saw it: the box
+        // is off-screen and aria-hidden, so the only way a person reaches it is a
+        // password manager or an autofill filling it for them.
+        //
+        // A trap has to answer the way a success answers or it is not a trap, so
+        // the submission is dropped and the ordinary thank-you is returned. That
+        // is deliberately indistinguishable from a review that was accepted and
+        // is awaiting moderation - which is also what protects the rare real
+        // shopper whose autofill trips it from being shown an error they cannot
+        // act on or understand.
+        //
+        // The test has to survive being handed something that is not a string,
+        // which is why it asks the request rather than casting what it hands
+        // back. A bot posts honeypot[]=x as readily as honeypot=x, and
+        // (string) $array raises PHP's "Array to string conversion" warning,
+        // which HandleExceptions promotes to an ErrorException - so a cast here
+        // answered the exact traffic the trap exists to catch with a 500 error
+        // page, the one reply that tells a bot its submission was treated as
+        // special, and the opposite of the property argued for above.
+        // Request::filled() checks is_array() and is_bool() before it casts
+        // anything, and treats whitespace as empty, so a blank box and an
+        // untouched box both fall through to the real validation while anything
+        // actually carrying a value - array included - is dropped.
+        if ($request->filled('honeypot')) {
+            return back()->with('success', 'Thank you for your review! It will be visible after moderation.');
+        }
+
         $validated = $request->validate([
             // Was 'string|max:100'. This name is PUBLISHED under the review on
             // the product page, so a length was the only thing standing between
@@ -36,12 +69,54 @@ class GuestReviewController extends Controller
             'rating' => 'required|integer|min:1|max:5',
             'title' => 'nullable|string|max:255',
             'content' => 'required|string|min:20|max:2000',
-            'honeypot' => 'max:0', // anti-spam: must be empty
             // Media (Task 10): up to 5 images, up to 2 videos.
             'images' => 'nullable|array|max:5',
             'images.*' => 'image|mimes:jpeg,jpg,png,webp|max:5120',      // 5 MB
             'videos' => 'nullable|array|max:2',
             'videos.*' => 'mimetypes:video/mp4,video/webm,video/quicktime|max:20480', // 20 MB
+        ], [
+            // This form passed NO messages at all, so every failure arrived in
+            // Laravel's own voice - "The guest name field is required.", "The
+            // content field must be at least 20 characters.", and for a rejected
+            // upload "The images.0 field must not be greater than 5120
+            // kilobytes.", which prints an internal column name, an array index
+            // and a unit nobody outside the codebase uses. The banner on the
+            // product page renders whatever comes back, so all of it was shown
+            // to shoppers verbatim.
+            //
+            // These are the sentences the boxes themselves would say. The email
+            // one is word for word what app.js prints for a malformed address
+            // (its typeMismatch branch does not read the label), so that failure
+            // now reads identically whichever side catches it. The rest cannot
+            // be made identical yet: the inputs on the product page carry no
+            // <label> elements, so app.js's labelFor() falls back to the
+            // placeholder and says "Share your experience (at least 20
+            // characters)… must be at least 20 characters." Naming the field the
+            // way a label would is the half that belongs here.
+            'guest_name.required' => 'Full name is required.',
+            'guest_name.min' => 'Full name must be at least 2 characters.',
+            'guest_name.max' => 'Full name must be 100 characters or fewer.',
+            'guest_email.required' => 'Email is required.',
+            'guest_email.email' => 'Enter a valid email address, like you@example.com.',
+            'guest_email.max' => 'Email must be 255 characters or fewer.',
+            // The stars are buttons driving a hidden input, and the submit
+            // button stays disabled until one is picked, so this is what a post
+            // that skipped the page is told.
+            'rating.required' => 'Please choose a star rating.',
+            'rating.integer' => 'Please choose a rating from 1 to 5 stars.',
+            'rating.min' => 'Please choose a rating from 1 to 5 stars.',
+            'rating.max' => 'Please choose a rating from 1 to 5 stars.',
+            'title.max' => 'Review title must be 255 characters or fewer.',
+            'content.required' => 'Your review is required.',
+            'content.min' => 'Your review must be at least 20 characters.',
+            'content.max' => 'Your review must be 2000 characters or fewer.',
+            'images.max' => 'You can add up to 5 photos.',
+            'images.*.image' => 'Photos must be image files.',
+            'images.*.mimes' => 'Photos must be JPG, PNG or WEBP files.',
+            'images.*.max' => 'Each photo must be 5 MB or smaller.',
+            'videos.max' => 'You can add up to 2 videos.',
+            'videos.*.mimetypes' => 'Videos must be MP4, WEBM or MOV files.',
+            'videos.*.max' => 'Each video must be 20 MB or smaller.',
         ]);
 
         // Who this review belongs to comes from the session, never from the form.

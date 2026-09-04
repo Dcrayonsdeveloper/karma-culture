@@ -87,8 +87,29 @@
                         @endif
 
                         {{-- Review Form --}}
+                        {{-- choose() exists because the rating is posted by a HIDDEN input, and
+                             a hidden input is the one control the site-wide validator in app.js
+                             cannot help with: it filters `el.type !== 'hidden'` on submit, and
+                             its clear-on-edit handler is keyed on input/change events that
+                             setting a property through Alpine never fires. So "Please choose a
+                             star rating." from the last POST had nothing that could retire it -
+                             it sat there next to five now-filled stars until a full reload,
+                             which is the stale-verdict bug in its most literal form.
+
+                             Clicking a star IS the correction, so the click is where the note
+                             goes. The aria link goes with it: leaving aria-describedby pointing
+                             at a paragraph that has been removed reads out an empty
+                             description, which is worse than none. --}}
                         <form action="{{ route('account.reviews.store', $product) }}" method="POST"
-                              x-data="{ rating: {{ old('rating', 0) }}, hoveredRating: 0 }"
+                              x-data="{
+                                  rating: {{ old('rating', 0) }},
+                                  hoveredRating: 0,
+                                  choose(value) {
+                                      this.rating = value;
+                                      if (this.$refs.ratingError) this.$refs.ratingError.remove();
+                                      if (this.$refs.ratingStars) this.$refs.ratingStars.removeAttribute('aria-describedby');
+                                  },
+                              }"
                               class="space-y-4">
                             @csrf
 
@@ -99,10 +120,18 @@
                                 </div>
                                 <div class="px-5 py-5">
                                     <input type="hidden" name="rating" :value="rating">
-                                    <div class="flex items-center gap-1.5">
+                                    {{-- The five buttons are one control between them, so the group
+                                         is what the message describes - there is no single input a
+                                         screen reader could hang it on. role/aria-label name the
+                                         group; aria-describedby is what gets the sentence read out
+                                         with it, the same wiring <x-field-error> gets automatically
+                                         wherever a real input exists. --}}
+                                    <div class="flex items-center gap-1.5"
+                                         x-ref="ratingStars" role="group" aria-label="Your rating"
+                                         @if($errors->has('rating')) aria-describedby="kk-srv-err-rating" @endif>
                                         @for($i = 1; $i <= 5; $i++)
                                             <button type="button"
-                                                    @click="rating = {{ $i }}"
+                                                    @click="choose({{ $i }})"
                                                     @mouseenter="hoveredRating = {{ $i }}"
                                                     @mouseleave="hoveredRating = 0"
                                                     class="p-1 -m-1 focus:outline-none transition-transform hover:scale-110">
@@ -117,9 +146,7 @@
                                             <span x-text="['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][rating]"></span>
                                         </span>
                                     </div>
-                                    @error('rating')
-                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                                    @enderror
+                                    <x-field-error field="rating" x-ref="ratingError" />
                                 </div>
                             </div>
 
@@ -136,9 +163,7 @@
                                                maxlength="255"
                                                placeholder="Summarize your experience"
                                                class="w-full rounded-lg border border-neutral-200 text-sm px-3 py-2.5 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50">
-                                        @error('title')
-                                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                        @enderror
+                                        <x-field-error field="title" />
                                     </div>
 
                                     {{-- Content --}}
@@ -151,9 +176,7 @@
                                                   maxlength="2000"
                                                   placeholder="What did you like or dislike? How was the quality? Would you recommend it?"
                                                   class="w-full rounded-lg border border-neutral-200 text-sm px-3 py-2.5 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50 resize-none">{{ old('content') }}</textarea>
-                                        @error('content')
-                                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                        @enderror
+                                        <x-field-error field="content" />
                                     </div>
 
                                     {{-- Pros & Cons --}}

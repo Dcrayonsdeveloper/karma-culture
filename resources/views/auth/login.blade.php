@@ -117,16 +117,14 @@
                                         </svg>
                                     </div>
                                     <input type="email" name="email" id="login_email" value="{{ old('_register') ? '' : old('email') }}" required
-                                           class="w-full pl-12 pr-4 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all @error('email') border-red-300 bg-red-50 @enderror"
+                                           class="w-full pl-12 pr-4 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all"
                                            placeholder="you@example.com">
                                 </div>
+                                {{-- Gated on !old('_register') because both panels on this page
+                                     share one error bag: without it a rejected SIGNUP prints its
+                                     email message under the sign-in box as well. --}}
                                 @if(!old('_register'))
-                                    @error('email')
-                                        <p class="mt-2 text-sm text-red-600 flex items-center gap-1">
-                                            <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
-                                            {{ $message }}
-                                        </p>
-                                    @enderror
+                                    <x-field-error field="email" />
                                 @endif
                             </div>
 
@@ -151,7 +149,7 @@
                                          customer out of the one screen they could change it from. --}}
                                     <input :type="show ? 'text' : 'password'" name="password" id="login_password" required
                                            autocomplete="current-password"
-                                           class="w-full pl-12 pr-12 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all @error('password') border-red-300 bg-red-50 @enderror"
+                                           class="w-full pl-12 pr-12 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all"
                                            placeholder="Enter your password">
                                     <button type="button" @click="show = !show" class="absolute inset-y-0 right-0 pl-3 pr-4 flex items-center text-neutral-600 hover:text-neutral-600 transition-colors">
                                         <svg x-show="!show" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -163,13 +161,11 @@
                                         </svg>
                                     </button>
                                 </div>
+                                {{-- Gated on !old('_register') because both panels on this page
+                                     share one error bag: without it a rejected SIGNUP prints its
+                                     email message under the sign-in box as well. --}}
                                 @if(!old('_register'))
-                                    @error('password')
-                                        <p class="mt-2 text-sm text-red-600 flex items-center gap-1">
-                                            <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
-                                            {{ $message }}
-                                        </p>
-                                    @enderror
+                                    <x-field-error field="password" />
                                 @endif
                             </div>
 
@@ -223,15 +219,30 @@
                         {{-- A rejected signup used to come back with only per-field messages,
                              several of which are gated behind old('_register') — so a failure
                              could land with nothing on screen explaining it. --}}
-                        @if(old('_register') && $errors->any())
-                            <div class="mb-5 p-3 bg-red-50 border border-red-200 rounded-xl">
-                                <p class="text-sm font-medium text-red-800">We couldn't create your account.</p>
-                                <ul class="mt-1 list-disc list-inside text-xs text-red-700 space-y-0.5">
-                                    @foreach($errors->all() as $error)
-                                        <li>{{ $error }}</li>
-                                    @endforeach
-                                </ul>
-                            </div>
+                        @php
+                            // Both panels on this page share one error bag, so the register side
+                            // only owns it when the rejected submit was its own - the hidden
+                            // _register field is what says so. These seeds feed BOTH kkRegisterForm
+                            // and the message slots below, so the component and the markup can
+                            // never disagree about what the server said, and a field cannot end up
+                            // showing one message before Alpine boots and a different one after.
+                            $regErrors = [
+                                'full_name' => $errors->first('full_name'),
+                                'email' => old('_register') ? $errors->first('email') : '',
+                                'phone' => old('_register') ? $errors->first('phone') : '',
+                                'password' => old('_register') ? $errors->first('password') : '',
+                                'terms' => $errors->first('terms'),
+                            ];
+                        @endphp
+
+                        {{-- Headline only, because every message in the bag is printed under its
+                             own field below. Listing them here as well is what made one rejected
+                             signup show each complaint twice - once in this box and once under the
+                             box it was about. Anything with no field of its own to sit under still
+                             appears: that is what :handled leaves to the banner. --}}
+                        @if(old('_register'))
+                            <x-form-errors :handled="array_keys($regErrors)"
+                                           title="We couldn't create your account." />
                         @endif
 
                         {{-- novalidate, with the checks moved into kkRegisterForm(): the browser's
@@ -251,13 +262,7 @@
                              old('_register') because the sign-in form on this page shares the
                              error bag. --}}
                         <form method="POST" action="{{ route('register') }}" class="space-y-4" novalidate
-                              x-data="kkRegisterForm(@js([
-                                  'full_name' => $errors->first('full_name'),
-                                  'email' => old('_register') ? $errors->first('email') : '',
-                                  'phone' => $errors->first('phone'),
-                                  'password' => old('_register') ? $errors->first('password') : '',
-                                  'terms' => $errors->first('terms'),
-                              ]))"
+                              x-data="kkRegisterForm(@js($regErrors))"
                               @submit="onSubmit($event)">
                             @csrf
                             <input type="hidden" name="_register" value="1">
@@ -281,7 +286,9 @@
                                        class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all"
                                        :class="errors.full_name && 'border-red-300 bg-red-50'"
                                        placeholder="e.g. Priya Sharma">
-                                <p class="mt-1.5 text-xs text-red-600" x-show="errors.full_name" x-text="errors.full_name" x-cloak></p>
+                                @php($seed = $regErrors['full_name'] ?? '')
+                                <p class="kk-field-error" x-show="errors.full_name" x-text="errors.full_name"
+                                   @if(!$seed) x-cloak @endif>{{ $seed }}</p>
                             </div>
 
                             <!-- Email + Phone -->
@@ -298,7 +305,9 @@
                                          that cannot run here: it needs the database, and an endpoint
                                          answering it would be an account-enumeration oracle. That
                                          message still arrives after submit, into this same slot. --}}
-                                    <p class="mt-1.5 text-xs text-red-600" x-show="errors.email" x-text="errors.email" x-cloak></p>
+                                    @php($seed = $regErrors['email'] ?? '')
+                                    <p class="kk-field-error" x-show="errors.email" x-text="errors.email"
+                                       @if(!$seed) x-cloak @endif>{{ $seed }}</p>
                                 </div>
                                 <div>
                                     <label for="phone" class="block text-sm font-medium text-neutral-700 mb-1.5">Mobile Number</label>
@@ -331,7 +340,9 @@
                                            class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all"
                                            :class="errors.phone && 'border-red-300 bg-red-50'"
                                            placeholder="9876543210">
-                                    <p class="mt-1.5 text-xs text-red-600" x-show="errors.phone" x-text="errors.phone" x-cloak></p>
+                                    @php($seed = $regErrors['phone'] ?? '')
+                                    <p class="kk-field-error" x-show="errors.phone" x-text="errors.phone"
+                                       @if(!$seed) x-cloak @endif>{{ $seed }}</p>
                                 </div>
                             </div>
 
@@ -362,7 +373,9 @@
                                             </svg>
                                         </button>
                                     </div>
-                                    <p class="mt-1.5 text-xs text-red-600" x-show="errors.password" x-text="errors.password" x-cloak></p>
+                                    @php($seed = $regErrors['password'] ?? '')
+                                    <p class="kk-field-error" x-show="errors.password" x-text="errors.password"
+                                       @if(!$seed) x-cloak @endif>{{ $seed }}</p>
                                     <p class="mt-1.5 text-[11px] text-neutral-600 leading-snug">
                                         10+ characters with an uppercase and a lowercase letter, a number
                                         and a special character.
@@ -398,7 +411,9 @@
                                     {{-- This field had no message slot at all: a mismatch is reported
                                          by the server against `password`, so the sentence appeared
                                          under the box the shopper had already got right. --}}
-                                    <p class="mt-1.5 text-xs text-red-600" x-show="errors.password_confirmation" x-text="errors.password_confirmation" x-cloak></p>
+                                    @php($seed = $regErrors['password_confirmation'] ?? '')
+                                    <p class="kk-field-error" x-show="errors.password_confirmation" x-text="errors.password_confirmation"
+                                       @if(!$seed) x-cloak @endif>{{ $seed }}</p>
                                 </div>
                             </div>
 
@@ -430,7 +445,9 @@
                                         <a href="{{ route('privacy') }}" class="text-[#3A6166] hover:text-[#2A494D] font-medium">Privacy Policy</a>
                                     </span>
                                 </label>
-                                <p class="mt-1.5 text-xs text-red-600" x-show="errors.terms" x-text="errors.terms" x-cloak></p>
+                                @php($seed = $regErrors['terms'] ?? '')
+                                <p class="kk-field-error" x-show="errors.terms" x-text="errors.terms"
+                                   @if(!$seed) x-cloak @endif>{{ $seed }}</p>
                             </div>
 
                             <!-- Submit -->

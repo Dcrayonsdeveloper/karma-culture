@@ -32,7 +32,7 @@
                             <input type="text" name="title" id="post-title" value="{{ old('title', $blogPost->title) }}" required
                                    minlength="2" maxlength="255"
                                    class="form-input">
-                            @error('title')<p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>@enderror
+                            <x-field-error field="title" />
                         </div>
 
                         <div>
@@ -41,14 +41,14 @@
                                    maxlength="255" pattern="[a-z0-9]+(-[a-z0-9]+)*"
                                    title="Lower-case letters, numbers and single hyphens only, for example summer-style-guide."
                                    class="form-input">
-                            @error('slug')<p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>@enderror
+                            <x-field-error field="slug" />
                         </div>
 
                         <div>
                             <label for="post-excerpt" class="form-label">Excerpt</label>
                             <textarea name="excerpt" id="post-excerpt" rows="3" maxlength="500" class="form-textarea"
                                       placeholder="Short description shown in blog listing...">{{ old('excerpt', $blogPost->excerpt) }}</textarea>
-                            @error('excerpt')<p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>@enderror
+                            <x-field-error field="excerpt" />
                         </div>
 
                         <div>
@@ -59,7 +59,7 @@
                                  report an empty field the admin can see is full. Length and markup
                                  are enforced server-side instead. --}}
                             <textarea name="content" id="content">{{ old('content', $blogPost->content) }}</textarea>
-                            @error('content')<p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>@enderror
+                            <x-field-error field="content" />
                         </div>
                     </div>
                 </div>
@@ -114,7 +114,7 @@
                     <input type="file" name="featured_image" id="post-featured-image" aria-label="Featured image"
                            accept="image/jpeg,image/png,image/webp,image/gif" style="font-size: 13px; color: #616161;">
                     <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Upload new to replace existing. JPG, PNG, WebP or GIF. Max 2MB.</p>
-                    @error('featured_image')<p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>@enderror
+                    <x-field-error field="featured_image" />
                 </div>
 
                 {{-- Category & Tags --}}

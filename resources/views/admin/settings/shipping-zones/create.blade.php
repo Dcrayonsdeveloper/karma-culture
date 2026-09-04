@@ -12,7 +12,7 @@
 
     <div style="max-width: 800px;">
 
-        @include('admin.settings.partials.errors')
+        @include('admin.settings.partials.errors', ['handled' => ['name', 'regions']])
         <form action="{{ route('admin.settings.shipping-zones.store') }}" method="POST">
             @csrf
 
@@ -22,7 +22,7 @@
                     <div>
                         <label class="form-label" style="font-size: 13px; color: #303030;">Zone Name <span style="color: #d72c0d;">*</span></label>
                         <input type="text" name="name" value="{{ old('name') }}" class="form-input" placeholder="e.g. Domestic, International" required>
-                        @error('name') <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p> @enderror
+                        <x-field-error field="name" />
                     </div>
                     <div>
                         <label class="form-label" style="font-size: 13px; color: #303030;">Regions</label>
@@ -31,7 +31,7 @@
                         <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
                             States or postal codes this zone covers. Leave blank to cover everywhere.
                         </p>
-                        @error('regions') <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p> @enderror
+                        <x-field-error field="regions" />
                     </div>
                     <div>
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">

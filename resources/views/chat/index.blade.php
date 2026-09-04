@@ -13,6 +13,12 @@
     $kkBotLogo = \App\Models\Setting::get('site_logo', '')
         ? asset_v('storage/' . \App\Models\Setting::get('site_logo'))
         : $kkBotLogoFallback;
+
+    // ChatbotController::message() validates 'message' => max:300 and answers
+    // 422 for anything longer. The composer's own cap and the guard inside
+    // send() are both rendered from this one number so the page cannot quietly
+    // drift away from the rule the endpoint actually enforces.
+    $kkChatMaxLength = 300;
 @endphp
 
 <x-layouts.app>
@@ -178,25 +184,53 @@
                     </div>
                 </template>
 
-                {{-- Composer --}}
+                {{-- Composer.
+
+                     novalidate is deliberate and means what it means everywhere
+                     else in this codebase: send() below does the whole job for
+                     this form, so the site-wide validator in app.js keeps its
+                     hands off and never prints a second note beside this one.
+
+                     The flex row moved inside a wrapper so the refusal message
+                     has a full-width line of its own underneath it - .kk-field-error
+                     is flex-basis:100% and would otherwise have been squeezed
+                     into the row between the box and the send button. --}}
                 <form @submit.prevent="send()" novalidate
-                      class="p-3 border-t border-neutral-100 bg-white flex items-end gap-2">
-                    <textarea
-                        x-ref="chatInput"
-                        x-model="inputText"
-                        @keydown="composerKeydown($event)"
-                        rows="1"
-                        enterkeyhint="send"
-                        placeholder="Ask about sizes, colours, delivery, returns…"
-                        class="flex-1 resize-none px-4 py-2.5 bg-neutral-50 border border-neutral-300 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all max-h-32"
-                    ></textarea>
-                    <button type="submit"
-                            :disabled="isTyping || !inputText.trim()"
-                            class="shrink-0 w-11 h-11 rounded-xl bg-[#2D1810] text-white flex items-center justify-center hover:bg-[#1F1109] disabled:opacity-40 disabled:cursor-not-allowed transition-all">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5M5 12l7-7 7 7"/>
-                        </svg>
-                    </button>
+                      class="p-3 border-t border-neutral-100 bg-white">
+                    <div class="flex items-end gap-2">
+                        <textarea
+                            x-ref="chatInput"
+                            x-model="inputText"
+                            @keydown="composerKeydown($event)"
+                            {{-- Editing the message retires the note about it:
+                                 a refusal that outlives the text it was about is
+                                 just noise the shopper has to read past. --}}
+                            @input="composerError = ''"
+                            rows="1"
+                            maxlength="{{ $kkChatMaxLength }}"
+                            enterkeyhint="send"
+                            placeholder="Ask about sizes, colours, delivery, returns…"
+                            :aria-invalid="composerError ? 'true' : 'false'"
+                            :aria-describedby="composerError ? 'kk-chat-composer-error' : null"
+                            class="flex-1 resize-none px-4 py-2.5 bg-neutral-50 border border-neutral-300 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all max-h-32"
+                        ></textarea>
+                        <button type="submit"
+                                :disabled="isTyping || !inputText.trim()"
+                                class="shrink-0 w-11 h-11 rounded-xl bg-[#2D1810] text-white flex items-center justify-center hover:bg-[#1F1109] disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5M5 12l7-7 7 7"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    {{-- Anything wrong with the message itself is said here, next
+                         to the box it is about, and never as a bubble in the
+                         transcript as well - the assistant did not say it. x-if
+                         rather than x-show so the node is inserted at the moment
+                         it applies, which is what makes role="alert" announce. --}}
+                    <template x-if="composerError">
+                        <p id="kk-chat-composer-error" role="alert" class="kk-field-error" x-text="composerError"></p>
+                    </template>
                 </form>
             </div>
 
@@ -215,6 +249,17 @@
                 isTyping: false,
                 isLoading: true,
                 conversationId: null,
+
+                // The single slot for anything wrong with the composer, whether
+                // this page worked it out before sending or the server said so.
+                // One slot means one message: a length note cannot pile up
+                // underneath the refusal from the previous attempt.
+                composerError: '',
+
+                // Mirrors the max:300 the endpoint enforces - rendered from the
+                // one constant at the top of this file, so the guard in send()
+                // and the cap on the box can never say different numbers.
+                maxLength: {{ $kkChatMaxLength }},
 
                 async loadHistory() {
                     try {
@@ -251,8 +296,34 @@
                     const text = (preset ?? this.inputText).trim();
                     if (!text || this.isTyping) return;
 
+                    // The refusal on screen belongs to the attempt before this
+                    // one. It goes now, at the start of the submission, rather
+                    // than when an answer comes back - otherwise a stale note
+                    // sits under the box for the whole round trip and reads as
+                    // if it were about the message just sent.
+                    this.composerError = '';
+
+                    // The endpoint validates the message at max:300. Nothing on
+                    // this page used to: the box had no cap and send() only
+                    // checked the text was non-empty, so a long paste was POSTed,
+                    // came back 422, and the catch below - which had no branch
+                    // for that status - told the shopper "Something went wrong",
+                    // which is both untrue and gives them nothing to act on.
+                    // Check the one rule we know here, say the thing that fixes
+                    // it, and make no request at all.
+                    if (text.length > this.maxLength) {
+                        this.composerError = 'Please shorten your message to ' + this.maxLength + ' characters or fewer (it is currently ' + text.length + ').';
+                        this.$nextTick(() => this.$refs.chatInput?.focus());
+                        return;
+                    }
+
                     this.inputText = '';
-                    this.messages.push({ role: 'user', content: text });
+                    // Held by reference: if the server refuses the message the
+                    // catch below has to find this exact bubble again to take it
+                    // back out, and matching on content would pick the wrong one
+                    // when the same question is asked twice.
+                    const pending = { role: 'user', content: text };
+                    this.messages.push(pending);
                     this.isTyping = true;
                     this.$nextTick(() => this.scrollToBottom());
 
@@ -275,15 +346,28 @@
                             products: data.products || [],
                         });
                     } catch (error) {
-                        let errorMsg = 'Something went wrong. Please try again.';
-                        if (error.response?.status === 401) {
-                            errorMsg = error.response.data?.reply || 'Your session expired. Please sign in again.';
-                        } else if (error.response?.status === 429) {
-                            errorMsg = 'You\'re chatting a little fast! Please wait a moment before sending another message.';
-                        } else if (error.response?.status === 503) {
-                            errorMsg = error.response.data?.reply || 'The assistant is temporarily unavailable. Please try again later.';
+                        const failure = this.describeFailure(error);
+
+                        if (failure.composer) {
+                            // The server refused the message itself, so it never
+                            // became part of the conversation. Leaving the bubble
+                            // where it is would show it as sent and then answered
+                            // by silence, so take it back out, put the text back
+                            // where it can be edited, and let the composer carry
+                            // the reason.
+                            const at = this.messages.indexOf(pending);
+                            if (at !== -1) this.messages.splice(at, 1);
+
+                            // Only when nothing new has been typed meanwhile -
+                            // the box stays enabled while a send is in flight,
+                            // and a restore must not overwrite what is in it.
+                            if (!this.inputText.trim()) this.inputText = text;
+
+                            this.composerError = failure.composer;
+                            this.$nextTick(() => this.$refs.chatInput?.focus());
+                        } else {
+                            this.messages.push({ role: 'assistant', content: failure.reply, products: [] });
                         }
-                        this.messages.push({ role: 'assistant', content: errorMsg, products: [] });
                     } finally {
                         this.isTyping = false;
                         this.$nextTick(() => {
@@ -291,6 +375,64 @@
                             this.$refs.chatInput?.focus();
                         });
                     }
+                },
+
+                {{-- The one place a failed send becomes a sentence, and the one
+                     place that decides where the sentence goes: `composer` is a
+                     note about what was typed and belongs under the box,
+                     `reply` is something the conversation has to say and belongs
+                     in the transcript. Exactly one of the two is ever set, so
+                     the same words can never appear in both places.
+
+                     window.kkApiError owns the status-to-English map and the
+                     rule that matters most here: a message from a 4xx is
+                     something the endpoint deliberately chose to say, while a
+                     message from a 5xx is the exception's own text and must
+                     never reach a shopper. Three things it cannot know are
+                     added on top - this endpoint writes its deliberate wording
+                     into `reply` rather than `message`, its 429 comes from the
+                     throttle middleware rather than the controller, and a 422
+                     about `message` is about the composer. --}}
+                describeFailure(error) {
+                    const failure = window.kkApiError(error);
+                    const body = error?.response?.data;
+
+                    if (failure.status === 422) {
+                        // Only the composer's own message is trusted for
+                        // display. Laravel's top-level 422 text is whichever
+                        // rule failed first, which for a bad history entry
+                        // reads "The history.3.content field must not be
+                        // greater than 2000 characters" - the request's
+                        // internal shape, not a sentence for a shopper.
+                        return failure.fields.message
+                            ? { composer: failure.fields.message, reply: '' }
+                            : { composer: '', reply: 'That message could not be sent. Please rephrase it and try again.' };
+                    }
+
+                    if (failure.status === 429) {
+                        // Sent by the rate limiter, not by the controller, so
+                        // the body carries the framework's "Too Many Attempts."
+                        // Mid-conversation that reads as an accusation; this
+                        // says the same thing in the assistant's voice.
+                        return { composer: '', reply: 'You\'re chatting a little fast! Please wait a moment before sending another message.' };
+                    }
+
+                    if (failure.status >= 500) {
+                        // Nothing a 5xx body says is fit to show - on a real
+                        // outage it is a stack trace, an upstream HTML page or
+                        // a database error, not the controller's own words.
+                        return { composer: '', reply: 'The assistant is unavailable right now. Please try again in a moment.' };
+                    }
+
+                    // Below 500 the endpoint's own wording wins where it has
+                    // any: the 401 body is the sign-in prompt written for a
+                    // session that expired mid-conversation. Everything else -
+                    // 403, 404, an expired CSRF token, or a request that never
+                    // reached the server at all - falls to kkApiError's
+                    // sentence for it.
+                    const deliberate = body && typeof body.reply === 'string' ? body.reply.trim() : '';
+
+                    return { composer: '', reply: deliberate || failure.message };
                 },
 
                 trackProductClick(productId) {

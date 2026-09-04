@@ -20,9 +20,7 @@
                     <input type="text" name="name" id="name" value="{{ old('name') }}" required
                            minlength="2" maxlength="255"
                            class="form-input" placeholder="e.g. Main Warehouse">
-                    @error('name')
-                        <p class="form-error">{{ $message }}</p>
-                    @enderror
+                    <x-field-error field="name" />
                 </div>
 
                 <div>
@@ -31,17 +29,13 @@
                            maxlength="20" pattern="[A-Za-z0-9_-]+"
                            title="Letters, digits, hyphens and underscores only, up to 20 characters."
                            class="form-input" placeholder="e.g. WH-001">
-                    @error('code')
-                        <p class="form-error">{{ $message }}</p>
-                    @enderror
+                    <x-field-error field="code" />
                 </div>
 
                 <div>
                     <label for="address" class="form-label">Address</label>
                     <textarea name="address" id="address" rows="2" minlength="3" maxlength="255" class="form-textarea" placeholder="Full address...">{{ old('address') }}</textarea>
-                    @error('address')
-                        <p class="form-error">{{ $message }}</p>
-                    @enderror
+                    <x-field-error field="address" />
                 </div>
 
                 <div style="display: flex; align-items: center; gap: 0.5rem;">

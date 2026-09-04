@@ -55,9 +55,7 @@ class ReviewController extends Controller
 
     public function update(Request $request, Review $review): JsonResponse
     {
-        if ($review->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        $this->assertOwned($request, $review);
 
         $validated = $request->validate([
             'rating' => 'required|integer|min:1|max:5',
@@ -89,14 +87,27 @@ class ReviewController extends Controller
 
     public function destroy(Request $request, Review $review): JsonResponse
     {
-        if ($review->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        $this->assertOwned($request, $review);
 
         $review->delete();
 
         return response()->json([
             'message' => 'Review deleted successfully',
         ]);
+    }
+
+    /**
+     * The one answer for a review that was written by somebody else.
+     *
+     * Both checks used to be a bare abort(403), which serialises to
+     * {"message":""} - a status with an empty body, so a client had nothing to
+     * show and fell back to its own generic wording or to silence. The reason is
+     * not a secret worth an empty body either: reviews are public, so the caller
+     * has either sent the id of a review they did not write or is probing, and
+     * one sentence answers both.
+     */
+    private function assertOwned(Request $request, Review $review): void
+    {
+        abort_if($review->user_id !== $request->user()->id, 403, 'You can only change reviews you wrote.');
     }
 }

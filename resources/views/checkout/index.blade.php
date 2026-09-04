@@ -88,7 +88,7 @@
                                             <span class="text-sm font-semibold text-neutral-900">Use a new address</span>
                                         </label>
                                     </div>
-                                    @error('address_id')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
+                                    <x-field-error field="address_id" />
                                 @endif
 
                                 {{-- The order confirmation goes to the address on the account, so
@@ -128,7 +128,7 @@
                                                title="The full name may only contain letters, spaces, hyphens, apostrophes and periods."
                                                class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
                                                placeholder="Full name" :required="addrId === ''" :disabled="addrId !== ''">
-                                        @error('full_name')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
+                                        <x-field-error field="full_name" />
                                     </div>
                                     <div>
                                         <label for="kk-co-phone" class="block text-[11px] font-medium text-neutral-600 mb-1">Phone *</label>
@@ -142,7 +142,7 @@
                                                title="Enter a 10-digit Indian mobile number starting with 6, 7, 8 or 9."
                                                class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
                                                placeholder="10-digit mobile number" :required="addrId === ''" :disabled="addrId !== ''">
-                                        @error('phone')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
+                                        <x-field-error field="phone" />
                                     </div>
                                 </div>
 
@@ -153,7 +153,7 @@
                                            minlength="3" maxlength="255" autocomplete="address-line1"
                                            class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
                                            placeholder="House no., Building, Street" :required="addrId === ''" :disabled="addrId !== ''">
-                                    @error('address_line_1')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
+                                    <x-field-error field="address_line_1" />
                                 </div>
 
                                 <div>
@@ -162,7 +162,7 @@
                                            minlength="3" maxlength="255" autocomplete="address-line2"
                                            class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
                                            placeholder="Area, Landmark" :disabled="addrId !== ''">
-                                    @error('address_line_2')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
+                                    <x-field-error field="address_line_2" />
                                 </div>
 
                                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -172,7 +172,7 @@
                                                minlength="1" maxlength="100" autocomplete="address-level2"
                                                class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
                                                placeholder="City" :required="addrId === ''" :disabled="addrId !== ''">
-                                        @error('city')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
+                                        <x-field-error field="city" />
                                     </div>
                                     <div>
                                         <label for="kk-co-state" class="block text-[11px] font-medium text-neutral-600 mb-1">State *</label>
@@ -182,7 +182,7 @@
                                                 <option value="{{ $s }}" {{ old('state') === $s ? 'selected' : '' }}>{{ $s }}</option>
                                             @endforeach
                                         </select>
-                                        @error('state')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
+                                        <x-field-error field="state" />
                                     </div>
                                     <div>
                                         <label for="kk-co-pin" class="block text-[11px] font-medium text-neutral-600 mb-1">PIN Code *</label>
@@ -194,7 +194,7 @@
                                                title="Enter a 6-digit PIN code. It cannot start with 0."
                                                class="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:border-primary-400 focus:ring focus:ring-primary-100"
                                                placeholder="400001" :required="addrId === ''" :disabled="addrId !== ''">
-                                        @error('postal_code')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
+                                        <x-field-error field="postal_code" />
                                     </div>
                                 </div>
                                 </div>
@@ -243,7 +243,7 @@
                                     </div>
                                 @endif
                             </div>
-                            @error('payment_method')<p class="px-4 pb-3 -mt-2 text-xs text-error-500">{{ $message }}</p>@enderror
+                            <x-field-error field="payment_method" />
                         </div>
 
                         <!-- Order Notes -->
@@ -258,7 +258,7 @@
                                 <textarea name="notes" id="kk-co-notes" rows="2" maxlength="500"
                                           aria-label="Order notes" class="form-input w-full text-[13px]"
                                           placeholder="Special instructions for delivery or your order...">{{ old('notes') }}</textarea>
-                                @error('notes')<p class="mt-1 text-xs text-error-500">{{ $message }}</p>@enderror
+                                <x-field-error field="notes" />
                             </div>
                         </div>
                     </div>
@@ -368,8 +368,28 @@
 
                             <!-- Place Order Button -->
                             <div class="p-4 pt-0">
+                                {{-- Two clicks on this button were two POSTs to checkout.process,
+                                     and on a checkout that is two orders drawn from one cart -
+                                     the same stock committed twice, the same coupon spent twice,
+                                     and on the online path a second trip to the payment gateway.
+                                     The one-submission-at-a-time guard in app.js now marks the
+                                     form in flight and disables this button on the tick after the
+                                     first click, so the duplicate request is never made.
+
+                                     What that guard cannot do from JavaScript is make the state
+                                     visible. With only bg-primary-600 and its hover in the class
+                                     list, the disabled button rendered exactly like the live one,
+                                     so the customer kept clicking a control that had already
+                                     stopped answering and read the silence as a checkout that had
+                                     failed - which is precisely the panic that makes someone
+                                     reload and try to order again. The disabled: variants are the
+                                     missing half of the guard: the greyed, not-allowed button is
+                                     what says the order is on its way. The hover variant is
+                                     stacked as well because a pointer resting on a disabled
+                                     button still matches :hover, and without it the darker
+                                     primary-700 would light up under a button that is inert. --}}
                                 <button type="submit"
-                                        class="block w-full py-3 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold text-center rounded-lg transition-colors shadow-sm">
+                                        class="block w-full py-3 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold text-center rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary-600">
                                     <span x-show="pm !== 'online'">PLACE ORDER</span>
                                     <span x-show="pm === 'online'" x-cloak>CONTINUE TO PAYMENT</span>
                                 </button>

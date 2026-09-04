@@ -30,7 +30,7 @@
                                        minlength="2" maxlength="255"
                                        class="form-input"
                                        @input="if(!slugManual) slug = toSlug($event.target.value)">
-                                @error('name') <p class="form-error">{{ $message }}</p> @enderror
+                                <x-field-error field="name" />
                             </div>
 
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -41,7 +41,7 @@
                                            title="Lower-case letters, digits and single hyphens, e.g. girls-dresses."
                                            class="form-input"
                                            @input="slugManual = ($event.target.value.trim() !== '')">
-                                    @error('slug') <p class="form-error">{{ $message }}</p> @enderror
+                                    <x-field-error field="slug" />
                                 </div>
                                 <div>
                                     {{-- Named `position` to match the column and the controller rule: as
@@ -50,7 +50,7 @@
                                     <label for="position" class="form-label">Sort order</label>
                                     <input type="number" name="position" id="position" value="{{ old('position', $category->position) }}" min="0" max="65535" step="1"
                                            class="form-input">
-                                    @error('position') <p class="form-error">{{ $message }}</p> @enderror
+                                    <x-field-error field="position" />
                                 </div>
                             </div>
 
@@ -64,14 +64,14 @@
                                         </option>
                                     @endforeach
                                 </select>
-                                @error('parent_id') <p class="form-error">{{ $message }}</p> @enderror
+                                <x-field-error field="parent_id" />
                             </div>
 
                             <div>
                                 <label for="description" class="form-label">Description</label>
                                 <textarea name="description" id="description" rows="3" maxlength="2000"
                                           class="form-textarea">{{ old('description', $category->description) }}</textarea>
-                                @error('description') <p class="form-error">{{ $message }}</p> @enderror
+                                <x-field-error field="description" />
                             </div>
                         </div>
                     </div>
@@ -124,7 +124,7 @@
                                        style="font-size: 13px; color: #616161;"
                                        @change="preview = $event.target.files[0] ? URL.createObjectURL($event.target.files[0]) : null; removing = false">
                                 <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">JPG, PNG or WebP. Max 2MB.</p>
-                                @error('image') <p class="form-error">{{ $message }}</p> @enderror
+                                <x-field-error field="image" />
                                 @if($category->image_url)
                                     <label style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; cursor: pointer;">
                                         <input type="checkbox" name="remove_image" value="1"
@@ -148,10 +148,10 @@
                                    maxlength="500" pattern="(https?://\S+|storage/[A-Za-z0-9._/\-]+)"
                                    title="A full https:// address, or a storage/… path from an upload here."
                                    class="form-input" placeholder="https://… or storage/categories/videos/file.mp4">
-                            @error('video_url_text') <p class="form-error">{{ $message }}</p> @enderror
+                            <x-field-error field="video_url_text" />
                             <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Paste a URL above OR upload an mp4/webm below. Used in the home page bento tile when shown.</p>
                             <input type="file" name="video_file" accept="video/mp4,video/webm,video/quicktime" class="form-input" style="margin-top: 0.5rem;">
-                            @error('video_file') <p class="form-error">{{ $message }}</p> @enderror
+                            <x-field-error field="video_file" />
                             @if($category->video_url)
                                 <label style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; cursor: pointer;">
                                     <input type="checkbox" name="remove_video" value="1" style="width: 1rem; height: 1rem; accent-color: #d72c0d;">
@@ -169,13 +169,13 @@
                                 <label for="meta_title" class="form-label">Page title</label>
                                 <input type="text" name="meta_title" id="meta_title" value="{{ old('meta_title', $category->meta_title) }}" maxlength="255"
                                        class="form-input">
-                                @error('meta_title') <p class="form-error">{{ $message }}</p> @enderror
+                                <x-field-error field="meta_title" />
                             </div>
                             <div>
                                 <label for="meta_description" class="form-label">Meta description</label>
                                 <textarea name="meta_description" id="meta_description" rows="2" maxlength="500"
                                           class="form-textarea">{{ old('meta_description', $category->meta_description) }}</textarea>
-                                @error('meta_description') <p class="form-error">{{ $message }}</p> @enderror
+                                <x-field-error field="meta_description" />
                             </div>
                         </div>
                     </div>

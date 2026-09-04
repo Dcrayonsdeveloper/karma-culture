@@ -18,6 +18,43 @@
         <p style="font-size: 13px; color: #616161; margin: 0;">Products below their low stock threshold</p>
     </div>
 
+@php
+    // A refused restock used to vanish without a trace. updateStock() validates
+    // the quantity, the type and the location and redirects BACK to this page
+    // when any of them is wrong - and this page rendered nothing at all from the
+    // error bag. The dialog came back closed, the row still showed the same low
+    // number, and nothing on screen said the adjustment had been rejected. An
+    // admin reading an unchanged stock figure cannot tell a refused save from
+    // one that went through, so the usual next move was to walk away believing
+    // the product had been restocked.
+    //
+    // The bag is therefore rendered inside the dialog, and the dialog is opened
+    // when the bag is not empty. WHICH product the refused attempt was about is
+    // the one thing the redirect could not carry: the form names its product in
+    // the action URL (/admin/inventory/{id}/stock) rather than in a field, so
+    // old() knew nothing about it and the reopened dialog would have posted the
+    // corrected quantity to `/admin/inventory/null/stock`. The hidden product_id
+    // in the form is what puts it in the flashed input - the controller takes the
+    // product from the route and ignores the field - and it is looked back up
+    // here so the dialog reopens showing the right name, the right totals and
+    // the right per-location holdings.
+    $restockProduct = $errors->any()
+        ? collect($products->items())->firstWhere('id', (int) old('product_id'))
+        : null;
+@endphp
+
+    {{-- The messages belong in the dialog, beside the boxes they are about, and
+         that is where they go whenever the dialog can be reopened. It cannot be
+         when the product has left this page between the attempt and the redirect
+         - a restock that fails on the quantity changes nothing, but a page of
+         rows shifts as other stock moves - and a failure that no one can see is
+         the whole defect being fixed here. So on that one path the bag is
+         printed on the page instead: nothing is rendered inline in this position,
+         so every message is the banner's to carry. --}}
+    @if($errors->any() && ! $restockProduct)
+        <x-form-errors title="That restock was not saved." style="margin-bottom: 1rem;" />
+    @endif
+
     @if($products->total() > 0)
         <div class="card" style="padding: 0.75rem 1rem; margin-bottom: 1rem; border-left: 4px solid #b98900;">
             <div style="display: flex; align-items: center; gap: 0.75rem;">
@@ -113,7 +150,7 @@
 @endphp
 
     <!-- Stock Modal -->
-    <div x-data="{ open: false, productId: null, productName: '', currentStock: 0, byLocation: {}, locationId: '{{ $defaultLocationId }}', get heldHere() { return this.byLocation[String(this.locationId)] ?? 0 } }"
+    <div x-data="{ open: {{ $restockProduct ? 'true' : 'false' }}, productId: {{ $restockProduct ? (int) $restockProduct->id : 'null' }}, productName: {{ Js::from($restockProduct?->name ?? '') }}, currentStock: {{ (int) ($restockProduct?->stock_quantity ?? 0) }}, byLocation: {{ Js::from($restockProduct?->heldByLocation() ?? []) }}, locationId: {{ Js::from((string) old('location_id', $defaultLocationId)) }}, get heldHere() { return this.byLocation[String(this.locationId)] ?? 0 } }"
          x-on:open-stock-modal.window="open = true; productId = $event.detail.id; productName = $event.detail.name; currentStock = $event.detail.stock; byLocation = $event.detail.byLocation || {}"
          x-show="open" x-cloak
          x-transition.opacity.duration.150ms
@@ -140,36 +177,61 @@
                     <span style="font-size: 12px; color: #8a6d00;" x-text="currentStock"></span>
                 </div>
             </div>
-            <form method="POST" x-bind:action="'/admin/inventory/' + productId + '/stock'">
+            <form method="POST" id="restock-form" data-restock-product="{{ $restockProduct?->id }}" x-bind:action="'/admin/inventory/' + productId + '/stock'">
                 @csrf
                 @method('PUT')
+                {{-- Not read by the controller, which resolves the product from the
+                     route. It exists so that the redirect after a refused save
+                     still says which product was being restocked - the note where
+                     $restockProduct is worked out, further up, has the why. --}}
+                <input type="hidden" name="product_id" x-bind:value="productId">
                 <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+                    {{-- The headline that says the save was refused, plus anything
+                         the controller rejected that has no box of its own below.
+                         Every key that DOES have one is listed as handled, so the
+                         same sentence is never printed twice. --}}
+                    <x-form-errors :handled="['location_id', 'type', 'quantity', 'reason']" title="That restock was not saved." />
                     <div>
                         {{-- Stock sits in a warehouse, so an adjustment has to say
                              which one it happens at. --}}
-                        <label class="form-label">Location</label>
-                        <select name="location_id" x-model="locationId" class="form-select" style="width: 100%;">
+                        <label for="restock_location" class="form-label">Location</label>
+                        <select name="location_id" id="restock_location" x-model="locationId" class="form-select" style="width: 100%;">
                             @forelse($locations as $location)
                                 <option value="{{ $location->id }}" @selected($location->is_default)>{{ $location->name }} ({{ $location->code }})</option>
                             @empty
                                 <option value="">Main Warehouse</option>
                             @endforelse
                         </select>
+                        <x-field-error field="location_id" />
                     </div>
                     <div>
-                        <label class="form-label">Adjustment Type <span style="color: #d72c0d;">*</span></label>
-                        <select name="type" class="form-select" required>
-                            <option value="add">Add Stock</option>
-                            <option value="set">Set Stock To</option>
+                        <label for="restock_type" class="form-label">Adjustment Type <span style="color: #d72c0d;">*</span></label>
+                        <select name="type" id="restock_type" class="form-select" required>
+                            <option value="add" @selected(old('type', 'add') === 'add')>Add Stock</option>
+                            <option value="set" @selected(old('type') === 'set')>Set Stock To</option>
                         </select>
+                        <x-field-error field="type" />
                     </div>
                     <div>
-                        <label class="form-label">Quantity <span style="color: #d72c0d;">*</span></label>
-                        <input type="number" name="quantity" min="1" required class="form-input" placeholder="0">
+                        {{-- Every label on this form carries a `for` now, and this is
+                             the box that shows why: the validator names a field from
+                             its label, so with no label to find it fell back to the
+                             placeholder and an empty quantity was reported as "0 is
+                             required."
+
+                             max and step are the server's own max:1000000 and integer
+                             rules, restated where they can be answered before a request
+                             is made. A fat-fingered extra digit used to cost a round
+                             trip that then said nothing at all. --}}
+                        <label for="restock_quantity" class="form-label">Quantity <span style="color: #d72c0d;">*</span></label>
+                        <input type="number" name="quantity" id="restock_quantity" min="1" max="1000000" step="1" inputmode="numeric"
+                               value="{{ old('quantity') }}" required class="form-input" placeholder="0">
+                        <x-field-error field="quantity" />
                     </div>
                     <div>
-                        <label class="form-label">Reason</label>
-                        <input type="text" name="reason" class="form-input" placeholder="e.g. Restock, Purchase order">
+                        <label for="restock_reason" class="form-label">Reason</label>
+                        <input type="text" name="reason" id="restock_reason" maxlength="255" value="{{ old('reason') }}" class="form-input" placeholder="e.g. Restock, Purchase order">
+                        <x-field-error field="reason" />
                     </div>
                 </div>
                 <div style="padding: 0.75rem 1.5rem; background: #f6f6f7; border-top: 1px solid #e3e3e3; display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem; border-radius: 0 0 0.75rem 0.75rem;">
@@ -181,7 +243,88 @@
     </div>
 
     <script>
+        // One dialog serves every row on the page, so whatever a refused restock
+        // left in it is still there when a DIFFERENT product's Restock button is
+        // clicked - and none of it is true of the row just opened. "The quantity
+        // is too large." was a verdict on another product's numbers, and the
+        // quantity that earned it must not be sitting pre-filled under a name it
+        // was never typed for: one careless Enter and the wrong product is
+        // adjusted. Reopening the SAME product keeps both, because that is the
+        // admin coming back to correct exactly what was refused.
+        //
+        // The messages are removed by the markers app.js uses for them, and the
+        // outline and aria wiring go back with them, so the two never disagree
+        // about what is on screen. `.kk-field-error` catches the server's notes
+        // and the validator's own alike - a field can only ever show one, and
+        // neither of them survives the change of product.
+        // One dialog, reopened over whichever row was clicked, so everything the
+        // last product left behind has to go before the next one is shown.
+        //
+        // Hand-clearing the DOM reached the note, the outline and the aria link
+        // but not the state app.js keeps ON the control: the note it tracks as
+        // _kkErrorNote, and the 2-second repaint timer the character filter arms,
+        // which would fire after this ran and print the previous product's
+        // complaint inside the new product's dialog. kkResetForm() is app.js
+        // undoing all of it from the inside, so this page does not have to know
+        // how any of it is stored.
+        function clearRestockErrors(form) {
+            if (window.kkResetForm) {
+                window.kkResetForm(form);
+                return;
+            }
+
+            // app.js has not booted yet (or failed to). Clear what is reachable
+            // from here rather than leaving the last product's messages up.
+            form.querySelectorAll('.kk-field-error, [data-kk-form-error]').forEach(function (note) {
+                note.remove();
+            });
+
+            form.querySelectorAll('.kk-input-invalid').forEach(function (field) {
+                field.classList.remove('kk-input-invalid');
+                field.removeAttribute('aria-invalid');
+
+                var describedBy = field.getAttribute('aria-describedby') || '';
+                if (describedBy.indexOf('kk-srv-err-') === 0 || describedBy.indexOf('kk-err-') === 0) {
+                    field.removeAttribute('aria-describedby');
+                }
+            });
+        }
+
         function openStockModal(id, name, stock, byLocation) {
+            var form = document.getElementById('restock-form');
+
+            if (form && String(form.dataset.restockProduct || '') !== String(id)) {
+                clearRestockErrors(form);
+                form.dataset.restockProduct = String(id);
+
+                // The numbers go with the messages. The location is deliberately
+                // left alone: which warehouse the admin is working at holds good
+                // across products, and it is bound to Alpine rather than to this
+                // form's DOM value anyway.
+                ['quantity', 'reason'].forEach(function (name) {
+                    var field = form.querySelector('[name="' + name + '"]');
+                    if (field) field.value = '';
+                });
+
+                // The adjustment MODE has to travel with them, and it is the
+                // more dangerous half of what a refusal leaves in the dialog.
+                // The select restores old('type') so that the admin coming back
+                // to correct the product that WAS refused finds the mode they
+                // picked still set; carried onto a different product it leaves a
+                // dialog that looks freshly opened - blank quantity, blank
+                // reason, the new name and the new totals in the header - while
+                // still in absolute "Set Stock To". A hundred typed into that is
+                // not a delivery being added to a shelf that is running low, it
+                // is that shelf being rewritten to a hundred, and nothing on
+                // screen tells the two apart. It is put back here rather than by
+                // dropping the option's server-side pre-selection, because
+                // restoring the mode for a re-open of the SAME product is
+                // exactly what that pre-selection is for. 'add' is the option
+                // the markup defaults to.
+                var type = form.querySelector('[name="type"]');
+                if (type) type.value = 'add';
+            }
+
             window.dispatchEvent(new CustomEvent('open-stock-modal', { detail: { id, name, stock, byLocation } }));
         }
     </script>

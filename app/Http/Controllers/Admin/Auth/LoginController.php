@@ -20,6 +20,19 @@ class LoginController extends Controller
         $credentials = $request->validate([
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
+        ], [
+            // Without these three the admin sign-in was the one auth screen that
+            // answered in Laravel's framework voice - "The email field is
+            // required." - while the browser side, which loads app.js and has no
+            // `novalidate` on the form, named the same empty box after its own
+            // <label>: "Email address is required." Same rule, same field, two
+            // wordings, and both are reachable in one attempt because a value of
+            // spaces passes the native `required` and is only rejected once
+            // Laravel trims it. The sentences below are the ones app.js prints,
+            // so the field says the same thing whichever side rejected it.
+            'email.required' => 'Email address is required.',
+            'email.email' => 'Enter a valid email address, like you@example.com.',
+            'password.required' => 'Password is required.',
         ]);
 
         if (Auth::guard('admin')->attempt($credentials, $request->boolean('remember'))) {

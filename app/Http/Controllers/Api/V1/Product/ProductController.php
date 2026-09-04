@@ -56,8 +56,13 @@ class ProductController extends Controller
 
     public function show(Product $product): JsonResponse
     {
+        // Was a bare abort(404), which serialises to {"message":""} - the same
+        // unusable empty body a bare abort(403) produces, so a client had nothing
+        // to show for a product that has been unpublished or is still awaiting
+        // approval. Deliberately the same answer as a product id that never
+        // existed: which of the two it is, is not a caller's business.
         if (!$product->is_active || $product->status !== 'approved') {
-            abort(404);
+            abort(404, 'This product is not available.');
         }
 
         $product->load([

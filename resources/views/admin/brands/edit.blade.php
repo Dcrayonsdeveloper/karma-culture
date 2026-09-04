@@ -27,12 +27,12 @@
                                 <label for="name" class="form-label">Name <span style="color: #d72c0d;">*</span></label>
                                 <input type="text" name="name" id="name" value="{{ old('name', $brand->name) }}" required
                                        minlength="2" maxlength="255" class="form-input">
-                                @error('name') <p class="form-error">{{ $message }}</p> @enderror
+                                <x-field-error field="name" />
                             </div>
                             <div>
                                 <label for="description" class="form-label">Description</label>
                                 <textarea name="description" id="description" rows="3" maxlength="2000" class="form-textarea">{{ old('description', $brand->description) }}</textarea>
-                                @error('description') <p class="form-error">{{ $message }}</p> @enderror
+                                <x-field-error field="description" />
                             </div>
                         </div>
                     </div>
@@ -58,7 +58,7 @@
                                 <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
                                     @if($brand->logo_url) Upload new to replace current logo. @else JPG, PNG, WebP or GIF. Max 2MB. @endif
                                 </p>
-                                @error('logo') <p class="form-error">{{ $message }}</p> @enderror
+                                <x-field-error field="logo" />
                             </div>
                         </div>
                     </div>

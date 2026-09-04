@@ -20,11 +20,11 @@
         </form>
     </div>
 
-    @if(session('success'))
-        <div style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: #cdfee1; border: 1px solid #1a7a2e; border-radius: 0.5rem; font-size: 13px; color: #1a7a2e;">
-            {{ session('success') }}
-        </div>
-    @endif
+    {{-- The success flash is deliberately not painted here. The admin layout
+         hands every session flash to toastr, so this card repeated "Reply sent
+         to ..." and "Enquiry status updated." a second time on the same page
+         load. It was only ever half a channel in any case: the mail-failure
+         'warning' this page can also raise was never rendered inline. --}}
 
     <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
         <!-- Main Content -->
@@ -86,9 +86,7 @@
                         <textarea name="message" rows="4" required
                                   class="form-input" style="width: 100%;"
                                   placeholder="Type your reply to the customer...">{{ old('message') }}</textarea>
-                        @error('message')
-                            <p style="font-size: 13px; color: #d72c0d; margin: 0;">{{ $message }}</p>
-                        @enderror
+                        <x-field-error field="message" />
                         <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
                             <p style="font-size: 12px; color: #616161; margin: 0;">Emailed to {{ $enquiry->email }}</p>
                             <button type="submit" class="btn btn-primary" style="font-size: 13px;">Send Reply</button>
@@ -106,19 +104,44 @@
                     @csrf
                     @method('PUT')
                     <div style="padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                        {{-- A rejected status update used to be silent. The only error
+                             surface on this page was the note under the reply textarea
+                             above, which belongs to the OTHER form entirely, so an
+                             admin_notes over the controller's max:5000 bounced straight
+                             back to a page that looked untouched and said nothing. Each
+                             field now carries its own verdict, which is also what keeps
+                             the two forms from borrowing each other's messages: they
+                             share one error bag, and a key is only ever shown by the
+                             field it names.
+
+                             The for/id pairs matter beyond accessibility here: the
+                             inline validator in app.js names a field from its <label>,
+                             so without them the length message would have been built
+                             from the placeholder ("Internal notes (not visible to
+                             customer)... must be 5000 characters or fewer."). The
+                             "(internal only)" hint sits outside the <label> for the same
+                             reason - inside it, the field's name became "Admin Notes
+                             (internal only)". maxlength mirrors max:5000 so the limit is
+                             felt while typing instead of after a round trip. --}}
                         <div>
-                            <label style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Status</label>
-                            <select name="status" class="form-select" style="width: 100%;">
+                            <label for="enquiry-status" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Status</label>
+                            <select name="status" id="enquiry-status" class="form-select" style="width: 100%;">
                                 <option value="new" @selected($enquiry->status === 'new')>New</option>
                                 <option value="read" @selected($enquiry->status === 'read')>Read</option>
                                 <option value="replied" @selected($enquiry->status === 'replied')>Replied</option>
                                 <option value="closed" @selected($enquiry->status === 'closed')>Closed</option>
                             </select>
+                            <x-field-error field="status" />
                         </div>
                         <div>
-                            <label style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Admin Notes <span style="color: #616161; font-weight: 400;">(internal only)</span></label>
-                            <textarea name="admin_notes" rows="3" placeholder="Internal notes (not visible to customer)..."
+                            <div style="margin-bottom: 0.25rem;">
+                                <label for="enquiry-admin-notes" style="font-size: 13px; font-weight: 500; color: #303030;">Admin Notes</label>
+                                <span style="font-size: 13px; color: #616161; font-weight: 400;">(internal only)</span>
+                            </div>
+                            <textarea name="admin_notes" id="enquiry-admin-notes" rows="3" maxlength="5000"
+                                      placeholder="Internal notes (not visible to customer)..."
                                       class="form-input" style="width: 100%;">{{ old('admin_notes', $enquiry->admin_notes) }}</textarea>
+                            <x-field-error field="admin_notes" />
                         </div>
                         <div style="display: flex; justify-content: flex-end;">
                             <button type="submit" class="btn btn-secondary" style="font-size: 13px;">Update Status</button>

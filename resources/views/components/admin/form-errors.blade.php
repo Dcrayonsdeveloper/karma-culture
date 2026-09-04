@@ -1,24 +1,27 @@
 {{--
-    Server-side validation feedback for admin forms.
+    Admin alias for <x-form-errors>.
 
-    The admin layout only raises a toast for session('success'|'error'|...), and a
-    Laravel validation failure populates the $errors bag instead - so across the
-    Homepage Manager a rejected save bounced back to a silent page with the form
-    reset to whatever was in the database. The admin saw their edit vanish with no
-    explanation and no clue which field was at fault.
+    This used to be its own renderer, printing `@foreach($errors->all())` in a
+    box above the form while the `@error(...)` blocks a few lines below printed
+    the same sentences again under the fields they belonged to - so a rejected
+    admin save reported each problem twice. It now forwards to the single
+    form-level banner, which prints only what no field is already showing, and
+    which app.js retires the moment a new submission starts.
 
-    Drop this immediately above a form. Pair it with old() on the inputs so the
-    typing survives the round trip as well.
+    Kept as a name of its own because thirty-odd admin views say
+    <x-admin.form-errors> and the wording of the heading is admin-specific.
+    New forms should use <x-form-errors> directly.
+
+    Pass `handled` with the field keys rendered inline below it:
+
+        <x-admin.form-errors :handled="['name', 'slug', 'price']" />
 --}}
-@props(['title' => 'This form was not saved'])
 
-@if($errors->any())
-    <div role="alert" style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: #fff0f0; border: 1px solid #f0c2bd; border-radius: 0.5rem;">
-        <div style="font-size: 13px; font-weight: 600; color: #8e1f0b; margin-bottom: 0.25rem;">{{ $title }}</div>
-        <ul style="margin: 0; padding-left: 1.1rem; font-size: 13px; color: #8e1f0b;">
-            @foreach($errors->all() as $error)
-                <li>{{ $error }}</li>
-            @endforeach
-        </ul>
-    </div>
-@endif
+@props([
+    'title' => 'This form was not saved',
+    'handled' => [],
+    'bag' => 'default',
+    'for' => null,
+])
+
+<x-form-errors :title="$title" :handled="$handled" :bag="$bag" :for="$for" {{ $attributes }} />

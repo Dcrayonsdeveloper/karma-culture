@@ -133,9 +133,17 @@ class CustomerController extends Controller
 
             'is_active' => 'boolean',
         ], [
-            'first_name.required' => 'Please enter a first name.',
-            'email.required' => 'Please enter an email address.',
-            'email.email' => 'Enter a valid email address, like name@example.com.',
+            // The admin layout loads app.js, so the site-wide validator runs on
+            // this form too and names an empty box after its own <label>: "First
+            // Name is required.", "Email is required." These are those labels.
+            'first_name.required' => 'First Name is required.',
+            'email.required' => 'Email is required.',
+            // The example address was the only "name@example.com" in the
+            // codebase; every other place that teaches the shape of an address -
+            // app.js's own _EMAIL_GENERIC, the storefront profile form, the
+            // contact form, registration - says "you@example.com". One example,
+            // everywhere, or the two look like two different rules.
+            'email.email' => 'Enter a valid email address, like you@example.com.',
             'email.unique' => 'An account already exists for this email address.',
         ]);
 

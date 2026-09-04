@@ -25,9 +25,7 @@
                             <input type="text" name="title" id="page-title" value="{{ old('title') }}" required
                                    minlength="2" maxlength="255"
                                    class="form-input" style="width: 100%;" placeholder="e.g. About Us">
-                            @error('title')
-                                <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="title" />
                         </div>
 
                         <div>
@@ -37,9 +35,7 @@
                                    title="Lower-case letters, numbers and single hyphens only, for example shipping-policy."
                                    class="form-input" style="width: 100%;" placeholder="auto-generated-from-title">
                             <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Leave empty to auto-generate from title</p>
-                            @error('slug')
-                                <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="slug" />
                         </div>
 
                         <div>
@@ -50,9 +46,7 @@
                                  report an empty field the admin can see is full. Length and markup
                                  are enforced server-side instead. --}}
                             <textarea name="content" id="page-content" rows="12" class="form-textarea" style="width: 100%;" placeholder="Page content...">{{ old('content') }}</textarea>
-                            @error('content')
-                                <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="content" />
                         </div>
                     </div>
                 </div>

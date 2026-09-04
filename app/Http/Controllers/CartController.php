@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -115,20 +116,63 @@ class CartController extends Controller
 
     public function add(Request $request): JsonResponse|RedirectResponse
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             // is_active matters: ProductController::show 404s an inactive
             // product, so without it the only way to buy a withdrawn line was
             // to POST its id straight to this endpoint.
-            'product_id' => ['required', 'integer', Rule::exists('products', 'id')->where('is_active', true)],
+            //
+            // whereNull('deleted_at') matters for the opposite reason. Products
+            // are soft-deleted - Admin\ProductController::destroy calls delete()
+            // and leaves is_active alone - but Rule::exists runs a raw query
+            // that no model scope touches, so every deleted product still
+            // satisfied is_active = true and passed the rule. The lookup below
+            // then applied the soft-delete scope, missed, and threw; Laravel
+            // turned that into a 404 carrying the ORM's own sentence, and
+            // convertExceptionToArray keeps an HttpException's message even
+            // with APP_DEBUG off. So a shopper who pressed Add to Cart on a
+            // page an admin had just removed the product from read "No query
+            // results for model [App\Models\Product] 12." in the toast: our
+            // class name and a row id, shown to a customer. The id arrived on a
+            // field, so the answer belongs on that field as an ordinary 422.
+            'product_id' => ['required', 'integer', Rule::exists('products', 'id')->whereNull('deleted_at')->where('is_active', true)],
             'variant_id' => ['nullable', 'integer', 'exists:product_variants,id'],
             // Charset and length only - whether these are OPTIONS THIS PRODUCT
             // ACTUALLY OFFERS is checked below, once the product is loaded.
             'size' => V::text(required: false, max: 50),
             'colour' => V::text(required: false, max: 60),
             'quantity' => V::quantity(max: 99),
+        ], [
+            // Without this the scoped rule answers a withdrawn product with
+            // Laravel's "The selected product id is invalid." - a sentence about
+            // a request field, shown to somebody who pressed Add to Cart on a
+            // page that had simply gone stale. Same words as the lookup below
+            // uses when it loses the same race, so the two cannot disagree.
+            'product_id.exists' => 'That product is no longer available.',
+            'variant_id.exists' => 'That option is no longer available for this product.',
         ]);
 
-        $product = Product::findOrFail($validated['product_id']);
+        if ($validator->fails() && $request->wantsJson()) {
+            return $this->invalid($validator);
+        }
+
+        // Throws for a browser form post, exactly as $request->validate() did:
+        // the redirect-with-errors is what puts each message back under its own
+        // input. Only the JSON caller is answered above, and only because the
+        // framework's own JSON body speaks a different dialect to this
+        // controller's - see invalid() for what that cost.
+        $validated = $validator->validate();
+
+        // find(), not findOrFail(): the rule above has already proved this id
+        // names a product the storefront sells, so a miss here can only be a
+        // race with an admin withdrawing it between validation and this line.
+        // That deserves the same field message as any other unusable
+        // product_id - one the shopper can act on - rather than an exception
+        // rendered to them as a 404 body.
+        $product = Product::where('is_active', true)->find($validated['product_id']);
+
+        if (! $product) {
+            return $this->failed($request, 'That product is no longer available.', 'product_id');
+        }
 
         // Check stock
         $variantId = $validated['variant_id'] ?? null;
@@ -145,12 +189,7 @@ class CartController extends Controller
             : null;
 
         if ($variantId && ! $variant) {
-            $error = 'That option is no longer available for this product.';
-            if ($request->wantsJson()) {
-                return response()->json(['error' => $error], 422);
-            }
-
-            return back()->with('error', $error);
+            return $this->failed($request, 'That option is no longer available for this product.', 'variant_id');
         }
 
         // size and colour are free-text POST fields that get written to the
@@ -169,11 +208,7 @@ class CartController extends Controller
                 ? 'This product is not sold by '.$field.'.'
                 : 'That '.$field.' is not available for this product.';
 
-            if ($request->wantsJson()) {
-                return response()->json(['error' => $error], 422);
-            }
-
-            return back()->with('error', $error);
+            return $this->failed($request, $error, $field);
         }
 
         // The product's own flag is the storefront's sell / don't-sell switch: the
@@ -185,13 +220,7 @@ class CartController extends Controller
         // column, and a blanket isInStock() would also refuse a variant-stocked
         // product whose parent row happens to sit at 0.
         if ($product->stock_status !== 'in_stock') {
-            $error = 'This item is currently out of stock.';
-
-            if ($request->wantsJson()) {
-                return response()->json(['error' => $error, 'available' => 0], 422);
-            }
-
-            return back()->with('error', $error);
+            return $this->failed($request, 'This item is currently out of stock.', 'quantity', ['available' => 0]);
         }
 
         $stockQuantity = $variant ? $variant->stock_quantity : $product->stock_quantity;
@@ -200,11 +229,8 @@ class CartController extends Controller
             $error = $stockQuantity > 0
                 ? "Only {$stockQuantity} item(s) available in stock."
                 : 'This item is currently out of stock.';
-            if ($request->wantsJson()) {
-                return response()->json(['error' => $error, 'available' => $stockQuantity], 422);
-            }
 
-            return back()->with('error', $error);
+            return $this->failed($request, $error, 'quantity', ['available' => $stockQuantity]);
         }
 
         $cart = $this->getOrCreateCart();
@@ -225,11 +251,11 @@ class CartController extends Controller
                 $error = $canAdd > 0
                     ? "You already have {$inCart} in your cart. You can add up to {$canAdd} more."
                     : "You already have all {$stockQuantity} available item(s) in your cart.";
-                if ($request->wantsJson()) {
-                    return response()->json(['error' => $error, 'available' => $stockQuantity, 'in_cart' => $inCart], 422);
-                }
 
-                return back()->with('error', $error);
+                return $this->failed($request, $error, 'quantity', [
+                    'available' => $stockQuantity,
+                    'in_cart' => $inCart,
+                ]);
             }
             $existingItem->update(['quantity' => $newQuantity]);
         } else {
@@ -327,24 +353,30 @@ class CartController extends Controller
         $cart = $this->getOrCreateCart();
         abort_if($cartItem->cart_id !== $cart->id, 403);
 
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'quantity' => V::quantity(max: 99),
         ]);
 
-        // Check stock
-        $stockQuantity = $cartItem->variant_id
-            ? $cartItem->variant->stock_quantity
-            : $cartItem->product->stock_quantity;
+        if ($validator->fails() && $request->wantsJson()) {
+            return $this->invalid($validator);
+        }
+
+        $validated = $validator->validate();
+
+        // Check stock. Null-safe, because a cart line outlives the rows it
+        // points at - products are soft-deleted, variants are deleted outright
+        // - and reading ->stock_quantity off the missing relation turned "that
+        // item is gone" into a 500 on an ordinary quantity change.
+        $stockQuantity = (int) ($cartItem->variant_id
+            ? ($cartItem->variant?->stock_quantity ?? 0)
+            : ($cartItem->product?->stock_quantity ?? 0));
 
         if ($validated['quantity'] > $stockQuantity) {
             $error = $stockQuantity > 0
                 ? "Only {$stockQuantity} item(s) available in stock."
                 : 'This item is currently out of stock.';
-            if ($request->wantsJson()) {
-                return response()->json(['error' => $error, 'available' => $stockQuantity], 422);
-            }
 
-            return back()->with('error', $error);
+            return $this->failed($request, $error, 'quantity', ['available' => $stockQuantity]);
         }
 
         $cartItem->update(['quantity' => $validated['quantity']]);
@@ -430,13 +462,25 @@ class CartController extends Controller
 
     public function applyCoupon(Request $request): JsonResponse|RedirectResponse
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             // Was an unbounded 'string', so a megabyte of text was strtoupper'd
             // and looked up on every attempt. 50 is the coupons.code column
             // width and the ceiling Admin\CouponController creates codes under,
             // so no findable code is excluded.
             'code' => V::text(max: 50),
         ]);
+
+        // The coupon box has no charset filter on the way in - deliberately, so
+        // a code is never silently rewritten as it is typed - which makes this
+        // the one place a shopper meets a rule failure by ordinary accident:
+        // pasting "<b>SALE" trips the no-markup rule. Answered by the framework
+        // that arrived with no `error` key, so the cart page fell through to
+        // "Invalid coupon" - a different and untrue reason for the refusal.
+        if ($validator->fails() && $request->wantsJson()) {
+            return $this->invalid($validator);
+        }
+
+        $validated = $validator->validate();
 
         // Entering a code is a fresh decision: stop suppressing auto-apply.
         session()->forget('coupon_dismissed');
@@ -446,12 +490,7 @@ class CartController extends Controller
 
         // Prevent stacking - if a coupon is already applied, reject
         if ($cart->coupon_id) {
-            $message = 'A coupon is already applied. Remove it first to apply a different one.';
-            if ($request->wantsJson()) {
-                return response()->json(['error' => $message], 422);
-            }
-
-            return back()->with('error', $message);
+            return $this->failed($request, 'A coupon is already applied. Remove it first to apply a different one.', 'code');
         }
 
         // Another hand-written copy of the validity predicate, and this one
@@ -464,30 +503,19 @@ class CartController extends Controller
             ->first();
 
         if (! $coupon) {
-            if ($request->wantsJson()) {
-                return response()->json(['error' => 'Invalid or expired coupon code'], 422);
-            }
-
-            return back()->with('error', 'Invalid or expired coupon code.');
+            return $this->failed($request, 'Invalid or expired coupon code.', 'code');
         }
 
         // Check minimum order amount (not for BOGO - BOGO checks quantity instead)
         if ($coupon->type !== 'buy_x_get_y' && $coupon->min_order_amount && $cart->subtotal < $coupon->min_order_amount) {
-            $message = 'This coupon requires a minimum order of '.format_price($coupon->min_order_amount);
-            if ($request->wantsJson()) {
-                return response()->json(['error' => $message], 422);
-            }
+            $message = 'This coupon requires a minimum order of '.format_price($coupon->min_order_amount).'.';
 
-            return back()->with('error', $message);
+            return $this->failed($request, $message, 'code');
         }
 
         // Check global usage limit
         if ($coupon->usage_limit && $coupon->times_used >= $coupon->usage_limit) {
-            if ($request->wantsJson()) {
-                return response()->json(['error' => 'This coupon has reached its usage limit'], 422);
-            }
-
-            return back()->with('error', 'This coupon has reached its usage limit.');
+            return $this->failed($request, 'This coupon has reached its usage limit.', 'code');
         }
 
         // Check per-user usage limit
@@ -496,12 +524,7 @@ class CartController extends Controller
                 ->where('coupon_id', $coupon->id)
                 ->count();
             if ($userUsage >= $coupon->usage_per_user) {
-                $message = 'You have already used this coupon the maximum number of times.';
-                if ($request->wantsJson()) {
-                    return response()->json(['error' => $message], 422);
-                }
-
-                return back()->with('error', $message);
+                return $this->failed($request, 'You have already used this coupon the maximum number of times.', 'code');
             }
         }
 
@@ -512,11 +535,8 @@ class CartController extends Controller
             $message = $coupon->type === 'buy_x_get_y'
                 ? 'Your cart does not meet the quantity requirements for this offer.'
                 : 'This coupon cannot be applied to your cart.';
-            if ($request->wantsJson()) {
-                return response()->json(['error' => $message], 422);
-            }
 
-            return back()->with('error', $message);
+            return $this->failed($request, $message, 'code');
         }
 
         $cart->update([
@@ -566,6 +586,74 @@ class CartController extends Controller
         }
 
         return back()->with('success', 'Coupon removed.');
+    }
+
+    /**
+     * One envelope for every refusal these endpoints hand back.
+     *
+     * A business failure answered with {error: "..."} while the framework's own
+     * failure on the same endpoint answered with {message, errors} - two
+     * dialects out of one URL. Every consumer picked one and read only that, so
+     * `error` won and a real validation message arrived as an undefined key and
+     * collapsed into a hardcoded string: "Failed to add to cart", "Failed to
+     * update", "Invalid coupon" - none of them the reason. Each refusal now
+     * carries all three keys, saying the same sentence three ways so no reader
+     * can miss it:
+     *
+     *   error   - what the drawer and the cart page have read since they were
+     *             written, kept so this stays a fix and not a breaking change;
+     *   message - the key window.kkApiError() reads, and the framework's own;
+     *   errors  - the {field: [messages]} map, so the message can be put under
+     *             the input it belongs to instead of floating in a toast.
+     *
+     * A browser form post is unchanged: it still redirects back with the
+     * sentence flashed as `error`.
+     *
+     * @param  array<string, mixed>  $extra  Machine-readable context (available
+     *                                       stock, quantity already in the cart)
+     *                                       the page uses to adjust its inputs.
+     */
+    protected function failed(Request $request, string $message, ?string $field = null, array $extra = []): JsonResponse|RedirectResponse
+    {
+        if (! $request->wantsJson()) {
+            return back()->with('error', $message);
+        }
+
+        $body = [
+            'error' => $message,
+            'message' => $message,
+        ];
+
+        if ($field !== null) {
+            // Wrapped in an array because that is what Laravel sends per field
+            // and what every reader unwraps; a bare string is read a character
+            // at a time.
+            $body['errors'] = [$field => [$message]];
+        }
+
+        return response()->json($body + $extra, 422);
+    }
+
+    /**
+     * A rule failure, in the same envelope as everything else.
+     *
+     * ValidationException's JSON body has no `error` key, which is the one key
+     * the cart drawer and the cart page read - so the endpoint's most precise
+     * messages ("The code field must not contain HTML.") were the only ones
+     * that never reached the shopper. Re-emitting them here costs nothing: the
+     * first message is what the framework itself puts in `message`, and the
+     * full per-field map still travels under `errors` for anything that renders
+     * inline.
+     */
+    protected function invalid(\Illuminate\Contracts\Validation\Validator $validator): JsonResponse
+    {
+        $errors = $validator->errors();
+
+        return response()->json([
+            'error' => $errors->first(),
+            'message' => $errors->first(),
+            'errors' => $errors->messages(),
+        ], 422);
     }
 
     protected function formatCouponData(Coupon $coupon, Cart $cart): array

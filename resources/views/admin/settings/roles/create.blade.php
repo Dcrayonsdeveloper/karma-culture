@@ -12,7 +12,7 @@
 
     <div style="max-width: 800px;">
 
-        @include('admin.settings.partials.errors')
+        @include('admin.settings.partials.errors', ['handled' => ['name']])
         <form action="{{ route('admin.settings.roles.store') }}" method="POST">
             @csrf
 
@@ -22,7 +22,7 @@
                     <div>
                         <label class="form-label" style="font-size: 13px; color: #303030;">Role Name <span style="color: #d72c0d;">*</span></label>
                         <input type="text" name="name" value="{{ old('name') }}" class="form-input" placeholder="e.g. editor, moderator" required>
-                        @error('name') <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p> @enderror
+                        <x-field-error field="name" />
                     </div>
                     @if($permissions->count())
                         <div>

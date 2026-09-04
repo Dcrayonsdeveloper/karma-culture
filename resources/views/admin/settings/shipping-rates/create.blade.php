@@ -12,7 +12,7 @@
 
     <div style="max-width: 640px;">
 
-        @include('admin.settings.partials.errors')
+        @include('admin.settings.partials.errors', ['handled' => ['name', 'rate', 'type']])
         <form action="{{ route('admin.settings.shipping-zones.rates.store', $shippingZone) }}" method="POST">
             @csrf
 
@@ -23,7 +23,7 @@
                     <input type="text" name="name" value="{{ old('name') }}" required
                            placeholder="e.g. Standard Delivery"
                            style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #c9cccf; border-radius: 0.5rem; font-size: 13px;">
-                    @error('name') <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p> @enderror
+                    <x-field-error field="name" />
                 </div>
 
                 <div>
@@ -35,14 +35,14 @@
                         <option value="price" {{ old('type') === 'price' ? 'selected' : '' }}>Price Based</option>
                         <option value="free" {{ old('type') === 'free' ? 'selected' : '' }}>Free Shipping</option>
                     </select>
-                    @error('type') <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p> @enderror
+                    <x-field-error field="type" />
                 </div>
 
                 <div>
                     <label style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.375rem;">Rate Amount (₹) <span style="color: #d72c0d;">*</span></label>
                     <input type="number" name="rate" value="{{ old('rate', 0) }}" required min="0" step="0.01"
                            style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #c9cccf; border-radius: 0.5rem; font-size: 13px;">
-                    @error('rate') <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p> @enderror
+                    <x-field-error field="rate" />
                 </div>
 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">

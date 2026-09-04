@@ -14,13 +14,7 @@
             <h1 class="text-lg sm:text-xl font-bold text-neutral-900">Request a Return</h1>
             <p class="text-[13px] text-neutral-600 mt-1 mb-5">Order {{ $order->order_number }} &middot; delivered {{ $order->delivered_at?->format('d M Y') }}</p>
 
-            @if($errors->any())
-                <div class="mb-4 p-3.5 rounded-lg bg-red-50 border border-red-100">
-                    @foreach($errors->all() as $error)
-                        <p class="text-[13px] text-red-700">{{ $error }}</p>
-                    @endforeach
-                </div>
-            @endif
+            <x-form-errors title="Your return request could not be submitted." />
 
             @if($items->isEmpty())
                 <div class="bg-white border border-neutral-100 rounded-xl p-6 text-center">

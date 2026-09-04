@@ -106,7 +106,11 @@ class RegistrationFormTest extends TestCase
         // The Alpine component must come back in register mode, not login mode,
         // or the customer never sees why the submit failed.
         $page->assertSee("mode: 'register'", false);
-        $page->assertSee("We couldn't create your account.", false);
+        // Escaped, not raw: the headline now travels through {{ }} in
+        // <x-form-errors>, so the apostrophe reaches the page as &#039;. The
+        // default assertSee() escapes the needle the same way, which is what
+        // makes this compare like with like.
+        $page->assertSee("We couldn't create your account.");
         $page->assertSee('Please accept the Terms and Privacy Policy to continue.');
     }
 

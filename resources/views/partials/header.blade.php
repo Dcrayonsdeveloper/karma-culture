@@ -471,18 +471,40 @@
                 {{-- Signup-only: full name --}}
                 <div class="kk-loginmodal__group" x-show="mode === 'signup'">
                     <label class="kk-loginmodal__label" for="kk-auth-name">Full Name</label>
+                    {{-- @input="recheck(...)": a message this modal put under a box
+                         is the verdict on a value that is no longer in it the moment
+                         the shopper starts fixing it. Only the password pair used to
+                         be re-judged as it was typed, so a corrected name, email or
+                         phone kept the last submit's red sentence - and its red
+                         border - until the next submit proved it wrong. recheck()
+                         only speaks for a box that is already showing something, so
+                         nothing complains about a half-typed entry.
+
+                         The aria pair is wired by hand here because these messages
+                         are rendered by Alpine rather than by the field-error
+                         component, which does it for every server-rendered form:
+                         without it a screen reader reads the box as valid and never
+                         reaches the paragraph that says why it is not. --}}
                     <input type="text" id="kk-auth-name" class="kk-loginmodal__field"
                            :class="fieldErrors.full_name && 'has-error'"
-                           x-model="form.full_name" placeholder="Enter your full name" autocomplete="name">
-                    <p class="kk-loginmodal__fielderror" x-show="fieldErrors.full_name" x-text="fieldErrors.full_name" x-cloak></p>
+                           x-model="form.full_name" @input="recheck('full_name')"
+                           :aria-invalid="fieldErrors.full_name ? 'true' : 'false'"
+                           :aria-describedby="fieldErrors.full_name ? 'kk-auth-name-error' : null"
+                           placeholder="Enter your full name" autocomplete="name">
+                    <p class="kk-loginmodal__fielderror" id="kk-auth-name-error" role="alert"
+                       x-show="fieldErrors.full_name" x-text="fieldErrors.full_name" x-cloak></p>
                 </div>
 
                 <div class="kk-loginmodal__group">
                     <label class="kk-loginmodal__label" for="kk-auth-email">Email Address</label>
                     <input type="email" id="kk-auth-email" class="kk-loginmodal__field"
                            :class="fieldErrors.email && 'has-error'"
-                           x-model="form.email" placeholder="you@example.com" autocomplete="email">
-                    <p class="kk-loginmodal__fielderror" x-show="fieldErrors.email" x-text="fieldErrors.email" x-cloak></p>
+                           x-model="form.email" @input="recheck('email')"
+                           :aria-invalid="fieldErrors.email ? 'true' : 'false'"
+                           :aria-describedby="fieldErrors.email ? 'kk-auth-email-error' : null"
+                           placeholder="you@example.com" autocomplete="email">
+                    <p class="kk-loginmodal__fielderror" id="kk-auth-email-error" role="alert"
+                       x-show="fieldErrors.email" x-text="fieldErrors.email" x-cloak></p>
                 </div>
 
                 {{-- Signup-only: phone --}}
@@ -494,9 +516,13 @@
                          the browser long enough to be normalised. --}}
                     <input type="tel" id="kk-auth-phone" class="kk-loginmodal__field"
                            :class="fieldErrors.phone && 'has-error'"
-                           x-model="form.phone" placeholder="9876543210" autocomplete="tel"
+                           x-model="form.phone" @input="recheck('phone')"
+                           :aria-invalid="fieldErrors.phone ? 'true' : 'false'"
+                           :aria-describedby="fieldErrors.phone ? 'kk-auth-phone-error' : null"
+                           placeholder="9876543210" autocomplete="tel"
                            inputmode="numeric" maxlength="20" data-kk-mobile="10">
-                    <p class="kk-loginmodal__fielderror" x-show="fieldErrors.phone" x-text="fieldErrors.phone" x-cloak></p>
+                    <p class="kk-loginmodal__fielderror" id="kk-auth-phone-error" role="alert"
+                       x-show="fieldErrors.phone" x-text="fieldErrors.phone" x-cloak></p>
                 </div>
 
                 <div class="kk-loginmodal__group">
@@ -511,6 +537,8 @@
                                :class="fieldErrors.password && 'has-error'"
                                x-model="form.password"
                                @input="checkPassword()"
+                               :aria-invalid="fieldErrors.password ? 'true' : 'false'"
+                               :aria-describedby="fieldErrors.password ? 'kk-auth-password-error' : null"
                                :placeholder="mode === 'login' ? 'Enter your password' : 'Min 10 characters'"
                                :autocomplete="mode === 'login' ? 'current-password' : 'new-password'">
                         <button type="button" class="kk-loginmodal__eye" @click="showPassword = !showPassword"
@@ -524,7 +552,8 @@
                             </svg>
                         </button>
                     </div>
-                    <p class="kk-loginmodal__fielderror" x-show="fieldErrors.password" x-text="fieldErrors.password" x-cloak></p>
+                    <p class="kk-loginmodal__fielderror" id="kk-auth-password-error" role="alert"
+                       x-show="fieldErrors.password" x-text="fieldErrors.password" x-cloak></p>
                 </div>
 
                 {{-- Signup-only: confirm password --}}
@@ -536,6 +565,8 @@
                                :class="fieldErrors.password_confirmation && 'has-error'"
                                x-model="form.password_confirmation" placeholder="Repeat your password"
                                @input="checkPassword()"
+                               :aria-invalid="fieldErrors.password_confirmation ? 'true' : 'false'"
+                               :aria-describedby="fieldErrors.password_confirmation ? 'kk-auth-password2-error' : null"
                                autocomplete="new-password">
                         <button type="button" class="kk-loginmodal__eye" @click="showConfirm = !showConfirm"
                                 :aria-label="showConfirm ? 'Hide password' : 'Show password'" tabindex="-1">
@@ -548,7 +579,8 @@
                             </svg>
                         </button>
                     </div>
-                    <p class="kk-loginmodal__fielderror" x-show="fieldErrors.password_confirmation" x-text="fieldErrors.password_confirmation" x-cloak></p>
+                    <p class="kk-loginmodal__fielderror" id="kk-auth-password2-error" role="alert"
+                       x-show="fieldErrors.password_confirmation" x-text="fieldErrors.password_confirmation" x-cloak></p>
                 </div>
 
                 <label class="kk-loginmodal__notify" x-show="mode === 'login'">
@@ -590,6 +622,19 @@
             fieldErrors: {},
             form: { full_name: '', email: '', phone: '', password: '', password_confirmation: '', remember: false },
             csrf: '{{ csrf_token() }}',
+            /**
+             * LoginController::CREDENTIALS_FAILED, verbatim.
+             *
+             * Sign-in reports "wrong email or wrong password" against the
+             * `email` key, because it refuses to say which half was wrong - and
+             * that one sentence is the only email-keyed message this modal is
+             * entitled to move off the email box (see submit()). Holding it here
+             * is what lets that test be "is this THAT sentence?" rather than "is
+             * there anything keyed to email?", which is a question with the
+             * wrong answer for every other thing the endpoint can say about an
+             * address.
+             */
+            credentialsFailed: 'The provided credentials do not match our records.',
             openModal() { this.open = true; this.error = ''; this.notice = ''; this.fieldErrors = {}; },
             switchMode(m) {
                 this.mode = m;
@@ -630,9 +675,26 @@
              * Only the two password keys are rewritten. Re-running validate()
              * here would light up the name, email and phone boxes as well,
              * while the shopper is still on the password.
+             *
+             * Sign-in has a job here too, even though it judges nothing. This
+             * method used to return before it could touch anything in login
+             * mode, and recheck() speaks only for the name, email and phone -
+             * so a message the SERVER put under the password box ("Password is
+             * required." for a box holding nothing but spaces, or the length
+             * refusal) sat there with its red border through every keystroke of
+             * the correction, and only the next submit could clear it. A
+             * field's note is retired the moment the field is EDITED, whoever
+             * wrote it. What sign-in still must not do is judge the value: the
+             * account created under the old eight-character policy holds a
+             * password that fails today's rule, and objecting to it as it is
+             * typed would fence that customer out of the one screen they can
+             * fix it from.
              */
             checkPassword() {
-                if (this.mode !== 'signup') return;
+                if (this.mode !== 'signup') {
+                    this.fieldErrors = { ...this.fieldErrors, password: '', password_confirmation: '' };
+                    return;
+                }
 
                 const pw = this.form.password;
                 const confirm = this.form.password_confirmation;
@@ -648,6 +710,99 @@
                 };
             },
             /**
+             * The three non-password rules, one method each.
+             *
+             * They used to live inline inside validate(), which is the reason
+             * only the password pair could be re-judged while it was being
+             * corrected: there was no way to ask "is the email acceptable NOW?"
+             * without running the whole form and lighting up every box the
+             * shopper has not reached yet. Pulled out, the sentence a field is
+             * given on submit and the sentence it is given as it is fixed are
+             * necessarily the same sentence, because there is only one of them.
+             *
+             * Each returns '' when the value passes, matching passwordError().
+             * Each reads this.mode itself rather than taking a flag, because
+             * registration checks things sign-in deliberately does not.
+             */
+            nameError(value) {
+                const name = String(value == null ? '' : value).trim();
+                if (!name) return 'Please enter your full name.';
+                // The same limit the server holds (RegisterController::NAME_LIMIT)
+                // and the same sentence, so the modal never posts a name the
+                // endpoint is about to hand straight back.
+                if ([...name].length > 30) return 'Please keep your name to 30 characters or fewer.';
+                return '';
+            },
+            emailError(value) {
+                const signup = this.mode === 'signup';
+                const email = String(value == null ? '' : value).trim();
+
+                if (!email) return 'Please enter your email address.';
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return 'That does not look like a valid email address.';
+                // The server's bound on the column, in the server's own words -
+                // 'max:255' and "That email address is too long." are what both
+                // LoginController and ValidationRules::email() answer with. It
+                // was missing here, so an over-long address was the one email
+                // complaint the modal could not make itself: it went to the
+                // endpoint, came back as a 422 keyed to `email`, and the login
+                // branch below then read it as the credentials refusal and moved
+                // it to the banner with the box left unmarked. Counted in code
+                // points, which is what mb_strlen - and so Laravel's `max` -
+                // counts, and what passwordError() above already counts in.
+                if ([...email].length > 255) return 'That email address is too long.';
+                // The two headline checks from App\Rules\EmailAddress, which
+                // registration adds and sign-in deliberately does not: an address
+                // stored before that rule existed still has to be able to log in.
+                if (signup && !/^[A-Za-z0-9]/.test(email)) return 'An email address must start with a letter or a number.';
+                if (signup && email.includes('..')) return 'An email address cannot contain two dots in a row.';
+                return '';
+            },
+            phoneError(value) {
+                if (!String(value == null ? '' : value).trim()) return 'Please enter your mobile number.';
+
+                // Mirrors App\Rules\IndianMobile: strip the decoration and the
+                // +91/0 prefix, then test the ten digits that are left.
+                const digits = String(value).replace(/\D/g, '')
+                    .replace(/^0?91(?=[6-9]\d{9}$)/, '')
+                    .replace(/^0(?=[6-9]\d{9}$)/, '');
+                if (!/^[6-9]\d{9}$/.test(digits)) {
+                    return 'Please enter a valid 10-digit mobile number starting with 6, 7, 8 or 9.';
+                }
+                return '';
+            },
+            /**
+             * A box that is already showing a message, re-judged as the shopper
+             * corrects it.
+             *
+             * Before this, only the password pair was re-checked on the
+             * keystroke: a name, email or phone kept the verdict of the last
+             * submit until the next one, so an address corrected in front of
+             * the shopper still read "That does not look like a valid email
+             * address." and still had the red border to match. The message a
+             * form shows has to be about the value that is in the box now.
+             *
+             * The guard is the one the site-wide validator uses (its
+             * `alreadyFlagged` rule): a box is only re-judged once it has
+             * something to say. Without it the modal would start objecting to
+             * an email halfway through being typed, before the "@" is reached.
+             *
+             * This retires a message the SERVER sent for the field too, which
+             * is the point rather than a side effect: whatever the endpoint
+             * objected to, it objected to a value the box no longer holds.
+             */
+            recheck(field) {
+                if (!this.fieldErrors[field]) return;
+
+                const rules = {
+                    full_name: () => this.nameError(this.form.full_name),
+                    email: () => this.emailError(this.form.email),
+                    phone: () => this.phoneError(this.form.phone),
+                };
+                if (!rules[field]) return;
+
+                this.fieldErrors = { ...this.fieldErrors, [field]: rules[field]() };
+            },
+            /**
              * Errors are keyed by field so each one renders under the input it
              * belongs to, rather than as a single message at the top that makes
              * the reader work out which box it means.
@@ -657,47 +812,27 @@
                 const signup = this.mode === 'signup';
 
                 if (signup) {
-                    const name = this.form.full_name.trim();
-                    if (!name) {
-                        e.full_name = 'Please enter your full name.';
-                    } else if ([...name].length > 30) {
-                        // The same limit the server holds (RegisterController::NAME_LIMIT)
-                        // and the same sentence, so the modal never posts a name the
-                        // endpoint is about to hand straight back.
-                        e.full_name = 'Please keep your name to 30 characters or fewer.';
-                    }
+                    const name = this.nameError(this.form.full_name);
+                    if (name) e.full_name = name;
                 }
 
-                const email = this.form.email.trim();
-                if (!email) {
-                    e.email = 'Please enter your email address.';
-                } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
-                    e.email = 'That does not look like a valid email address.';
-                } else if (signup && !/^[A-Za-z0-9]/.test(email)) {
-                    // The two headline checks from App\Rules\EmailAddress, which
-                    // registration adds and sign-in deliberately does not: an address
-                    // stored before that rule existed still has to be able to log in.
-                    e.email = 'An email address must start with a letter or a number.';
-                } else if (signup && email.includes('..')) {
-                    e.email = 'An email address cannot contain two dots in a row.';
-                }
+                const email = this.emailError(this.form.email);
+                if (email) e.email = email;
 
                 if (signup) {
-                    if (!this.form.phone.trim()) {
-                        e.phone = 'Please enter your mobile number.';
-                    } else {
-                        // Mirrors App\Rules\IndianMobile: strip the decoration and the
-                        // +91/0 prefix, then test the ten digits that are left.
-                        const digits = this.form.phone.replace(/\D/g, '')
-                            .replace(/^0?91(?=[6-9]\d{9}$)/, '')
-                            .replace(/^0(?=[6-9]\d{9}$)/, '');
-                        if (!/^[6-9]\d{9}$/.test(digits)) {
-                            e.phone = 'Please enter a valid 10-digit mobile number starting with 6, 7, 8 or 9.';
-                        }
-                    }
+                    const phone = this.phoneError(this.form.phone);
+                    if (phone) e.phone = phone;
                 }
 
-                if (!this.form.password) {
+                // Emptiness is judged on the TRIMMED value because that is how
+                // the endpoint judges it: Laravel's `required` trims a string
+                // before deciding it is empty, so a password of three spaces
+                // passed this guard, was sent, and came back as a 422 the modal
+                // had to render under a box the shopper had visibly typed into.
+                // The value itself is still sent untrimmed - a real password may
+                // legitimately begin or end with a space, and only bcrypt gets
+                // to say whether it matches.
+                if (!this.form.password.trim()) {
                     e.password = 'Please enter your password.';
                 } else if (signup) {
                     // The same passwordError() the keystroke check calls, so the
@@ -708,6 +843,16 @@
                     // lock that customer out of the screen they'd fix it from.
                     const problem = this.passwordError(this.form.password);
                     if (problem) e.password = problem;
+                } else if ([...this.form.password].length > 1024) {
+                    // Sign-in does not judge the SHAPE of a stored password, but
+                    // it does have to respect the bound the endpoint puts on the
+                    // field ('max:1024' in LoginController). Nothing this long
+                    // can be anyone's password - registration caps at 255, and
+                    // bcrypt reads only the first 72 bytes - so refusing it here
+                    // costs no one a sign-in, and it saves a round trip whose
+                    // only answer is Laravel's untailored length message landing
+                    // under the box.
+                    e.password = 'Your password must be 1024 characters or fewer.';
                 }
 
                 if (signup) {
@@ -722,7 +867,22 @@
                 return Object.keys(e).length === 0;
             },
             async submit() {
+                // The disabled button stops the mouse, not a second Enter from a
+                // field while the first request is still out - and two sign-ups
+                // from one form is a duplicate account, not a duplicate message.
+                if (this.loading) return;
+
+                // Everything on screen belongs to the attempt that has just been
+                // superseded, so a new attempt starts by clearing all of it. The
+                // notice was the one that used to survive: after a successful
+                // sign-up the green "Account created! Please log in." sat there
+                // through the failed login that followed, so the modal claimed
+                // success and failure at the same time. validate() rewrites
+                // fieldErrors wholesale, which retires the previous per-field
+                // messages - the server's included - in the same breath.
                 this.error = '';
+                this.notice = '';
+
                 if (!this.validate()) return;
                 this.loading = true;
                 const url = this.mode === 'login' ? '{{ route('login') }}' : '{{ route('register') }}';
@@ -747,6 +907,12 @@
                     });
                     // The page's CSRF token goes stale once the session expires
                     // (tab left open); a fresh load is the only way to renew it.
+                    // This is the one status kkApiError does not get to speak
+                    // for: its 419 sentence asks the reader to refresh, and here
+                    // the page is already doing it for them. `loading` is left
+                    // on deliberately - the form is about to be replaced, and a
+                    // second attempt in the meantime would post the same dead
+                    // token.
                     if (res.status === 419) {
                         this.error = 'Your session expired. Refreshing the page…';
                         setTimeout(() => window.location.reload(), 1200);
@@ -764,34 +930,70 @@
                         } else {
                             window.location.reload();
                         }
-                    } else if (data.errors) {
-                        // Laravel keys its errors by field, so they land under the
-                        // same inputs the client-side checks use.
+                    } else {
+                        // Nothing is worded here and nothing from the body is
+                        // printed raw. kkApiError is the one place a failure
+                        // becomes a sentence, and it is what stops the old
+                        // `data.message || 'Something went wrong.'` line from
+                        // putting a 500's own text - which is the exception, its
+                        // class name, its file path, sometimes a fragment of SQL
+                        // - in front of a customer. It also hands back the 422's
+                        // one-message-per-field map ready to use.
+                        const failure = window.kkApiError(res, data);
+
+                        // Only a key this modal actually renders can become a
+                        // field message; anything else would be written into
+                        // fieldErrors and displayed by nothing, which is how a
+                        // sign-up could fail with every box looking untouched.
+                        // Those go to the banner instead.
+                        const shown = ['full_name', 'email', 'phone', 'password', 'password_confirmation'];
                         const mapped = {};
-                        for (const [field, messages] of Object.entries(data.errors)) {
-                            mapped[field] = Array.isArray(messages) ? messages[0] : messages;
-                        }
-                        this.fieldErrors = mapped;
-                        // A credentials failure is about the pair, not one box.
-                        if (this.mode === 'login' && mapped.email) {
-                            this.error = mapped.email;
-                            this.fieldErrors = {};
+                        const unplaceable = [];
+                        for (const [field, message] of Object.entries(failure.fields)) {
+                            if (shown.includes(field)) mapped[field] = message;
+                            else unplaceable.push(message);
                         }
 
-                        // An error for a field this modal does not render (the
-                        // server validates more than the modal shows) would map
-                        // to nothing and leave the button looking dead. Anything
-                        // unplaceable goes in the banner instead.
-                        const shown = ['full_name', 'email', 'phone', 'password', 'password_confirmation'];
-                        const orphan = Object.keys(mapped).find(f => !shown.includes(f));
-                        if (!this.error && orphan) {
-                            this.error = mapped[orphan];
+                        // A credentials failure is about the pair, not one box:
+                        // sign-in reports it against `email`, but the address is
+                        // rarely the half that is wrong. It reads as the banner,
+                        // and the key is dropped so the one sentence is never
+                        // printed in two places at once.
+                        //
+                        // The test is the SENTENCE, not the key. Keyed on
+                        // `email` alone this diverted everything sign-in can say
+                        // about an address - "Enter a valid email address, like
+                        // you@example.com." for a shape the client regex lets
+                        // through, "That email address is too long." - into the
+                        // banner and then deleted the key, so the box those
+                        // sentences are about kept its normal border, its
+                        // aria-invalid="false" and no aria-describedby, while
+                        // the complaint about it sat at the top of the form. A
+                        // field-specific message belongs to its field; only the
+                        // one message that is about no single field moves.
+                        if (this.mode === 'login' && mapped.email === this.credentialsFailed) {
+                            this.error = mapped.email;
+                            delete mapped.email;
                         }
-                    } else {
-                        this.error = data.message || 'Something went wrong. Please try again.';
+
+                        this.fieldErrors = mapped;
+
+                        // The banner carries only what no field can: a complaint
+                        // about a field the modal does not render, and - when
+                        // nothing at all was keyed to a field - the sentence for
+                        // the status itself. A banner saying "check the
+                        // highlighted fields" above boxes that are already
+                        // highlighted tells the reader nothing they cannot see.
+                        if (!this.error) {
+                            this.error = unplaceable[0]
+                                || (Object.keys(mapped).length ? '' : failure.message);
+                        }
                     }
                 } catch (e) {
-                    this.error = 'Network error. Please try again.';
+                    // A request that never got an answer at all: kkApiError reads
+                    // that as status 0 and returns the connection sentence, so a
+                    // dropped network and a rejected payload stop sounding alike.
+                    this.error = window.kkApiError(e).message;
                 }
                 this.loading = false;
             }

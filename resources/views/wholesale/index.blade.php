@@ -62,9 +62,7 @@
                         <input type="text" name="business_name" id="wholesale_business_name" class="min-h-10 sm:min-h-0" value="{{ old('business_name') }}" required maxlength="120"
                                placeholder="Your business name"
                                style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d5d9d9; border-radius: 0.5rem; font-size: 13px; box-sizing: border-box;">
-                        @error('business_name')
-                            <p style="font-size: 12px; color: #9b1c1c; margin: 0.375rem 0 0;">{{ $message }}</p>
-                        @enderror
+                        <x-field-error field="business_name" />
                     </div>
                     <div>
                         <label for="wholesale_name" style="display: block; font-size: 13px; font-weight: 500; color: #0F1111; margin-bottom: 0.375rem;">Contact Name *</label>
@@ -72,9 +70,7 @@
                                pattern="{{ \App\Rules\ValidationRules::namePattern(lettersOnly: true) }}" title="Letters and spaces only, up to 30 characters."
                                placeholder="Your name"
                                style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d5d9d9; border-radius: 0.5rem; font-size: 13px; box-sizing: border-box;">
-                        @error('name')
-                            <p style="font-size: 12px; color: #9b1c1c; margin: 0.375rem 0 0;">{{ $message }}</p>
-                        @enderror
+                        <x-field-error field="name" />
                     </div>
                 </div>
 
@@ -84,9 +80,7 @@
                         <input type="email" name="email" id="wholesale_email" class="min-h-10 sm:min-h-0" value="{{ old('email') }}" required maxlength="255"
                                placeholder="your@email.com"
                                style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d5d9d9; border-radius: 0.5rem; font-size: 13px; box-sizing: border-box;">
-                        @error('email')
-                            <p style="font-size: 12px; color: #9b1c1c; margin: 0.375rem 0 0;">{{ $message }}</p>
-                        @enderror
+                        <x-field-error field="email" />
                     </div>
                     <div>
                         <label for="wholesale_phone" style="display: block; font-size: 13px; font-weight: 500; color: #0F1111; margin-bottom: 0.375rem;">Phone</label>
@@ -94,9 +88,7 @@
                                pattern="[+\s()-]*(?:\d[+\s()-]*){10,15}" title="Enter a phone number with 10 to 15 digits. Spaces, brackets, hyphens and a leading + are fine."
                                placeholder="+91 XXXXX XXXXX"
                                style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d5d9d9; border-radius: 0.5rem; font-size: 13px; box-sizing: border-box;">
-                        @error('phone')
-                            <p style="font-size: 12px; color: #9b1c1c; margin: 0.375rem 0 0;">{{ $message }}</p>
-                        @enderror
+                        <x-field-error field="phone" />
                     </div>
                 </div>
 
@@ -105,9 +97,7 @@
                     <textarea name="message" id="wholesale_message" required rows="4" minlength="10" maxlength="5000"
                               placeholder="Tell us about your business, estimated order quantities, and categories of interest..."
                               style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d5d9d9; border-radius: 0.5rem; font-size: 13px; box-sizing: border-box; resize: vertical;">{{ old('message') }}</textarea>
-                    @error('message')
-                        <p style="font-size: 12px; color: #9b1c1c; margin: 0.375rem 0 0;">{{ $message }}</p>
-                    @enderror
+                    <x-field-error field="message" />
                 </div>
 
                 <button type="submit"

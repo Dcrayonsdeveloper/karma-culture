@@ -57,9 +57,7 @@
                                            minlength="2" maxlength="50" autocomplete="given-name"
                                            title="Enter your first name, 2 to 50 characters."
                                            class="w-full rounded-lg border {{ $errors->has('first_name') ? 'border-red-300' : 'border-neutral-200' }} text-sm px-3 py-2.5 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50">
-                                    @error('first_name')
-                                        <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                                    @enderror
+                                    <x-field-error field="first_name" />
                                 </div>
 
                                 <div>
@@ -68,9 +66,7 @@
                                            minlength="2" maxlength="50" autocomplete="family-name"
                                            title="Enter your last name, 2 to 50 characters."
                                            class="w-full rounded-lg border {{ $errors->has('last_name') ? 'border-red-300' : 'border-neutral-200' }} text-sm px-3 py-2.5 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50">
-                                    @error('last_name')
-                                        <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                                    @enderror
+                                    <x-field-error field="last_name" />
                                 </div>
                             </div>
 
@@ -90,9 +86,7 @@
                                            title="Enter a valid email address, like you@example.com."
                                            class="w-full rounded-lg border {{ $errors->has('email') ? 'border-red-300' : 'border-neutral-200' }} text-sm pl-9 pr-3 py-2.5 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50">
                                 </div>
-                                @error('email')
-                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                                @enderror
+                                <x-field-error field="email" />
                             </div>
 
                             <div class="mb-5">
@@ -111,9 +105,7 @@
                                            title="Enter a 10-digit Indian mobile number starting with 6, 7, 8 or 9."
                                            class="w-full rounded-lg border {{ $errors->has('phone') ? 'border-red-300' : 'border-neutral-200' }} text-sm pl-11 pr-3 py-2.5 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50">
                                 </div>
-                                @error('phone')
-                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                                @enderror
+                                <x-field-error field="phone" />
                             </div>
 
                             <button type="submit"
@@ -149,9 +141,7 @@
                                             <svg x-show="showPassword" x-cloak class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
                                         </button>
                                     </div>
-                                    @error('current_password')
-                                        <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                                    @enderror
+                                    <x-field-error field="current_password" />
                                 </div>
 
                                 <div>
@@ -171,9 +161,7 @@
                                             <svg x-show="showNew" x-cloak class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
                                         </button>
                                     </div>
-                                    @error('password')
-                                        <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                                    @enderror
+                                    <x-field-error field="password" />
                                     <p class="mt-1 text-xs text-neutral-600">
                                         At least 10 characters, including an uppercase and a lowercase
                                         letter, a number and a special character.

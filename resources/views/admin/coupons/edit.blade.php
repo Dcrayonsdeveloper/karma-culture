@@ -31,27 +31,21 @@
                                        minlength="3" maxlength="50" pattern="[A-Za-z0-9_\-]+" autocomplete="off"
                                        title="Use letters, numbers, hyphens and underscores only - no spaces."
                                        class="form-input" style="font-family: monospace; text-transform: uppercase;">
-                                @error('code')
-                                    <p class="form-error">{{ $message }}</p>
-                                @enderror
+                                <x-field-error field="code" />
                             </div>
                             <div>
                                 <label for="name" class="form-label">Name <span style="color: #d72c0d;">*</span></label>
                                 <input type="text" name="name" id="name" value="{{ old('name', $coupon->name) }}" required
                                        minlength="2" maxlength="255"
                                        class="form-input">
-                                @error('name')
-                                    <p class="form-error">{{ $message }}</p>
-                                @enderror
+                                <x-field-error field="name" />
                             </div>
                         </div>
 
                         <div>
                             <label for="description" class="form-label">Description</label>
                             <textarea name="description" id="description" rows="2" maxlength="1000" class="form-textarea">{{ old('description', $coupon->description) }}</textarea>
-                            @error('description')
-                                <p class="form-error">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="description" />
                         </div>
 
                         <div x-data="{ couponType: '{{ old('type', $coupon->type) }}' }">
@@ -64,9 +58,7 @@
                                         <option value="free_shipping">Free Shipping</option>
                                         <option value="buy_x_get_y">Buy X Get Y</option>
                                     </select>
-                                    @error('type')
-                                        <p class="form-error">{{ $message }}</p>
-                                    @enderror
+                                    <x-field-error field="type" />
                                 </div>
                                 <div>
                                     <label for="value" class="form-label">
@@ -84,9 +76,7 @@
                                            class="form-input"
                                            :placeholder="couponType === 'buy_x_get_y' ? 'e.g. 100 for free' : 'e.g. 20'">
                                     <p x-show="couponType === 'buy_x_get_y'" x-cloak style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Enter 100 for completely free, 50 for half price, etc.</p>
-                                    @error('value')
-                                        <p class="form-error">{{ $message }}</p>
-                                    @enderror
+                                    <x-field-error field="value" />
                                 </div>
                             </div>
 
@@ -103,9 +93,7 @@
                                                    x-bind:required="couponType === 'buy_x_get_y'"
                                                    class="form-input" placeholder="e.g. 2">
                                             <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Customer must buy this many items</p>
-                                            @error('conditions.buy_qty')
-                                                <p class="form-error">{{ $message }}</p>
-                                            @enderror
+                                            <x-field-error field="conditions.buy_qty" />
                                         </div>
                                         <div>
                                             <label for="conditions_get_qty" class="form-label">Get Quantity <span style="color: #d72c0d;">*</span></label>
@@ -115,9 +103,7 @@
                                                    x-bind:required="couponType === 'buy_x_get_y'"
                                                    class="form-input" placeholder="e.g. 1">
                                             <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Number of items discounted</p>
-                                            @error('conditions.get_qty')
-                                                <p class="form-error">{{ $message }}</p>
-                                            @enderror
+                                            <x-field-error field="conditions.get_qty" />
                                         </div>
                                     </div>
                                     <p style="font-size: 12px; color: #005bd3;">
@@ -141,18 +127,14 @@
                                 <input type="number" name="max_discount" id="max_discount" value="{{ old('max_discount', $coupon->max_discount) }}" step="0.01" min="0" max="9999999.99"
                                        inputmode="decimal" title="Enter an amount, up to two decimal places."
                                        class="form-input" placeholder="No limit">
-                                @error('max_discount')
-                                    <p class="form-error">{{ $message }}</p>
-                                @enderror
+                                <x-field-error field="max_discount" />
                             </div>
                             <div>
                                 <label for="min_order_amount" class="form-label">Min Order Amount ({{ currency_symbol() }})</label>
                                 <input type="number" name="min_order_amount" id="min_order_amount" value="{{ old('min_order_amount', $coupon->min_order_amount) }}" step="0.01" min="0" max="9999999.99"
                                        inputmode="decimal" title="Enter an amount, up to two decimal places."
                                        class="form-input" placeholder="No minimum">
-                                @error('min_order_amount')
-                                    <p class="form-error">{{ $message }}</p>
-                                @enderror
+                                <x-field-error field="min_order_amount" />
                             </div>
                         </div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -161,9 +143,7 @@
                                 <input type="number" name="usage_limit" id="usage_limit" value="{{ old('usage_limit', $coupon->usage_limit) }}" min="1" max="1000000" step="1"
                                        inputmode="numeric" title="Enter a whole number of 1 or more."
                                        class="form-input" placeholder="Unlimited">
-                                @error('usage_limit')
-                                    <p class="form-error">{{ $message }}</p>
-                                @enderror
+                                <x-field-error field="usage_limit" />
                             </div>
                             <div>
                                 <label for="usage_per_user" class="form-label">Usage Per User</label>
@@ -172,9 +152,7 @@
                                 <input type="number" name="usage_per_user" id="usage_per_user" value="{{ old('usage_per_user', $coupon->usage_per_user) }}" min="1" max="65535" step="1"
                                        inputmode="numeric" title="Enter a whole number between 1 and 65535."
                                        class="form-input" placeholder="Unlimited">
-                                @error('usage_per_user')
-                                    <p class="form-error">{{ $message }}</p>
-                                @enderror
+                                <x-field-error field="usage_per_user" />
                             </div>
                         </div>
                     </div>
@@ -218,9 +196,7 @@
                             </template>
                         </div>
 
-                        @error('applicable_categories')
-                            <p class="form-error">{{ $message }}</p>
-                        @enderror
+                        <x-field-error field="applicable_categories" />
                     </div>
                 </div>
             </div>
@@ -248,9 +224,7 @@
                                    value="{{ old('starts_at', $startOriginal) }}"
                                    min="{{ $startFloor }}" data-schedule-start data-schedule-original="{{ $startOriginal }}"
                                    class="form-input">
-                            @error('starts_at')
-                                <p class="form-error">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="starts_at" />
                         </div>
                         <div>
                             <label for="expires_at" class="form-label">Expires At</label>
@@ -258,9 +232,7 @@
                                    value="{{ old('expires_at', $endOriginal) }}"
                                    min="{{ $endFloor }}" data-schedule-end="starts_at" data-schedule-original="{{ $endOriginal }}"
                                    class="form-input">
-                            @error('expires_at')
-                                <p class="form-error">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="expires_at" />
                         </div>
                     </div>
                 </div>

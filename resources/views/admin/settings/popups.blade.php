@@ -16,7 +16,7 @@
 
     @include('admin.settings.partials.nav', ['active' => 'popups'])
 
-    @include('admin.settings.partials.errors')
+    @include('admin.settings.partials.errors', ['handled' => ['exit_popup_claim_days', 'exit_popup_code', 'exit_popup_image', 'exit_popup_minutes', 'exit_popup_subtitle', 'exit_popup_title', 'offer_popup_image', 'offer_popup_subtitle', 'offer_popup_title']])
 
     {{-- enctype: both popups take an image, and without it the file inputs post
          their filename as text and no upload ever arrives. --}}
@@ -50,7 +50,7 @@
                         <label for="offer-popup-title" class="form-label form-label-required" style="font-size: 12px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Heading</label>
                         <input type="text" name="offer_popup_title" id="offer-popup-title" maxlength="120" required
                                value="{{ old('offer_popup_title', $settings['offer_popup_title'] ?? '') }}" class="form-input">
-                        @error('offer_popup_title') <p class="form-error">{{ $message }}</p> @enderror
+                        <x-field-error field="offer_popup_title" />
                     </div>
 
                     <div>
@@ -59,7 +59,7 @@
                         {{-- Setting::get() treats a blank stored value as unset, so an empty
                              box genuinely does restore the default rather than showing nothing. --}}
                         <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Leave blank to go back to the default wording.</p>
-                        @error('offer_popup_subtitle') <p class="form-error">{{ $message }}</p> @enderror
+                        <x-field-error field="offer_popup_subtitle" />
                     </div>
 
                     <div>
@@ -74,7 +74,7 @@
                         <input type="file" name="offer_popup_image" id="offer-popup-image"
                                accept="image/jpeg,image/png,image/webp" style="font-size: 13px; color: #616161;">
                         <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Optional. JPG, PNG or WebP, max 2MB. Recommended 600x660px. Without one the brown gradient is used.</p>
-                        @error('offer_popup_image') <p class="form-error">{{ $message }}</p> @enderror
+                        <x-field-error field="offer_popup_image" />
                     </div>
                 </div>
             </div>
@@ -103,14 +103,14 @@
                         <label for="exit-popup-title" class="form-label form-label-required" style="font-size: 12px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Heading</label>
                         <input type="text" name="exit_popup_title" id="exit-popup-title" maxlength="120" required
                                value="{{ old('exit_popup_title', $settings['exit_popup_title'] ?? '') }}" class="form-input">
-                        @error('exit_popup_title') <p class="form-error">{{ $message }}</p> @enderror
+                        <x-field-error field="exit_popup_title" />
                     </div>
 
                     <div>
                         <label for="exit-popup-subtitle" class="form-label" style="font-size: 12px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Sub-heading</label>
                         <textarea name="exit_popup_subtitle" id="exit-popup-subtitle" rows="3" maxlength="400" class="form-textarea">{{ old('exit_popup_subtitle', $settings['exit_popup_subtitle'] ?? '') }}</textarea>
                         <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Leave blank to go back to the default wording.</p>
-                        @error('exit_popup_subtitle') <p class="form-error">{{ $message }}</p> @enderror
+                        <x-field-error field="exit_popup_subtitle" />
                     </div>
 
                     {{-- This used to be an <input list> over a <datalist>. The browser
@@ -177,7 +177,7 @@
                                         </ul>
                                     @endif
                                 </div>
-                                @error('exit_popup_code') <p class="form-error">{{ $message }}</p> @enderror
+                                <x-field-error field="exit_popup_code" />
                             </div>
                             {{-- Two numbers that both look like "how long the offer lasts"
                                  sit next to each other here, so each label says which
@@ -189,7 +189,7 @@
                                        title="Whole minutes, 1 to 180." style="width: 7rem;"
                                        value="{{ old('exit_popup_minutes', $settings['exit_popup_minutes'] ?? '10') }}" class="form-input">
                                 <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">minutes, then the form closes</p>
-                                @error('exit_popup_minutes') <p class="form-error">{{ $message }}</p> @enderror
+                                <x-field-error field="exit_popup_minutes" />
                             </div>
                             <div>
                                 <label for="exit-popup-claim-days" class="form-label" style="font-size: 12px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">A claimed offer lasts</label>
@@ -197,7 +197,7 @@
                                        title="Whole days, 1 to 365." style="width: 7rem;"
                                        value="{{ old('exit_popup_claim_days', $settings['exit_popup_claim_days'] ?? '7') }}" class="form-input">
                                 <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">days after they claim</p>
-                                @error('exit_popup_claim_days') <p class="form-error">{{ $message }}</p> @enderror
+                                <x-field-error field="exit_popup_claim_days" />
                             </div>
                         </div>
 
@@ -232,7 +232,7 @@
                         <input type="file" name="exit_popup_image" id="exit-popup-image"
                                accept="image/jpeg,image/png,image/webp" style="font-size: 13px; color: #616161;">
                         <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Optional. JPG, PNG or WebP, max 2MB. Recommended 600x660px. Without one the brown gradient is used.</p>
-                        @error('exit_popup_image') <p class="form-error">{{ $message }}</p> @enderror
+                        <x-field-error field="exit_popup_image" />
                     </div>
                 </div>
             </div>
@@ -284,6 +284,11 @@
                 // box matches none of them - which is exactly when the browser's
                 // own datalist used to show an empty list and look broken.
                 showAll: false,
+                // Set for the length of the input event pick() raises below.
+                // The @input binding on the box cannot tell a dispatch from a
+                // keystroke, and treating our own notification as typing would
+                // reopen the list the admin has just chosen a code out of.
+                syncing: false,
 
                 get visible() {
                     const typed = this.code.trim().toUpperCase();
@@ -299,6 +304,8 @@
                 },
                 type(value) {
                     this.code = value;
+                    if (this.syncing) return;
+
                     this.showAll = false;
                     this.active = -1;
                     this.open = this.visible.length > 0;
@@ -344,6 +351,25 @@
                     // The input is not x-model bound - it carries the server's value
                     // and its own validation - so the DOM has to be written directly.
                     this.$refs.input.value = value;
+
+                    // Writing .value from script raises nothing, and the site-wide
+                    // validator retires a field's message on the EDIT - the input
+                    // or change event - because that is the moment the value it
+                    // was judging stopped being the value on screen. Choosing a
+                    // code out of this list was therefore the one correction it
+                    // never heard about: whatever sent the admin to the list in
+                    // the first place, the server's "The exit popup code field is
+                    // required." or the pattern complaint about what they typed,
+                    // stayed sitting under a box that now held a real coupon code,
+                    // red outline and aria-invalid with it, until the page was
+                    // saved again. Saying out loud what was just written is what
+                    // makes picking count as correcting.
+                    this.syncing = true;
+                    ['input', 'change'].forEach((name) => {
+                        this.$refs.input.dispatchEvent(new Event(name, { bubbles: true }));
+                    });
+                    this.syncing = false;
+
                     this.close();
                     this.$refs.input.focus();
                 },

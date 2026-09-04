@@ -11,6 +11,30 @@ use Illuminate\Validation\ValidationException;
 
 class LoginController extends Controller
 {
+    /**
+     * One message for every way a sign-in can fail.
+     *
+     * "No account with that email" and "wrong password" are two different
+     * answers to the same question, and the difference is enough to confirm an
+     * address is registered here - which is the first step of a credential
+     * stuffing run against it. Both cases say this instead.
+     *
+     * Deliberately word for word Auth\LoginController::CREDENTIALS_FAILED. The
+     * same account, the same wrong password, said "The provided credentials are
+     * incorrect." through the app and "The provided credentials do not match our
+     * records." through the website, which reads as two different verdicts on one
+     * attempt. The two have no shared home to live in yet - hoisting them into a
+     * lang key means editing the web and admin sign-ins as well - so they must be
+     * changed together, and so must doc/api-documentation.md section 1.2.
+     *
+     * Where it appears in the response: in `errors.email[0]`, and only there.
+     * `message` is the fixed 422 summary the handler in bootstrap/app.php writes
+     * for every endpoint under the /api/ prefix, so a client reading `message`
+     * for this sentence will not find it - which is the shape the documentation
+     * now publishes.
+     */
+    private const CREDENTIALS_FAILED = 'The provided credentials do not match our records.';
+
     public function __invoke(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -23,7 +47,7 @@ class LoginController extends Controller
 
         if (!$user || !Hash::check($validated['password'], $user->password)) {
             throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
+                'email' => [self::CREDENTIALS_FAILED],
             ]);
         }
 

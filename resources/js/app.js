@@ -72,6 +72,160 @@ window.throttle = function(func, limit) {
 };
 
 // ========================================
+// The one place an API failure becomes a sentence
+// ========================================
+//
+// Every component that talked to the server used to invent its own wording for
+// a failure, and most of them printed whatever the response happened to carry:
+//
+//     this.error = data.message || 'Something went wrong. Please try again.';
+//
+// Two problems with that. A request that never reached the server has no `data`
+// at all, so a dead connection and a rejected payload came out as the same
+// shrug; and on a 500 the `message` field is the exception's own text, which is
+// how a class name, a file path or a fragment of SQL ends up on a customer's
+// screen.
+//
+// So the status code decides, and the rule is one line: a 4xx is the server
+// answering the request deliberately, and its message is written for the person
+// reading it; a 5xx is the server falling over, and nothing it says at that
+// moment is fit to show. Anything with no response at all is the network.
+const KK_API_MESSAGES = {
+    400: 'That request could not be processed. Please check what you entered and try again.',
+    401: 'Please sign in to continue.',
+    403: 'You do not have permission to do that.',
+    404: 'We could not find what you were looking for.',
+    409: 'That has already been done. Please refresh the page and try again.',
+    // Laravel's own code for an expired CSRF token, which is a page left open
+    // too long rather than anything the visitor got wrong.
+    419: 'This page has been open a while and your session expired. Please refresh and try again.',
+    422: 'Please check the highlighted fields and try again.',
+    429: 'That is a few too many attempts. Please wait a moment and try again.',
+    500: 'Something went wrong at our end. Please try again in a moment.',
+    502: 'The service is briefly unavailable. Please try again in a moment.',
+    503: 'The service is briefly unavailable. Please try again in a moment.',
+    504: 'The server took too long to answer. Please try again in a moment.',
+};
+
+const KK_NETWORK_MESSAGE = 'Unable to connect to the server. Please check your internet connection and try again.';
+
+// The three statuses whose body is never this application's writing.
+//
+// The 4xx rule above - "the server answered deliberately, so its message is
+// written for the person reading it" - holds for the codes a controller
+// chooses. These three are raised by the framework's own middleware before any
+// controller runs, and their bodies carry Laravel's diagnostics rather than
+// anybody's copy: {"message":"Unauthenticated."}, {"message":"CSRF token
+// mismatch."} and, from the throttle on /newsletter/subscribe,
+// {"message":"Too Many Attempts."} - which is precisely what a shopper who
+// signed up twice in a minute used to read in the popup's red line.
+//
+// Nothing in app/ or routes/ answers with a 401, 419 or 429 body of its own, so
+// there is no deliberate message being thrown away here; the canned sentences
+// above say the same thing in words a customer can act on.
+const KK_FRAMEWORK_STATUSES = new Set([401, 419, 429]);
+
+/**
+ * Normalise any failure - an axios rejection, a fetch Response, a thrown
+ * TypeError from a dropped connection - into one shape:
+ *
+ *     { status, message, fields }
+ *
+ * `status` is 0 when the request never got an answer. `fields` is the
+ * {name: 'message'} map from a 422, ready to be written straight into a
+ * component's per-field error slots, and is empty for everything else.
+ *
+ * @param {*} error   an axios error, a fetch Response, or a thrown Error
+ * @param {object} [payload]  the already-parsed body, when the caller has it
+ */
+window.kkApiError = function (error, payload = null) {
+    let status = 0;
+    let body = payload;
+
+    // An axios rejection is tested FIRST, and the order is load-bearing. Axios
+    // copies the status onto the error itself (AxiosError sets
+    // `this.status = response.status`), so an AxiosError satisfies the
+    // fetch-Response test below just as well as a Response does - and taking
+    // that branch left `body` null, which threw away the 422 field map and the
+    // 4xx sentence for every axios caller on the site. What reaches the screen
+    // is the difference between "That coupon has expired." and a generic shrug,
+    // so the branch that can read a body has to be the one that runs.
+    if (error && error.response) {
+        status = error.response.status || 0;
+        if (body === null) body = error.response.data;
+    } else if (error && typeof error.status === 'number') {
+        // A fetch Response, handed over directly. Its body has already been
+        // read by the caller (or by kkFetchError) and passed in as `payload`.
+        status = error.status;
+    }
+
+    if (!status) {
+        return { status: 0, message: KK_NETWORK_MESSAGE, fields: {} };
+    }
+
+    const fields = {};
+    const raw = (body && body.errors) || null;
+    if (raw && typeof raw === 'object') {
+        Object.keys(raw).forEach(function (key) {
+            // Laravel sends an ARRAY of messages per field. Only the first is
+            // shown: a field has one thing wrong with it as far as the person
+            // filling it in is concerned, and the bag is already ordered by the
+            // rule that failed - required before format before length.
+            const value = raw[key];
+            const message = Array.isArray(value) ? value[0] : value;
+            if (message) fields[key] = String(message);
+        });
+    }
+
+    const canned = KK_API_MESSAGES[status]
+        || (status >= 500 ? KK_API_MESSAGES[500] : KK_API_MESSAGES[400]);
+
+    // 5xx: never the server's own words, and neither for the three statuses the
+    // framework raises for itself. Below that, a deliberate message from the
+    // endpoint beats the generic one - that is where "This email address is
+    // already registered" and "That coupon has expired" come from.
+    //
+    // TWO envelopes are read, because this codebase answers in two. `message` is
+    // what the validator and most controllers use; `error` is what CartController
+    // and six others say a business refusal in - {"error":"Only 2 left in
+    // stock"}, with no `message` in the body at all. Reading `message` alone is
+    // why a stock cap the server had spelled out arrived at the shopper as the
+    // generic "Please check the highlighted fields and try again."
+    //
+    // `error` is read FIRST, which is the same order the cart page's own
+    // failureMessage() settled on: where a body ever carried both, `error` is
+    // the sentence a controller sat down and wrote, while `message` may be no
+    // more than the validator's aggregate of the bag below it.
+    const authored = status < 500 && !KK_FRAMEWORK_STATUSES.has(status) && body
+        ? [body.error, body.message]
+            .filter(function (m) { return typeof m === 'string'; })
+            .map(function (m) { return m.trim(); })
+            .find(Boolean)
+        : '';
+
+    return {
+        status,
+        message: authored || canned,
+        fields,
+    };
+};
+
+/**
+ * The same thing for a `fetch` that resolved with a non-2xx status: reads the
+ * body once, tolerating an HTML error page where JSON was expected (which is
+ * what a 500 behind a proxy usually returns).
+ */
+window.kkFetchError = async function (response) {
+    let body = null;
+    try {
+        body = await response.clone().json();
+    } catch (e) {
+        body = null;
+    }
+    return window.kkApiError(response, body);
+};
+
+// ========================================
 // Alpine.js Global Data/Stores
 // ========================================
 
@@ -127,6 +281,11 @@ Alpine.store('cart', {
     isLoading: false,
     recommendations: [],
 
+    // Whether the last attempt to read the cart failed. It is the difference
+    // between "there is nothing in your bag" and "we could not find out what is
+    // in your bag", which are the same picture on screen and opposite facts.
+    loadFailed: false,
+
     get count() {
         return this.itemCount;
     },
@@ -145,7 +304,14 @@ Alpine.store('cart', {
             const response = await axios.get('/cart/data');
             this.items = response.data.items || [];
             this.itemCount = response.data.cart_count || this.items.reduce((sum, item) => sum + item.quantity, 0);
+            this.loadFailed = false;
         } catch (error) {
+            // Whatever was already loaded stays exactly as it was. A dropped
+            // connection says nothing about what the server is holding, and
+            // clearing the list here would answer "what is in my bag?" with a
+            // confident, wrong "nothing" - which on a cart reads as an order
+            // that has just been lost.
+            this.loadFailed = true;
             console.error('Failed to fetch cart:', error);
         } finally {
             this.isLoading = false;
@@ -178,8 +344,21 @@ Alpine.store('cart', {
             }
             return true;
         } catch (error) {
-            const msg = error.response?.data?.error || 'Failed to add to cart';
-            Alpine.store('toast').error(msg);
+            // ONE reading of the failure, shared with update() and remove()
+            // below and with the cart page, so the drawer and the page tell the
+            // same story about the same refusal.
+            //
+            // Reading `error.response.data.error` by hand only ever understood
+            // one of the three answers this endpoint gives. A stock cap is
+            // {"error":"Only 2 left in stock"}, but a ValidationException from
+            // $request->validate() is {message, errors} with no `error` key at
+            // all, and an expired CSRF token is a 419 carrying Laravel's own
+            // "CSRF token mismatch." - so a cart that had just refused for a
+            // reason it could name said "Failed to add to cart" instead, and the
+            // shopper was left to guess. kkApiError knows all three shapes, and
+            // is the only thing here allowed to decide when the server's own
+            // words are fit to print.
+            Alpine.store('toast').error(window.kkApiError(error).message);
             console.error('Failed to add to cart:', error);
             return false;
         } finally {
@@ -198,7 +377,13 @@ Alpine.store('cart', {
             }
             await this.fetch();
         } catch (error) {
-            Alpine.store('toast').error('Failed to update cart');
+            // The same reading as add() above, and it matters most here: this is
+            // the handler CartController answers with "Only 2 left in stock"
+            // when the quantity is raised past the shelf. That sentence was
+            // being thrown away and replaced with "Failed to update cart", which
+            // describes the request rather than the reason - and left the
+            // shopper pressing + against a limit nobody had mentioned.
+            Alpine.store('toast').error(window.kkApiError(error).message);
             console.error('Failed to update cart:', error);
         } finally {
             this.isLoading = false;
@@ -212,7 +397,11 @@ Alpine.store('cart', {
             Alpine.store('toast').info('Item removed from cart');
             await this.fetch();
         } catch (error) {
-            Alpine.store('toast').error('Failed to remove item');
+            // And again the same reading, so a session that expired while the
+            // cart sat open says so - "Failed to remove item" invited the
+            // shopper to press the bin a second time against a request that was
+            // never going to be accepted until the page was refreshed.
+            Alpine.store('toast').error(window.kkApiError(error).message);
             console.error('Failed to remove from cart:', error);
         } finally {
             this.isLoading = false;
@@ -249,6 +438,10 @@ Alpine.store('wishlist', {
     items: [],          // product data for the drawer / wishlist page
     isOpen: false,      // wishlist drawer (popup) open state
     isLoading: false,
+    // Set when the products behind the saved ids could not be loaded, so the
+    // page can tell "you have not saved anything" from "we could not load what
+    // you saved" - see fetch() for why those two were indistinguishable.
+    loadFailed: false,
 
     init() {
         this.ids = this.readCookie();
@@ -279,15 +472,33 @@ Alpine.store('wishlist', {
     },
 
     async fetch() {
-        if (!this.ids.length) { this.items = []; return; }
+        if (!this.ids.length) { this.items = []; this.loadFailed = false; return; }
         this.isLoading = true;
         try {
             const res = await axios.get('/wishlist-items', { params: { ids: this.ids.join(',') } });
             const byId = {};
             (res.data.items || []).forEach(p => byId[p.id] = p);
             this.items = this.ids.map(id => byId[id]).filter(Boolean);
+            this.loadFailed = false;
         } catch (e) {
-            this.items = [];
+            // `this.items = []` here was the lie. The ids live in a cookie and
+            // the products come from the server, so a request that failed says
+            // nothing at all about whether the shopper saved anything - and
+            // emptying the list made the page say the opposite of the badge in
+            // the header, which counts the cookie: "Your wishlist is empty"
+            // underneath a heart reading 3.
+            //
+            // So whatever was already loaded stays, and the failure is recorded
+            // rather than answered.
+            this.loadFailed = true;
+            // With nothing loaded there is no stale list to contradict, and the
+            // empty state is about to be shown as though it were the truth. Say
+            // what actually happened instead - through kkApiError, so a 500's
+            // own text never reaches the shopper. Wrapped because a toast is
+            // cosmetic and must not take the store down with it.
+            if (!this.items.length) {
+                try { Alpine.store('toast').error(window.kkApiError(e).message); } catch (err) {}
+            }
         } finally {
             this.isLoading = false;
         }
@@ -339,81 +550,146 @@ Alpine.store('authModal', {
     isOpen: false,
     isLoading: false,
     mode: 'login',
+
+    // One message slot per field, holding a STRING - not the array Laravel
+    // sends. A field has one thing wrong with it as far as the person filling it
+    // in is concerned, and the bag arrives ordered by the rule that failed.
     errors: {},
+
+    // The form-level line, for what no field can speak for: a credentials
+    // failure (which is about the pair, not either box), an error for a field
+    // this modal does not render, a mapped status.
     message: '',
 
     open(mode = 'login') {
         this.mode = mode;
-        this.errors = {};
-        this.message = '';
+        this.reset();
         this.isOpen = true;
         document.body.style.overflow = 'hidden';
     },
 
     close() {
         this.isOpen = false;
-        this.errors = {};
-        this.message = '';
+        this.reset();
         document.body.style.overflow = '';
     },
 
     switchMode(mode) {
         this.mode = mode;
+        this.reset();
+    },
+
+    /** Step 1 of every submission: nothing the last one was told survives it. */
+    reset() {
         this.errors = {};
         this.message = '';
     },
 
-    async login(email, password, remember) {
-        this.isLoading = true;
+    /**
+     * Step 4: one failure becomes at most one message per field plus at most one
+     * form-level line, and never the same sentence in both places.
+     *
+     * LoginController answers a credentials failure with the SAME text in
+     * `message` and in `errors.email`, deliberately - it is a JSON API and
+     * either shape may be what a caller reads. Printing both is what put the
+     * identical sentence in the banner and under the email box at once, so the
+     * pair is collapsed here: a credentials failure is about the two fields
+     * together, so it belongs in the banner and the field slots stay empty.
+     */
+    fail(error) {
+        const failure = window.kkApiError(error);
+
         this.errors = {};
+        this.message = '';
+
+        const shown = this.mode === 'login'
+            ? ['email', 'password']
+            : ['full_name', 'email', 'password', 'password_confirmation', 'terms'];
+
+        Object.entries(failure.fields).forEach(([field, text]) => {
+            if (shown.includes(field)) this.errors[field] = text;
+            // A field this modal does not render would map to nothing and leave
+            // the button looking dead, so it goes to the banner instead.
+            else if (!this.message) this.message = text;
+        });
+
+        if (this.mode === 'login' && this.errors.email) {
+            this.message = this.errors.email;
+            this.errors = {};
+            return;
+        }
+
+        // Only if no field is speaking. Otherwise the banner would repeat what
+        // is already under the boxes.
+        if (!this.message && !Object.keys(this.errors).length) this.message = failure.message;
+    },
+
+    async login(email, password, remember) {
+        if (this.isLoading) return;
+        this.reset();
+
+        // Step 2: nothing is sent while a field is wrong, and the message the
+        // visitor reads is this one - not an authentication failure for a
+        // request that was never worth making.
+        const errors = {};
+        const emailError = _emailShapeError(email);
+        if (emailError) errors.email = emailError;
+        if (!password) errors.password = 'Please enter your password.';
+
+        if (Object.keys(errors).length) {
+            this.errors = errors;
+            return;
+        }
+
+        this.isLoading = true;
         try {
-            const response = await axios.post('/login', {
-                email: email,
-                password: password,
-                remember: remember
-            });
+            await axios.post('/login', { email, password, remember });
             this.close();
             window.location.reload();
         } catch (error) {
-            if (error.response && error.response.status === 422) {
-                this.errors = error.response.data.errors || {};
-                if (error.response.data.message) {
-                    this.message = error.response.data.message;
-                }
-            } else {
-                this.message = 'Something went wrong. Please try again.';
-            }
+            this.fail(error);
         } finally {
             this.isLoading = false;
         }
     },
 
     async register(name, email, password, passwordConfirmation) {
+        if (this.isLoading) return;
+        this.reset();
+
+        // _emailError, not _emailShapeError: this is where an address is minted,
+        // and RegisterController holds it to the tighter EmailAddress shape.
+        const errors = {};
+        const checks = {
+            full_name: _fullNameError(name),
+            email: _emailError(email),
+            password: _passwordError(password),
+            password_confirmation: password !== passwordConfirmation ? 'The two passwords do not match.' : '',
+        };
+        Object.entries(checks).forEach(([field, text]) => { if (text) errors[field] = text; });
+
+        if (Object.keys(errors).length) {
+            this.errors = errors;
+            return;
+        }
+
         this.isLoading = true;
-        this.errors = {};
         try {
-            const response = await axios.post('/register', {
+            await axios.post('/register', {
                 full_name: name,
-                email: email,
-                password: password,
+                email,
+                password,
                 password_confirmation: passwordConfirmation,
-                terms: true
+                terms: true,
             });
             this.close();
             window.location.reload();
         } catch (error) {
-            if (error.response && error.response.status === 422) {
-                this.errors = error.response.data.errors || {};
-                if (error.response.data.message) {
-                    this.message = error.response.data.message;
-                }
-            } else {
-                this.message = 'Something went wrong. Please try again.';
-            }
+            this.fail(error);
         } finally {
             this.isLoading = false;
         }
-    }
+    },
 });
 
 // ========================================
@@ -566,15 +842,27 @@ Alpine.data('search', (endpoint = '/api/search') => ({
     selectedIndex: -1,
     endpoint: endpoint,
 
+    // "Nothing matched" is a statement about the catalogue; "the search did not
+    // run" is a statement about the connection. They produced the same empty
+    // dropdown, and the shopper read the second as the first - so a search that
+    // never reached the server told them the thing they wanted is not sold here.
+    // The two are separated so the dropdown can say which happened.
+    failed: false,
+    errorMessage: '',
+
     async search() {
         if (this.query.length < 2) {
             this.results = [];
+            this.failed = false;
+            this.errorMessage = '';
             this.isOpen = false;
             return;
         }
 
         this.isLoading = true;
         this.isOpen = true;
+        this.failed = false;
+        this.errorMessage = '';
 
         try {
             const response = await axios.get(this.endpoint, {
@@ -583,7 +871,12 @@ Alpine.data('search', (endpoint = '/api/search') => ({
             this.results = response.data.results || [];
         } catch (error) {
             console.error('Search failed:', error);
+            // Stale results for a query they no longer describe would be worse
+            // than none, so the list still goes - but it goes alongside a reason,
+            // mapped through kkApiError so a 500's own text is never printed.
             this.results = [];
+            this.failed = true;
+            this.errorMessage = window.kkApiError(error).message;
         } finally {
             this.isLoading = false;
         }
@@ -592,6 +885,8 @@ Alpine.data('search', (endpoint = '/api/search') => ({
     clear() {
         this.query = '';
         this.results = [];
+        this.failed = false;
+        this.errorMessage = '';
         this.isOpen = false;
         this.selectedIndex = -1;
     },
@@ -842,6 +1137,50 @@ const _mobileError = (v) => {
     if (raw.length > 20) return 'That phone number is too long.';
     if (_normalizeMobile(raw) === null) return 'Please enter a valid 10-digit mobile number starting with 6, 7, 8 or 9.';
     return '';
+};
+
+// The LENIENT email mirror, for the endpoints that validate with V::email()
+// rather than V::email(strictShape: true).
+//
+// _emailError() above is the SIGNUP mirror, and it is deliberately stricter:
+// the local part has to open on a letter or a digit, because that is what
+// App\Rules\EmailAddress demands where an address is being minted. Pointing it
+// at the newsletter endpoint - which validates with a plain V::email() - would
+// make the browser refuse "_asha@example.com" for a form the server would have
+// accepted, and a client-side check that is tighter than the server's is worse
+// than none: it rejects real people for a rule that does not exist.
+//
+// So this one only tests the shape `email:strict` itself tests: one @, a local
+// part, a domain with a real TLD, and no whitespace anywhere.
+const _emailShapeError = (v) => {
+    const email = (v || '').trim();
+    if (!email) return 'Please enter your email address.';
+    if (email.length > 255) return 'That email address is too long.';
+    if (/\s/.test(email)) return _EMAIL_GENERIC;
+
+    const parts = email.split('@');
+    if (parts.length !== 2) return _EMAIL_GENERIC;
+
+    const [local, domain] = parts;
+    if (!local || !_EMAIL_DOMAIN.test(domain)) return _EMAIL_GENERIC;
+    return '';
+};
+
+// 10 to 15 digits, mirroring the closure on the `phone` rule in
+// NewsletterController - NOT _mobileError above, which is the Indian-mobile
+// rule. The subscriber list is the one place an overseas number is legitimate,
+// which the server rule says in as many words; holding the box to ten digits
+// starting 6-9 would have turned that allowance back off from the browser.
+const _subscriberPhoneError = (v, required = false) => {
+    const raw = (v || '').trim();
+    if (!raw) return required ? 'Please enter your mobile number.' : '';
+    if (raw.length > 20) return 'That phone number is too long.';
+
+    const INVALID = 'Please enter a valid mobile number (10-15 digits).';
+    if (!/^[0-9+\-\s()]+$/.test(raw)) return INVALID;
+
+    const digits = raw.replace(/\D/g, '');
+    return digits.length < 10 || digits.length > 15 ? INVALID : '';
 };
 
 // Mirrors Password::min(10)->mixedCase()->numbers()->symbols() from
@@ -1316,11 +1655,27 @@ Alpine.data('offerPopup', () => ({
     destroy() { this.$store.popupQueue.release('offer'); },
     close() { this.open = false; },
     async submit() {
+        // A second click while the first request is still out would post the
+        // same signup twice and answer one action with two outcomes. The button
+        // is disabled as well; this is the half a second Enter key cannot get
+        // round.
+        if (this.submitting) return;
+
+        // Whatever the last attempt was told, gone - before anything is judged,
+        // so a server message is never left sitting beside a fresh client-side
+        // one.
         this.error = '';
-        const nameError = _nameError(this.form.name);
-        if (nameError) { this.error = nameError; return; }
-        if (!this.form.email) { this.error = 'Please enter your email address.'; return; }
-        if (!_validPhone(this.form.phone)) { this.error = 'Please enter a valid 10-digit mobile number.'; return; }
+
+        // Every field, in priority order, and the request is NOT sent while one
+        // of them is wrong. The email check is the LENIENT mirror because this
+        // endpoint validates with a plain V::email(), and the phone check allows
+        // 10-15 digits because the server does - a browser rule tighter than the
+        // server's would reject subscribers the site is happy to take.
+        const invalid = _nameError(this.form.name)
+            || _emailShapeError(this.form.email)
+            || _subscriberPhoneError(this.form.phone, true);
+        if (invalid) { this.error = invalid; return; }
+
         this.submitting = true;
         try {
             const res = await fetch('/newsletter/subscribe', {
@@ -1336,9 +1691,16 @@ Alpine.data('offerPopup', () => ({
                 // over an email should be shown another popup 47s later.
                 this.$store.popupQueue.stop('converted');
                 window.setTimeout(() => this.close(), 2800);
+                return;
             }
-            else { this.error = data.message || 'Something went wrong. Please try again.'; }
-        } catch (e) { this.error = 'Network error. Please try again.'; }
+            // Only now, and only one message: a 422's first field complaint if
+            // the server caught something the checks above could not, otherwise
+            // the sentence mapped from the status. Never the raw body on a 5xx.
+            const failure = window.kkApiError(res, data);
+            this.error = Object.values(failure.fields)[0] || failure.message;
+        } catch (e) {
+            this.error = window.kkApiError(e).message;
+        }
         finally { this.submitting = false; }
     },
 }));
@@ -1463,10 +1825,18 @@ Alpine.data('exitPopup', (code = 'KARMAA10', minutes = 10, accountEmail = '') =>
         if (this._reloadHost) window.location.reload();
     },
     async claim() {
+        if (this.submitting) return;
+
         this.error = '';
         if (this.expired) return;
-        if (!this.form.email) { this.error = 'Please enter your email address.'; return; }
-        if (this.form.phone && !_validPhone(this.form.phone)) { this.error = 'Enter a valid 10-digit mobile number.'; return; }
+
+        // Same two mirrors as the offer popup, for the same reason: this posts
+        // to the newsletter endpoint too. The number is optional here, so an
+        // empty box is not an error - only a malformed one is.
+        const invalid = _emailShapeError(this.form.email)
+            || _subscriberPhoneError(this.form.phone, false);
+        if (invalid) { this.error = invalid; return; }
+
         this.submitting = true;
         try {
             const res = await fetch('/newsletter/subscribe', {
@@ -1492,8 +1862,13 @@ Alpine.data('exitPopup', (code = 'KARMAA10', minutes = 10, accountEmail = '') =>
                 if (this.state === 'applied') this._reloadHost = /^\/(cart|checkout)\/?$/.test(window.location.pathname);
                 this.done = true;
                 this.$store.popupQueue.stop('converted');
-            } else { this.error = data.message || 'Something went wrong.'; }
-        } catch (e) { this.error = 'Network error. Please try again.'; }
+                return;
+            }
+            const failure = window.kkApiError(res, data);
+            this.error = Object.values(failure.fields)[0] || failure.message;
+        } catch (e) {
+            this.error = window.kkApiError(e).message;
+        }
         finally { this.submitting = false; }
     },
 }));
@@ -1506,8 +1881,16 @@ Alpine.data('exitPopup', (code = 'KARMAA10', minutes = 10, accountEmail = '') =>
 Alpine.data('newsletterSignup', () => ({
     email: '', submitting: false, done: false, error: '', message: '',
     async submit() {
+        if (this.submitting) return;
+
         this.error = '';
-        if (!this.email) { this.error = 'Please enter your email address.'; return; }
+
+        // The box only ever checked that SOMETHING had been typed, so "priya@"
+        // made the round trip just to come back rejected. Same shape test the
+        // server runs, before the request instead of after it.
+        const invalid = _emailShapeError(this.email);
+        if (invalid) { this.error = invalid; return; }
+
         this.submitting = true;
         try {
             const res = await fetch('/newsletter/subscribe', {
@@ -1516,9 +1899,16 @@ Alpine.data('newsletterSignup', () => ({
                 body: JSON.stringify({ email: this.email, source: 'homepage' }),
             });
             const data = await res.json().catch(() => ({}));
-            if (res.ok && data.success) { this.done = true; this.message = data.message || 'You are subscribed. Thanks for joining us.'; }
-            else { this.error = data.message || 'Something went wrong. Please try again.'; }
-        } catch (e) { this.error = 'Network error. Please try again.'; }
+            if (res.ok && data.success) {
+                this.done = true;
+                this.message = data.message || 'You are subscribed. Thanks for joining us.';
+                return;
+            }
+            const failure = window.kkApiError(res, data);
+            this.error = Object.values(failure.fields)[0] || failure.message;
+        } catch (e) {
+            this.error = window.kkApiError(e).message;
+        }
         finally { this.submitting = false; }
     },
 }));
@@ -1560,11 +1950,209 @@ Alpine.start();
 // source of truth (required, type, minlength, pattern) but renders the failures
 // as text under each field, naming it from its own label.
 //
-// Opt a form out with data-no-validate. Forms that already handle their own
-// submission (Alpine's @submit.prevent sets novalidate) are skipped.
+// It also OWNS the messages Blade printed for the same fields - see
+// <x-field-error> and the SERVER_NOTE block below - so a field can only ever
+// carry one sentence, whichever side of the wire it came from.
+//
+// Two opt-outs, and they mean different things:
+//
+//   novalidate        the form validates itself (kkRegisterForm, the header
+//                     sign-in modal, both popups). This module prints nothing
+//                     for its fields; typing-level help still applies.
+//   data-no-validate  hands off entirely.
+//
+// See optedOut()/handsOff() below for why the distinction earns its keep.
 (function () {
     const ERROR_CLASS = 'kk-field-error';
     const INVALID_CLASS = 'kk-input-invalid';
+
+    // ------------------------------------------------------------------
+    // Server-rendered messages, owned by the same system as the live ones
+    // ------------------------------------------------------------------
+    //
+    // This module used to know only about the notes it created itself. Blade
+    // printed the $errors bag as its own paragraphs, which clearError() had no
+    // way to reach, so the two renderers stacked: the message from the LAST
+    // response stayed on screen while this one added the message about THIS
+    // attempt, and one empty email box produced
+    //
+    //     Email Address is required.                          (this module, now)
+    //     The provided credentials do not match our records.   (Blade, last POST)
+    //
+    // Both were true of different moments and neither said so. <x-field-error>
+    // now prints the server's message as a `.kk-field-error` carrying
+    // data-kk-field-error="<key>", and <x-form-errors> marks its banner with
+    // data-kk-form-error, which makes both of them this module's to retire.
+    //
+    // WHEN a server message is retired is the whole of the rule, and there are
+    // exactly two moments:
+    //
+    //   * the field is EDITED - the server judged the old value, and the value
+    //     has just changed, so the verdict no longer describes what is in the
+    //     box. Not on blur: tabbing through a field is not correcting it, and a
+    //     server message like "that email is already registered" has to survive
+    //     the visitor looking at it.
+    //   * a new submission STARTS - the whole response is about what was sent
+    //     last time. Clearing it here is what guarantees that a submit blocked
+    //     by client-side validation shows only the client-side message.
+    //
+    // A third moment falls out of showError(): if this module has something to
+    // say about a field, it says it INSTEAD of the server's older sentence, so
+    // one field never carries two messages.
+    const SERVER_NOTE = '[data-kk-field-error]';
+    const SERVER_BANNER = '[data-kk-form-error]';
+
+    // What a form means when it says "not you".
+    //
+    // There are two ways to say it and they used to mean different things in
+    // different handlers, which is how one box ended up with two messages under
+    // it. Only the submit handler tested `novalidate`; the blur, character,
+    // password and invalid handlers tested `data-no-validate` alone. But
+    // `novalidate` suppresses only the browser's INTERACTIVE validation -
+    // willValidate and checkValidity() keep working - so on a form that had
+    // opted out and printed its own per-field messages (the Create Account
+    // panel, the header sign-in modal, both popups), those four handlers went
+    // right on injecting a second, differently worded paragraph under the same
+    // field: "Full Name is required." from here, "Please enter your full name."
+    // from the component, at the same moment.
+    //
+    // One helper now, used by all five:
+    //
+    //   novalidate         - the form has a validator of its own. This module
+    //                        says NOTHING about its fields; the component owns
+    //                        every message. Typing-level help (stripping a
+    //                        letter out of a phone box, capping a mobile at ten
+    //                        digits) still applies, because that is not a
+    //                        message and no component duplicates it.
+    //   data-no-validate   - hands off entirely, typing included.
+    function optedOut(form) {
+        return !!(form && (form.hasAttribute('data-no-validate') || form.hasAttribute('novalidate')));
+    }
+
+    function handsOff(form) {
+        return !!(form && form.hasAttribute('data-no-validate'));
+    }
+
+    // Laravel keys an array field with dots ("variants.0.sku"); the input that
+    // produced it is named "variants[0][sku]". <x-field-error> writes the dotted
+    // form, so the input's name is brought to the same shape before matching.
+    function fieldKey(field) {
+        const name = (field.getAttribute && field.getAttribute('name')) || '';
+        return name.replace(/\[/g, '.').replace(/\]/g, '');
+    }
+
+    // Scoped to the field's own form so two forms on one page - the sign-in and
+    // Create Account panels share a page and an error bag - cannot retire each
+    // other's messages. Falls back to the document for a stray control.
+    function serverNotesFor(field) {
+        const key = fieldKey(field);
+        if (!key) return [];
+
+        const scope = field.form || document;
+        return Array.from(scope.querySelectorAll(SERVER_NOTE))
+            .filter((note) => note.getAttribute('data-kk-field-error') === key);
+    }
+
+    function dropServerNotes(field) {
+        const notes = serverNotesFor(field);
+        if (!notes.length) return;
+
+        notes.forEach(function (note) {
+            // Hand back the aria link this note was borrowing before it goes,
+            // or the input is left pointing at an id that no longer exists.
+            if (field.getAttribute('aria-describedby') === note.id) {
+                field.removeAttribute('aria-describedby');
+            }
+            note.remove();
+        });
+
+        // The red box goes with the message that explained it. Leaving the
+        // outline behind is the same stale-state bug in a quieter form: a field
+        // marked wrong with nothing on screen saying why.
+        field.classList.remove(INVALID_CLASS);
+        if (field.getAttribute('aria-invalid') === 'true') field.removeAttribute('aria-invalid');
+    }
+
+    // The form a banner speaks for.
+    //
+    // <x-form-errors> is written immediately ABOVE its form far more often than
+    // inside it, which puts the banner outside form.querySelectorAll() and left
+    // it as the one piece of the previous response that survived a blocked
+    // submit. Rather than making every one of sixty views declare the link, it
+    // is resolved from where the banner sits: inside a form, that form; before
+    // one, the next form in document order - which is what "the banner above
+    // this form" means. data-kk-form-error-for="<form id>" overrides both, for
+    // the rare layout where the banner is somewhere else entirely.
+    function ownerFormFor(banner) {
+        const explicit = banner.getAttribute('data-kk-form-error-for');
+        if (explicit) return document.getElementById(explicit);
+
+        const enclosing = banner.closest('form');
+        if (enclosing) return enclosing;
+
+        return Array.from(document.forms).find(function (f) {
+            return banner.compareDocumentPosition(f) & Node.DOCUMENT_POSITION_FOLLOWING;
+        }) || null;
+    }
+
+    function bannersFor(form) {
+        return Array.from(document.querySelectorAll(SERVER_BANNER))
+            .filter(function (b) { return ownerFormFor(b) === form; });
+    }
+
+    // Everything the last response said about this form, gone. Called at the top
+    // of every submission, before a single constraint is checked.
+    function dropFormServerState(form) {
+        if (!form) return;
+
+        Array.from(form.querySelectorAll(SERVER_NOTE)).forEach(function (note) {
+            const key = note.getAttribute('data-kk-field-error');
+            const owner = key && form.querySelector('[name="' + cssEscape(keyToName(key)) + '"]');
+            if (owner) dropServerNotes(owner);
+            else note.remove();
+        });
+
+        bannersFor(form).forEach(function (b) { b.remove(); });
+    }
+
+    // "variants.0.sku" back to "variants[0][sku]", to find the input again.
+    function keyToName(key) {
+        const parts = String(key).split('.');
+        return parts.length === 1 ? parts[0] : parts[0] + parts.slice(1).map((p) => '[' + p + ']').join('');
+    }
+
+    function cssEscape(value) {
+        if (window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(value);
+        return String(value).replace(/["\\]/g, '\\$&');
+    }
+
+    // On the way in: adopt every message Blade printed, so a server error and a
+    // live one are indistinguishable from here on - same outline, same aria
+    // wiring, same rules about when they disappear.
+    function adoptServerNotes(root) {
+        Array.from((root || document).querySelectorAll(SERVER_NOTE)).forEach(function (note) {
+            const key = note.getAttribute('data-kk-field-error');
+            if (!key) return;
+
+            const scope = note.closest('form') || document;
+            const field = scope.querySelector('[name="' + cssEscape(keyToName(key)) + '"]');
+            if (!field || !field.willValidate) return;
+
+            field.classList.add(INVALID_CLASS);
+            field.setAttribute('aria-invalid', 'true');
+            // aria-invalid alone says "wrong" without saying why; the link is
+            // what gets the sentence read out.
+            if (!field.getAttribute('aria-describedby') && note.id) {
+                field.setAttribute('aria-describedby', note.id);
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () { adoptServerNotes(document); });
+    } else {
+        adoptServerNotes(document);
+    }
 
     function labelFor(field) {
         if (field.labels && field.labels.length) {
@@ -1606,6 +2194,19 @@ Alpine.start();
     function clearError(field) {
         field.classList.remove(INVALID_CLASS);
         field.removeAttribute('aria-invalid');
+
+        // The character filter below arms a 2s timer that repaints this field's
+        // message when it expires. Clearing the note without cancelling that
+        // timer means the message comes back on its own a moment later, over a
+        // field nothing is wrong with - and in a REUSED dialog (the restock
+        // modal opens over whichever product was clicked) it comes back inside
+        // the next product's form, describing the last one. Whoever clears the
+        // message is also saying the field is settled, so the pending repaint
+        // goes with it.
+        if (field._kkCharTimer) {
+            clearTimeout(field._kkCharTimer);
+            field._kkCharTimer = null;
+        }
 
         // The note is tracked on the field itself rather than looked up among
         // the field's siblings. showError anchors the message to the field's
@@ -1672,6 +2273,13 @@ Alpine.start();
 
     function showError(field, message) {
         clearError(field);
+
+        // If this module has something to say about the field, it says it
+        // INSTEAD of whatever the last response said - never underneath it.
+        // This is the line that makes "one error per field" true rather than
+        // merely intended.
+        dropServerNotes(field);
+
         field.classList.add(INVALID_CLASS);
         field.setAttribute('aria-invalid', 'true');
 
@@ -1705,10 +2313,45 @@ Alpine.start();
         field._kkErrorNote = note;
     }
 
+    // Hand a control back in a clean state.
+    //
+    // For the dialogs that are opened over one row and then reopened over
+    // another - the restock modal on the low-stock and out-of-stock screens is
+    // the same <form>, refilled each time - the fields survive between openings
+    // and so does everything hanging off them: the note, the red outline, the
+    // aria link, the pending repaint timer. Clearing the DOM by hand from the
+    // page's own script reaches the first three and not the fourth, and cannot
+    // reach the note tracked on the element as _kkErrorNote at all. This is the
+    // one call that undoes all of it, so a dialog does not have to know how any
+    // of it is stored.
+    window.kkResetField = function (field) {
+        if (!field || !field.classList) return;
+        dropServerNotes(field);
+        clearError(field);
+        field[TOUCHED] = false;
+        if (field.setCustomValidity) field.setCustomValidity('');
+    };
+
+    /** The same, for every control in a form. */
+    window.kkResetForm = function (form) {
+        if (!form) return;
+        dropFormServerState(form);
+        Array.from(form.elements).forEach(window.kkResetField);
+    };
+
     document.addEventListener('submit', function (event) {
         const form = event.target;
         if (!(form instanceof HTMLFormElement)) return;
-        if (form.hasAttribute('data-no-validate') || form.hasAttribute('novalidate')) return;
+
+        // STEP 1 of every submission, and it runs for EVERY form - including the
+        // ones that opt out of the checks below, and the ones Alpine submits
+        // itself. Whatever the last response said is about the last request; the
+        // moment a new one starts it is history, and leaving it on screen is how
+        // "The provided credentials do not match our records." ended up sitting
+        // under an email box that had since been emptied.
+        dropFormServerState(form);
+
+        if (optedOut(form)) return;
 
         const fields = Array.from(form.elements).filter(function (el) {
             return el.willValidate && !el.disabled && el.type !== 'hidden';
@@ -1718,6 +2361,10 @@ Alpine.start();
         const invalid = fields.filter(function (el) { return !el.checkValidity(); });
         if (invalid.length === 0) return;
 
+        // STEP 2: the request is NOT sent. stopPropagation is what keeps any
+        // other submit listener - a fetch handler, an analytics hook - from
+        // firing it behind this module's back, which is the only way a
+        // backend error could still arrive for a submission that never left.
         event.preventDefault();
         event.stopPropagation();
         invalid.forEach(function (el) { showError(el, messageFor(el)); });
@@ -1726,6 +2373,64 @@ Alpine.start();
         first.focus({ preventScroll: true });
         first.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, true);
+
+    // One submission at a time.
+    //
+    // Bound in the BUBBLE phase on purpose. By the time an event reaches here,
+    // every handler on the form itself has run, so event.defaultPrevented tells
+    // us whether the browser is actually about to navigate - which is the
+    // difference between a real submission worth guarding and an Alpine
+    // @submit.prevent form that manages its own request and must stay usable.
+    document.addEventListener('submit', function (event) {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        if (event.defaultPrevented || form.hasAttribute('data-no-submit-guard')) return;
+
+        if (form._kkSubmitting) {
+            // A second click, or an Enter on top of a click. The first request
+            // is already on its way; sending it twice means two orders, two
+            // signups, or two contradictory answers to one action.
+            event.preventDefault();
+            return;
+        }
+
+        form._kkSubmitting = true;
+
+        // Disabled on the NEXT tick, never in this handler. A disabled control
+        // is omitted from the payload, and a submit button routinely carries the
+        // name/value that says which action was chosen ("save" vs "publish"), so
+        // disabling it here would quietly drop that from the request the click
+        // just started.
+        const buttons = Array.from(form.querySelectorAll('button[type="submit"], input[type="submit"], button:not([type])'))
+            .filter(function (b) { return !b.disabled; });
+
+        window.setTimeout(function () {
+            buttons.forEach(function (b) {
+                b.disabled = true;
+                b.setAttribute('aria-busy', 'true');
+                b.classList.add('kk-submitting');
+            });
+        }, 0);
+
+        form._kkSubmitButtons = buttons;
+    });
+
+    // Back button. A page restored from the bfcache comes back exactly as it
+    // left - mid-submit, with its button greyed out - and the visitor is then
+    // looking at a form they cannot send. Restore it.
+    window.addEventListener('pageshow', function (event) {
+        if (!event.persisted) return;
+
+        Array.from(document.forms).forEach(function (form) {
+            if (!form._kkSubmitting) return;
+            form._kkSubmitting = false;
+            (form._kkSubmitButtons || []).forEach(function (b) {
+                b.disabled = false;
+                b.removeAttribute('aria-busy');
+                b.classList.remove('kk-submitting');
+            });
+        });
+    });
 
     // Marks a field the customer has actually typed in or chosen from, as
     // opposed to one they merely tabbed across on the way somewhere else.
@@ -1738,8 +2443,41 @@ Alpine.start();
             const field = event.target;
             if (!field || !field.willValidate) return;
             field[TOUCHED] = true;
+
+            // The server judged the value that was in this box when it was
+            // submitted. That value has just changed, so the verdict is about
+            // something that is no longer on screen - "that email is already
+            // registered" must not still be sitting under an address the
+            // visitor has since rewritten. Retired on the EDIT, deliberately,
+            // and not on blur: passing through a field is not correcting it.
+            dropServerNotes(field);
+
+            if (optedOut(field.form)) return;
             if (field.classList.contains(INVALID_CLASS) && field.checkValidity()) clearError(field);
         }, true);
+
+        // And again on the way back OUT, in the bubble phase.
+        //
+        // The pass above runs at document capture, which is before any listener
+        // bound on the field itself - and two modules in this app decide a
+        // field's validity in exactly such a listener: the compare-at price
+        // guard on the product form and the schedule-pair module at the bottom
+        // of this file both call setCustomValidity() from their own `input`
+        // handler. On the keystroke that FIXES the value, the capture pass
+        // therefore reads a custom validity that is one event stale, still sees
+        // the field as invalid, and leaves the note up; the message only cleared
+        // on the keystroke after the correction, or not at all if that was the
+        // last one typed.
+        //
+        // Running the same check once more after those listeners have had their
+        // say costs nothing when nothing changed - clearError() on a field with
+        // no note is a no-op - and makes "the message goes when you fix it" true
+        // for a custom constraint as well as a native one.
+        document.addEventListener(type, function (event) {
+            const field = event.target;
+            if (!field || !field.willValidate || optedOut(field.form)) return;
+            if (field.classList.contains(INVALID_CLASS) && field.checkValidity()) clearError(field);
+        }, false);
     });
 
     // Characters a field will accept while it is being typed in.
@@ -1820,7 +2558,7 @@ Alpine.start();
         if (!field || typeof field.value !== 'string') return;
 
         const form = field.form;
-        if (form && form.hasAttribute('data-no-validate')) return;
+        if (handsOff(form)) return;
 
         const policy = charPolicy(field);
         if (!policy) return;
@@ -1865,6 +2603,13 @@ Alpine.start();
 
         field.value = cleaned;
         try { field.setSelectionRange(caret - removedBeforeCaret, caret - removedBeforeCaret); } catch (e) { /* unsupported on some types */ }
+
+        // The character is refused either way - that is the useful half, and no
+        // component duplicates it. The NOTE is this module's to print only when
+        // the form has no validator of its own; on one that does, saying so here
+        // would put a second sentence under a box the component is already
+        // writing to.
+        if (optedOut(field.form)) return;
 
         showError(field, policy.message);
 
@@ -1983,7 +2728,7 @@ Alpine.start();
         if (!role) return;
 
         const form = field.form;
-        if (form && form.hasAttribute('data-no-validate')) return;
+        if (optedOut(form)) return;
 
         const value = field.value || '';
         let message = '';
@@ -2081,8 +2826,7 @@ Alpine.start();
         if (!field || !field.willValidate || field.disabled) return true;
         if (field.type === 'checkbox' || field.type === 'radio') return true;
 
-        const form = field.form;
-        return !!(form && form.hasAttribute('data-no-validate'));
+        return optedOut(field.form);
     }
 
     document.addEventListener('blur', function (event) {
@@ -2118,7 +2862,30 @@ Alpine.start();
         if (!field || !field.willValidate) return;
 
         const form = field.form;
-        if (form && form.hasAttribute('data-no-validate')) return;
+        if (optedOut(form)) return;
+
+        // This is the path a blocked submission actually takes. When a native
+        // constraint fails, the browser fires `invalid` on each offending
+        // control and abandons the submission WITHOUT firing `submit` - so the
+        // step-1 clear-down at the top of the submit handler never runs, and
+        // every message from the previous response would survive into this one.
+        //
+        // Doing it here is what guarantees the promise in both directions: the
+        // request is not sent, AND nothing the server said last time is still on
+        // screen next to the message explaining why it was not sent. Note that
+        // it clears the whole FORM, not just this field: a stale note under a
+        // box that is now filled in correctly is just as contradictory as one
+        // under this box.
+        //
+        // Called once per failing control rather than once per pass, and that is
+        // deliberate. Gating it on "first of the pass" would mean reading
+        // pendingInvalid, which is emptied in a microtask - correct in a browser,
+        // where each submission is its own task, and wrong the moment anything
+        // drives two passes without yielding. The operation is idempotent and
+        // touches only [data-kk-field-error] and [data-kk-form-error], never the
+        // notes showError is about to add, so repeating it costs nothing and
+        // removes the ordering assumption entirely.
+        if (form) dropFormServerState(form);
 
         showError(field, messageFor(field));
 
@@ -2218,9 +2985,22 @@ Alpine.start();
             }
         }
 
-        [start, end].forEach((field) => {
-            ['input', 'change', 'blur'].forEach((type) => field.addEventListener(type, refresh));
-        });
+        // Bound to WINDOW in the CAPTURE phase, filtered to this pair - the same
+        // shape as the password checks in the validator above, and for the same
+        // reason.
+        //
+        // A listener on the field itself runs in the AT_TARGET phase, which is
+        // after every document-capture listener has had the event. One of those
+        // is the validator's clear-on-input handler, and it calls
+        // checkValidity() - so it was reading a setCustomValidity() written for
+        // the PREVIOUS value, and a start or end date the admin had just
+        // corrected kept its message until the keystroke AFTER the one that
+        // fixed it. Capture descends window before document, so refreshing from
+        // here puts the custom validity in step before anything reads it.
+        const refreshPair = (event) => {
+            if (event.target === start || event.target === end) refresh();
+        };
+        ['input', 'change', 'blur'].forEach((type) => window.addEventListener(type, refreshPair, true));
 
         // A click on the submit button lands BEFORE the browser checks the
         // form's constraints, which makes it the last chance to re-floor "now"

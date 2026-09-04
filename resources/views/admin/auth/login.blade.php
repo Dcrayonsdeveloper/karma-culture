@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=manrope:400,500,600,700,800&display=swap" rel="stylesheet" />
 
-    @vite(['resources/css/app.css'])
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
         body { font-family: 'Manrope', sans-serif; margin: 0; }
@@ -75,9 +75,7 @@
                     <input type="email" name="email" id="email" value="{{ old('email') }}" required autofocus
                            class="form-input" style="width: 100%; padding: 0.75rem 1rem; font-size: 13px;"
                            placeholder="admin@example.com">
-                    @error('email')
-                        <p style="margin-top: 0.375rem; font-size: 12px; color: #d72c0d;">{{ $message }}</p>
-                    @enderror
+                    <x-field-error field="email" />
                 </div>
 
                 {{-- Password --}}
@@ -96,9 +94,7 @@
                             <svg id="eye-on" style="width: 1.125rem; height: 1.125rem; display: none;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
                         </button>
                     </div>
-                    @error('password')
-                        <p style="margin-top: 0.375rem; font-size: 12px; color: #d72c0d;">{{ $message }}</p>
-                    @enderror
+                    <x-field-error field="password" />
                 </div>
 
                 {{-- Remember me --}}

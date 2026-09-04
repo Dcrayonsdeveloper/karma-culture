@@ -45,7 +45,15 @@ class ForgotPasswordController extends Controller
             // existed must still be able to recover its password.
             'email' => ['required', 'string', 'email', 'max:255'],
         ], [
-            'email.required' => 'Please enter your email address.',
+            // "Email Address is required." is the field's own <label>, because
+            // that is the sentence the browser side already prints. This form
+            // has no `novalidate`, so the site-wide validator in app.js owns the
+            // box and builds its message from the label; saying "Please enter
+            // your email address." here made the same rule on the same field
+            // read as two different complaints depending on which side rejected
+            // it - and a whitespace-only value reaches the server, so both can
+            // be seen within one attempt. One rule, one sentence.
+            'email.required' => 'Email Address is required.',
             'email.email' => 'Enter a valid email address, like you@example.com.',
             'email.max' => 'That email address is too long.',
         ]);

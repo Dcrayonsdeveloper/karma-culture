@@ -32,11 +32,10 @@
         </div>
     </div>
 
-    @if(session('success'))
-        <div style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: #cdfee1; border: 1px solid #1a7a2e; border-radius: 0.5rem; font-size: 13px; color: #1a7a2e;">
-            {{ session('success') }}
-        </div>
-    @endif
+    {{-- The success flash is deliberately not painted here. The admin layout
+         hands every session flash to toastr, so one status change or one reply
+         produced two copies of the identical sentence. The toast is the single
+         flash channel for the admin. --}}
 
     <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
         <!-- Conversation -->
@@ -102,9 +101,7 @@
                         <textarea name="message" rows="4" required
                                   class="form-input" style="width: 100%;"
                                   placeholder="Type your reply to the customer...">{{ old('message') }}</textarea>
-                        @error('message')
-                            <p style="font-size: 13px; color: #d72c0d; margin: 0;">{{ $message }}</p>
-                        @enderror
+                        <x-field-error field="message" />
                         <div style="display: flex; justify-content: flex-end;">
                             <button type="submit" class="btn btn-primary" style="font-size: 13px;">Send Reply</button>
                         </div>

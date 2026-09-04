@@ -318,16 +318,12 @@
                             <option value="flagged" {{ old('action', $fraudLog->action) === 'flagged' ? 'selected' : '' }}>Flagged</option>
                             <option value="blocked" {{ old('action', $fraudLog->action) === 'blocked' ? 'selected' : '' }}>Blocked</option>
                         </select>
-                        @error('action')
-                            <p style="margin-top: 0.25rem; font-size: 12px; color: #d72c0d;">{{ $message }}</p>
-                        @enderror
+                        <x-field-error field="action" />
                     </div>
                     <div>
                         <label style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Notes</label>
                         <textarea name="notes" rows="4" class="form-input" style="width: 100%;" placeholder="Add review notes...">{{ old('notes', $fraudLog->notes) }}</textarea>
-                        @error('notes')
-                            <p style="margin-top: 0.25rem; font-size: 12px; color: #d72c0d;">{{ $message }}</p>
-                        @enderror
+                        <x-field-error field="notes" />
                     </div>
                     <button type="submit" class="btn btn-primary" style="width: 100%;">
                         Submit Review

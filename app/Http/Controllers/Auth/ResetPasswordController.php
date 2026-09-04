@@ -48,9 +48,26 @@ class ResetPasswordController extends Controller
             'password' => [...V::password(), 'max:255'],
         ], [
             'token.required' => 'This password reset link is incomplete. Please request a new one.',
-            'email.required' => 'Please enter your email address.',
+            // The two required sentences are the fields' own labels - "Email
+            // Address" and "New Password" - because the form carries no
+            // `novalidate` and the site-wide validator in app.js therefore owns
+            // both boxes and names an empty one after its label. Saying "Please
+            // enter your email address." / "Please choose a new password." here
+            // made the same rule on the same field arrive in two different
+            // wordings depending on which side caught it, which is exactly the
+            // drift V::passwordMessages() below was introduced to end for the
+            // password POLICY; only the required case had been left behind.
+            'email.required' => 'Email Address is required.',
             'email.email' => 'Enter a valid email address, like you@example.com.',
-            'password.required' => 'Please choose a new password.',
+            // This screen validates `max:255` on the address just as sign-in and
+            // forgot-password do, but it alone had no sentence for it, so an
+            // over-long address was answered here in Laravel's framework voice
+            // ("The email field must not be greater than 255 characters.") and
+            // in the site's own on the other two auth screens. The email box on
+            // reset-password.blade.php has no maxlength either, so nothing stops
+            // an over-long address being sent and the mismatch being read.
+            'email.max' => 'That email address is too long.',
+            'password.required' => 'New Password is required.',
             'password.confirmed' => 'The two passwords do not match.',
             'password.max' => 'Your password must be 255 characters or fewer.',
             // Word for word what the box already said while the password was

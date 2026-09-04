@@ -139,7 +139,29 @@ class CheckoutController extends Controller
         ], [
             'payment_method.in' => 'Please choose an available payment method.',
             'state.in'          => 'Please choose a state from the list.',
-            'postal_code.regex' => 'Please enter a valid 6-digit PIN code.',
+            // The exact sentence the box's own title carries, which is what
+            // app.js prints on a patternMismatch. "Please enter a valid 6-digit
+            // PIN code." never mentioned the leading zero the rule is actually
+            // enforcing, so a shopper who typed "012345" was told the code was
+            // invalid while the six digits in front of them plainly were six
+            // digits. Kept identical to Account\AddressController, so the two PIN
+            // boxes on the site cannot disagree about the same rule.
+            'postal_code.regex' => 'Enter a 6-digit PIN code. It cannot start with 0.',
+
+            // required_without has no message of its own, so the framework built
+            // one out of the rule: "The full name field is required when address
+            // id is not present." That names `address_id` - a hidden input the
+            // customer has never seen, and whose absence is not something they
+            // can act on - for a failure that is simply an empty box. The typed
+            // address fields are :required="addrId === ''" in the blade, so the
+            // browser reports exactly the same failure as "<label> is required."
+            // These are those labels, verbatim.
+            'full_name.required_without'      => 'Full Name is required.',
+            'phone.required_without'          => 'Phone is required.',
+            'address_line_1.required_without' => 'Address Line 1 is required.',
+            'city.required_without'           => 'City is required.',
+            'state.required_without'          => 'State is required.',
+            'postal_code.required_without'    => 'PIN Code is required.',
         ]);
 
         // The confirmation address is the account's, not the form's: the box

@@ -176,8 +176,14 @@
                             </template>
 
                             <!-- Clear Cart -->
+                            {{-- Every other control on this page is held shut while its
+                                 request is out (item.updating, applyingCoupon); this one
+                                 was not, so an impatient second click sent a second DELETE
+                                 and, when the first had already emptied the bag, earned a
+                                 second failure toast for a cart that was gone. --}}
                             <div class="flex justify-end">
-                                <button @click="clearCart()" class="text-xs text-neutral-600 hover:text-error-500 transition-colors py-2 px-1 min-h-10 sm:min-h-0">
+                                <button @click="clearCart()" :disabled="clearing"
+                                        class="text-xs text-neutral-600 hover:text-error-500 transition-colors py-2 px-1 min-h-10 sm:min-h-0 disabled:opacity-50 disabled:cursor-not-allowed">
                                     Remove All Items
                                 </button>
                             </div>
@@ -231,21 +237,47 @@
                                                         <p class="text-[11px] text-success-600 font-medium" x-text="couponLabel"></p>
                                                     </template>
                                                 </div>
-                                                <button @click="removeCoupon()" class="text-xs text-error-500 hover:text-error-600 font-medium py-1 px-2 min-h-10 sm:min-h-0">Remove</button>
+                                                {{-- Same reason as Remove All Items: without the guard a
+                                                     double click fired two DELETEs at an endpoint that
+                                                     only has one coupon to take off. --}}
+                                                <button @click="removeCoupon()" :disabled="removingCoupon"
+                                                        class="text-xs text-error-500 hover:text-error-600 font-medium py-1 px-2 min-h-10 sm:min-h-0 disabled:opacity-50 disabled:cursor-not-allowed">Remove</button>
                                             </div>
                                         </div>
                                     </template>
 
                                     <template x-if="!coupon">
                                         <div>
-                                            <form @submit.prevent="applyCoupon()" class="flex items-stretch">
+                                            {{-- novalidate: applyCoupon() judges this box itself, so the
+                                                 site-wide validator must stay out of it. Without this the
+                                                 browser blocked an empty APPLY before applyCoupon() could
+                                                 run, which meant the "required" note appeared while the
+                                                 PREVIOUS rejection was still on screen underneath. --}}
+                                            <form @submit.prevent="applyCoupon()" novalidate class="flex items-stretch">
                                                 {{-- No pattern: admin can mint a coupon code containing
                                                      any character up to 50, so anything narrower here
                                                      would refuse a code the server would have honoured.
-                                                     maxlength matches the coupons.code column. --}}
-                                                <input type="text" x-model="couponCode" placeholder="Enter coupon code"
+                                                     maxlength matches the coupons.code column.
+
+                                                     couponError was only ever cleared once applyCoupon()
+                                                     ran, so "Invalid or expired coupon code" stayed under
+                                                     the box for as long as the shopper took to type a
+                                                     different one - still naming a code that is no longer
+                                                     in the field. Retiring the note on the first keystroke
+                                                     is what the site-wide validator does for every field
+                                                     it owns; this box is opted out of it (see novalidate
+                                                     above), so the opt-out has to do it for itself.
+
+                                                     aria-invalid and aria-describedby are wired by hand
+                                                     for the same reason: this note is painted by Alpine,
+                                                     not by <x-field-error>, so nothing else is going to
+                                                     tie it to the input a screen reader is sitting on. --}}
+                                                <input type="text" x-model="couponCode" @input="couponError = ''"
+                                                       placeholder="Enter coupon code"
                                                        required maxlength="50" aria-label="Coupon code"
                                                        autocomplete="off" spellcheck="false"
+                                                       :aria-invalid="couponError ? 'true' : 'false'"
+                                                       :aria-describedby="couponError ? 'kk-cart-coupon-error' : null"
                                                        class="flex-1 min-w-0 text-[13px] border border-neutral-200 border-r-0 rounded-l-lg px-3 py-2.5 focus:border-primary-400 focus:outline-none uppercase placeholder:normal-case placeholder:text-neutral-600">
                                                 <button type="submit"
                                                         class="shrink-0 text-[13px] font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-r-lg px-5 py-2.5 transition-colors disabled:opacity-50"
@@ -257,7 +289,8 @@
                                                 </button>
                                             </form>
                                             <template x-if="couponError">
-                                                <p class="mt-1.5 text-[11px] text-error-500" x-text="couponError"></p>
+                                                <p id="kk-cart-coupon-error" role="alert"
+                                                   class="mt-1.5 text-[11px] text-error-500" x-text="couponError"></p>
                                             </template>
                                         </div>
                                     </template>
@@ -418,6 +451,11 @@
                 couponCode: '',
                 couponError: '',
                 applyingCoupon: false,
+                clearing: false,
+                removingCoupon: false,
+                // Set once a 419 has already scheduled the reload below, so a
+                // burst of expired requests cannot stack up reload timers.
+                reloading: false,
                 csrfToken: '{{ csrf_token() }}',
                 currencySymbol: '{{ currency_symbol() }}',
                 currencyPosition: '{{ currency_position() }}',
@@ -448,6 +486,80 @@
                     return this.productDiscount + this.discount;
                 },
 
+                // Every request on this page can fail the same handful of ways,
+                // and until now each handler answered differently. updateQty and
+                // removeItem read `data.error` - a key only CartController's own
+                // deliberate rejections carry - so a validate()-raised 422
+                // ({message, errors}) or an abort_if(403) ({message}) fell through
+                // to "Failed to update", which is not the reason and gives the
+                // shopper nothing to act on. clearCart and removeCoupon read
+                // nothing at all: the button was pressed, the request failed, and
+                // the page just sat there. One translator now, and the status is
+                // what decides the sentence.
+                //
+                // kkApiError owns the status-to-English map and the rule that
+                // matters most here - a message from a 4xx is something the
+                // endpoint chose to say and is shown, a message from a 5xx is the
+                // exception's own text and never is. `error` is trusted only below
+                // 500 for exactly that reason, and it is trusted FIRST because
+                // that is where this controller puts the wording worth reading:
+                // "This coupon has reached its usage limit", "Only 2 left in
+                // stock".
+                failureMessage(res, data) {
+                    // A 2xx is only an answer if a body came back that this page
+                    // can read. Every success path in CartController replies with
+                    // a JSON object, so a 200 that will not parse was written by
+                    // something standing in front of the application - a captive
+                    // portal, a CDN interstitial, an HTML login page a redirect
+                    // was followed to. Nothing whatever can be inferred from it
+                    // about what became of the cart, and that is why it is
+                    // reported here rather than believed: kkApiError with nothing
+                    // to read gives the one true description, status 0 - the
+                    // request never got an answer.
+                    if (res.ok) {
+                        return window.kkApiError(null).message;
+                    }
+
+                    // A 419 is the CSRF token that was printed into this page
+                    // dying with the session while the tab sat open. No further
+                    // press on this copy of the page can succeed, so the only
+                    // honest answer is to go and fetch one with a live token -
+                    // the same thing the account modal in the header does.
+                    if (res.status === 419) {
+                        if (!this.reloading) {
+                            this.reloading = true;
+                            setTimeout(() => window.location.reload(), 1500);
+                        }
+                        return 'Your session expired. Refreshing the page…';
+                    }
+
+                    const body = data && typeof data === 'object' ? data : {};
+                    const failure = window.kkApiError(res, body);
+                    const deliberate = res.status < 500 && typeof body.error === 'string'
+                        ? body.error.trim()
+                        : '';
+
+                    return deliberate || Object.values(failure.fields)[0] || failure.message;
+                },
+
+                // Every handler below read the body with
+                // `await res.json().catch(() => ({}))`, and that fallback was too
+                // forgiving: a body that would not parse became an empty object,
+                // which then sailed through `res.ok` as a perfectly good success.
+                // `{}` carries no `coupon` key, so syncCouponData() took its else
+                // branch and wiped the coupon and the discount off the panel -
+                // directly beneath a toast saying the coupon had been applied. The
+                // parse stays tolerant, because letting it throw sent a plain
+                // server fault down the catch branch and had it reported as a dead
+                // connection, but the fallback is now null: "an answer arrived and
+                // it is not one this page can use", which is a different thing from
+                // an answer that is merely empty, and is treated as a failure
+                // wherever it turns up.
+                async readBody(res) {
+                    const data = await res.json().catch(() => null);
+                    return data && typeof data === 'object' ? data : null;
+                },
+
                 async updateQty(item, newQty) {
                     if (newQty < 1 || newQty > 99 || item.updating) return;
                     item.updating = true;
@@ -464,17 +576,31 @@
                             },
                             body: JSON.stringify({ quantity: newQty }),
                         });
-                        const data = await res.json();
-                        if (!res.ok) {
+                        // A 5xx behind the proxy answers with an HTML error page,
+                        // and an unguarded res.json() threw on it - sending a
+                        // plain server fault down the catch branch below, where
+                        // it was reported as a connection problem. readBody() still
+                        // absorbs that page without also turning an unreadable 200
+                        // into a silent success.
+                        const data = await this.readBody(res);
+                        // The optimistic quantity set above goes back whenever the
+                        // answer is a refusal OR unreadable: in both cases what the
+                        // server holds is not what is on the screen, and a number
+                        // the shopper will trust is the last thing that should
+                        // survive a request nobody can vouch for.
+                        if (!res.ok || data === null) {
                             item.quantity = oldQty;
-                            this.toast(data.error || 'Failed to update', 'error');
+                            this.toast(this.failureMessage(res, data), 'error');
                         } else {
                             this.syncCouponData(data);
                             this.updateCartBadge();
                         }
                     } catch (e) {
                         item.quantity = oldQty;
-                        this.toast('Something went wrong', 'error');
+                        // Only genuinely thrown failures reach here now, and for
+                        // those kkApiError reports status 0 - the request never
+                        // got an answer at all.
+                        this.toast(window.kkApiError(e).message, 'error');
                     } finally {
                         item.updating = false;
                     }
@@ -492,23 +618,29 @@
                                 'Accept': 'application/json',
                             },
                         });
-                        const data = await res.json();
-                        if (res.ok) {
+                        const data = await this.readBody(res);
+                        // An unreadable answer leaves the row exactly where it is:
+                        // taking it off the screen would be claiming a deletion
+                        // that nothing has confirmed.
+                        if (res.ok && data !== null) {
                             this.items = this.items.filter(i => i.id !== item.id);
                             this.syncCouponData(data);
                             this.updateCartBadge();
                             this.toast('Item removed from cart');
                         } else {
-                            this.toast(data.error || 'Failed to remove', 'error');
+                            this.toast(this.failureMessage(res, data), 'error');
                             item.updating = false;
                         }
                     } catch (e) {
-                        this.toast('Something went wrong', 'error');
+                        this.toast(window.kkApiError(e).message, 'error');
                         item.updating = false;
                     }
                 },
 
                 async clearCart() {
+                    if (this.clearing) return;
+                    this.clearing = true;
+
                     try {
                         const res = await fetch('/cart', {
                             method: 'DELETE',
@@ -517,22 +649,46 @@
                                 'Accept': 'application/json',
                             },
                         });
-                        if (res.ok) {
+                        const data = await this.readBody(res);
+                        // The same rule as removeItem, and it costs more here: an
+                        // empty bag drawn over a cart the server never cleared is
+                        // the most convincing false success on the page, and the
+                        // shopper would only find out at checkout.
+                        if (res.ok && data !== null) {
                             this.items = [];
                             this.coupon = null;
                             this.discount = 0;
                             this.updateCartBadge();
                             this.toast('Cart cleared');
+                        } else {
+                            // There was no else at all here: a rejected clear left
+                            // the bag on screen exactly as it was, with nothing said,
+                            // which reads as a dead button rather than a refusal.
+                            this.toast(this.failureMessage(res, data), 'error');
                         }
                     } catch (e) {
-                        this.toast('Something went wrong', 'error');
+                        this.toast(window.kkApiError(e).message, 'error');
+                    } finally {
+                        this.clearing = false;
                     }
                 },
 
                 async applyCoupon() {
-                    if (!this.couponCode.trim() || this.applyingCoupon) return;
-                    this.applyingCoupon = true;
+                    // Re-entry guard first, then clear what the last attempt was
+                    // told - before anything is judged, so an old rejection is
+                    // never left beside a fresh complaint.
+                    if (this.applyingCoupon) return;
                     this.couponError = '';
+
+                    // This used to return in silence, so pressing APPLY on an
+                    // empty box did nothing at all once the form stopped relying
+                    // on the browser to catch it.
+                    if (!this.couponCode.trim()) {
+                        this.couponError = 'Please enter a coupon code.';
+                        return;
+                    }
+
+                    this.applyingCoupon = true;
 
                     try {
                         const res = await fetch('/cart/apply-coupon', {
@@ -544,22 +700,39 @@
                             },
                             body: JSON.stringify({ code: this.couponCode }),
                         });
-                        const data = await res.json();
-                        if (res.ok) {
+                        const data = await this.readBody(res);
+                        // Only a readable answer may reach syncCouponData(): handed
+                        // a body it cannot read, it hears "there is no coupon on
+                        // this cart" and clears the pill and the discount - which is
+                        // how the panel came to show no coupon at all directly under
+                        // a toast announcing one. Unreadable falls to the else,
+                        // where the complaint is printed under the box the code was
+                        // typed into and the code is left in it to try again.
+                        if (res.ok && data !== null) {
                             this.syncCouponData(data);
                             this.couponCode = '';
                             this.toast('Coupon applied successfully');
                         } else {
-                            this.couponError = data.error || 'Invalid coupon';
+                            // Mapped from the status rather than read straight
+                            // out of the body: a 500's `message` is the
+                            // exception's own text, and a 419 is a dead token
+                            // that no retry from this page can survive. This is
+                            // a message about the code in the box, so it belongs
+                            // under the box and nowhere else - never also in a
+                            // toast.
+                            this.couponError = this.failureMessage(res, data);
                         }
                     } catch (e) {
-                        this.couponError = 'Something went wrong';
+                        this.couponError = window.kkApiError(e).message;
                     } finally {
                         this.applyingCoupon = false;
                     }
                 },
 
                 async removeCoupon() {
+                    if (this.removingCoupon) return;
+                    this.removingCoupon = true;
+
                     try {
                         const res = await fetch('/cart/remove-coupon', {
                             method: 'DELETE',
@@ -568,13 +741,25 @@
                                 'Accept': 'application/json',
                             },
                         });
-                        const data = await res.json();
-                        if (res.ok) {
+                        const data = await this.readBody(res);
+                        // Success here IS syncCouponData() being told there is no
+                        // coupon any more, which is the one thing an unreadable body
+                        // says by accident: the pill would come off a cart that
+                        // still has the coupon on it, and the discount would vanish
+                        // from a total that still includes it.
+                        if (res.ok && data !== null) {
                             this.syncCouponData(data);
                             this.toast('Coupon removed');
+                        } else {
+                            // As with clearCart, this failed in silence: the pill
+                            // stayed, the discount stayed, and the shopper was left
+                            // to guess whether the coupon had come off.
+                            this.toast(this.failureMessage(res, data), 'error');
                         }
                     } catch (e) {
-                        this.toast('Something went wrong', 'error');
+                        this.toast(window.kkApiError(e).message, 'error');
+                    } finally {
+                        this.removingCoupon = false;
                     }
                 },
 

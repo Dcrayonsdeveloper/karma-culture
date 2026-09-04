@@ -66,9 +66,7 @@
                                title="Order numbers contain only letters, numbers and hyphens, like ORD-20260211-A1B2C3D4."
                                class="w-full px-3.5 py-2.5 text-sm border border-neutral-200 rounded-lg bg-white text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
                                placeholder="e.g., ORD-20260211-A1B2C">
-                        @error('order_number')
-                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                        @enderror
+                        <x-field-error field="order_number" />
                     </div>
 
                     @guest
@@ -80,9 +78,7 @@
                                    title="Enter a 10-digit Indian mobile number starting with 6, 7, 8 or 9."
                                    class="w-full px-3.5 py-2.5 text-sm border border-neutral-200 rounded-lg bg-white text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
                                    placeholder="Mobile number used for the order">
-                            @error('phone')
-                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="phone" />
                         </div>
                     @endguest
 

@@ -29,9 +29,7 @@
                                 <input type="text" name="name" value="{{ old('name', $store->name) }}" required
                                        minlength="2" maxlength="255"
                                        class="form-input" style="width: 100%;">
-                                @error('name')
-                                    <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                                @enderror
+                                <x-field-error field="name" />
                             </div>
                             <div>
                                 <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Code <span style="color: #d72c0d;">*</span></label>
@@ -41,9 +39,7 @@
                                        maxlength="20" pattern="[A-Za-z0-9][A-Za-z0-9 _\-/]*"
                                        title="Start with a letter or number, then letters, numbers, spaces, hyphens, underscores and slashes."
                                        class="form-input" style="width: 100%;">
-                                @error('code')
-                                    <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                                @enderror
+                                <x-field-error field="code" />
                             </div>
                         </div>
 
@@ -52,9 +48,7 @@
                             <input type="text" name="address" value="{{ old('address', $store->address) }}"
                                    minlength="3" maxlength="255" autocomplete="street-address"
                                    class="form-input" style="width: 100%;">
-                            @error('address')
-                                <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="address" />
                         </div>
                     </div>
                 </div>
@@ -75,9 +69,7 @@
                                        title="Enter a 10-digit Indian mobile number starting with 6, 7, 8 or 9."
                                        class="form-input" style="width: 100%;">
                                 <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">10-digit mobile number. Saved as bare digits.</p>
-                                @error('phone')
-                                    <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                                @enderror
+                                <x-field-error field="phone" />
                             </div>
                             <div>
                                 <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Email</label>
@@ -87,9 +79,7 @@
                                        maxlength="255" autocomplete="email" pattern=".+@.+\..+"
                                        title="Enter a full email address, like store@example.com"
                                        class="form-input" style="width: 100%;">
-                                @error('email')
-                                    <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                                @enderror
+                                <x-field-error field="email" />
                             </div>
                         </div>
                     </div>

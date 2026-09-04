@@ -65,7 +65,21 @@ class TicketController extends Controller
         ], [
             'category.in' => 'Please choose a category from the list.',
             'priority.in' => 'Please choose a priority from the list.',
-            'message.min' => 'Please describe the issue in at least 10 characters.',
+            // The wording is the browser's, not ours. This form carries no
+            // `novalidate`, so the site-wide validator in app.js owns these two
+            // boxes and names them after their own <label>: "Subject is
+            // required.", "Message must be at least 10 characters." The server
+            // said "Please describe the issue in at least 10 characters." for
+            // the identical rule, so one under-length message was complained
+            // about in two different voices depending on which side caught it -
+            // and both can be on screen at once, because a value the browser
+            // accepts is not always one Laravel does: twelve spaces satisfy
+            // minlength="10", and TrimStrings reduces them to nothing before
+            // `required` here ever sees them.
+            'subject.required' => 'Subject is required.',
+            'subject.min' => 'Subject must be at least 3 characters.',
+            'message.required' => 'Message is required.',
+            'message.min' => 'Message must be at least 10 characters.',
         ]);
 
         $ticket = SupportTicket::create([
@@ -110,13 +124,45 @@ class TicketController extends Controller
     public function reply(Request $request, SupportTicket $ticket): RedirectResponse
     {
         abort_if($ticket->user_id !== $request->user()->id, 403);
-        abort_if($ticket->status === 'closed', 403, 'This ticket is closed.');
 
+        // The textarea carries aria-label="Reply", so app.js names it "Reply"
+        // when it catches an empty or short box; these are the same two
+        // sentences, so the customer is told one thing about one mistake
+        // whichever side notices it first.
         $validated = $request->validate([
             'message' => V::textarea(max: 5000, min: 5),
         ], [
-            'message.min' => 'Please write at least 5 characters.',
+            'message.required' => 'Reply is required.',
+            'message.min' => 'Reply must be at least 5 characters.',
         ]);
+
+        // A ticket closed by support AFTER this page was rendered is a state
+        // failure, not an authorisation one: the customer did nothing wrong and
+        // has just typed a reply. abort(403) answered it with a bare error page
+        // that threw the typed reply away and looked nothing like the other
+        // failures on this form.
+        //
+        // The message is deliberately NOT put on the `message` key. back() lands
+        // on the ticket, where the status is still closed, so the reply box - and
+        // with it the only <x-field-error field="message"> on that page - is not
+        // rendered at all; a message on that key was filtered out of the
+        // form-level banner as "already handled inline" and therefore printed
+        // nowhere, leaving the customer with the static closed panel and no hint
+        // that his reply had been refused. Nor is this something he could fix by
+        // editing that box, which is what a message under a field promises. So it
+        // goes on a key no input owns and lands on the form-level line, which is
+        // exactly what that line is reserved for. withInput() is what lets the
+        // closed panel hand the typed reply back to be pasted into the new
+        // ticket, so it is no longer decoration.
+        //
+        // Checked AFTER validation on purpose: an empty box is a "required"
+        // failure, which outranks a business rule, so a customer who submits
+        // nothing is told to write something rather than being sent away.
+        if ($ticket->status === 'closed') {
+            return back()->withInput()->withErrors([
+                'ticket' => 'This ticket is closed, so your reply was not sent. Please raise a new ticket and we will pick it up from there.',
+            ]);
+        }
 
         SupportTicketReply::create([
             'support_ticket_id' => $ticket->id,

@@ -31,17 +31,13 @@
                             <input type="text" name="name" id="fs-name" value="{{ old('name', $flashSale->name) }}" required
                                    minlength="2" maxlength="255"
                                    class="form-input" style="width: 100%;">
-                            @error('name')
-                                <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="name" />
                         </div>
 
                         <div>
                             <label for="fs-description" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Description</label>
                             <textarea name="description" id="fs-description" rows="3" maxlength="1000" class="form-textarea" style="width: 100%;">{{ old('description', $flashSale->description) }}</textarea>
-                            @error('description')
-                                <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="description" />
                         </div>
                     </div>
                 </div>
@@ -132,9 +128,7 @@
                                    value="{{ old('starts_at', $startOriginal) }}" required
                                    min="{{ $startFloor }}" data-schedule-start data-schedule-original="{{ $startOriginal }}"
                                    class="form-input" style="width: 100%;">
-                            @error('starts_at')
-                                <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="starts_at" />
                         </div>
                         <div>
                             <label for="fs-ends-at" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Ends At <span style="color: #d72c0d;">*</span></label>
@@ -142,9 +136,7 @@
                                    value="{{ old('ends_at', $endOriginal) }}" required
                                    min="{{ $endFloor }}" data-schedule-end="fs-starts-at" data-schedule-original="{{ $endOriginal }}"
                                    class="form-input" style="width: 100%;">
-                            @error('ends_at')
-                                <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="ends_at" />
                         </div>
                     </div>
                 </div>

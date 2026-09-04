@@ -13,6 +13,7 @@ use App\Services\ShiprocketService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 class OrderController extends Controller
@@ -108,8 +109,8 @@ class OrderController extends Controller
                     $shiprocket = new ShiprocketService();
                     $result = $shiprocket->pushOrder($order);
                     $shiprocketPushed = true;
-                } catch (\Exception $e) {
-                    return back()->with('error', 'Shiprocket: ' . $e->getMessage());
+                } catch (\Throwable $e) {
+                    return back()->with('error', $this->shiprocketFailure($e, $order, 'push-on-status'));
                 }
             }
         }
@@ -290,8 +291,8 @@ class OrderController extends Controller
             }
 
             return back()->with('success', $msg);
-        } catch (\Exception $e) {
-            return back()->with('error', 'Shiprocket: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            return back()->with('error', $this->shiprocketFailure($e, $order, 'push'));
         }
     }
 
@@ -312,8 +313,8 @@ class OrderController extends Controller
                 return back()->with('success', 'Tracking synced from Shiprocket.');
             }
             return back()->with('error', 'No tracking data available yet.');
-        } catch (\Exception $e) {
-            return back()->with('error', 'Shiprocket tracking: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            return back()->with('error', $this->shiprocketFailure($e, $order, 'tracking'));
         }
     }
 
@@ -332,8 +333,52 @@ class OrderController extends Controller
             $shiprocket->cancelOrder($shiprocketOrderId);
 
             return back()->with('success', 'Order cancelled on Shiprocket.');
-        } catch (\Exception $e) {
-            return back()->with('error', 'Shiprocket cancel: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            return back()->with('error', $this->shiprocketFailure($e, $order, 'cancel'));
         }
+    }
+
+    /**
+     * Record a Shiprocket failure and hand the admin a sentence they can act on.
+     *
+     * Every one of these call sites used to flash 'Shiprocket: ' . $e->getMessage()
+     * into the admin toast, and that message is not ours to show. ShiprocketService
+     * builds it as `$response->json('message') ?? $response->body()`, so what lands
+     * here is whatever the upstream API said - a JSON body, an HTML error page from
+     * a proxy in front of it, a gateway's own wording about tokens and endpoints -
+     * and on any non-HTTP failure it is a PHP exception message complete with class
+     * name and file path. An operator standing at the orders screen could read none
+     * of that and act on it, while anyone looking over their shoulder could read all
+     * of it.
+     *
+     * So the upstream detail goes where it is actually useful - the log, tied to the
+     * order it belongs to so a support thread can be reconstructed later - and the
+     * screen gets a fixed sentence per step. The step matters because the recovery
+     * differs: a failed push means nothing has moved and the order can simply be
+     * pushed again, whereas a failed cancel means we no longer know whether
+     * Shiprocket has the order, and the admin has to look before retrying.
+     *
+     * These catch \Throwable rather than \Exception on purpose. A TypeError or an
+     * ArgumentCountError coming out of the service is exactly the kind of failure
+     * whose message must not reach a banner, and it was previously the one kind that
+     * escaped the catch entirely and became a 500 page mid-status-change.
+     */
+    private function shiprocketFailure(\Throwable $e, Order $order, string $step): string
+    {
+        Log::error('Shiprocket request failed', [
+            'step' => $step,
+            'order_id' => $order->id,
+            'order_number' => $order->order_number,
+            'exception' => $e::class,
+            'error' => $e->getMessage(),
+        ]);
+
+        return match ($step) {
+            'push-on-status' => 'Shiprocket could not accept this order, so the status has not been changed. Check the Shiprocket settings and the delivery address, then try again - the details are in the application log.',
+            'push' => 'Shiprocket could not accept this order. Check the Shiprocket settings and the delivery address, then try again - the details are in the application log.',
+            'tracking' => 'Shiprocket could not return tracking for this order. Nothing has been changed; try again shortly - the details are in the application log.',
+            'cancel' => 'Shiprocket could not cancel this order. Confirm its state in the Shiprocket dashboard before retrying - the details are in the application log.',
+            default => 'The Shiprocket request failed. The details are in the application log.',
+        };
     }
 }

@@ -20,6 +20,26 @@ class RegisterController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'phone' => ['nullable', 'string', 'max:20', 'unique:users'],
             'password' => ['required', 'confirmed', Password::defaults()],
+        ], [
+            // The web sign-up deliberately overrides these four rules with
+            // sentences written for a customer; this endpoint passed no messages
+            // at all, so the same duplicate address came back as "The email has
+            // already been taken." through the app and "An account already exists
+            // for this email address. Try signing in instead." through the
+            // website - one fact, two verdicts, and only one of them says what to
+            // do about it. The duplicate-phone rule was worse: the framework
+            // default names the column ("The phone has already been taken.")
+            // where the web sign-up names the thing the customer has ("An account
+            // with this mobile number already exists.").
+            //
+            // Word for word Auth\RegisterController's array. The two have no
+            // shared home to live in yet - hoisting them into lang keys means
+            // editing the web and admin sign-ups as well - so they must be
+            // changed together.
+            'email.email' => 'Enter a valid email address, like you@example.com.',
+            'email.unique' => 'An account already exists for this email address. Try signing in instead.',
+            'phone.unique' => 'An account with this mobile number already exists.',
+            'password.confirmed' => 'The two passwords do not match.',
         ]);
 
         $user = User::create([

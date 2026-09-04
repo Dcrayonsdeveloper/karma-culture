@@ -20,9 +20,7 @@
                     <input type="text" name="value" id="value" value="{{ old('value') }}" required
                            minlength="1" maxlength="255"
                            class="form-input" style="width: 100%;" placeholder="e.g. Red, XL, Cotton">
-                    @error('value')
-                        <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                    @enderror
+                    <x-field-error field="value" />
                 </div>
 
                 @if($attribute->type === 'color')
@@ -34,9 +32,7 @@
                             <input type="text" value="{{ old('color_code', '#000000') }}" readonly
                                    class="form-input" style="flex: 1; background-color: #f6f6f7;" id="color_text">
                         </div>
-                        @error('color_code')
-                            <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                        @enderror
+                        <x-field-error field="color_code" />
                     </div>
                 @endif
 
@@ -44,9 +40,7 @@
                     <label for="position" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Position</label>
                     <input type="number" name="position" id="position" value="{{ old('position', 0) }}" min="0" max="65535" step="1"
                            class="form-input" style="width: 100%;">
-                    @error('position')
-                        <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                    @enderror
+                    <x-field-error field="position" />
                 </div>
             </div>
         </div>

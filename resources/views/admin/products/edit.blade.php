@@ -20,6 +20,17 @@
             @csrf
             @method('PUT')
 
+            {{-- `variants.*.mrp` is deliberately NOT in this list. Naming a key here is a
+                 promise that a field below is already showing it, and the compare-at guard
+                 makes no such promise on page load: it re-arms setCustomValidity over the
+                 values that came back and prints nothing until the row is touched. A row
+                 the admin then deletes takes its inputs off screen while still submitting
+                 them, so the guard has nothing to mark and the server's verdict on that row
+                 would have vanished entirely. Left to the banner, it is at least said
+                 once. --}}
+            <x-admin.form-errors title="This product could not be saved."
+                                 :handled="['name', 'short_description', 'description', 'main_image', 'images', 'images.*', 'videos', 'videos.*', 'price', 'mrp', 'cost_price', 'sku', 'barcode', 'stock_quantity', 'weight', 'length', 'width', 'height', 'hsn_code', 'category_id', 'brand_id', 'seller_id', 'slug', 'meta_title', 'meta_description']" />
+
             <!-- Two-column Shopify layout -->
             <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
 
@@ -32,22 +43,22 @@
                             <label for="name" class="form-label form-label-required">Title</label>
                             <input type="text" name="name" id="name" value="{{ old('name', $product->name) }}" required
                                    minlength="2" maxlength="255"
-                                   class="form-input w-full @error('name') form-input-error @enderror"
+                                   class="form-input w-full"
                                    @input="if(!slugManual) slug = toSlug($event.target.value)">
-                            @error('name') <p class="form-error">{{ $message }}</p> @enderror
+                            <x-field-error field="name" />
                         </div>
                         <div>
                             <label for="short_description" class="form-label">Short description</label>
                             <textarea name="short_description" id="short_description" rows="2" maxlength="500"
-                                      class="form-input w-full @error('short_description') form-input-error @enderror">{{ old('short_description', $product->short_description) }}</textarea>
-                            @error('short_description') <p class="form-error">{{ $message }}</p> @enderror
+                                      class="form-input w-full">{{ old('short_description', $product->short_description) }}</textarea>
+                            <x-field-error field="short_description" />
                         </div>
                         <div>
                             <label for="description" class="form-label form-label-required">Description</label>
                             {{-- `required` removed: CKEditor hides this textarea so HTML5 validation silently blocks submit. Server validates instead. --}}
                             <textarea name="description" id="description" rows="6"
-                                      class="form-input w-full @error('description') form-input-error @enderror">{!! old('description', $product->description) !!}</textarea>
-                            @error('description') <p class="form-error">{{ $message }}</p> @enderror
+                                      class="form-input w-full">{!! old('description', $product->description) !!}</textarea>
+                            <x-field-error field="description" />
                         </div>
                     </div>
 
@@ -91,13 +102,25 @@
                                     </svg>
                                     File missing
                                 </span>
-                                {{-- Touch screens send no HTML5 drag events, so a tile can also step one place with a tap. --}}
+                                {{-- Touch screens send no HTML5 drag events, so a tile can also step one place with a tap.
+
+                                     Both arrows go dead while a reorder is being written. Each tap
+                                     posts the whole order, and the server answers concurrent writes
+                                     in whatever sequence it finishes them, so three quick taps could
+                                     leave the stored order set by the request that happened to land
+                                     last rather than by the arrangement on screen. Disabling the
+                                     control that starts the request is the honest way to say "one at
+                                     a time" - refusing the click silently would look like the tap
+                                     missed. The delete cross stays live: it changes nothing the
+                                     server has yet been told about. --}}
                                 <div class="absolute top-1.5 right-1.5 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button type="button" @click="moveTile($el, -1)" title="Move earlier" aria-label="Move earlier"
+                                            :disabled="reorderBusy" :style="reorderBusy ? 'opacity:0.5; cursor:not-allowed;' : ''"
                                             class="w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-sm">
                                         <svg style="width: 0.875rem; height: 0.875rem; color: #303030;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                                     </button>
                                     <button type="button" @click="moveTile($el, 1)" title="Move later" aria-label="Move later"
+                                            :disabled="reorderBusy" :style="reorderBusy ? 'opacity:0.5; cursor:not-allowed;' : ''"
                                             class="w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-sm">
                                         <svg style="width: 0.875rem; height: 0.875rem; color: #303030;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                                     </button>
@@ -151,30 +174,79 @@
                                 <p class="text-xs font-medium" style="color: #005bd3;" x-text="mainImageChanged ? 'Main image ready ✓' : 'Set / replace main image'">Set / replace main image</p>
                                 <p class="text-[11px] mt-0.5" style="color: #616161;">JPG, PNG, WEBP or GIF, max 2MB</p>
                             </div>
+                            {{-- The two multi-file zones below carry their own message wiring,
+                                 and the reason is a name that cannot be matched. app.js finds
+                                 the control a server note belongs to by normalising the input's
+                                 name to the dotted key Laravel uses ("variants[0][sku]" ->
+                                 "variants.0.sku"); "images[]" normalises to "images.", which is
+                                 never equal to the "images" the note is keyed under. So it
+                                 neither links the note to anything on the way in nor retires it
+                                 when a new selection is made, and the verdict on the batch that
+                                 was rejected hung over the batch that replaced it. Choosing or
+                                 dropping files IS the correction, so the note goes with it, and
+                                 the description is pointed at the zone rather than at the input
+                                 because the input is display:none - a description on something
+                                 that can never be focused is read to nobody. role and tabindex
+                                 are what make the zone reachable in the first place, and Enter
+                                 and Space are then owed the behaviour a real button would give
+                                 them. The main image beside them needs none of this: its input
+                                 is named "main_image", which matches its key exactly, so app.js
+                                 already owns that note from both ends. --}}
                             <div class="flex-1 min-w-[45%] border border-dashed rounded-lg p-3 text-center cursor-pointer hover:border-neutral-400 transition-colors" style="border-color: #b5b5b5;"
+                                 x-ref="galleryZone"
+                                 role="button" tabindex="0"
+                                 @if ($errors->has('images') || $errors->has('images.*')) aria-describedby="kk-srv-err-images" @endif
                                  @click="$refs.galleryInput.click()"
+                                 @keydown.enter.prevent="$refs.galleryInput.click()"
+                                 @keydown.space.prevent="$refs.galleryInput.click()"
                                  @dragover.prevent @dragleave.prevent
-                                 @drop.prevent="handleGalleryFiles($event.dataTransfer.files)">
-                                <input type="file" name="images[]" multiple accept="image/jpeg,image/jpg,image/png,image/webp,image/gif" x-ref="galleryInput" style="display: none;" @change="handleGalleryFiles($event.target.files)">
+                                 @drop.prevent="handleGalleryFiles($event.dataTransfer.files); $refs.galleryError && $refs.galleryError.remove(); $refs.galleryZone && $refs.galleryZone.removeAttribute('aria-describedby')">
+                                <input type="file" name="images[]" multiple accept="image/jpeg,image/jpg,image/png,image/webp,image/gif" x-ref="galleryInput" style="display: none;" @change="handleGalleryFiles($event.target.files); $refs.galleryError && $refs.galleryError.remove(); $refs.galleryZone && $refs.galleryZone.removeAttribute('aria-describedby')">
                                 <p class="text-xs font-medium" style="color: #005bd3;">Add images</p>
                                 <p class="text-[11px] mt-0.5" style="color: #616161;">Up to 10 per save, JPG/PNG/WEBP/GIF, max 2MB each</p>
                             </div>
                             <div class="flex-1 min-w-[45%] border border-dashed rounded-lg p-3 text-center cursor-pointer hover:border-neutral-400 transition-colors" style="border-color: #b5b5b5;"
+                                 x-ref="videoZone"
+                                 role="button" tabindex="0"
+                                 @if ($errors->has('videos') || $errors->has('videos.*')) aria-describedby="kk-srv-err-videos" @endif
                                  @click="$refs.videoInput.click()"
+                                 @keydown.enter.prevent="$refs.videoInput.click()"
+                                 @keydown.space.prevent="$refs.videoInput.click()"
                                  @dragover.prevent @dragleave.prevent
-                                 @drop.prevent="handleVideoFiles($event.dataTransfer.files)">
-                                <input type="file" name="videos[]" multiple accept="video/mp4,video/webm,video/quicktime" x-ref="videoInput" style="display: none;" @change="handleVideoFiles($event.target.files)">
+                                 @drop.prevent="handleVideoFiles($event.dataTransfer.files); $refs.videoError && $refs.videoError.remove(); $refs.videoZone && $refs.videoZone.removeAttribute('aria-describedby')">
+                                <input type="file" name="videos[]" multiple accept="video/mp4,video/webm,video/quicktime" x-ref="videoInput" style="display: none;" @change="handleVideoFiles($event.target.files); $refs.videoError && $refs.videoError.remove(); $refs.videoZone && $refs.videoZone.removeAttribute('aria-describedby')">
                                 <p class="text-xs font-medium" style="color: #005bd3;">Add videos</p>
                                 <p class="text-[11px] mt-0.5" style="color: #616161;">Up to 5 per save, MP4/WEBM/MOV, max 50MB each</p>
                             </div>
                         </div>
-                        @error('main_image') <p class="form-error mt-2">{{ $message }}</p> @enderror
-                        {{-- The array-level max:10 / max:5 rules report under `images` and
-                             `videos`; without these the save was rejected in silence. --}}
-                        @error('images') <p class="form-error mt-2">{{ $message }}</p> @enderror
-                        @error('images.*') <p class="form-error mt-2">{{ $message }}</p> @enderror
-                        @error('videos') <p class="form-error mt-2">{{ $message }}</p> @enderror
-                        @error('videos.*') <p class="form-error mt-2">{{ $message }}</p> @enderror
+                        <x-field-error field="main_image" />
+                        {{-- One control, one note - and which key it comes from is the
+                             whole of the care here.
+
+                             A multi-file input is a SINGLE control, but Laravel complains
+                             about it in two different registers: the array-level caps
+                             (images max:10, videos max:5) land under `images` / `videos`,
+                             while the per-file rules - mimes, max size - land under
+                             `images.0`, `images.1` and so on. Rendering both keys, which
+                             is what the four tags here used to do, put two red paragraphs
+                             under one file input for one rejected save. That is the
+                             duplicate-message-per-field bug with the server playing both
+                             parts, and a save that tripped both caps and a bad file
+                             printed four paragraphs for two controls.
+
+                             The array-level message wins when both are present, because
+                             it is about the selection as a whole and that is what has to
+                             change; a complaint about one file inside a selection that is
+                             too big to accept anyway is not yet the useful thing to read,
+                             and it surfaces on the next attempt once the count is right.
+                             Neither key rendered at all was the original bug: the save
+                             bounced back in silence. --}}
+                        @php
+                            $kkImagesKey = $errors->has('images') ? 'images' : 'images.*';
+                            $kkVideosKey = $errors->has('videos') ? 'videos' : 'videos.*';
+                        @endphp
+                        <x-field-error :field="$kkImagesKey" x-ref="galleryError" />
+                        <x-field-error :field="$kkVideosKey" x-ref="videoError" />
                     </div>
 
                     <!-- Pricing -->
@@ -186,20 +258,23 @@
                                 <div class="relative">
                                     <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[13px]" style="color: #616161;">₹</span>
                                     <input type="number" name="price" id="price" value="{{ old('price', $product->price) }}" required
-                                           step="0.01" min="0" max="9999999.99" class="form-input form-input-prefixed w-full @error('price') form-input-error @enderror">
+                                           step="0.01" min="0" max="9999999.99" class="form-input form-input-prefixed w-full">
                                 </div>
-                                @error('price') <p class="form-error">{{ $message }}</p> @enderror
+                                <x-field-error field="price" />
                             </div>
                             <div>
                                 <label for="mrp" class="form-label">Compare-at price</label>
                                 <div class="relative">
                                     <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[13px]" style="color: #616161;">₹</span>
                                     <input type="number" name="mrp" id="mrp" value="{{ old('mrp', $product->mrp) }}"
-                                           step="0.01" min="0" max="9999999.99" class="form-input form-input-prefixed w-full @error('mrp') form-input-error @enderror">
+                                           step="0.01" min="0" max="9999999.99" class="form-input form-input-prefixed w-full">
                                 </div>
-                                @error('mrp') <p class="form-error">{{ $message }}</p> @enderror
+                                <x-field-error field="mrp" />
                                 {{-- Filled in by the compare-at guard below as the two prices are typed. --}}
-                                <p class="form-error" id="mrp-compare-error" hidden></p>
+                                {{-- The message lives in setCustomValidity(), which the
+                                     site-wide validator reads back and prints as the one
+                                     note under this field. A second paragraph here put the
+                                     same sentence on screen twice. --}}
                                 <p class="form-hint" style="font-size:11px;color:#999;margin-top:4px;">Shown struck-through on the product page. Must be at least the Price.</p>
                             </div>
                             <div>
@@ -207,9 +282,9 @@
                                 <div class="relative">
                                     <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[13px]" style="color: #616161;">₹</span>
                                     <input type="number" name="cost_price" id="cost_price" value="{{ old('cost_price', $product->cost_price) }}"
-                                           step="0.01" min="0" max="9999999.99" class="form-input form-input-prefixed w-full @error('cost_price') form-input-error @enderror">
+                                           step="0.01" min="0" max="9999999.99" class="form-input form-input-prefixed w-full">
                                 </div>
-                                @error('cost_price') <p class="form-error">{{ $message }}</p> @enderror
+                                <x-field-error field="cost_price" />
                             </div>
                         </div>
                     </div>
@@ -223,22 +298,22 @@
                                 <input type="text" name="sku" id="sku" value="{{ old('sku', $product->sku) }}" required
                                        maxlength="50" pattern="[A-Za-z0-9._/\-]+"
                                        title="Letters, digits and . _ / - only, up to 50 characters."
-                                       class="form-input w-full @error('sku') form-input-error @enderror">
-                                @error('sku') <p class="form-error">{{ $message }}</p> @enderror
+                                       class="form-input w-full">
+                                <x-field-error field="sku" />
                             </div>
                             <div>
                                 <label for="barcode" class="form-label">Barcode (EAN/UPC)</label>
                                 <input type="text" name="barcode" id="barcode" value="{{ old('barcode', $product->barcode) }}"
                                        maxlength="50" pattern="[A-Za-z0-9\-]+"
                                        title="Letters, digits and hyphens only, up to 50 characters."
-                                       class="form-input w-full @error('barcode') form-input-error @enderror">
-                                @error('barcode') <p class="form-error">{{ $message }}</p> @enderror
+                                       class="form-input w-full">
+                                <x-field-error field="barcode" />
                             </div>
                             <div>
                                 <label for="stock_quantity" class="form-label form-label-required">Quantity</label>
                                 <input type="number" name="stock_quantity" id="stock_quantity" value="{{ old('stock_quantity', $product->stock_quantity) }}" required
-                                       min="0" max="1000000" step="1" class="form-input w-full @error('stock_quantity') form-input-error @enderror">
-                                @error('stock_quantity') <p class="form-error">{{ $message }}</p> @enderror
+                                       min="0" max="1000000" step="1" class="form-input w-full">
+                                <x-field-error field="stock_quantity" />
                             </div>
                         </div>
                     </div>
@@ -251,30 +326,30 @@
                             <div>
                                 <label for="weight" class="form-label">Weight (kg)</label>
                                 <input type="number" name="weight" id="weight" value="{{ old('weight', $product->weight) }}"
-                                       step="0.01" min="0" max="999999.99" class="form-input w-full @error('weight') form-input-error @enderror"
+                                       step="0.01" min="0" max="999999.99" class="form-input w-full"
                                        placeholder="0.5">
-                                @error('weight') <p class="form-error">{{ $message }}</p> @enderror
+                                <x-field-error field="weight" />
                             </div>
                             <div>
                                 <label for="length" class="form-label">Length (cm)</label>
                                 <input type="number" name="length" id="length" value="{{ old('length', $product->length) }}"
-                                       step="0.1" min="0" max="999999.99" class="form-input w-full @error('length') form-input-error @enderror"
+                                       step="0.1" min="0" max="999999.99" class="form-input w-full"
                                        placeholder="10">
-                                @error('length') <p class="form-error">{{ $message }}</p> @enderror
+                                <x-field-error field="length" />
                             </div>
                             <div>
                                 <label for="width" class="form-label">Width (cm)</label>
                                 <input type="number" name="width" id="width" value="{{ old('width', $product->width) }}"
-                                       step="0.1" min="0" max="999999.99" class="form-input w-full @error('width') form-input-error @enderror"
+                                       step="0.1" min="0" max="999999.99" class="form-input w-full"
                                        placeholder="10">
-                                @error('width') <p class="form-error">{{ $message }}</p> @enderror
+                                <x-field-error field="width" />
                             </div>
                             <div>
                                 <label for="height" class="form-label">Height (cm)</label>
                                 <input type="number" name="height" id="height" value="{{ old('height', $product->height) }}"
-                                       step="0.1" min="0" max="999999.99" class="form-input w-full @error('height') form-input-error @enderror"
+                                       step="0.1" min="0" max="999999.99" class="form-input w-full"
                                        placeholder="10">
-                                @error('height') <p class="form-error">{{ $message }}</p> @enderror
+                                <x-field-error field="height" />
                             </div>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
@@ -283,9 +358,9 @@
                                 <input type="text" name="hsn_code" id="hsn_code" value="{{ old('hsn_code', $product->hsn_code) }}"
                                        inputmode="numeric" maxlength="8" pattern="[0-9]{4,8}"
                                        title="An HSN code is 4, 6 or 8 digits."
-                                       class="form-input w-full @error('hsn_code') form-input-error @enderror"
+                                       class="form-input w-full"
                                        placeholder="e.g. 6109">
-                                @error('hsn_code') <p class="form-error">{{ $message }}</p> @enderror
+                                <x-field-error field="hsn_code" />
                             </div>
                             <div>
                                 <label class="form-label">&nbsp;</label>
@@ -495,42 +570,42 @@
                         <h2 class="text-[13px] font-semibold" style="color: #303030;">Organization</h2>
                         <div>
                             <label for="category_id" class="form-label form-label-required">Category</label>
-                            <select name="category_id" id="category_id" required class="form-input w-full @error('category_id') form-input-error @enderror">
+                            <select name="category_id" id="category_id" required class="form-input w-full">
                                 <option value="">Select</option>
                                 @foreach($categories as $category)
                                     <option value="{{ $category->id }}" {{ old('category_id', $product->category_id) == $category->id ? 'selected' : '' }}>{{ $category->path_label ?? $category->name }}</option>
                                 @endforeach
                             </select>
-                            @error('category_id') <p class="form-error">{{ $message }}</p> @enderror
+                            <x-field-error field="category_id" />
                         </div>
                         <div>
                             <label for="brand_id" class="form-label">Brand</label>
-                            <select name="brand_id" id="brand_id" class="form-input w-full @error('brand_id') form-input-error @enderror">
+                            <select name="brand_id" id="brand_id" class="form-input w-full">
                                 <option value="">Select</option>
                                 @foreach($brands as $brand)
                                     <option value="{{ $brand->id }}" {{ old('brand_id', $product->brand_id) == $brand->id ? 'selected' : '' }}>{{ $brand->name }}</option>
                                 @endforeach
                             </select>
-                            @error('brand_id') <p class="form-error">{{ $message }}</p> @enderror
+                            <x-field-error field="brand_id" />
                         </div>
                         <div>
                             <label for="seller_id" class="form-label">Seller</label>
-                            <select name="seller_id" id="seller_id" class="form-input w-full @error('seller_id') form-input-error @enderror">
+                            <select name="seller_id" id="seller_id" class="form-input w-full">
                                 <option value="">Select</option>
                                 @foreach($sellers as $seller)
                                     <option value="{{ $seller->id }}" {{ old('seller_id', $product->seller_id) == $seller->id ? 'selected' : '' }}>{{ $seller->store_name }}</option>
                                 @endforeach
                             </select>
-                            @error('seller_id') <p class="form-error">{{ $message }}</p> @enderror
+                            <x-field-error field="seller_id" />
                         </div>
                         <div>
                             <label for="slug" class="form-label">URL handle</label>
                             <input type="text" name="slug" id="slug" x-model="slug"
                                    maxlength="255" pattern="[a-z0-9]+(-[a-z0-9]+)*"
                                    title="Lower-case letters, digits and single hyphens, e.g. short-sleeve-t-shirt."
-                                   class="form-input w-full @error('slug') form-input-error @enderror"
+                                   class="form-input w-full"
                                    @input="slugManual = ($event.target.value.trim() !== '')">
-                            @error('slug') <p class="form-error">{{ $message }}</p> @enderror
+                            <x-field-error field="slug" />
                         </div>
                     </div>
 
@@ -540,14 +615,14 @@
                         <div>
                             <label for="meta_title" class="form-label">Page title</label>
                             <input type="text" name="meta_title" id="meta_title" value="{{ old('meta_title', $product->meta_title) }}" maxlength="255"
-                                   class="form-input w-full @error('meta_title') form-input-error @enderror">
-                            @error('meta_title') <p class="form-error">{{ $message }}</p> @enderror
+                                   class="form-input w-full">
+                            <x-field-error field="meta_title" />
                         </div>
                         <div>
                             <label for="meta_description" class="form-label">Meta description</label>
                             <textarea name="meta_description" id="meta_description" rows="3" maxlength="500"
-                                      class="form-input w-full @error('meta_description') form-input-error @enderror">{{ old('meta_description', $product->meta_description) }}</textarea>
-                            @error('meta_description') <p class="form-error">{{ $message }}</p> @enderror
+                                      class="form-input w-full">{{ old('meta_description', $product->meta_description) }}</textarea>
+                            <x-field-error field="meta_description" />
                         </div>
                     </div>
                 </div>
@@ -626,6 +701,40 @@
                 videoPreviews: [],
                 videoFileList: new DataTransfer(),
                 dragEl: null,
+                // ---- Reorder bookkeeping ----
+                //
+                // A reorder is applied to the tiles FIRST and posted afterwards, which
+                // makes the grid a claim about the database rather than a picture of
+                // it. Two things have to hold for that claim to stay honest, and
+                // neither did: only one write may be in flight at a time, and a write
+                // the server refuses has to be taken back off the screen.
+                //
+                // The arrangement the tiles were in before the gesture now being
+                // saved, captured BEFORE the DOM is touched so that a refusal has a
+                // known-good order to restore. Emptied on success, when the screen and
+                // the database agree again and there is nothing left to roll back to.
+                orderBeforeMove: [],
+                reorderBusy: false,
+                tileOrder() {
+                    const list = this.$refs.mediaList;
+                    return list ? [...list.querySelectorAll('.media-tile')].map(el => el.dataset.id) : [];
+                },
+                // Restores a known order. Written by id and by insertion rather than by
+                // index, because the same grid also holds the <template> anchors and
+                // the freshly picked previews, which must be left exactly where Alpine
+                // put them.
+                applyOrder(ids) {
+                    const list = this.$refs.mediaList;
+                    if (!list) return;
+                    const byId = new Map([...list.querySelectorAll('.media-tile')].map(el => [el.dataset.id, el]));
+                    let anchor = null;
+                    ids.forEach(function (id) {
+                        const el = byId.get(id);
+                        if (!el) return;
+                        if (anchor) anchor.after(el); else list.prepend(el);
+                        anchor = el;
+                    });
+                },
                 handleMainImage(file) {
                     if (!file) return;
                     if (!IMAGE_TYPES.includes(file.type)) { if (window.toastr) toastr.error(file.name + ' is not a JPG, PNG, WEBP or GIF.'); return; }
@@ -681,7 +790,16 @@
                     this.$refs.videoInput.files = this.videoFileList.files;
                 },
                 // ---- Drag reorder (saves instantly) ----
-                onDragStart(e) { this.dragEl = e.currentTarget; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', e.currentTarget.dataset.id || ''); },
+                onDragStart(e) {
+                    // Refused outright rather than queued. A drag begun while the
+                    // previous order is still being written would race it, and the
+                    // loser of that race is whatever the person can actually see.
+                    if (this.reorderBusy) { e.preventDefault(); return; }
+                    this.orderBeforeMove = this.tileOrder();
+                    this.dragEl = e.currentTarget;
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', e.currentTarget.dataset.id || '');
+                },
                 onDragOver(e) {
                     const target = e.currentTarget;
                     if (!this.dragEl || target === this.dragEl) return;
@@ -695,25 +813,66 @@
                 // Tap fallback for the drag above: Android Chrome and iOS Safari send no
                 // HTML5 drag events from touch, so the tile steps one place instead.
                 moveTile(btn, dir) {
+                    // The arrows are already disabled while a write is in flight; this
+                    // is the belt to that brace, for a call that arrives some other
+                    // way (a keyboard activation racing the re-render, say).
+                    if (this.reorderBusy) return;
                     const el = btn.closest('.media-tile');
                     const deleted = this.deletedIds.map(String);
                     const tiles = [...this.$refs.mediaList.querySelectorAll('.media-tile')].filter(t => !deleted.includes(t.dataset.id));
                     const i = tiles.indexOf(el), j = i + dir;
                     if (i < 0 || j < 0 || j >= tiles.length) return;
+                    // Snapshotted before the step, not after it, or the "previous"
+                    // order would be the one we are about to try to save.
+                    this.orderBeforeMove = this.tileOrder();
                     if (dir < 0) tiles[j].before(el); else tiles[j].after(el);
                     this.saveOrder();
                 },
                 saveOrder() {
                     const deleted = this.deletedIds.map(String);
-                    const ids = [...this.$refs.mediaList.querySelectorAll('.media-tile')]
-                        .map(el => el.dataset.id)
-                        .filter(id => !deleted.includes(id));
+                    const ids = this.tileOrder().filter(id => !deleted.includes(id));
                     if (!this.reorderUrl || !ids.length) return;
+                    if (this.reorderBusy) return;
+
+                    this.reorderBusy = true;
                     fetch(this.reorderUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || '', 'Accept': 'application/json' },
                         body: JSON.stringify({ order: ids }),
-                    }).then(r => { if (r.ok && window.toastr) toastr.success('Order saved'); });
+                    }).then(async (r) => {
+                        if (r.ok) {
+                            this.orderBeforeMove = [];
+                            if (window.toastr) toastr.success('Order saved');
+                            return;
+                        }
+                        // Only `r.ok` was ever looked at, so a permission refusal, a
+                        // session that had expired while the page sat open, a rejected
+                        // payload and a 500 all ended the same way: the tiles left
+                        // sitting in an order the server had refused, and not a word
+                        // about it. Which sentence a status deserves is not this
+                        // view's judgement to make - kkApiError owns that for the
+                        // whole site, and is also what keeps a 500's exception text,
+                        // and anything it drags along with it, off an admin's screen.
+                        this.failReorder(await window.kkFetchError(r));
+                    }).catch((e) => {
+                        // A request that never got an answer at all - the laptop lid
+                        // closed, the wifi dropped - resolves no response, so there is
+                        // no status to read. kkApiError calls that 0 and gives it its
+                        // own sentence rather than a shrug that blames the server.
+                        this.failReorder(window.kkApiError(e));
+                    }).finally(() => {
+                        this.reorderBusy = false;
+                    });
+                },
+                // The write was refused, so the arrangement on screen is a claim the
+                // database never accepted. Put the tiles back where the server still
+                // has them and say why - leaving them in the new order would tell the
+                // admin the reorder had stuck, and they would find out otherwise only
+                // on the storefront.
+                failReorder(failure) {
+                    if (this.orderBeforeMove.length) this.applyOrder(this.orderBeforeMove);
+                    this.orderBeforeMove = [];
+                    if (window.toastr) toastr.error(failure.message);
                 },
             };
         }

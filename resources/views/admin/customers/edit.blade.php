@@ -25,9 +25,7 @@
                             <input type="text" name="first_name" id="first_name" value="{{ old('first_name', $customer->first_name) }}" required
                                    minlength="2" maxlength="50" autocomplete="given-name"
                                    class="form-input" style="width: 100%;">
-                            @error('first_name')
-                                <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="first_name" />
                         </div>
 
                         <div>
@@ -38,9 +36,7 @@
                             <input type="text" name="last_name" id="last_name" value="{{ old('last_name', $customer->last_name) }}"
                                    minlength="2" maxlength="50" autocomplete="family-name"
                                    class="form-input" style="width: 100%;">
-                            @error('last_name')
-                                <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="last_name" />
                         </div>
                     </div>
 
@@ -51,9 +47,7 @@
                         <input type="email" name="email" id="email" value="{{ old('email', $customer->email) }}" required
                                maxlength="255" pattern=".+@.+\..+" autocomplete="email"
                                class="form-input" style="width: 100%;">
-                        @error('email')
-                            <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                        @enderror
+                        <x-field-error field="email" />
                     </div>
 
                     <div>
@@ -64,9 +58,7 @@
                                title="Enter a 10-digit Indian mobile number starting with 6, 7, 8 or 9."
                                class="form-input" style="width: 100%;">
                         <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">10-digit mobile number. Saved as bare digits, so delivery calls and OTPs match the account.</p>
-                        @error('phone')
-                            <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                        @enderror
+                        <x-field-error field="phone" />
                     </div>
                 </div>
             </div>

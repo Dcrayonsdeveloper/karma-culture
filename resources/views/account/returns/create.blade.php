@@ -28,8 +28,30 @@
                             </a>
                         </div>
                     @else
+                        {{-- `submitting` belongs to this component rather than being left to the
+                             site-wide guard in app.js, because the button below already carries an
+                             Alpine :disabled binding and two owners of one property fight. app.js
+                             sets button.disabled imperatively as the request leaves; the next time
+                             selectedItems changes, Alpine's effect re-runs and hands the button
+                             straight back - live, on top of a request that is already out. Folding
+                             the flag into the same expression leaves Alpine the only writer of it.
+
+                             What the missing guard cost: a second click posted the same return
+                             again, and the answer to it contradicted the first with "One or more
+                             selected items already have a return request." for a request the
+                             customer had made exactly once.
+
+                             The flag is raised from @submit, which the browser fires only after its
+                             own required/min/max/step checks have passed, so a submission stopped by
+                             client-side validation leaves the button live for the correction instead
+                             of dead. It is lowered again on a persisted pageshow: a page restored
+                             from the bfcache brings this component's state back exactly as it left -
+                             mid-submit - and would otherwise be a form that can never be sent. --}}
                         <form action="{{ route('account.returns.store') }}" method="POST"
+                              @submit="submitting = true"
+                              @pageshow.window="if ($event.persisted) submitting = false"
                               x-data="{
+                                  submitting: false,
                                   selectedOrder: '{{ old('order_id', '') }}',
                                   type: '{{ old('type', 'return') }}',
                                   orders: {{ Js::from($orders->map(fn($o) => [
@@ -103,9 +125,7 @@
                                             </label>
                                         @endforeach
                                     </div>
-                                    @error('order_id')
-                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                                    @enderror
+                                    <x-field-error field="order_id" />
                                 </div>
                             </div>
 
@@ -144,9 +164,7 @@
                                             </div>
                                         </label>
                                     </div>
-                                    @error('type')
-                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                                    @enderror
+                                    <x-field-error field="type" />
                                 </div>
                             </div>
 
@@ -167,17 +185,13 @@
                                             <option value="{{ $reasonOption }}" @selected(old('reason') === $reasonOption)>{{ $reasonOption }}</option>
                                         @endforeach
                                     </select>
-                                    @error('reason')
-                                        <p class="text-sm text-red-600">{{ $message }}</p>
-                                    @enderror
+                                    <x-field-error field="reason" />
 
                                     <textarea name="description" id="description" rows="2" maxlength="1000"
                                               aria-label="Additional details"
                                               placeholder="Additional details"
                                               class="w-full rounded-lg border border-neutral-200 text-sm px-3 py-2.5 focus:border-[#6F9CA2]/50 focus:ring focus:ring-[#6F9CA2]/15 focus:ring-opacity-50 resize-none">{{ old('description') }}</textarea>
-                                    @error('description')
-                                        <p class="text-sm text-red-600">{{ $message }}</p>
-                                    @enderror
+                                    <x-field-error field="description" />
                                 </div>
                             </div>
 
@@ -269,20 +283,28 @@
                                             </div>
                                         </template>
                                     </div>
-                                    @error('items')
-                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                                    @enderror
+                                    <x-field-error field="items" />
                                 </div>
                             </div>
 
                             {{-- Submit --}}
                             <div class="flex flex-wrap items-center gap-3 pt-2">
+                                {{-- Two different reasons to be disabled that have to look the same
+                                     to the customer: nothing is ticked yet, or the request they have
+                                     already sent has not come back. Only the first was ever handled,
+                                     so for the whole round trip the button stayed bright, hoverable
+                                     and clickable - which is an invitation to press it again. The
+                                     label says which of the two states it is in, because a greyed
+                                     button with no explanation reads as broken; x-text over the
+                                     server-rendered wording, so there is no flash of the wrong label
+                                     before Alpine starts, and no label at all if it never does. --}}
                                 <button type="submit"
-                                        :disabled="selectedItems.length === 0"
-                                        :class="selectedItems.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#E07E0A]'"
+                                        :disabled="submitting || selectedItems.length === 0"
+                                        :aria-busy="submitting ? 'true' : 'false'"
+                                        :class="(submitting || selectedItems.length === 0) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#E07E0A]'"
                                         class="inline-flex items-center gap-2 bg-[#F8931D] text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                    Submit Return Request
+                                    <span x-text="submitting ? 'Submitting...' : 'Submit Return Request'">Submit Return Request</span>
                                 </button>
                                 <a href="{{ route('account.returns.index') }}" class="text-sm font-medium text-neutral-600 hover:text-neutral-700 transition-colors px-4 py-2.5">
                                     Cancel

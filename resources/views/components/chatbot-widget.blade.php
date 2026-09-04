@@ -590,13 +590,7 @@ function chatbotWidget() {
                 }
 
             } catch (error) {
-                let errorMsg = 'Something went wrong. Please try again.';
-                if (error.response?.status === 429) {
-                    errorMsg = 'You\'re chatting a little fast! Please wait a moment before sending another message.';
-                } else if (error.response?.status === 503) {
-                    errorMsg = error.response.data?.reply || 'The assistant is temporarily unavailable. Please try again later.';
-                }
-                this.messages.push({ role: 'assistant', content: errorMsg, products: [] });
+                this.messages.push({ role: 'assistant', content: this.failureReply(error), products: [] });
 
                 if (!this.isOpen) {
                     this.unreadCount++;
@@ -605,6 +599,65 @@ function chatbotWidget() {
                 this.isTyping = false;
                 this.$nextTick(() => this.$refs.chatInput?.focus());
             }
+        },
+
+        /**
+         * Turn a failed send into the sentence the assistant says back.
+         *
+         * The hand-rolled chain this replaces mapped 429 and 503 and nothing
+         * else, so the two failures a shopper is most likely to hit both came
+         * out as "Something went wrong. Please try again." A session that
+         * expired mid-conversation got that instead of the sign-in prompt the
+         * server had actually sent - the full-page chat handled the same 401
+         * correctly, so the two surfaces disagreed about the same response -
+         * and a message the endpoint rejected got it instead of the reason.
+         *
+         * window.kkApiError now owns the status-to-English map, so both
+         * surfaces answer identically, and with it comes the rule that a
+         * message from a 4xx is something the endpoint deliberately chose to
+         * say while a message from a 5xx is the exception's own text and must
+         * never be shown. Only what kkApiError cannot know is added here: this
+         * endpoint writes its deliberate wording into `reply` rather than
+         * `message`, and its 429 comes from the rate limiter rather than the
+         * controller.
+         */
+        failureReply(error) {
+            const failure = window.kkApiError(error);
+            const body = error?.response?.data;
+
+            if (failure.status === 422) {
+                // The composer is capped at maxlength=300 to match the rule the
+                // endpoint enforces, so this is all but unreachable - but when
+                // it is reached the reason for the refusal is the only useful
+                // thing to say. Laravel's top-level 422 text is skipped: it is
+                // whichever rule failed first, which for a stale history entry
+                // names an internal field like history.3.content.
+                return failure.fields.message
+                    || 'That message could not be sent. Please rephrase it and try again.';
+            }
+
+            if (failure.status === 429) {
+                // Sent by the rate limiter, not by the controller, so the body
+                // carries the framework's "Too Many Attempts." Mid-conversation
+                // that reads as an accusation; this says it in the assistant's
+                // own voice.
+                return 'You\'re chatting a little fast! Please wait a moment before sending another message.';
+            }
+
+            if (failure.status >= 500) {
+                // Nothing a 5xx body says is fit to show: on a real outage it is
+                // a stack trace, a database error or an upstream HTML page
+                // rather than the controller's own words.
+                return 'The assistant is unavailable right now. Please try again in a moment.';
+            }
+
+            // Below 500 the endpoint's own wording wins where it has any - the
+            // 401 body is the sign-in prompt this widget was missing. Anything
+            // else, including a request that never reached the server at all,
+            // falls to kkApiError's sentence for it.
+            const deliberate = body && typeof body.reply === 'string' ? body.reply.trim() : '';
+
+            return deliberate || failure.message;
         },
 
         sendQuickChip(message) {

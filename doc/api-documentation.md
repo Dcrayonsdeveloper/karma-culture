@@ -152,12 +152,23 @@ Authenticate an existing user and receive a token.
 
 ```json
 {
-  "message": "The provided credentials are incorrect.",
+  "success": false,
+  "message": "Please check the highlighted fields and try again.",
   "errors": {
-    "email": ["The provided credentials are incorrect."]
+    "email": ["The provided credentials do not match our records."]
   }
 }
 ```
+
+`message` is a fixed summary line under the `/api/` prefix, the same for every
+422 on every endpoint. The sentence to show the user is in `errors`, keyed by
+the field it belongs to - read that, not `message`. A client that matched on the
+old `message` text will no longer match; match on the status and the `errors`
+key instead.
+
+A sign-in failure is reported on `email` whichever half of the pair was wrong.
+That is deliberate: telling the two apart would confirm which addresses have
+accounts here.
 
 ---
 
@@ -1582,6 +1593,14 @@ Places an order from the current cart.
 }
 ```
 
+**Error Response** `403 Forbidden` (the order belongs to another account)
+
+```json
+{
+  "message": "You do not have access to this order."
+}
+```
+
 ---
 
 ### 10.3 Cancel Order
@@ -1602,11 +1621,20 @@ Cancels an order that is in `pending` or `processing` status.
 }
 ```
 
-**Error Response** `422 Unprocessable Entity`
+**Error Response** `409 Conflict` (order already past cancellation)
 
 ```json
 {
+  "success": false,
   "message": "Order cannot be cancelled at this stage"
+}
+```
+
+**Error Response** `403 Forbidden` (the order belongs to another account)
+
+```json
+{
+  "message": "You do not have access to this order."
 }
 ```
 
@@ -2392,20 +2420,46 @@ Aggregated endpoint that returns all data needed to render the home screen. Resp
 
 ## Error Response Format
 
-All error responses follow a consistent format.
+All error responses follow a consistent format:
+
+```json
+{
+  "success": false,
+  "message": "<one sentence, safe to show a user>",
+  "errors": { "<field>": ["<one sentence about that field>"] }
+}
+```
+
+`errors` is present only where a field can be corrected - a 422, essentially.
+Everything else carries `message` alone.
+
+**Where to read the sentence you show.** If `errors` is present, put each entry
+beside its own input and show `message` only as a heading, or not at all -
+printing both means the same complaint twice. If `errors` is absent, `message`
+is the whole answer.
+
+**`message` never carries internal detail.** Every failure passes through one
+handler (`bootstrap/app.php`) which replaces framework and exception text with a
+fixed sentence per status, so a class name, a file path, a SQL fragment or a
+primary key cannot reach a client. Two consequences worth knowing:
+
+- Under `/api/`, a 422's `message` is always the same summary line. The specific
+  complaints are in `errors`.
+- A deliberate sentence written by an endpoint (`abort(409, '...')`, a
+  controller's own refusal) IS published. Framework diagnostics are not.
+
+With `APP_DEBUG=true` - never in production - a `debug` object rides along
+carrying the exception class, its message and its origin.
 
 ### Validation Error (422)
 
 ```json
 {
-  "message": "The email field is required.",
+  "success": false,
+  "message": "Please check the highlighted fields and try again.",
   "errors": {
-    "email": [
-      "The email field is required."
-    ],
-    "password": [
-      "The password field is required."
-    ]
+    "email": ["Email Address is required."],
+    "password": ["Password is required."]
   }
 }
 ```
@@ -2414,15 +2468,20 @@ All error responses follow a consistent format.
 
 ```json
 {
-  "message": "Not Found"
+  "success": false,
+  "message": "We could not find what you were looking for."
 }
 ```
+
+An endpoint that has something more useful to say sends it instead - product
+lookups answer `"This product is not available."`
 
 ### Unauthorized (401)
 
 ```json
 {
-  "message": "Unauthenticated."
+  "success": false,
+  "message": "Please sign in to continue."
 }
 ```
 
@@ -2430,7 +2489,23 @@ All error responses follow a consistent format.
 
 ```json
 {
-  "message": "This action is unauthorized."
+  "success": false,
+  "message": "You do not have permission to do that."
+}
+```
+
+### Conflict (409)
+
+The request is well formed, but the resource has already moved past the state
+the call needs - an order that can no longer be cancelled, a product already
+reviewed, a product already in the wishlist. There is no `errors` map because
+no field can be corrected: refresh the resource instead of asking the user to
+change something. Branch on the status, not on the sentence - `409` means
+"look again", `422` means "read the field messages".
+
+```json
+{
+  "message": "Order cannot be cancelled at this stage"
 }
 ```
 

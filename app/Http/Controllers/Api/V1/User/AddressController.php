@@ -48,9 +48,7 @@ class AddressController extends Controller
 
     public function show(Request $request, UserAddress $address): JsonResponse
     {
-        if ($address->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        $this->assertOwned($request, $address);
 
         return response()->json([
             'data' => $address,
@@ -59,9 +57,7 @@ class AddressController extends Controller
 
     public function update(Request $request, UserAddress $address): JsonResponse
     {
-        if ($address->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        $this->assertOwned($request, $address);
 
         $validated = $request->validate([
             'label' => 'nullable|string|max:50',
@@ -91,14 +87,27 @@ class AddressController extends Controller
 
     public function destroy(Request $request, UserAddress $address): JsonResponse
     {
-        if ($address->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        $this->assertOwned($request, $address);
 
         $address->delete();
 
         return response()->json([
             'message' => 'Address deleted successfully',
         ]);
+    }
+
+    /**
+     * The one answer for an address book entry that is not the caller's.
+     *
+     * All three checks used to be a bare abort(403), which serialises to
+     * {"message":""} - a status with an empty body, so a client had nothing to
+     * show and fell back to its own generic wording or to silence. The reason is
+     * not a secret worth an empty body either: the caller has either sent an
+     * address id they have since deleted or is probing somebody else's address
+     * book, and one sentence answers both without confirming which.
+     */
+    private function assertOwned(Request $request, UserAddress $address): void
+    {
+        abort_if($address->user_id !== $request->user()->id, 403, 'You do not have access to this address.');
     }
 }

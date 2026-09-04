@@ -70,8 +70,18 @@ class ProfileController extends Controller
                 },
             ],
         ], [
-            'first_name.required' => 'Please enter your first name.',
-            'email.required' => 'Please enter your email address.',
+            // The two required sentences are the LABELS above the boxes, not a
+            // phrasing of our own. This form carries no `novalidate`, so the
+            // site-wide validator in app.js owns these inputs and names an empty
+            // one after its own <label>: "First Name is required.", "Email
+            // Address is required." Saying "Please enter your first name." here
+            // meant one empty box was complained about in two different voices
+            // depending on which side caught it - and both can be on screen at
+            // once, because a value the browser accepts is not always one Laravel
+            // does: a name of three spaces satisfies the native `required` and is
+            // then trimmed to nothing and rejected here.
+            'first_name.required' => 'First Name is required.',
+            'email.required' => 'Email Address is required.',
             'email.email' => 'Enter a valid email address, like you@example.com.',
             'email.unique' => 'An account already exists for this email address.',
         ]);
@@ -105,7 +115,10 @@ class ProfileController extends Controller
             // change it that they have, when nothing changed.
             'password' => [...V::password(), 'max:255', 'different:current_password'],
         ], [
-            'current_password.required' => 'Please enter your current password.',
+            // The label, for the same reason as above: the box is `required`,
+            // so app.js says "Current Password is required." for the empty case
+            // and the server must not answer it in a second voice.
+            'current_password.required' => 'Current Password is required.',
             'current_password.current_password' => 'That is not your current password.',
             'password.confirmed' => 'The two passwords do not match.',
             'password.different' => 'Your new password must be different from your current one.',

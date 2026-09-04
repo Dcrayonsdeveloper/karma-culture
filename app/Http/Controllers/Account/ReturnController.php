@@ -114,11 +114,29 @@ class ReturnController extends Controller
             'items.required' => 'Please select at least one item to return.',
         ]);
 
-        // Verify the order belongs to the authenticated user
+        // Verify the order belongs to the authenticated user and is still one a
+        // return can be raised against.
+        //
+        // This was firstOrFail(). The `exists` rule above already proves the
+        // order is real and the customer's, so the only thing left that can miss
+        // here is the status: an order that was 'delivered' when the page was
+        // rendered and has since been moved on - a support agent reopening it,
+        // a courier reversal - which the form's own list would no longer offer.
+        // That is a state failure the customer did nothing to cause, and a bare
+        // 404 page answered it by throwing away every item, quantity, reason and
+        // description they had just filled in. It is reported on the field that
+        // chose the order, alongside the other messages on this form, with the
+        // rest of the input flashed back.
         $order = Order::where('id', $validated['order_id'])
             ->where('user_id', $request->user()->id)
             ->where('status', 'delivered')
-            ->firstOrFail();
+            ->first();
+
+        if (! $order) {
+            return back()->withInput()->withErrors([
+                'order_id' => 'This order is no longer eligible for a return. Please pick another order or contact support.',
+            ]);
+        }
 
         // Verify each item belongs to this order and return qty doesn't exceed ordered qty
         $submittedItemIds = collect($validated['items'])->pluck('order_item_id')->toArray();

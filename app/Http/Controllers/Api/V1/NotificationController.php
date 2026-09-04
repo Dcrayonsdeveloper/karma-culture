@@ -20,9 +20,17 @@ class NotificationController extends Controller
 
     public function markAsRead(Request $request, Notification $notification): JsonResponse
     {
-        if ($notification->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        // Was a bare abort(403), which serialises to {"message":""} - a status
+        // with an empty body, so a client had nothing to show and fell back to
+        // its own generic wording or to silence. The reason is not a secret worth
+        // an empty body: the caller has either sent a stale notification id or is
+        // poking at somebody else's bell, and one sentence answers both without
+        // confirming which.
+        abort_if(
+            $notification->user_id !== $request->user()->id,
+            403,
+            'This notification is not yours.'
+        );
 
         $notification->update(['read_at' => now()]);
 

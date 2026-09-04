@@ -36,9 +36,7 @@
                                        pattern="{{ \App\Rules\ValidationRules::namePattern() }}"
                                        title="The first name may only contain letters, spaces, hyphens, apostrophes and periods."
                                        class="form-input" style="width: 100%;">
-                                @error('first_name')
-                                    <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                                @enderror
+                                <x-field-error field="first_name" />
                             </div>
                             <div>
                                 <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Last Name <span style="color: #d72c0d;">*</span></label>
@@ -48,9 +46,7 @@
                                        pattern="{{ \App\Rules\ValidationRules::namePattern() }}"
                                        title="The last name may only contain letters, spaces, hyphens, apostrophes and periods."
                                        class="form-input" style="width: 100%;">
-                                @error('last_name')
-                                    <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                                @enderror
+                                <x-field-error field="last_name" />
                             </div>
                         </div>
 
@@ -58,9 +54,7 @@
                             <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Email <span style="color: #d72c0d;">*</span></label>
                             <input type="email" name="email" value="{{ old('email', $staff->user->email) }}" required
                                    class="form-input" style="width: 100%;">
-                            @error('email')
-                                <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="email" />
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -73,9 +67,7 @@
                                 <input type="password" name="password"
                                        autocomplete="new-password" minlength="10" maxlength="255"
                                        class="form-input" style="width: 100%;" placeholder="Leave blank to keep current">
-                                @error('password')
-                                    <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                                @enderror
+                                <x-field-error field="password" />
                                 <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
                                     At least 10 characters, including an uppercase and a lowercase
                                     letter, a number and a special character.
@@ -104,9 +96,7 @@
                                 <option value="support" @selected(old('role', $staff->role) === 'support')>Support</option>
                                 <option value="warehouse" @selected(old('role', $staff->role) === 'warehouse')>Warehouse</option>
                             </select>
-                            @error('role')
-                                <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="role" />
                         </div>
 
                         <div style="display: flex; align-items: center; gap: 0.5rem;">

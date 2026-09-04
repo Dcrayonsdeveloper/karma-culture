@@ -8,14 +8,11 @@
         </div>
     </x-slot>
 
-    @if(session('success'))
-        <div style="margin-bottom: 1rem; padding: 0.625rem 1rem; background: #e3f4e8; border: 1px solid #b3d8c0; border-radius: 0.5rem; font-size: 13px; color: #1a7a2e; display: flex; align-items: center; gap: 0.5rem;">
-            <svg style="width: 1rem; height: 1rem; flex-shrink: 0;" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-            </svg>
-            {{ session('success') }}
-        </div>
-    @endif
+    {{-- The success flash is deliberately not painted here. The admin layout
+         already hands every session flash to toastr, so this page's green card
+         made one saved discount announce itself twice in the same words - once
+         in the toast and once above the table. The toast is the single flash
+         channel for the admin; a second copy is the bug, not a reassurance. --}}
 
     {{-- Discounts list card --}}
     <div class="card">

@@ -20,9 +20,7 @@
                     <input type="text" name="name" id="name" value="{{ old('name') }}" required
                            minlength="2" maxlength="100"
                            class="form-input" style="width: 100%;" placeholder="e.g. Size, Color, Material">
-                    @error('name')
-                        <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                    @enderror
+                    <x-field-error field="name" />
                 </div>
 
                 <div>
@@ -32,9 +30,7 @@
                         <option value="color" @selected(old('type') === 'color')>Color (Swatch)</option>
                         <option value="text" @selected(old('type') === 'text')>Text (Free Input)</option>
                     </select>
-                    @error('type')
-                        <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                    @enderror
+                    <x-field-error field="type" />
                 </div>
 
                 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem;">

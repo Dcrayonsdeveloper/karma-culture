@@ -32,6 +32,13 @@ class LoginController extends Controller
 
     public function login(Request $request): RedirectResponse|JsonResponse
     {
+        // Who is asking decides two things that have to agree with each other:
+        // the shape of every answer this action gives, and - see below - the
+        // wording of the two "you left this empty" messages. Settle it once,
+        // rather than asking again at each branch and leaving the two free to
+        // disagree about which client they are talking to.
+        $wantsJson = $request->wantsJson();
+
         // Deliberately NOT `email:strict` here, unlike registration. Sign-in
         // has to accept whatever address is already stored, and accounts
         // created before the strict rule existed may hold one it rejects —
@@ -45,10 +52,47 @@ class LoginController extends Controller
             'password' => ['required', 'string', 'max:1024'],
             'remember' => ['nullable', 'boolean'],
         ], [
-            'email.required' => 'Please enter your email address.',
+            // The two "required" sentences are not a phrasing of our own: each
+            // is the one the client that asked would have used had it caught the
+            // empty box itself. They follow the caller because this action is
+            // posted from two kinds of client that name an empty field
+            // differently, and both render the 422 map straight back into the
+            // field it keys.
+            //
+            // The page form at /login carries no `novalidate`, so the site-wide
+            // validator in app.js owns those two boxes and names an empty one
+            // after its <label>: "Email Address is required.", "Password is
+            // required." The two sign-in modals - kkAuthModal in the header
+            // partial, and the Alpine `authModal` store rendered on every
+            // storefront page - are hand-written and say "Please enter your
+            // email address." / "Please enter your password." instead.
+            //
+            // A client-side check and this rule are not alternatives, which is
+            // what makes the wording matter: both can speak about the same box
+            // on the same attempt, because a value the browser accepts is not
+            // always one Laravel does. A password of three spaces is truthy to
+            // every one of these clients and satisfies the native `required`, so
+            // it is sent; `required` here trims before it looks, and rejects it.
+            // With one fixed sentence, one of the two surfaces would then
+            // complain about one empty box in two different voices depending on
+            // which side caught it - the client's about the attempt being made,
+            // the server's differently worded one about the attempt just made,
+            // same rule, same field. Answering in the voice of whoever asked
+            // keeps it to one wording per field per screen, whichever side
+            // speaks.
+            //
+            // `email.email` and `email.max` need no such split: the mirrors in
+            // app.js - the sentence it gives a type="email" typeMismatch, and
+            // the length check in _emailShapeError - already word them exactly
+            // this way.
+            'email.required' => $wantsJson
+                ? 'Please enter your email address.'
+                : 'Email Address is required.',
             'email.email' => 'Enter a valid email address, like you@example.com.',
             'email.max' => 'That email address is too long.',
-            'password.required' => 'Please enter your password.',
+            'password.required' => $wantsJson
+                ? 'Please enter your password.'
+                : 'Password is required.',
         ]);
 
         // Only these two go to the guard: anything else in the validated array
@@ -67,14 +111,14 @@ class LoginController extends Controller
             // Merge guest cart into user cart
             $this->mergeGuestCart($guestSessionId, Auth::id());
 
-            if ($request->wantsJson()) {
+            if ($wantsJson) {
                 return response()->json(['success' => true]);
             }
 
             return redirect()->to($this->safeIntendedUrl($request, route('account.dashboard')));
         }
 
-        if ($request->wantsJson()) {
+        if ($wantsJson) {
             return response()->json([
                 'message' => self::CREDENTIALS_FAILED,
                 'errors' => ['email' => [self::CREDENTIALS_FAILED]],

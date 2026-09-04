@@ -99,21 +99,17 @@
                                     <label for="name" class="block text-sm font-medium text-neutral-700 mb-1.5">Your Name <span class="text-red-400">*</span></label>
                                     <input type="text" name="name" id="name" value="{{ old('name') }}" required minlength="2" maxlength="30" data-kk-chars="letters"
                                            pattern="{{ \App\Rules\ValidationRules::namePattern(lettersOnly: true) }}" title="Letters and spaces only, up to 30 characters."
-                                           class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all @error('name') border-red-300 bg-red-50 @enderror"
+                                           class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all"
                                            placeholder="John Doe">
-                                    @error('name')
-                                        <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p>
-                                    @enderror
+                                    <x-field-error field="name" />
                                 </div>
 
                                 <div>
                                     <label for="email" class="block text-sm font-medium text-neutral-700 mb-1.5">Email Address <span class="text-red-400">*</span></label>
                                     <input type="email" name="email" id="email" value="{{ old('email') }}" required maxlength="255"
-                                           class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all @error('email') border-red-300 bg-red-50 @enderror"
+                                           class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all"
                                            placeholder="you@example.com">
-                                    @error('email')
-                                        <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p>
-                                    @enderror
+                                    <x-field-error field="email" />
                                 </div>
                             </div>
 
@@ -122,31 +118,25 @@
                                 <input type="tel" name="phone" id="phone" value="{{ old('phone') }}"
                                        maxlength="20" inputmode="tel" pattern="[+\s()-]*(?:\d[+\s()-]*){10,15}"
                                        title="Enter a phone number with 10 to 15 digits. Spaces, brackets, hyphens and a leading + are fine."
-                                       class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all @error('phone') border-red-300 bg-red-50 @enderror"
+                                       class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all"
                                        placeholder="+91 93117 96900">
-                                @error('phone')
-                                    <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p>
-                                @enderror
+                                <x-field-error field="phone" />
                             </div>
 
                             <div>
                                 <label for="subject" class="block text-sm font-medium text-neutral-700 mb-1.5">Subject <span class="text-red-400">*</span></label>
                                 <input type="text" name="subject" id="subject" value="{{ old('subject') }}" required minlength="3" maxlength="200"
-                                       class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all @error('subject') border-red-300 bg-red-50 @enderror"
+                                       class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all"
                                        placeholder="How can we help?">
-                                @error('subject')
-                                    <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p>
-                                @enderror
+                                <x-field-error field="subject" />
                             </div>
 
                             <div class="flex-1">
                                 <label for="message" class="block text-sm font-medium text-neutral-700 mb-1.5">Message <span class="text-red-400">*</span></label>
                                 <textarea name="message" id="message" rows="6" required minlength="10" maxlength="5000"
-                                          class="w-full h-[calc(100%-1.75rem)] min-h-[140px] px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all resize-none @error('message') border-red-300 bg-red-50 @enderror"
+                                          class="w-full h-[calc(100%-1.75rem)] min-h-[140px] px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all resize-none"
                                           placeholder="Tell us more about your inquiry...">{{ old('message') }}</textarea>
-                                @error('message')
-                                    <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p>
-                                @enderror
+                                <x-field-error field="message" />
                             </div>
 
                             <div class="pt-1">

@@ -12,7 +12,7 @@
 
     <div style="max-width: 800px;">
 
-        @include('admin.settings.partials.errors')
+        @include('admin.settings.partials.errors', ['handled' => ['code', 'exchange_rate', 'name', 'symbol']])
         <form action="{{ route('admin.settings.currencies.update', $currency) }}" method="POST">
             @csrf
             @method('PUT')
@@ -24,24 +24,24 @@
                         <div>
                             <label class="form-label" style="font-size: 13px; color: #303030;">Currency Code <span style="color: #d72c0d;">*</span></label>
                             <input type="text" name="code" value="{{ old('code', $currency->code) }}" class="form-input" maxlength="3" required>
-                            @error('code') <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p> @enderror
+                            <x-field-error field="code" />
                         </div>
                         <div>
                             <label class="form-label" style="font-size: 13px; color: #303030;">Name <span style="color: #d72c0d;">*</span></label>
                             <input type="text" name="name" value="{{ old('name', $currency->name) }}" class="form-input" required>
-                            @error('name') <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p> @enderror
+                            <x-field-error field="name" />
                         </div>
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                         <div>
                             <label class="form-label" style="font-size: 13px; color: #303030;">Symbol <span style="color: #d72c0d;">*</span></label>
                             <input type="text" name="symbol" value="{{ old('symbol', $currency->symbol) }}" class="form-input" required>
-                            @error('symbol') <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p> @enderror
+                            <x-field-error field="symbol" />
                         </div>
                         <div>
                             <label class="form-label" style="font-size: 13px; color: #303030;">Exchange Rate <span style="color: #d72c0d;">*</span></label>
                             <input type="number" name="exchange_rate" value="{{ old('exchange_rate', $currency->exchange_rate) }}" class="form-input" step="0.000001" min="0" required>
-                            @error('exchange_rate') <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p> @enderror
+                            <x-field-error field="exchange_rate" />
                         </div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 1rem;">

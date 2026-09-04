@@ -1892,6 +1892,42 @@ body:not(.layout-admin) a.kk-social-link:focus-visible {
     outline-offset: 1px;
 }
 
+/* The form-level banner rendered by <x-form-errors>, for the errors that have
+   no field of their own to sit under. It deliberately does NOT repeat what the
+   fields are already saying - see the component - so it is usually one line,
+   and is sized for one rather than for a list. */
+.kk-form-error {
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid #f0c2bd;
+    border-radius: 0.5rem;
+    background: #fff5f5;
+    font-family: var(--kk-body, 'Inter', ui-sans-serif, system-ui, sans-serif);
+    color: #8e1f0b;
+}
+
+.layout-admin .kk-form-error {
+    font-family: inherit;
+}
+
+.kk-form-error__title {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.kk-form-error__list {
+    margin: 0.375rem 0 0;
+    padding-left: 1.125rem;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+}
+
+.kk-form-error__list > li + li {
+    margin-top: 0.125rem;
+}
+
 /* ========================================
    MODAL / DIALOG
    ======================================== */

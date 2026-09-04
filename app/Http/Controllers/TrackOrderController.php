@@ -28,7 +28,15 @@ class TrackOrderController extends Controller
         ];
 
         $validated = $request->validate($rules, [
-            'phone.required' => 'Please enter the mobile number used for the order.',
+            // The labels above the boxes, not a phrasing of our own. This form
+            // carries no `novalidate`, so app.js owns both inputs and names an
+            // empty one after its <label>: "Order Number is required.", "Mobile
+            // Number is required." Saying "Please enter the mobile number used
+            // for the order." here answered the identical failure in a second
+            // voice - and the extra context it carried is already on the box, as
+            // the placeholder "Mobile number used for the order".
+            'order_number.required' => 'Order Number is required.',
+            'phone.required' => 'Mobile Number is required.',
             'order_number.regex' => 'Order numbers contain only letters, numbers and hyphens, like ORD-20260211-A1B2C3D4.',
         ]);
 

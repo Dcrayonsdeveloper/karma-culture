@@ -4,6 +4,13 @@
     <h1 style="font-size: 1.25rem; font-weight: 600; color: #303030; margin: 0;">Profile Settings</h1>
     <p style="font-size: 13px; color: #616161; margin: 0.25rem 0 1rem 0;">Manage your admin account</p>
 
+    {{-- Every label names its control with for=, and every control carries the
+         matching id. Beyond the a11y linkage, that is what lets the live checks
+         name the field at all: labelFor() in app.js reads field.labels, and with
+         nothing joining the two it fell through to its last resort and said "This
+         field is required." for every box on the page, while the server named each
+         one - the same rule on the same field, worded two different ways depending
+         on which side caught it. --}}
     <form action="{{ route('admin.profile.update') }}" method="POST">
         @csrf
         @method('PUT')
@@ -16,42 +23,36 @@
                     <div style="display: flex; flex-direction: column; gap: 1rem;">
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                             <div>
-                                <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">First Name <span style="color: #d72c0d;">*</span></label>
+                                <label for="first_name" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">First Name <span style="color: #d72c0d;">*</span></label>
                                 {{-- data-kk-chars rather than an inferred autocomplete token: this
                                      is the admin panel, and these boxes are deliberately left out
                                      of the browser's autofill. maxlength is 50 because that is the
                                      width of users.first_name; the rule behind it said 255. --}}
-                                <input type="text" name="first_name" value="{{ old('first_name', $user->first_name) }}" required
+                                <input type="text" name="first_name" id="first_name" value="{{ old('first_name', $user->first_name) }}" required
                                        minlength="2" maxlength="50"
                                        data-kk-chars="personName"
                                        pattern="{{ \App\Rules\ValidationRules::namePattern() }}"
                                        title="The first name may only contain letters, spaces, hyphens, apostrophes and periods."
                                        class="form-input" style="width: 100%;">
-                                @error('first_name')
-                                    <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                                @enderror
+                                <x-field-error field="first_name" />
                             </div>
                             <div>
-                                <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Last Name <span style="color: #d72c0d;">*</span></label>
-                                <input type="text" name="last_name" value="{{ old('last_name', $user->last_name) }}" required
+                                <label for="last_name" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Last Name <span style="color: #d72c0d;">*</span></label>
+                                <input type="text" name="last_name" id="last_name" value="{{ old('last_name', $user->last_name) }}" required
                                        minlength="2" maxlength="50"
                                        data-kk-chars="personName"
                                        pattern="{{ \App\Rules\ValidationRules::namePattern() }}"
                                        title="The last name may only contain letters, spaces, hyphens, apostrophes and periods."
                                        class="form-input" style="width: 100%;">
-                                @error('last_name')
-                                    <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                                @enderror
+                                <x-field-error field="last_name" />
                             </div>
                         </div>
 
                         <div>
-                            <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Email <span style="color: #d72c0d;">*</span></label>
-                            <input type="email" name="email" value="{{ old('email', $user->email) }}" required
+                            <label for="email" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Email <span style="color: #d72c0d;">*</span></label>
+                            <input type="email" name="email" id="email" value="{{ old('email', $user->email) }}" required
                                    class="form-input" style="width: 100%;">
-                            @error('email')
-                                <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="email" />
                         </div>
                     </div>
                 </div>
@@ -63,41 +64,37 @@
                         <p style="font-size: 12px; color: #616161; margin: 0;">Leave blank to keep your current password.</p>
 
                         <div>
-                            <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Current Password</label>
+                            <label for="current_password" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Current Password</label>
                             <div class="relative" style="position: relative;">
-                                <input type="password" name="current_password" autocomplete="current-password"
+                                <input type="password" name="current_password" id="current_password" autocomplete="current-password"
                                        class="form-input" style="width: 100%; padding-right: 2.75rem;">
                                 <x-admin.password-toggle label="current password" />
                             </div>
-                            @error('current_password')
-                                <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="current_password" />
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                             <div>
-                                <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">New Password</label>
+                                <label for="password" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">New Password</label>
                                 <div class="relative" style="position: relative;">
                                     {{-- Optional, so no `required`; minlength applies only once
                                          something has been typed. autocomplete="new-password" is
                                          what enrols the box in the live policy check in app.js. --}}
-                                    <input type="password" name="password"
+                                    <input type="password" name="password" id="password"
                                            autocomplete="new-password" minlength="10" maxlength="255"
                                            class="form-input" style="width: 100%; padding-right: 2.75rem;">
                                     <x-admin.password-toggle label="new password" />
                                 </div>
-                                @error('password')
-                                    <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                                @enderror
+                                <x-field-error field="password" />
                                 <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
                                     At least 10 characters, including an uppercase and a lowercase
                                     letter, a number and a special character.
                                 </p>
                             </div>
                             <div>
-                                <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Confirm New Password</label>
+                                <label for="password_confirmation" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Confirm New Password</label>
                                 <div class="relative" style="position: relative;">
-                                    <input type="password" name="password_confirmation"
+                                    <input type="password" name="password_confirmation" id="password_confirmation"
                                            autocomplete="new-password" maxlength="255"
                                            class="form-input" style="width: 100%; padding-right: 2.75rem;">
                                     <x-admin.password-toggle label="password confirmation" />

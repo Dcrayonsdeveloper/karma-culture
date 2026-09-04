@@ -91,9 +91,7 @@
                                 <option value="{{ $pickable->id }}" @selected($addOld('product_id') == $pickable->id)>{{ $pickable->name }}{{ $pickable->sku ? " ({$pickable->sku})" : '' }}</option>
                             @endforeach
                         </select>
-                        @error('product_id', 'addStock')
-                            <p class="form-error">{{ $message }}</p>
-                        @enderror
+                        <x-field-error field="product_id" bag="addStock" />
                     </div>
 
                     <div style="flex: 0 1 180px;">
@@ -107,27 +105,21 @@
                                 <option :value="variant.id" x-text="variant.name"></option>
                             </template>
                         </select>
-                        @error('variant_id', 'addStock')
-                            <p class="form-error">{{ $message }}</p>
-                        @enderror
+                        <x-field-error field="variant_id" bag="addStock" />
                     </div>
 
                     <div style="flex: 0 0 110px;">
                         <label for="stock_add_quantity" class="form-label">Quantity <span style="color: #d72c0d;">*</span></label>
                         <input type="number" name="quantity" id="stock_add_quantity" min="0" max="1000000" step="1" inputmode="numeric"
                                value="{{ $addOld('quantity') }}" required class="form-input" placeholder="0" style="width: 100%; font-size: 13px;">
-                        @error('quantity', 'addStock')
-                            <p class="form-error">{{ $message }}</p>
-                        @enderror
+                        <x-field-error field="quantity" bag="addStock" />
                     </div>
 
                     <div style="flex: 1 1 180px;">
                         <label for="stock_add_reason" class="form-label">Reason</label>
                         <input type="text" name="reason" id="stock_add_reason" maxlength="255" value="{{ $addOld('reason') }}"
                                class="form-input" placeholder="e.g. Received from supplier" style="width: 100%; font-size: 13px;">
-                        @error('reason', 'addStock')
-                            <p class="form-error">{{ $message }}</p>
-                        @enderror
+                        <x-field-error field="reason" bag="addStock" />
                     </div>
 
                     <div style="flex: 0 0 auto; padding-top: 1.35rem;">

@@ -61,20 +61,15 @@
                     <p class="text-neutral-600 text-sm">Your new password must be different from previously used passwords.</p>
                 </div>
 
-                @if ($errors->any())
-                    <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-5">
-                        <div class="flex items-start gap-2">
-                            <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
-                            </svg>
-                            <div class="text-sm">
-                                @foreach ($errors->all() as $error)
-                                    <p>{{ $error }}</p>
-                                @endforeach
-                            </div>
-                        </div>
-                    </div>
-                @endif
+                {{-- The list this replaces printed every message in the bag, while the
+                     fields below printed nothing at all - so a mistyped confirmation was
+                     reported at the top of the page, nowhere near the box that caused it.
+                     Each message now sits under its own field; what stays here is the
+                     headline, plus anything with no field to sit under. `token` is the
+                     one that matters: it is a hidden input, so an expired link has no box
+                     of its own and would otherwise fail in silence. --}}
+                <x-form-errors :handled="['email', 'password', 'password_confirmation']"
+                               title="Your password could not be reset." />
 
                 <form method="POST" action="{{ route('password.update') }}" class="space-y-4">
                     @csrf
@@ -93,6 +88,7 @@
                                    class="w-full pl-12 pr-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all"
                                    placeholder="you@example.com">
                         </div>
+                        <x-field-error field="email" />
                     </div>
 
                     <!-- New Password -->
@@ -128,6 +124,7 @@
                             At least 10 characters, including an uppercase and a lowercase letter,
                             a number and a special character.
                         </p>
+                        <x-field-error field="password" />
                     </div>
 
                     <!-- Confirm Password -->
@@ -144,6 +141,7 @@
                                    class="w-full pl-12 pr-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all"
                                    placeholder="Repeat new password">
                         </div>
+                        <x-field-error field="password_confirmation" />
                     </div>
 
                     <!-- Submit -->

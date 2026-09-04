@@ -19,12 +19,10 @@
         </div>
     </x-slot>
 
-    @if(session('success'))
-        <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.625rem 1rem; background: #cdfee1; border: 1px solid #1a7a2e; border-radius: 0.5rem; font-size: 13px; color: #1a7a2e; margin-bottom: 1rem;">
-            <svg style="width: 18px; height: 18px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            {{ session('success') }}
-        </div>
-    @endif
+    {{-- The success flash is deliberately not painted here. The admin layout
+         hands every session flash to toastr, so every bulk action and every
+         delete reported itself twice - once in the toast, once in this green
+         banner. The toast is the single flash channel for the admin. --}}
 
     {{-- Stats --}}
     <div style="display: flex; flex-wrap: wrap; gap: 1px; background: #e3e3e3; border-radius: 0.75rem; overflow: hidden; margin-bottom: 1rem;">

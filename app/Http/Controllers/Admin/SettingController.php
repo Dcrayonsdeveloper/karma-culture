@@ -249,8 +249,21 @@ class SettingController extends Controller
      * The button used to call a JS alert() that said a test email "would" be
      * sent, which told an admin nothing about whether their SMTP details
      * actually work. This sends a real message to the signed-in admin and
-     * surfaces the transport error verbatim when it fails - that error text is
-     * the whole point of a test button.
+     * reports what went wrong when it fails - because a test button that only
+     * says "failed" is barely better than the alert() it replaced.
+     *
+     * It reports it in our own words, though. This used to concatenate
+     * $e->getMessage() into the flash, and a Symfony TransportException
+     * message is not a diagnosis - it is the SMTP conversation quoted back at
+     * you, host and port included, with the server's verbatim 5xx line on the
+     * end. Gmail's rejection line repeats the configured username, so the
+     * banner was printing a credential onto the screen of whoever happened to
+     * be looking at the settings page. Worse, the catch is \Throwable: a
+     * TypeError raised inside Mail::raw would have put a class name and an
+     * absolute file path in the same banner. So the exception goes to the log,
+     * where it is genuinely useful, and the admin gets a fixed sentence plus a
+     * hint that mailFailureHint() derives from - never copies out of - that
+     * text.
      */
     public function testEmail(Request $request): RedirectResponse
     {
@@ -269,12 +282,83 @@ class SettingController extends Controller
                 fn ($message) => $message->to($recipient)->subject('Test email from '.$this->siteName())
             );
         } catch (\Throwable $e) {
-            Log::warning('Admin test email failed', ['error' => $e->getMessage()]);
+            // The exception class matters as much as the text when someone
+            // reads this back: a TransportException means the SMTP settings
+            // above are wrong, anything else means the failure happened before
+            // we ever reached the mail server.
+            Log::warning('Admin test email failed', [
+                'exception' => $e::class,
+                'error' => $e->getMessage(),
+            ]);
 
-            return back()->with('error', 'Could not send the test email: '.$e->getMessage());
+            return back()->with(
+                'error',
+                'Could not send the test email. '.$this->mailFailureHint($e)
+                .' The full error is in the application log.'
+            );
         }
 
         return back()->with('success', "Test email sent to {$recipient}.");
+    }
+
+    /**
+     * Classify a mail failure into one of our own sentences.
+     *
+     * The point of this method is the direction the text travels: it reads the
+     * exception message but never returns any part of it. Every branch returns
+     * a literal written here, so no host, port, username or server response can
+     * reach the banner no matter what the mailer throws. That keeps the test
+     * button honest - "rejected the username or password" and "could not be
+     * reached" send an admin to two completely different fields - without
+     * making the screen a window onto the SMTP conversation.
+     *
+     * Matching on words rather than on exception classes is deliberate: SMTP,
+     * Sendmail and the API transports all raise the same TransportException and
+     * only differ in their wording, so the class tells us nothing we can act
+     * on. An unrecognised failure falls through to the generic arm rather than
+     * guessing, because a wrong hint costs more than no hint.
+     */
+    private function mailFailureHint(\Throwable $e): string
+    {
+        $message = strtolower($e->getMessage());
+
+        return match (true) {
+            // 535 is "authentication credentials invalid"; 534 and 530 are the
+            // variants Gmail returns when the app password is missing or the
+            // account requires one. The codes are matched as a reply line - the
+            // digits followed by the space or hyphen that starts the enhanced
+            // status - rather than as bare digits, so a host or port that
+            // happens to contain "535" cannot be read as a rejected password.
+            str_contains($message, 'authentication')
+                || str_contains($message, 'username and password')
+                || preg_match('/(?<![\d.])5(?:30|34|35)[ -]/', $message) === 1
+                => 'The mail server rejected the username or password saved above.',
+
+            // Nothing answered on the far end, so the host or the port is
+            // wrong, or outbound SMTP is blocked from this server.
+            str_contains($message, 'connection could not be established')
+                || str_contains($message, 'connection refused')
+                || str_contains($message, 'could not connect')
+                || str_contains($message, 'timed out')
+                || str_contains($message, 'timeout')
+                || str_contains($message, 'getaddrinfo')
+                || str_contains($message, 'name or service not known')
+                => 'The mail server could not be reached - check the host and port.',
+
+            // The handshake happened but the encryption did not, which is
+            // almost always the encryption setting paired with the wrong port.
+            str_contains($message, 'ssl')
+                || str_contains($message, 'tls')
+                || str_contains($message, 'certificate')
+                => 'The connection could not be secured - check the encryption setting matches the port.',
+
+            // A malformed from-address fails here rather than at the transport,
+            // and the fix is a different field again.
+            str_contains($message, 'address')
+                => 'One of the addresses on the message was refused - check the from-address.',
+
+            default => 'Check the settings above and try again.',
+        };
     }
 
     private function siteName(): string

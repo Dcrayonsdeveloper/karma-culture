@@ -186,10 +186,22 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/>
                                         </svg>
                                     </div>
-                                    <button type="button" @click="moveUp($el)" class="kk-nudge" style="color: #616161; background: none; border: none; cursor: pointer; padding: 0.125rem;" title="Move up">
+                                    {{-- Disabled while a reorder is in flight. A second click used to
+                                         start a second POST describing a different order, and the two
+                                         then raced: whichever answered last decided what the page
+                                         claimed had happened, so a stale rejection could report "not
+                                         saved" for an order the later request had just stored. The
+                                         :style is the object form on purpose - a string :style
+                                         replaces the whole attribute and would wipe the static
+                                         padding and colour above. --}}
+                                    <button type="button" @click="moveUp($el)" class="kk-nudge" :disabled="saving"
+                                            :style="{ opacity: saving ? '0.4' : '', cursor: saving ? 'progress' : '' }"
+                                            style="color: #616161; background: none; border: none; cursor: pointer; padding: 0.125rem;" title="Move up">
                                         <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
                                     </button>
-                                    <button type="button" @click="moveDown($el)" class="kk-nudge" style="color: #616161; background: none; border: none; cursor: pointer; padding: 0.125rem;" title="Move down">
+                                    <button type="button" @click="moveDown($el)" class="kk-nudge" :disabled="saving"
+                                            :style="{ opacity: saving ? '0.4' : '', cursor: saving ? 'progress' : '' }"
+                                            style="color: #616161; background: none; border: none; cursor: pointer; padding: 0.125rem;" title="Move down">
                                         <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                                     </button>
                                 </div>
@@ -415,10 +427,20 @@
             <div x-show="saved" x-cloak x-transition style="margin-top: 0.75rem; font-size: 13px; color: #1a7a2e; font-weight: 500;">Order saved.</div>
             {{-- A rejected reorder used to leave the cards in their new places on
                  screen with no message, so the page disagreed with the database
-                 until the next refresh silently put everything back. --}}
-            <div x-show="failed" x-cloak x-transition style="margin-top: 0.75rem; font-size: 13px; color: #8e1f0b; font-weight: 500;">
-                The new order was not saved. Reload the page and try again.
-            </div>
+                 until the next refresh silently put everything back.
+
+                 The sentence is no longer baked in. One fixed line stood in for an
+                 expired session, a revoked permission, a payload the server refused
+                 and a dropped connection alike, so it told the admin to "reload and
+                 try again" when reloading was exactly what would not help - it is a
+                 sign-in, or a wait, that the situation calls for. saveOrder() now
+                 maps the status through kkApiError and puts the result here.
+
+                 role="alert" because nothing moves focus when a reorder fails: the
+                 message simply appears below a list the admin is already looking
+                 away from. --}}
+            <div x-show="failed" x-cloak x-transition role="alert" x-text="failedMessage"
+                 style="margin-top: 0.75rem; font-size: 13px; color: #8e1f0b; font-weight: 500;"></div>
         </div>
     </div>
 
@@ -443,6 +465,15 @@
                 saving: false,
                 saved: false,
                 failed: false,
+                // The sentence shown when a reorder is rejected, mapped from the
+                // status by kkApiError rather than written here.
+                failedMessage: '',
+                // Every reorder takes a ticket, and only the newest one is allowed
+                // to report. The arrows are disabled while a save is in flight, but
+                // a drag has no control to disable and a click can still land in the
+                // instant before Alpine paints the disabled state, so the guard is
+                // repeated here where it is cheap and certain.
+                saveTicket: 0,
 
                 getItems() {
                     return Array.from(this.$refs.list.querySelectorAll('[data-id]'));
@@ -506,6 +537,15 @@
                 },
 
                 moveDom(fromEl, toEl) {
+                    // A save in flight owns the list. The POST already travelling
+                    // describes the order as the cards stand right now, so shuffling
+                    // them again before it answers would send a second, competing
+                    // order - two requests deciding between them what the database
+                    // ends up holding. Refusing the move leaves the DOM untouched,
+                    // which is the honest state: what is on screen is still what was
+                    // sent. A dropped card snaps back for the moment the save takes.
+                    if (this.saving) return;
+
                     const list = this.$refs.list;
                     const fromIndex = this.indexOf(fromEl);
                     const toIndex = this.indexOf(toEl);
@@ -527,40 +567,101 @@
                     });
                 },
 
-                saveOrder() {
+                /**
+                 * The end of one reorder, and the only place the status line is
+                 * written. An empty message means it saved.
+                 *
+                 * The ticket check is the point of it: a reply that arrives after a
+                 * newer reorder has already started describes an order that is no
+                 * longer on screen, so letting it write here is how "The new order
+                 * was not saved." used to appear over an order that had saved
+                 * perfectly well - the older request simply answered last.
+                 */
+                settleSave(ticket, message) {
+                    if (ticket !== this.saveTicket) return;
+
+                    this.saving = false;
+                    this.saved = message === '';
+                    this.failed = message !== '';
+                    this.failedMessage = message;
+
+                    // Guarded for the same reason: by the time this fires another
+                    // save may own the line, and clearing its "Order saved." two
+                    // seconds after ours would hide a result the admin never saw.
+                    if (this.saved) {
+                        setTimeout(() => {
+                            if (ticket === this.saveTicket) this.saved = false;
+                        }, 2000);
+                    }
+                },
+
+                async saveOrder() {
                     const order = this.getItems().map(el => parseInt(el.dataset.id));
+                    const ticket = ++this.saveTicket;
 
                     this.saving = true;
                     this.saved = false;
                     this.failed = false;
+                    this.failedMessage = '';
 
-                    fetch('{{ route("admin.homepage.hero-banners.reorder") }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                            'Accept': 'application/json',
-                        },
-                        body: JSON.stringify({ order }),
-                    })
-                    .then(r => {
-                        if (!r.ok) throw new Error('HTTP ' + r.status);
-                        return r.json();
-                    })
-                    .then(data => {
-                        if (!data || data.success !== true) throw new Error('not saved');
-                        this.saving = false;
-                        this.failed = false;
-                        this.saved = true;
-                        setTimeout(() => this.saved = false, 2000);
-                    })
-                    .catch(() => {
-                        // Silence here left the admin believing an order had been
-                        // stored that the server had in fact rejected.
-                        this.saving = false;
-                        this.saved = false;
-                        this.failed = true;
-                    });
+                    // Read before the request, and defensively: `.content` off a
+                    // missing meta tag throws straight out of here, and `saving`
+                    // would be left true forever - which now disables the arrows and
+                    // freezes moveDom, so a missing token would lock reordering for
+                    // the rest of the page's life instead of failing once.
+                    const csrf = document.querySelector('meta[name="csrf-token"]');
+                    if (!csrf) {
+                        this.settleSave(ticket, 'This page has been open a while and your session expired. Please refresh and try again.');
+                        return;
+                    }
+
+                    try {
+                        const res = await fetch('{{ route("admin.homepage.hero-banners.reorder") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrf.content,
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({ order }),
+                        });
+
+                        // Tolerated, not assumed: a 419 redirected to the login page
+                        // and a 500 behind the proxy both answer with HTML, and
+                        // parsing that must not become the reason the failure is
+                        // reported as a dead connection.
+                        const data = await res.json().catch(() => null);
+
+                        if (res.ok && data && data.success === true) {
+                            this.settleSave(ticket, '');
+                            return;
+                        }
+
+                        // A 200 that does not say success: the endpoint answered and
+                        // stored nothing, and no status code describes that, so this
+                        // is the one sentence still written by hand.
+                        if (res.ok) {
+                            this.settleSave(ticket, 'The new order was not saved. Reload the page and try again.');
+                            return;
+                        }
+
+                        // Everything else goes through the one mapper. It is what
+                        // separates "your session expired, sign in again" from "you
+                        // do not have permission" from "try again in a moment", all
+                        // of which used to arrive as the same "reload and try again"
+                        // - and it is what keeps a 5xx exception's own text, class
+                        // names and file paths included, off this page.
+                        const failure = window.kkApiError(res, data);
+
+                        // The 422 here is never about a field the admin can see: the
+                        // payload is a list of banner ids this page built itself, so
+                        // "check the highlighted fields" would point at nothing. The
+                        // server's first complaint says far more.
+                        this.settleSave(ticket, Object.values(failure.fields)[0] || failure.message);
+                    } catch (e) {
+                        // No response at all - the request never reached the server.
+                        this.settleSave(ticket, window.kkApiError(e).message);
+                    }
                 },
             };
         }

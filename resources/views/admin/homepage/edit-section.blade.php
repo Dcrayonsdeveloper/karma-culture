@@ -49,22 +49,13 @@
     {{-- A rejected save used to bounce straight back to this page with no
          explanation and every field reset to what was in the database, so the
          admin's edit was gone and nothing said why. --}}
-    @if($errors->any())
-        <div style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: #fff0f0; border: 1px solid #f0c2bd; border-radius: 0.5rem;">
-            <div style="font-size: 13px; font-weight: 600; color: #8e1f0b; margin-bottom: 0.25rem;">This section was not saved</div>
-            <ul style="margin: 0; padding-left: 1.1rem; font-size: 13px; color: #8e1f0b;">
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+    <x-form-errors title="This section was not saved" />
 
-    @if(session('success'))
-        <div style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: #eafdf0; border: 1px solid #a9e3bf; border-radius: 0.5rem; font-size: 13px; color: #1a7a2e;">
-            {{ session('success') }}
-        </div>
-    @endif
+    {{-- The success flash is deliberately not painted here. The admin layout
+         hands every session flash to toastr, so a saved section said the same
+         sentence twice. The validation banner above stays inline on purpose:
+         it has to sit with the form it rejected and stay there while the admin
+         works through the fields, which a four-second toast cannot do. --}}
 
     <form action="{{ route('admin.homepage.sections.update', $section) }}" method="POST" enctype="multipart/form-data">
         @csrf

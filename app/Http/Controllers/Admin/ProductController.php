@@ -198,6 +198,10 @@ class ProductController extends Controller
             // checked values (size, colour, …) so one product can offer several.
             'product_attributes.*' => 'nullable',
             'product_attributes.*.*' => ['nullable', 'string', 'max:255', new NoHtml],
+            // Sizes are entered on the create form too, so a product can be
+            // saved complete in one go instead of being created and then
+            // immediately edited to add the sizes it ships in.
+            ...$this->variantRules($request),
             // Read straight off the request further down, so it has to be
             // validated here or it reaches the JSON column unchecked.
             'colours' => ['nullable', 'array', 'max:50'],
@@ -244,15 +248,24 @@ class ProductController extends Controller
 
         $validated['attributes'] = ! empty($productAttributes) ? $productAttributes : null;
 
+        // Held back from the mass-assign: sizes are their own table, and are
+        // written once the product exists and has an id to hang them off.
+        $variantsData = $validated['variants'] ?? null;
+
         unset(
             $validated['images'],
             $validated['videos'],
             $validated['main_image'],
             $validated['product_attributes'],
             $validated['colours'],
+            $validated['variants'],
         );
 
         $product = Product::create($validated);
+
+        if (is_array($variantsData)) {
+            $this->syncVariants($product, $variantsData);
+        }
 
         // Handle main image upload
         if ($request->hasFile('main_image')) {
@@ -361,23 +374,7 @@ class ProductController extends Controller
             // checked values (size, colour, …) so one product can offer several.
             'product_attributes.*' => 'nullable',
             'product_attributes.*.*' => ['nullable', 'string', 'max:255', new NoHtml],
-            'variants' => ['nullable', 'array', 'max:100'],
-            // id is absent on rows added with the "Add size" button, so a new row
-            // is created rather than rejected by validation. When present it must
-            // belong to THIS product.
-            'variants.*.id' => ['nullable', 'integer', Rule::exists('product_variants', 'id')->where('product_id', $product->id)],
-            'variants.*.name' => ['nullable', 'string', 'max:100', new NoHtml],
-            'variants.*.measurements' => ['nullable', 'string', 'max:160', new NoHtml],
-            'variants.*.colour' => ['nullable', 'string', 'max:60', new NoHtml],
-            'variants.*.colour_hex' => self::HEX_RULES,
-            // product_variants.sku is UNIQUE. Without this a duplicate reached
-            // MySQL and blew up with a 500 instead of a field error.
-            'variants.*.sku' => [...self::SKU_RULES, 'nullable', 'distinct:ignore_case', $this->uniqueVariantSku($request)],
-            'variants.*.price' => V::money(required: false),
-            'variants.*.mrp' => [...V::money(required: false), $this->variantMrpAtLeastPrice($request)],
-            'variants.*.stock_quantity' => ['nullable', 'integer', 'min:0', 'max:1000000'],
-            'variants.*.delete' => ['nullable', 'boolean'],
-            'variants.*.is_active' => ['nullable', 'boolean'],
+            ...$this->variantRules($request, $product),
             // Colours are a product-level list, not a per-size value, so one
             // colour is entered once instead of on every size row.
             'colours' => ['nullable', 'array', 'max:50'],
@@ -468,75 +465,8 @@ class ProductController extends Controller
 
         $product->update($validated);
 
-        // Sizes & pricing rows. Each row is one purchasable size of this product,
-        // optionally in a specific colour, with its own price and stock. Rows
-        // without an id are new, rows flagged `delete` are removed.
         if (is_array($variantsData)) {
-            // Every SKU this request spells out. A derived SKU has to dodge
-            // these as well: the rows are written one at a time, so a value a
-            // *later* row claims is not in the table yet when an earlier blank
-            // row derives one. Rows being deleted give theirs up, so they are
-            // not counted.
-            $spokenFor = [];
-            foreach ($variantsData as $row) {
-                if (! is_array($row) || filter_var($row['delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
-                    continue;
-                }
-
-                $spelled = trim((string) ($row['sku'] ?? ''));
-                if ($spelled !== '') {
-                    $spokenFor[] = $spelled;
-                }
-            }
-
-            foreach ($variantsData as $variantData) {
-                $id = $variantData['id'] ?? null;
-                $variant = $id ? $product->variants()->find($id) : null;
-
-                if (filter_var($variantData['delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
-                    $variant?->delete();
-                    continue;
-                }
-
-                $size = trim((string) ($variantData['name'] ?? ''));
-                if ($size === '' && ! $variant) {
-                    continue; // blank new row - nothing to save
-                }
-
-                $colour = trim((string) ($variantData['colour'] ?? ''));
-                $hex = trim((string) ($variantData['colour_hex'] ?? ''));
-                // Measurements ride in the variant attributes so the assistant can
-                // advise on fit without a schema change per garment type.
-                $measurements = trim((string) ($variantData['measurements'] ?? ''));
-                $attributes = array_filter([
-                    'Colour' => $colour !== '' ? $colour : null,
-                    'colour_hex' => $colour !== '' && $hex !== '' ? $hex : null,
-                    'measurements' => $measurements !== '' ? $measurements : null,
-                ]);
-
-                $payload = [
-                    'name' => $size !== '' ? $size : $variant->name,
-                    'price' => $variantData['price'] ?? $variant?->price ?? $product->price,
-                    'mrp' => $variantData['mrp'] ?? $variant?->mrp ?? $product->mrp,
-                    'stock_quantity' => $variantData['stock_quantity'] ?? $variant?->stock_quantity ?? 0,
-                    'is_active' => filter_var($variantData['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN),
-                    'attributes' => $attributes ?: null,
-                ];
-
-                // sku is NOT NULL and unique, so derive one when left blank.
-                $sku = trim((string) ($variantData['sku'] ?? ''));
-                if ($sku === '') {
-                    $sku = $variant?->sku ?: $this->deriveVariantSku($product, $payload['name'], $colour, $spokenFor);
-                    $spokenFor[] = $sku;
-                }
-                $payload['sku'] = $sku;
-
-                if ($variant) {
-                    $variant->update($payload);
-                } else {
-                    $product->variants()->create($payload);
-                }
-            }
+            $this->syncVariants($product, $variantsData);
         }
 
         // Delete selected gallery images
@@ -637,6 +567,137 @@ class ProductController extends Controller
             FILTER_VALIDATE_IP,
             FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
         );
+    }
+
+    /**
+     * Rules for the "Sizes & pricing" table, shared by store() and update() so
+     * a size the edit form accepts is not refused on create, or the reverse.
+     *
+     * $product is null on create: nothing exists to edit or delete yet, so the
+     * `id` and `delete` keys are not accepted there and every posted row is a
+     * new size. Leaving them out also keeps them out of validated(), so a
+     * crafted request cannot hand store() an id belonging to another product.
+     *
+     * @return array<string, mixed>
+     */
+    private function variantRules(Request $request, ?Product $product = null): array
+    {
+        $rules = [
+            'variants' => ['nullable', 'array', 'max:100'],
+            'variants.*.name' => ['nullable', 'string', 'max:100', new NoHtml],
+            'variants.*.measurements' => ['nullable', 'string', 'max:160', new NoHtml],
+            'variants.*.colour' => ['nullable', 'string', 'max:60', new NoHtml],
+            'variants.*.colour_hex' => self::HEX_RULES,
+            // product_variants.sku is UNIQUE. Without this a duplicate reached
+            // MySQL and blew up with a 500 instead of a field error.
+            'variants.*.sku' => [...self::SKU_RULES, 'nullable', 'distinct:ignore_case', $this->uniqueVariantSku($request)],
+            'variants.*.price' => V::money(required: false),
+            'variants.*.mrp' => [...V::money(required: false), $this->variantMrpAtLeastPrice($request)],
+            'variants.*.stock_quantity' => ['nullable', 'integer', 'min:0', 'max:1000000'],
+            'variants.*.is_active' => ['nullable', 'boolean'],
+        ];
+
+        if ($product) {
+            // id is absent on rows added with the "Add size" button, so a new row
+            // is created rather than rejected by validation. When present it must
+            // belong to THIS product.
+            $rules['variants.*.id'] = ['nullable', 'integer', Rule::exists('product_variants', 'id')->where('product_id', $product->id)];
+            $rules['variants.*.delete'] = ['nullable', 'boolean'];
+        }
+
+        return $rules;
+    }
+
+    /**
+     * Write the posted "Sizes & pricing" rows onto a product. Each row is one
+     * purchasable size, optionally in a specific colour, with its own price and
+     * stock. Rows without an id are new, rows flagged `delete` are removed.
+     *
+     * Shared by store() and update(): a size added while creating a product has
+     * to end up byte-identical to the same size added a minute later on the
+     * edit screen, or the storefront renders the two differently.
+     *
+     * @param  array<int, mixed>  $rows
+     */
+    private function syncVariants(Product $product, array $rows): void
+    {
+        // Every SKU this request spells out. A derived SKU has to dodge
+        // these as well: the rows are written one at a time, so a value a
+        // *later* row claims is not in the table yet when an earlier blank
+        // row derives one. Rows being deleted give theirs up, so they are
+        // not counted.
+        $spokenFor = [];
+        foreach ($rows as $row) {
+            if (! is_array($row) || filter_var($row['delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                continue;
+            }
+
+            $spelled = trim((string) ($row['sku'] ?? ''));
+            if ($spelled !== '') {
+                $spokenFor[] = $spelled;
+            }
+        }
+
+        foreach ($rows as $variantData) {
+            if (! is_array($variantData)) {
+                continue;
+            }
+
+            $id = $variantData['id'] ?? null;
+            $variant = $id ? $product->variants()->find($id) : null;
+
+            if (filter_var($variantData['delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                $variant?->delete();
+                continue;
+            }
+
+            $size = trim((string) ($variantData['name'] ?? ''));
+            if ($size === '' && ! $variant) {
+                continue; // blank new row - nothing to save
+            }
+
+            $colour = trim((string) ($variantData['colour'] ?? ''));
+            $hex = trim((string) ($variantData['colour_hex'] ?? ''));
+            // Measurements ride in the variant attributes so the assistant can
+            // advise on fit without a schema change per garment type.
+            $measurements = trim((string) ($variantData['measurements'] ?? ''));
+            $attributes = array_filter([
+                'Colour' => $colour !== '' ? $colour : null,
+                'colour_hex' => $colour !== '' && $hex !== '' ? $hex : null,
+                'measurements' => $measurements !== '' ? $measurements : null,
+            ]);
+
+            $payload = [
+                'name' => $size !== '' ? $size : $variant->name,
+                'price' => $variantData['price'] ?? $variant?->price ?? $product->price,
+                'mrp' => $variantData['mrp'] ?? $variant?->mrp ?? $product->mrp,
+                'stock_quantity' => $variantData['stock_quantity'] ?? $variant?->stock_quantity ?? 0,
+                'is_active' => filter_var($variantData['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN),
+                'attributes' => $attributes ?: null,
+            ];
+
+            // A row priced above the product's own MRP would render as a
+            // negative discount on the storefront. The MRP field is optional
+            // per row, so lift the inherited figure to the row's price rather
+            // than publish a strike-through that is lower than what is charged.
+            if ($payload['mrp'] !== null && (float) $payload['mrp'] < (float) $payload['price']) {
+                $payload['mrp'] = $payload['price'];
+            }
+
+            // sku is NOT NULL and unique, so derive one when left blank.
+            $sku = trim((string) ($variantData['sku'] ?? ''));
+            if ($sku === '') {
+                $sku = $variant?->sku ?: $this->deriveVariantSku($product, $payload['name'], $colour, $spokenFor);
+                $spokenFor[] = $sku;
+            }
+            $payload['sku'] = $sku;
+
+            if ($variant) {
+                $variant->update($payload);
+            } else {
+                $product->variants()->create($payload);
+            }
+        }
     }
 
     /**

@@ -10,7 +10,7 @@
     </div>
 
 
-    @include('admin.settings.partials.errors')
+    @include('admin.settings.partials.errors', ['handled' => ['cgst_rate', 'igst_rate', 'name', 'sgst_rate', 'state']])
     <form action="{{ route('admin.settings.tax-rates.store') }}" method="POST">
         @csrf
 
@@ -21,18 +21,14 @@
                     <label class="form-label">Name <span style="color: #d72c0d;">*</span></label>
                     <input type="text" name="name" value="{{ old('name') }}" required
                            class="form-input" placeholder="e.g. GST 18%">
-                    @error('name')
-                        <p class="form-error">{{ $message }}</p>
-                    @enderror
+                    <x-field-error field="name" />
                 </div>
 
                 <div>
                     <label class="form-label">State</label>
                     <input type="text" name="state" value="{{ old('state') }}"
                            class="form-input" placeholder="e.g. Maharashtra">
-                    @error('state')
-                        <p class="form-error">{{ $message }}</p>
-                    @enderror
+                    <x-field-error field="state" />
                 </div>
 
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
@@ -40,25 +36,19 @@
                         <label class="form-label">CGST Rate (%) <span style="color: #d72c0d;">*</span></label>
                         <input type="number" name="cgst_rate" value="{{ old('cgst_rate', '0') }}" step="0.01" min="0" max="100" required
                                class="form-input">
-                        @error('cgst_rate')
-                            <p class="form-error">{{ $message }}</p>
-                        @enderror
+                        <x-field-error field="cgst_rate" />
                     </div>
                     <div>
                         <label class="form-label">SGST Rate (%) <span style="color: #d72c0d;">*</span></label>
                         <input type="number" name="sgst_rate" value="{{ old('sgst_rate', '0') }}" step="0.01" min="0" max="100" required
                                class="form-input">
-                        @error('sgst_rate')
-                            <p class="form-error">{{ $message }}</p>
-                        @enderror
+                        <x-field-error field="sgst_rate" />
                     </div>
                     <div>
                         <label class="form-label">IGST Rate (%) <span style="color: #d72c0d;">*</span></label>
                         <input type="number" name="igst_rate" value="{{ old('igst_rate', '0') }}" step="0.01" min="0" max="100" required
                                class="form-input">
-                        @error('igst_rate')
-                            <p class="form-error">{{ $message }}</p>
-                        @enderror
+                        <x-field-error field="igst_rate" />
                     </div>
                 </div>
 

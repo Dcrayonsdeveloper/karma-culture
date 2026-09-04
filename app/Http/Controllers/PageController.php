@@ -55,25 +55,47 @@ class PageController extends Controller
             'phone' => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\-\s()]+$/', function ($attribute, $value, $fail) {
                 $digits = preg_replace('/\D/', '', (string) $value);
                 if (strlen($digits) < 10 || strlen($digits) > 15) {
-                    $fail('Please enter a valid phone number (10-15 digits).');
+                    // The box's own title, which is what app.js prints when the
+                    // browser's pattern rejects the same number. The closure and
+                    // the regex above are two halves of one rule, so they say one
+                    // sentence between them.
+                    $fail('Enter a phone number with 10 to 15 digits. Spaces, brackets, hyphens and a leading + are fine.');
                 }
             }],
             'subject' => V::text(max: 200, min: 3),
             'message' => V::textarea(max: 5000, min: 10),
             'business_name' => V::text(required: false, max: 120),
         ], [
-            'name.required' => 'Please enter your name.',
-            'name.min' => 'Please enter your full name.',
-            'name.max' => 'Please keep your name to 30 characters or fewer.',
-            'email.required' => 'Please enter your email address.',
+            // Every sentence here is the one the BOX would say for the same
+            // failure. /contact carries no `novalidate`, so the site-wide
+            // validator in app.js owns these inputs and derives its wording from
+            // the <label> and the constraint: "Your Name is required.", "Subject
+            // must be at least 3 characters.", "Message must be 5000 characters
+            // or fewer." This array used to answer all of them in a different
+            // voice - "Please write your message." for the box that had just said
+            // "Message is required." - and both can be on screen at once, because
+            // a value the browser accepts is not always one Laravel does: a
+            // message of twelve spaces satisfies minlength="10" and is then
+            // trimmed to nothing and refused here.
+            //
+            // The labels are /contact's. The wholesale enquiry at
+            // resources/views/wholesale/index.blade.php posts to this same
+            // endpoint and names two of its boxes differently ("Contact Name",
+            // "Email"), which one shared message set cannot match; the fields it
+            // has in common - message, phone, business_name - agree.
+            'name.required' => 'Your Name is required.',
+            'name.min' => 'Your Name must be at least 2 characters.',
+            'name.max' => 'Your Name must be 30 characters or fewer.',
+            'email.required' => 'Email Address is required.',
             'email.email' => 'Enter a valid email address, like you@example.com.',
-            'phone.regex' => 'Please enter a valid phone number (10-15 digits).',
-            'subject.required' => 'Please tell us what this is about.',
-            'subject.min' => 'Please give the subject at least 3 characters.',
-            'message.required' => 'Please write your message.',
-            'message.min' => 'Please give us a little more detail - at least 10 characters.',
-            'message.max' => 'Please keep your message under 5000 characters.',
-            'business_name.max' => 'Please keep the business name under 120 characters.',
+            'phone.regex' => 'Enter a phone number with 10 to 15 digits. Spaces, brackets, hyphens and a leading + are fine.',
+            'subject.required' => 'Subject is required.',
+            'subject.min' => 'Subject must be at least 3 characters.',
+            'subject.max' => 'Subject must be 200 characters or fewer.',
+            'message.required' => 'Message is required.',
+            'message.min' => 'Message must be at least 10 characters.',
+            'message.max' => 'Message must be 5000 characters or fewer.',
+            'business_name.max' => 'Business Name must be 120 characters or fewer.',
         ]);
 
         $body = $validated['message'];

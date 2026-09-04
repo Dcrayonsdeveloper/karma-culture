@@ -90,11 +90,9 @@
                                            data-kk-chars="personName"
                                            pattern="{{ \App\Rules\ValidationRules::namePattern() }}"
                                            title="The full name may only contain letters, spaces, hyphens, apostrophes and periods."
-                                           class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors @error('name') border-error-300 ring-1 ring-error-300 @enderror"
+                                           class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
                                            placeholder="Enter full name">
-                                    @error('name')
-                                        <p class="mt-1 text-[12px] text-error-600">{{ $message }}</p>
-                                    @enderror
+                                    <x-field-error field="name" />
                                 </div>
 
                                 <div>
@@ -110,12 +108,10 @@
                                                maxlength="20" pattern="(\+?91[\s\-]?)?0?[6-9][0-9\s\-]{9,}"
                                                inputmode="numeric" autocomplete="tel-national"
                                                title="Enter a 10-digit Indian mobile number starting with 6, 7, 8 or 9."
-                                               class="w-full rounded-lg border border-neutral-200 pl-12 pr-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors @error('phone') border-error-300 ring-1 ring-error-300 @enderror"
+                                               class="w-full rounded-lg border border-neutral-200 pl-12 pr-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
                                                placeholder="10-digit mobile number">
                                     </div>
-                                    @error('phone')
-                                        <p class="mt-1 text-[12px] text-error-600">{{ $message }}</p>
-                                    @enderror
+                                    <x-field-error field="phone" />
                                 </div>
                             </div>
                         </div>
@@ -132,11 +128,9 @@
                                     <input type="text" name="address_line1" id="address_line1" value="{{ old('address_line1', $address->address_line_1) }}" required
                                            minlength="3" maxlength="255" autocomplete="address-line1"
                                            title="House or flat number, building and street."
-                                           class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors @error('address_line1') border-error-300 ring-1 ring-error-300 @enderror"
+                                           class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
                                            placeholder="House/Flat no., Building, Street">
-                                    @error('address_line1')
-                                        <p class="mt-1 text-[12px] text-error-600">{{ $message }}</p>
-                                    @enderror
+                                    <x-field-error field="address_line1" />
                                 </div>
 
                                 <div>
@@ -146,11 +140,9 @@
                                     <input type="text" name="address_line2" id="address_line2" value="{{ old('address_line2', $address->address_line_2) }}"
                                            minlength="3" maxlength="255" autocomplete="address-line2"
                                            title="Area, colony or a nearby landmark."
-                                           class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors @error('address_line2') border-error-300 ring-1 ring-error-300 @enderror"
+                                           class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
                                            placeholder="Area, Colony, Landmark">
-                                    @error('address_line2')
-                                        <p class="mt-1 text-[12px] text-error-600">{{ $message }}</p>
-                                    @enderror
+                                    <x-field-error field="address_line2" />
                                 </div>
 
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -164,17 +156,15 @@
                                                data-kk-chars="personName"
                                                pattern="{{ \App\Rules\ValidationRules::namePattern() }}"
                                                title="The city may only contain letters, spaces, hyphens, apostrophes and periods."
-                                               class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors @error('city') border-error-300 ring-1 ring-error-300 @enderror"
+                                               class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
                                                placeholder="Enter city">
-                                        @error('city')
-                                            <p class="mt-1 text-[12px] text-error-600">{{ $message }}</p>
-                                        @enderror
+                                        <x-field-error field="city" />
                                     </div>
 
                                     <div>
                                         <label for="state" class="block text-[13px] font-medium text-neutral-600 mb-1.5">State <span class="text-error-500">*</span></label>
                                         <select name="state" id="state" required
-                                                class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors @error('state') border-error-300 ring-1 ring-error-300 @enderror">
+                                                class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors">
                                             <option value="">Select state</option>
                                             {{-- $states is AddressController::STATES, the same list the
                                                  controller validates against, so the options offered and
@@ -183,9 +173,7 @@
                                                 <option value="{{ $state }}" {{ old('state', $address->state) === $state ? 'selected' : '' }}>{{ $state }}</option>
                                             @endforeach
                                         </select>
-                                        @error('state')
-                                            <p class="mt-1 text-[12px] text-error-600">{{ $message }}</p>
-                                        @enderror
+                                        <x-field-error field="state" />
                                     </div>
                                 </div>
 
@@ -198,22 +186,18 @@
                                                maxlength="6" minlength="6" pattern="[1-9][0-9]{5}"
                                                inputmode="numeric" autocomplete="postal-code"
                                                title="Enter a 6-digit PIN code. It cannot start with 0."
-                                               class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors @error('postal_code') border-error-300 ring-1 ring-error-300 @enderror"
+                                               class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
                                                placeholder="6-digit PIN code">
-                                        @error('postal_code')
-                                            <p class="mt-1 text-[12px] text-error-600">{{ $message }}</p>
-                                        @enderror
+                                        <x-field-error field="postal_code" />
                                     </div>
 
                                     <div>
                                         <label for="country" class="block text-[13px] font-medium text-neutral-600 mb-1.5">Country <span class="text-error-500">*</span></label>
                                         <select name="country" id="country" required
-                                                class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors @error('country') border-error-300 ring-1 ring-error-300 @enderror">
+                                                class="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors">
                                             <option value="IN" {{ old('country', $address->country) === 'IN' ? 'selected' : '' }}>India</option>
                                         </select>
-                                        @error('country')
-                                            <p class="mt-1 text-[12px] text-error-600">{{ $message }}</p>
-                                        @enderror
+                                        <x-field-error field="country" />
                                     </div>
                                 </div>
                             </div>

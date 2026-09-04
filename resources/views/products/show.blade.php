@@ -1625,11 +1625,12 @@
                 @if(session('error'))
                     <div class="kk-revform__alert kk-revform__alert--err">{{ session('error') }}</div>
                 @endif
-                @if($errors->any())
-                    <div class="kk-revform__alert kk-revform__alert--err">
-                        <ul>@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
-                    </div>
-                @endif
+                {{-- No `handled` list: this form renders no per-field messages of its
+                     own, so the banner is the only thing speaking for them and must
+                     keep every one. What it gains from the component is the marker
+                     app.js uses to retire it when the next submit starts. --}}
+                <x-form-errors class="kk-revform__alert kk-revform__alert--err"
+                               title="Your review could not be posted." />
 
                 <form action="{{ route('product.guest-review', $product) }}" method="POST" enctype="multipart/form-data"
                       x-data="kkReviewForm({

@@ -22,14 +22,31 @@
                 </div>
 
                 <div class="bg-white border border-neutral-100 rounded-xl p-5 sm:p-7">
-                    <form action="{{ route('account.tickets.store') }}" method="POST" class="space-y-5">
+                    {{-- An in-flight guard on the form itself, not only the site-wide one in
+                         app.js, because this page has to SAY it is working. TicketController::store
+                         has no duplicate check of its own and notifies every admin as it writes, so
+                         two clicks on Submit Ticket opened two identical tickets and sent the
+                         support team two rounds of notifications - leaving the customer holding two
+                         numbers for one problem. app.js does refuse the second submission, but it
+                         has no styling to go with it, so the button carried on looking live for the
+                         length of the round trip, which is exactly what earns the second click.
+
+                         Raised from @submit, which the browser fires only once its own required and
+                         minlength checks have passed, so a submission stopped by client-side
+                         validation leaves the button usable for the correction. Lowered again on a
+                         persisted pageshow, or a visitor arriving back here through the bfcache
+                         would find a form whose only button is permanently dead. --}}
+                    <form action="{{ route('account.tickets.store') }}" method="POST" class="space-y-5"
+                          x-data="{ submitting: false }"
+                          @submit="submitting = true"
+                          @pageshow.window="if ($event.persisted) submitting = false">
                         @csrf
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label for="category" class="block text-sm font-medium text-neutral-700 mb-1.5">Category <span class="text-red-400">*</span></label>
                                 <select name="category" id="category" required
-                                        class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all @error('category') border-red-300 @enderror">
+                                        class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all">
                                     <option value="">Select category</option>
                                     <option value="general" @selected(old('category') === 'general')>General Inquiry</option>
                                     <option value="order" @selected(old('category') === 'order')>Order Issue</option>
@@ -38,22 +55,18 @@
                                     <option value="account" @selected(old('category') === 'account')>Account Issue</option>
                                     <option value="other" @selected(old('category') === 'other')>Other</option>
                                 </select>
-                                @error('category')
-                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                                @enderror
+                                <x-field-error field="category" />
                             </div>
 
                             <div>
                                 <label for="priority" class="block text-sm font-medium text-neutral-700 mb-1.5">Priority <span class="text-red-400">*</span></label>
                                 <select name="priority" id="priority" required
-                                        class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all @error('priority') border-red-300 @enderror">
+                                        class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all">
                                     <option value="low" @selected(old('priority', 'normal') === 'low')>Low</option>
                                     <option value="normal" @selected(old('priority', 'normal') === 'normal')>Normal</option>
                                     <option value="high" @selected(old('priority') === 'high')>High</option>
                                 </select>
-                                @error('priority')
-                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                                @enderror
+                                <x-field-error field="priority" />
                             </div>
                         </div>
 
@@ -62,11 +75,9 @@
                             <input type="text" name="subject" id="subject" value="{{ old('subject') }}" required
                                    minlength="3" maxlength="255"
                                    title="Summarise the issue in a few words."
-                                   class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all @error('subject') border-red-300 @enderror"
+                                   class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all"
                                    placeholder="Brief description of your issue">
-                            @error('subject')
-                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="subject" />
                         </div>
 
                         <div>
@@ -75,17 +86,20 @@
                                  message was accepted by the box and refused by the controller. --}}
                             <textarea name="message" id="message" rows="6" required
                                       minlength="10" maxlength="5000"
-                                      class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all resize-none @error('message') border-red-300 @enderror"
+                                      class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all resize-none"
                                       placeholder="Describe your issue in detail...">{{ old('message') }}</textarea>
-                            @error('message')
-                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="message" />
                         </div>
 
                         <div class="flex flex-wrap items-center gap-3 pt-1">
                             <button type="submit"
+                                    :disabled="submitting"
+                                    :aria-busy="submitting ? 'true' : 'false'"
+                                    :class="submitting && 'opacity-60 cursor-not-allowed'"
                                     class="px-6 py-2.5 bg-gradient-to-r from-[#F8931D] to-[#E07E0A] hover:from-[#E07E0A] hover:to-[#D47200] text-white text-sm font-semibold rounded-xl shadow-lg shadow-[#F8931D]/25 transition-all">
-                                Submit Ticket
+                                {{-- x-text over the wording Blade already printed, so the label is
+                                     right before Alpine boots and stays right if it never does. --}}
+                                <span x-text="submitting ? 'Submitting...' : 'Submit Ticket'">Submit Ticket</span>
                             </button>
                             <a href="{{ route('account.tickets.index') }}" class="px-4 py-2.5 text-sm text-neutral-600 hover:text-neutral-900">Cancel</a>
                         </div>

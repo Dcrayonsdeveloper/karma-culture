@@ -97,26 +97,66 @@
                 @endforeach
 
                 <!-- Reply Form -->
+                {{-- The form-level line for this page, and it sits ABOVE the @if on purpose so
+                     that it renders in both branches. The reply box - and with it the only
+                     <x-field-error field="message"> on the page - lives inside the @if, so a
+                     ticket that support closed between this page being rendered and the reply
+                     being posted came back to a page with nowhere to print the controller's
+                     answer: the error bag was flashed and then dropped unread, and the customer
+                     was shown the same static "closed" panel he would have seen anyway, with
+                     nothing on it saying that the reply he had just written was refused. An
+                     error whose field is not on the page is precisely the orphan a form-level
+                     banner exists for.
+
+                     `handled` names the one key that IS rendered inline below, so a reply that
+                     is merely too short is never complained about twice - once here and once
+                     under the box. `for` is spelt out because in the closed branch there is no
+                     reply form to be "the next form in document order", and app.js would then
+                     hand this banner to the first form further down the layout - a popup's
+                     newsletter box - which would retire the message the moment THAT was
+                     submitted. --}}
+                <x-form-errors :handled="['message']" for="ticket-reply-form" title="Your reply could not be sent." />
+
                 @if($ticket->status !== 'closed')
                     <div class="bg-white border border-neutral-100 rounded-xl">
                         <div class="px-5 py-3 border-b border-neutral-100">
                             <h3 class="text-sm font-semibold text-neutral-900">Reply</h3>
                         </div>
-                        <form action="{{ route('account.tickets.reply', $ticket) }}" method="POST" class="p-5">
+                        {{-- The same in-flight guard the Raise a Ticket form carries, for the
+                             same reason: TicketController::reply writes the row and reopens the
+                             ticket without ever asking whether it has seen this message before, so a
+                             second click - or an Enter on top of a click - posted the reply twice
+                             and put one paragraph into the thread under two timestamps, which then
+                             reads to the support team as a customer repeating himself. app.js
+                             already refuses the second submission, but it cannot style the button
+                             while it does; a control that still looks live for the length of the
+                             round trip is what earns that second click in the first place.
+
+                             Raised from @submit, which fires only once the browser's required and
+                             minlength checks on the box above have passed, so a reply rejected for
+                             being too short leaves the button usable. Lowered on a persisted
+                             pageshow, so a thread reached with the back button is not left with a
+                             reply box that can no longer be sent. --}}
+                        <form action="{{ route('account.tickets.reply', $ticket) }}" method="POST" class="p-5"
+                              id="ticket-reply-form"
+                              x-data="{ submitting: false }"
+                              @submit="submitting = true"
+                              @pageshow.window="if ($event.persisted) submitting = false">
                             @csrf
                             {{-- aria-label, so the inline error reads "Reply is required" rather
                                  than falling back to the placeholder text. --}}
                             <textarea name="message" id="reply_message" rows="4" required
                                       minlength="5" maxlength="5000" aria-label="Reply"
-                                      class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all resize-none @error('message') border-red-300 @enderror"
+                                      class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all resize-none"
                                       placeholder="Type your reply...">{{ old('message') }}</textarea>
-                            @error('message')
-                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                            @enderror
+                            <x-field-error field="message" />
                             <div class="mt-3 flex justify-end">
                                 <button type="submit"
+                                        :disabled="submitting"
+                                        :aria-busy="submitting ? 'true' : 'false'"
+                                        :class="submitting && 'opacity-60 cursor-not-allowed'"
                                         class="px-5 py-2 bg-[#F8931D] text-white text-sm font-semibold rounded-lg hover:bg-[#E07E0A] transition-colors">
-                                    Send Reply
+                                    <span x-text="submitting ? 'Sending...' : 'Send Reply'">Send Reply</span>
                                 </button>
                             </div>
                         </form>
@@ -125,6 +165,23 @@
                     <div class="bg-neutral-50 border border-neutral-200 rounded-xl p-4 text-center text-sm text-neutral-600">
                         This ticket is closed. If you need further help, please raise a new ticket.
                     </div>
+
+                    {{-- What the customer had already typed when the ticket turned out to be
+                         closed. TicketController::reply keeps it with withInput() precisely so
+                         that it is not lost, and until now that was dead weight: the textarea it
+                         would have flowed back into is inside the branch above, which is not
+                         rendered here, so the reply went into the redirect and was never seen
+                         again. Read-only, unnamed and outside any form - it is a copy of
+                         something that was NOT sent, shown so it can be pasted into the new
+                         ticket instead of being written a second time. --}}
+                    @if(old('message'))
+                        <div class="mt-4 bg-white border border-neutral-100 rounded-xl p-5">
+                            <h3 class="text-sm font-semibold text-neutral-900">The reply you had typed</h3>
+                            <p class="text-xs text-neutral-600 mt-0.5 mb-3">It was not sent. Copy it into your new ticket so you don't have to write it out again.</p>
+                            <textarea rows="4" readonly aria-label="The reply you had typed"
+                                      class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-700 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all resize-none">{{ old('message') }}</textarea>
+                        </div>
+                    @endif
                 @endif
             </div>
         </div>

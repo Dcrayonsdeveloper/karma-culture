@@ -23,12 +23,12 @@
                                 <label for="name" class="form-label">Name <span style="color: #d72c0d;">*</span></label>
                                 <input type="text" name="name" id="name" value="{{ old('name') }}" required
                                        minlength="2" maxlength="255" class="form-input" placeholder="e.g. L'Oreal">
-                                @error('name') <p class="form-error">{{ $message }}</p> @enderror
+                                <x-field-error field="name" />
                             </div>
                             <div>
                                 <label for="description" class="form-label">Description</label>
                                 <textarea name="description" id="description" rows="3" maxlength="2000" class="form-textarea" placeholder="Brief description...">{{ old('description') }}</textarea>
-                                @error('description') <p class="form-error">{{ $message }}</p> @enderror
+                                <x-field-error field="description" />
                             </div>
                         </div>
                     </div>
@@ -48,7 +48,7 @@
                                 <input type="file" name="logo" id="logo" aria-label="Brand logo"
                                        accept="image/jpeg,image/png,image/webp,image/gif" style="font-size: 13px; color: #616161;">
                                 <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">JPG, PNG, WebP or GIF. Max 2MB.</p>
-                                @error('logo') <p class="form-error">{{ $message }}</p> @enderror
+                                <x-field-error field="logo" />
                             </div>
                         </div>
                     </div>

@@ -200,14 +200,14 @@
             <div x-show="$store.authModal.mode === 'login'"
                  x-data="{ email: '', password: '', remember: false }"
                  class="px-6 py-4">
-                <form @submit.prevent="$store.authModal.login(email, password, remember)" class="space-y-4">
+                <form @submit.prevent="$store.authModal.login(email, password, remember)" novalidate class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-neutral-700 mb-1.5">Email Address</label>
                         <input type="email" x-model="email" required autofocus
                                class="w-full px-3 py-2.5 bg-neutral-50 border border-neutral-300 rounded-lg text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#6F9CA2] focus:ring-0 transition-colors"
                                placeholder="you@example.com">
                         <template x-if="$store.authModal.errors.email">
-                            <p class="mt-1 text-xs text-error-600" x-text="$store.authModal.errors.email[0]"></p>
+                            <p class="mt-1 text-xs text-error-600" x-text="$store.authModal.errors.email"></p>
                         </template>
                     </div>
 
@@ -230,7 +230,7 @@
                             </button>
                         </div>
                         <template x-if="$store.authModal.errors.password">
-                            <p class="mt-1 text-xs text-error-600" x-text="$store.authModal.errors.password[0]"></p>
+                            <p class="mt-1 text-xs text-error-600" x-text="$store.authModal.errors.password"></p>
                         </template>
                     </div>
 
@@ -260,7 +260,7 @@
             <div x-show="$store.authModal.mode === 'register'" x-cloak
                  x-data="{ name: '', email: '', password: '', password_confirmation: '' }"
                  class="px-6 py-4">
-                <form @submit.prevent="$store.authModal.register(name, email, password, password_confirmation)" class="space-y-3">
+                <form @submit.prevent="$store.authModal.register(name, email, password, password_confirmation)" novalidate class="space-y-3">
                     <div>
                         <label class="block text-sm font-medium text-neutral-700 mb-1.5">Full Name</label>
                         {{-- autocomplete="name" is what earns this box the keystroke filter
@@ -273,7 +273,7 @@
                                class="w-full px-3 py-2.5 bg-neutral-50 border border-neutral-300 rounded-lg text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#6F9CA2] focus:ring-0 transition-colors"
                                placeholder="Enter your full name">
                         <template x-if="$store.authModal.errors.full_name">
-                            <p class="mt-1 text-xs text-error-600" x-text="$store.authModal.errors.full_name[0]"></p>
+                            <p class="mt-1 text-xs text-error-600" x-text="$store.authModal.errors.full_name"></p>
                         </template>
                     </div>
 
@@ -283,7 +283,7 @@
                                class="w-full px-3 py-2.5 bg-neutral-50 border border-neutral-300 rounded-lg text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#6F9CA2] focus:ring-0 transition-colors"
                                placeholder="you@example.com">
                         <template x-if="$store.authModal.errors.email">
-                            <p class="mt-1 text-xs text-error-600" x-text="$store.authModal.errors.email[0]"></p>
+                            <p class="mt-1 text-xs text-error-600" x-text="$store.authModal.errors.email"></p>
                         </template>
                     </div>
 
@@ -298,7 +298,7 @@
                                class="w-full px-3 py-2.5 bg-neutral-50 border border-neutral-300 rounded-lg text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#6F9CA2] focus:ring-0 transition-colors"
                                placeholder="Min 10 characters">
                         <template x-if="$store.authModal.errors.password">
-                            <p class="mt-1 text-xs text-error-600" x-text="$store.authModal.errors.password[0]"></p>
+                            <p class="mt-1 text-xs text-error-600" x-text="$store.authModal.errors.password"></p>
                         </template>
                         <p class="mt-1 text-xs text-neutral-600">
                             At least 10 characters, including an uppercase and a lowercase letter,
@@ -539,19 +539,38 @@
                                     <p class="text-xs mt-0.5" style="color:#777;">Colour: <span class="font-medium" style="color:#444;" x-text="item.colour"></span></p>
                                 </template>
                                 <p class="text-sm font-bold mt-1" style="color:#222;" x-text="formatCurrency(item.price)"></p>
+                                {{-- Each of the three controls below writes to /cart and then
+                                     refetches it, and nothing used to stop a second click
+                                     landing while the first request was still in the air.
+                                     Two quick taps on plus sent two PUTs built from the same
+                                     stale item.quantity, so the second asked for the quantity
+                                     the first had already set and silently undid it; two taps
+                                     on Remove sent a second DELETE for a row that was already
+                                     gone and stacked a duplicate failure toast on the first.
+                                     The store has tracked isLoading for exactly this since it
+                                     was written and the PDP's Add to Cart has bound it all
+                                     along - the drawer was simply the one place that never
+                                     did. :disabled takes the control out of reach of pointer
+                                     and keyboard alike while a cart request is open, and the
+                                     guard in front of each handler catches the click that
+                                     slips through anyway, since Alpine writes the disabled
+                                     attribute on its next flush rather than the instant
+                                     isLoading turns true. --}}
                                 <div class="flex items-center gap-2 mt-1.5">
                                     <div class="flex items-center rounded overflow-hidden" style="border:1px solid #ddd;">
-                                        <button @click="item.quantity > 1 ? $store.cart.update(item.id, item.quantity - 1) : $store.cart.remove(item.id)"
-                                                class="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center text-sm transition-colors" style="color:#555;" onmouseenter="this.style.background='#f5f5f5'" onmouseleave="this.style.background='transparent'">
+                                        <button @click="!$store.cart.isLoading && (item.quantity > 1 ? $store.cart.update(item.id, item.quantity - 1) : $store.cart.remove(item.id))"
+                                                :disabled="$store.cart.isLoading"
+                                                class="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center text-sm transition-colors disabled:opacity-50" style="color:#555;" onmouseenter="this.style.background='#f5f5f5'" onmouseleave="this.style.background='transparent'">
                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
                                         </button>
                                         <span class="w-8 h-9 sm:h-7 flex items-center justify-center text-xs font-semibold" style="border-left:1px solid #ddd;border-right:1px solid #ddd;background:#fafafa;" x-text="item.quantity"></span>
-                                        <button @click="$store.cart.update(item.id, item.quantity + 1)"
-                                                class="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center text-sm transition-colors" style="color:#555;" onmouseenter="this.style.background='#f5f5f5'" onmouseleave="this.style.background='transparent'">
+                                        <button @click="!$store.cart.isLoading && $store.cart.update(item.id, item.quantity + 1)"
+                                                :disabled="$store.cart.isLoading"
+                                                class="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center text-sm transition-colors disabled:opacity-50" style="color:#555;" onmouseenter="this.style.background='#f5f5f5'" onmouseleave="this.style.background='transparent'">
                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                                         </button>
                                     </div>
-                                    <button @click="$store.cart.remove(item.id)" class="py-2 sm:py-0 text-xs transition-colors" style="color:#999;" onmouseenter="this.style.color='#ef4444'" onmouseleave="this.style.color='#999'">Remove</button>
+                                    <button @click="!$store.cart.isLoading && $store.cart.remove(item.id)" :disabled="$store.cart.isLoading" class="py-2 sm:py-0 text-xs transition-colors disabled:opacity-50" style="color:#999;" onmouseenter="this.style.color='#ef4444'" onmouseleave="this.style.color='#999'">Remove</button>
                                 </div>
                             </div>
                         </div>
@@ -578,8 +597,21 @@
                                             <span class="text-[10px] line-through" style="color:#999;" x-text="formatCurrency(rec.mrp)"></span>
                                         </template>
                                     </div>
-                                    <button @click="$store.cart.add(rec.id)"
-                                            class="w-full mt-1.5 text-xs font-semibold py-1.5 rounded transition-colors"
+                                    {{-- The same in-flight guard the quantity controls above
+                                         now carry, for the same reason: this posts to
+                                         /cart/add, and the recommendation strip is a place
+                                         shoppers tap quickly. Two taps on one card meant two
+                                         of that product in the cart off a single intent, and
+                                         two toasts with no way to tell which request each
+                                         belonged to. It greys out rather than swapping in an
+                                         "Adding..." label the way the PDP button does: one
+                                         isLoading covers the whole store, and on a strip of
+                                         cards that label would appear on every card at once
+                                         and claim four things were being added when one was.
+                                         --}}
+                                    <button @click="!$store.cart.isLoading && $store.cart.add(rec.id)"
+                                            :disabled="$store.cart.isLoading"
+                                            class="w-full mt-1.5 text-xs font-semibold py-1.5 rounded transition-colors disabled:opacity-50"
                                             style="background:#F8931D;color:#fff;"
                                             onmouseenter="this.style.background='#E07E0A'" onmouseleave="this.style.background='#F8931D'">
                                         Add to Cart

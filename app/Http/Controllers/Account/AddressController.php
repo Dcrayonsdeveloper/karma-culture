@@ -175,7 +175,15 @@ class AddressController extends Controller
     private function messages(): array
     {
         return [
-            'postal_code.regex' => 'Please enter a valid 6-digit PIN code.',
+            // The exact sentence the PIN box carries as its title, which is what
+            // app.js prints when the browser's own pattern="[1-9][0-9]{5}"
+            // rejects the value. "Please enter a valid 6-digit PIN code." never
+            // mentioned the leading zero this regex is actually enforcing, so a
+            // customer who typed "012345" was told their code was invalid while
+            // the six digits in front of them plainly were six digits. Kept
+            // identical to CheckoutController, so the two PIN boxes on the site
+            // cannot disagree about one rule.
+            'postal_code.regex' => 'Enter a 6-digit PIN code. It cannot start with 0.',
             'state.in' => 'Please choose a state from the list.',
             'country.in' => 'We currently deliver within India only.',
             'label.in' => 'Please choose Home, Office or Other.',

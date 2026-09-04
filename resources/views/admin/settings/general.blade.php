@@ -10,7 +10,7 @@
     <!-- Settings Navigation -->
     @include('admin.settings.partials.nav', ['active' => 'general'])
 
-    @include('admin.settings.partials.errors')
+    @include('admin.settings.partials.errors', ['handled' => ['site_address', 'site_email', 'site_name', 'site_phone', 'site_tagline']])
 
     <form action="{{ route('admin.settings.general.update') }}" method="POST">
         @csrf
@@ -26,27 +26,27 @@
                     <div>
                         <label class="form-label form-label-required" style="font-size: 12px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Site Name</label>
                         <input type="text" name="site_name" value="{{ old('site_name', $settings['site_name'] ?? '') }}" required class="form-input">
-                        @error('site_name') <p class="form-error">{{ $message }}</p> @enderror
+                        <x-field-error field="site_name" />
                     </div>
                     <div>
                         <label class="form-label" style="font-size: 12px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Tagline</label>
                         <input type="text" name="site_tagline" value="{{ old('site_tagline', $settings['site_tagline'] ?? '') }}" class="form-input">
-                        @error('site_tagline') <p class="form-error">{{ $message }}</p> @enderror
+                        <x-field-error field="site_tagline" />
                     </div>
                     <div>
                         <label class="form-label form-label-required" style="font-size: 12px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Email Address</label>
                         <input type="email" name="site_email" value="{{ old('site_email', $settings['site_email'] ?? '') }}" required class="form-input">
-                        @error('site_email') <p class="form-error">{{ $message }}</p> @enderror
+                        <x-field-error field="site_email" />
                     </div>
                     <div>
                         <label class="form-label" style="font-size: 12px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Phone Number</label>
                         <input type="tel" name="site_phone" value="{{ old('site_phone', $settings['site_phone'] ?? '') }}" class="form-input">
-                        @error('site_phone') <p class="form-error">{{ $message }}</p> @enderror
+                        <x-field-error field="site_phone" />
                     </div>
                     <div>
                         <label class="form-label" style="font-size: 12px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Address</label>
                         <textarea name="site_address" rows="3" class="form-textarea">{{ old('site_address', $settings['site_address'] ?? '') }}</textarea>
-                        @error('site_address') <p class="form-error">{{ $message }}</p> @enderror
+                        <x-field-error field="site_address" />
                     </div>
                 </div>
             </div>

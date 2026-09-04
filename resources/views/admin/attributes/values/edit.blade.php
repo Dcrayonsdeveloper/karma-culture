@@ -21,9 +21,7 @@
                     <input type="text" name="value" id="value" value="{{ old('value', $value->value) }}" required
                            minlength="1" maxlength="255"
                            class="form-input" style="width: 100%;">
-                    @error('value')
-                        <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                    @enderror
+                    <x-field-error field="value" />
                 </div>
 
                 @if($value->attribute->type === 'color')
@@ -35,9 +33,7 @@
                             <input type="text" value="{{ old('color_code', $value->color_code ?? '#000000') }}" readonly
                                    class="form-input" style="flex: 1; background-color: #f6f6f7;">
                         </div>
-                        @error('color_code')
-                            <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                        @enderror
+                        <x-field-error field="color_code" />
                     </div>
                 @endif
 
@@ -45,9 +41,7 @@
                     <label for="position" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Position</label>
                     <input type="number" name="position" id="position" value="{{ old('position', $value->position) }}" min="0" max="65535" step="1"
                            class="form-input" style="width: 100%;">
-                    @error('position')
-                        <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
-                    @enderror
+                    <x-field-error field="position" />
                 </div>
             </div>
         </div>
