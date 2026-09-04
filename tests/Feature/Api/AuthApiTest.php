@@ -4,11 +4,12 @@ namespace Tests\Feature\Api;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\VerifiesSignupEmails;
 use Tests\TestCase;
 
 class AuthApiTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, VerifiesSignupEmails;
 
     private User $user;
 
@@ -25,6 +26,12 @@ class AuthApiTest extends TestCase
 
     public function test_api_register(): void
     {
+        // The API is the same act of signing up as the web form and is held to
+        // the same condition - it is session-stateful in a browser (Sanctum's
+        // EnsureFrontendRequestsAreStateful is prepended to the api group), so
+        // a gate on the web route alone would be no gate at all.
+        $this->verifiedSignupEmail('newuser@example.com');
+
         $response = $this->postJson('/api/v1/auth/register', [
             'first_name' => 'Api',
             'last_name' => 'User',

@@ -540,6 +540,33 @@
                            :class="fieldErrors.email && 'has-error'"
                            x-model="form.email" placeholder="you@example.com" autocomplete="email">
                     <p class="kk-loginmodal__fielderror" x-show="fieldErrors.email" x-text="fieldErrors.email" x-cloak></p>
+
+                    {{-- Signup-only: proving the address.
+
+                         Below the field, inside the same group, so the modal
+                         keeps its width and the phone box below simply moves
+                         down by one line. The email box itself is shared with
+                         the Login tab, which is why this block is gated on the
+                         mode rather than the group being. --}}
+                    <div class="kk-loginmodal__verify" x-show="mode === 'signup'" x-cloak>
+                        <p class="kk-loginmodal__verified" x-show="emailVerified">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true">
+                                <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Email Validated
+                        </p>
+
+                        <button type="button" class="kk-loginmodal__validate"
+                                x-show="showVerifyButton"
+                                @click="requestVerification()"
+                                :disabled="verifyButtonDisabled"
+                                x-text="verifyButtonLabel"></button>
+
+                        {{-- Never says "validated": only the server's answer to
+                             the status poll writes that. --}}
+                        <p class="kk-loginmodal__verifynote" x-show="verifyNotice" x-text="verifyNotice" x-cloak></p>
+                        <p class="kk-loginmodal__verifywarn" x-show="verifyError" x-text="verifyError" x-cloak></p>
+                    </div>
                 </div>
 
                 {{-- Signup-only: phone --}}
@@ -623,7 +650,12 @@
                     <a href="{{ route('password.request') }}" class="kk-loginmodal__forgot">Forgot password?</a>
                 </div>
 
-                <button type="submit" class="kk-loginmodal__submit" :disabled="loading">
+                {{-- Signup cannot be submitted until the address has been proved.
+                     A courtesy only - submit() refuses it again below, and
+                     RegisterController reads the verification row for itself
+                     and refuses it there whatever this attribute says. --}}
+                <button type="submit" class="kk-loginmodal__submit"
+                        :disabled="loading || (mode === 'signup' && !emailVerified)">
                     <span x-show="!loading" x-text="mode === 'login' ? 'Login' : 'Create Account'">Login</span>
                     <span x-show="loading" x-cloak>Please wait...</span>
                 </button>
@@ -646,7 +678,14 @@
 
 <script>
     function kkAuthModal() {
-        return {
+        // kkWithSignupVerification, not object spread: spread copies the VALUE
+        // of an accessor, and half the mixin is accessors (emailVerified,
+        // showVerifyButton, verifyButtonLabel). Spreading it freezes them into
+        // answers computed before this component existed - and computing them
+        // then calls verifyEmailRaw(), which does not exist yet, so the whole
+        // component throws on init and Alpine renders none of it. Descriptors
+        // carry the accessors themselves; see the note on the helper in app.js.
+        return window.kkWithSignupVerification({
             open: false,
             mode: 'login',
             loading: false,
@@ -657,6 +696,34 @@
             fieldErrors: {},
             form: { full_name: '', email: '', phone: '', password: '', password_confirmation: '', remember: false },
             csrf: '{{ csrf_token() }}',
+
+            // Email verification is shared verbatim with the Create Account
+            // panel on /login (kkSignupVerification in resources/js/app.js).
+            // This modal is a second, equally real signup form - it posts to the
+            // very same endpoint - so it needs the same Validate Email step, and
+            // a second copy of the state machine here is how the two would
+            // drift apart. The routes it needs are the last argument to
+            // kkWithSignupVerification, at the bottom of this function.
+            //
+            // Only the two host hooks below are this modal's own: the address
+            // lives in `form.email` rather than behind an x-ref, and a message
+            // about it goes in `fieldErrors.email`.
+            verifyEmailRaw() { return this.form.email; },
+
+            verifySetEmailError(message) {
+                this.fieldErrors = { ...this.fieldErrors, email: message };
+            },
+
+            init() {
+                this.verifyInit();
+                // x-model writes straight to form.email, so there is no @input
+                // to hang this on the way the /login form does - editing a
+                // verified address has to drop the tick from here.
+                this.$watch('form.email', () => this.verifyOnEmailChanged());
+            },
+
+            destroy() { this.verifyDestroy(); },
+
             openModal() { this.open = true; this.error = ''; this.notice = ''; this.fieldErrors = {}; },
             switchMode(m) {
                 this.mode = m;
@@ -665,6 +732,10 @@
                 // Errors belong to the form that produced them; carrying them
                 // across marks fields the other tab doesn't even show.
                 this.fieldErrors = {};
+                // And so does a verification: the sign-in tab shares this email
+                // box, so a poll left running would be asking about an address
+                // nobody is signing up with any more.
+                this._resetVerification();
                 this.showPassword = false;
                 this.showConfirm = false;
             },
@@ -791,6 +862,12 @@
             async submit() {
                 this.error = '';
                 if (!this.validate()) return;
+                // Reachable with the disabled attribute removed, or by pressing
+                // Enter in a field. Says the same sentence the endpoint would.
+                if (this.mode === 'signup' && !this.emailVerified) {
+                    this.verifySetEmailError('Please verify your email address before creating your account.');
+                    return;
+                }
                 this.loading = true;
                 const url = this.mode === 'login' ? '{{ route('login') }}' : '{{ route('register') }}';
                 try {
@@ -828,6 +905,10 @@
                             this.form.phone = '';
                             this.form.password = '';
                             this.form.password_confirmation = '';
+                            // The verification has been spent on the account
+                            // that was just made and can never back another, so
+                            // the tick must not survive into the next signup.
+                            this._resetVerification();
                         } else {
                             // Keep the shopper on the row they signed in from; the
                             // reload is only here to pick the session up.
@@ -864,7 +945,10 @@
                 }
                 this.loading = false;
             }
-        };
+        }, {
+            create: @js(route('signup.email-verifications.store')),
+            status: @js(route('signup.email-verifications.show', ['uuid' => '__ID__'])),
+        });
     }
 </script>
 
@@ -961,6 +1045,30 @@
     .kk-loginmodal__eye svg { width: 18px; height: 18px; display: block; }
     .kk-loginmodal__fielderror {
         margin: 5px 0 0; font-size: 11.5px; color: #d72c0d; line-height: 1.4;
+    }
+    /* Proving the email address. Sized off __fielderror and __forgot so the
+       block reads as part of the field it sits under rather than as a second
+       call to action competing with Create Account. */
+    .kk-loginmodal__verify { margin-top: 7px; }
+    .kk-loginmodal__validate {
+        display: inline-flex; align-items: center; justify-content: center;
+        padding: 6px 12px; border: 1px solid rgba(45, 24, 16, 0.35); border-radius: 4px;
+        background: #fff; color: #2d1810;
+        font-size: 12px; font-weight: 600; line-height: 1;
+        cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .kk-loginmodal__validate:hover:not(:disabled) { background: #f6f1ec; border-color: #2d1810; }
+    .kk-loginmodal__validate:disabled { opacity: 0.55; cursor: not-allowed; }
+    .kk-loginmodal__verified {
+        display: inline-flex; align-items: center; gap: 6px;
+        margin: 0; font-size: 12px; font-weight: 600; color: #1a7a2e;
+    }
+    .kk-loginmodal__verified svg { width: 13px; height: 13px; }
+    .kk-loginmodal__verifynote {
+        margin: 6px 0 0; font-size: 11.5px; color: #6b6b6b; line-height: 1.4;
+    }
+    .kk-loginmodal__verifywarn {
+        margin: 6px 0 0; font-size: 11.5px; color: #a15c07; line-height: 1.4;
     }
     /* Remember-me on the left, forgot-password on the right. Wraps rather than
        squeezing, so the link never collides with the checkbox on a narrow

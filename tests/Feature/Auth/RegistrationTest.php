@@ -4,11 +4,12 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\VerifiesSignupEmails;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, VerifiesSignupEmails;
 
     public function test_registration_form_is_displayed(): void
     {
@@ -19,6 +20,11 @@ class RegistrationTest extends TestCase
 
     public function test_new_user_can_register(): void
     {
+        // Signup will not create an account for an address nobody has proved
+        // they can read mail at. The proof is a row, not a request field - see
+        // Tests\Concerns\VerifiesSignupEmails.
+        $this->verifiedSignupEmail('test@example.com');
+
         $response = $this->post('/register', [
             'full_name' => 'Test User',
             'email' => 'test@example.com',
@@ -37,6 +43,11 @@ class RegistrationTest extends TestCase
             'first_name' => 'Test',
             'last_name' => 'User',
         ]);
+
+        // The address was proved before the row existed, so the account starts
+        // verified rather than being mailed a second link asking it to do again
+        // what it has just done.
+        $this->assertNotNull(User::where('email', 'test@example.com')->first()->email_verified_at);
     }
 
     public function test_registration_fails_with_missing_required_fields(): void

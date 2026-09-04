@@ -176,6 +176,43 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('password-reset', fn (Request $request) => Limit::perMinute(6)->by($request->ip()));
 
+        // Asking for a signup verification email. Every hit that gets through
+        // can put a real message on the wire, over the same single Gmail app
+        // password - and the same daily quota - that order confirmations and
+        // password resets go out on.
+        //
+        // Two clauses because they stop different things. The per-IP clause is
+        // a shape for ordinary traffic: one person filling in a signup form
+        // corrects a typo once or twice, not eight times a minute. The
+        // per-address clause is the one that matters against a script, because
+        // bootstrap/app.php trusts every proxy, so request()->ip() is whatever
+        // X-Forwarded-For claims and a single machine can present as many as it
+        // likes - but it cannot vary the mailbox it is trying to flood. The
+        // controller keeps a longer-window bucket on the same address for the
+        // daily-quota half of the problem.
+        RateLimiter::for('signup-verification', fn (Request $request) => [
+            Limit::perMinute(8)->by($request->ip()),
+            Limit::perMinute(3)->by('signup-verification:'.Str::lower(trim((string) $request->input('email')))),
+        ]);
+
+        // Reading whether the link has been clicked. No mail, no writes - the
+        // open signup form asks about every four seconds while it waits, so
+        // this is shaped for a couple of tabs rather than against abuse, and
+        // the attempt's uuid is needed to ask at all.
+        RateLimiter::for('signup-verification-status', fn (Request $request) => Limit::perMinute(60)->by($request->ip()));
+
+        // Opening the link. Named for the same reason the two above are, and it
+        // is the reason rather than the number that matters here: for a GUEST,
+        // an unnamed `throttle:20,1` resolves its bucket to domain|ip with no
+        // URI and no route in the key (ThrottleRequests::resolveRequestSignature),
+        // so it would share one counter with the newsletter form, the contact
+        // form, track-order, guest reviews, ask-a-question, back-in-stock and
+        // cart recovery. A customer who had used any of those would find their
+        // verification link refused. That is the lockout the comment above the
+        // login limiter describes, and this route is the most public one in the
+        // flow.
+        RateLimiter::for('signup-verification-link', fn (Request $request) => Limit::perMinute(20)->by($request->ip()));
+
         // The admin bell's ten-second poll - the one route in the panel a
         // browser calls on its own, so the only one where a stuck tab or a
         // shortened interval multiplies into the database with nothing to stop

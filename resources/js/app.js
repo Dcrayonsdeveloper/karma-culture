@@ -1092,7 +1092,365 @@ const _instantError = (field, value) => {
     return '';
 };
 
-Alpine.data('kkRegisterForm', (serverErrors = {}) => ({
+// The signup form's half of email verification.
+//
+// Four seconds between polls is quick enough that the tick lands while the
+// customer is still looking at the tab they clicked from, and the ceiling is the
+// link's own hour - after that there is nothing left to wait for and a tab left
+// open overnight should stop asking.
+const _VERIFY_POLL_MS = 4000;
+const _VERIFY_POLL_CEILING_MS = 60 * 60 * 1000;
+
+// Mirrors App\Models\SignupEmailVerification::normalizeEmail, which is what
+// decides whether the address in the box is the one that was proved. Case and
+// surrounding space only - nothing that would merge two addresses their owner
+// considers different.
+const _normalizeEmailForVerify = (v) => (v || '').trim().toLowerCase();
+
+/**
+ * Email verification, shared by both signup forms.
+ *
+ * There are two of them - the Create Account panel on /login and the signup tab
+ * of the header modal - and they keep their fields in completely different
+ * places: one reads the DOM through x-ref, the other holds a `form` object.
+ * Those two facts are the only things that differ, so they are the only two a
+ * host supplies:
+ *
+ *     verifyEmailRaw()               -> whatever is in the email box right now
+ *     verifySetEmailError(message)   -> put this sentence under it
+ *
+ * plus a call to verifyInit() from the host's init() and verifyDestroy() from
+ * its destroy(). Everything else - the request, the polling, the cooldown, the
+ * binding of a proof to one address - is here once.
+ *
+ * NONE OF IT IS AUTHORITY. Every flag below mirrors state the server holds;
+ * RegisterController reads the verification row itself and refuses a signup
+ * whatever this object says. Setting verifyState = 'verified' from a console
+ * enables a button that then comes back with a sentence under the email box,
+ * and that is the whole of what it achieves.
+ */
+const kkSignupVerification = (routes = {}) => ({
+    routes: {
+        create: routes.create || '',
+        // A template carrying __ID__ - the attempt's uuid only exists once the
+        // server has issued one, and the placeholder has to survive route()'s
+        // rawurlencode, which a colon would not.
+        status: routes.status || '',
+    },
+
+    /** '' | 'sending' | 'sent' | 'verified' */
+    verifyState: '',
+
+    /**
+     * The address the state above belongs to, normalised.
+     *
+     * Verification is a fact about an ADDRESS, so every flag here is meaningless
+     * without knowing which one - and comparing this against the box is the
+     * whole of "changing the email drops the tick".
+     */
+    verifyFor: '',
+
+    verifyNotice: '',
+    verifyError: '',
+    attemptId: '',
+    resendIn: 0,
+
+    _pollTimer: null,
+    _tickTimer: null,
+    _pollUntil: 0,
+    _onWake: null,
+
+    verifyInit() {
+        // Coming back to the tab is the common case: the link was opened in
+        // another tab, or on a phone, and the customer switches back here
+        // expecting the form to have noticed. Asking on wake means it has,
+        // without waiting out the poll interval.
+        this._onWake = () => {
+            if (this.verifyState === 'sent' && !document.hidden) this.pollStatus();
+        };
+        document.addEventListener('visibilitychange', this._onWake);
+        window.addEventListener('focus', this._onWake);
+    },
+
+    verifyDestroy() {
+        this._stopPolling();
+        if (this._tickTimer) { clearInterval(this._tickTimer); this._tickTimer = null; }
+        if (this._onWake) {
+            document.removeEventListener('visibilitychange', this._onWake);
+            window.removeEventListener('focus', this._onWake);
+            this._onWake = null;
+        }
+    },
+
+    /** The address currently in the box, in the form the server compares. */
+    get emailValue() {
+        return _normalizeEmailForVerify(this.verifyEmailRaw());
+    },
+
+    /**
+     * Is the address well-formed enough to offer to verify?
+     *
+     * _emailError is the same check App\Rules\EmailAddress makes, so the button
+     * appears exactly when the server would accept the address - never on
+     * "asha@", never on a half-typed domain.
+     */
+    get emailLooksValid() {
+        return this.emailValue !== '' && _emailError(this.emailValue) === '';
+    },
+
+    /** Verified, and verified for the address that is in the box right now. */
+    get emailVerified() {
+        return this.verifyState === 'verified'
+            && this.emailValue !== ''
+            && this.verifyFor === this.emailValue;
+    },
+
+    /**
+     * Whether the verification control is on screen at all.
+     *
+     * Nothing is offered for an address that is not yet an address - a button on
+     * "asha@" would send a message nowhere, and the customer would then have
+     * been told to wait for it.
+     */
+    get showVerifyButton() {
+        return !this.emailVerified && this.emailLooksValid;
+    },
+
+    /** One label, four states - kept here rather than as four x-shows in a blade. */
+    get verifyButtonLabel() {
+        if (this.verifyState === 'sending') return 'Sending...';
+        if (this.verifyState === 'sent') {
+            return this.resendIn > 0 ? 'Resend in ' + this.resendIn + 's' : 'Resend verification email';
+        }
+        return 'Validate Email';
+    },
+
+    /** In flight, or inside the cooldown that keeps Resend from being a send button. */
+    get verifyButtonDisabled() {
+        return this.verifyState === 'sending' || this.resendIn > 0;
+    },
+
+    /**
+     * Drop the verification whenever it stops belonging to what is on screen.
+     *
+     * The case the whole design turns on: someone verifies abc@example.com and
+     * then changes the box to xyz@example.com. The tick goes on the keystroke
+     * that makes the two differ - not on blur, and not at submit - because from
+     * that keystroke on nothing is proved about the address being signed up
+     * with.
+     */
+    verifyOnEmailChanged() {
+        if (this.verifyState !== '' && this.verifyFor !== this.emailValue) {
+            this._resetVerification();
+        }
+    },
+
+    _resetVerification() {
+        this._stopPolling();
+        if (this._tickTimer) { clearInterval(this._tickTimer); this._tickTimer = null; }
+        this.verifyState = '';
+        this.verifyFor = '';
+        this.verifyNotice = '';
+        this.verifyError = '';
+        this.attemptId = '';
+        this.resendIn = 0;
+    },
+
+    /** Ask the server to post a link to whatever is in the email box. */
+    async requestVerification() {
+        if (this.verifyState === 'sending' || this.resendIn > 0) return;
+
+        // Judge the box first, so pressing the button on a malformed address
+        // says what is wrong with it rather than round-tripping to be told the
+        // same thing.
+        const problem = _emailError(this.emailValue);
+        if (problem) {
+            this.verifySetEmailError(problem);
+            return;
+        }
+
+        const email = this.emailValue;
+
+        this.verifyState = 'sending';
+        this.verifyError = '';
+        this.verifyNotice = '';
+
+        try {
+            const res = await fetch(this.routes.create, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': _csrf(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                // The address and nothing else. The password is on this form and
+                // must never leave it by this route.
+                body: JSON.stringify({ email }),
+            });
+
+            let data = {};
+            try { data = await res.json(); } catch (e) {}
+
+            // The address moved while the request was in flight, so whatever
+            // came back describes an address this signup is no longer using.
+            if (this.emailValue !== email) return;
+
+            if (res.status === 409) {
+                // Already an account. Said under the email box like any other
+                // problem with that field, because that is what it is.
+                this.verifyState = '';
+                this.verifySetEmailError(
+                    (data.errors && data.errors.email && data.errors.email[0])
+                    || data.message
+                    || 'Email address already exists. Please log in or use another email.'
+                );
+                return;
+            }
+
+            if (res.status === 429) {
+                this.verifyState = this.attemptId ? 'sent' : '';
+                this.verifyError = data.message || 'Please wait a moment before trying again.';
+                this._startCooldown(data.retry_after || 60);
+                return;
+            }
+
+            if (!res.ok && res.status !== 200) {
+                this.verifyState = '';
+                this.verifyError = (data.errors && data.errors.email && data.errors.email[0])
+                    || data.message
+                    || 'We could not send the verification email. Please try again.';
+                return;
+            }
+
+            this.attemptId = data.id || '';
+
+            // 200 means the server already held a live, unspent verification for
+            // this address - a reloaded tab, or a second window - and sent
+            // nothing. Show the tick rather than pretending to send.
+            if (data.status === 'verified') {
+                this._markVerified(data.email || email);
+                return;
+            }
+
+            this.verifyState = 'sent';
+            // The waiting state belongs to an address too: editing the box while
+            // a link is in flight has to drop the wait, not go on polling an
+            // attempt made for what used to be typed there.
+            this.verifyFor = email;
+            this.verifyNotice = 'Verification email sent. Open the link in your email to validate your address.';
+            this._startCooldown(data.resend_available_in || 60);
+            this._startPolling();
+        } catch (e) {
+            if (this.emailValue !== email) return;
+            this.verifyState = '';
+            this.verifyError = 'We could not reach the server. Please check your connection and try again.';
+        }
+    },
+
+    /** Has the link been opened? Asked on a timer and whenever the tab wakes. */
+    async pollStatus() {
+        if (!this.attemptId || this.verifyState !== 'sent') return;
+
+        const email = this.emailValue;
+
+        try {
+            const res = await fetch(this.routes.status.replace('__ID__', encodeURIComponent(this.attemptId)), {
+                headers: { 'Accept': 'application/json' },
+            });
+
+            if (!res.ok) return;
+
+            const data = await res.json();
+
+            if (this.emailValue !== email) return;
+
+            // The answer is believed only for the address it names. A status
+            // about a different one is a status about a different signup.
+            if (data.status === 'verified' && data.email === email) {
+                this._markVerified(data.email);
+                return;
+            }
+
+            if (data.status === 'expired') {
+                this._stopPolling();
+                this.verifyState = '';
+                this.verifyFor = '';
+                this.verifyNotice = '';
+                this.verifyError = 'This verification link has expired. Please request a new verification email.';
+                this.resendIn = 0;
+            }
+        } catch (e) {
+            // A dropped poll is not worth a message: the next one is four
+            // seconds away, and the customer is looking at their inbox.
+        }
+    },
+
+    _markVerified(email) {
+        this._stopPolling();
+        this.verifyState = 'verified';
+        this.verifyFor = _normalizeEmailForVerify(email);
+        this.verifyNotice = '';
+        this.verifyError = '';
+        this.resendIn = 0;
+        this.verifySetEmailError('');
+    },
+
+    _startPolling() {
+        this._stopPolling();
+        this._pollUntil = Date.now() + _VERIFY_POLL_CEILING_MS;
+        this._pollTimer = setInterval(() => {
+            if (Date.now() > this._pollUntil) { this._stopPolling(); return; }
+            // A hidden tab is not being watched, and the wake handler asks the
+            // moment it comes back - so there is nothing to learn by polling it.
+            if (document.hidden) return;
+            this.pollStatus();
+        }, _VERIFY_POLL_MS);
+    },
+
+    _stopPolling() {
+        if (this._pollTimer) { clearInterval(this._pollTimer); this._pollTimer = null; }
+    },
+
+    /** The countdown that keeps Resend from being a send button. */
+    _startCooldown(seconds) {
+        this.resendIn = Math.max(0, parseInt(seconds, 10) || 0);
+        if (this._tickTimer) clearInterval(this._tickTimer);
+        if (this.resendIn === 0) return;
+        this._tickTimer = setInterval(() => {
+            this.resendIn -= 1;
+            if (this.resendIn <= 0) { this.resendIn = 0; clearInterval(this._tickTimer); this._tickTimer = null; }
+        }, 1000);
+    },
+});
+
+/**
+ * Give a signup component the verification mixin, GETTERS INCLUDED.
+ *
+ * Not `{...kkSignupVerification(routes), ...own}`, and this is not a style
+ * preference. Object spread copies VALUES: it reads every accessor on the
+ * source once, at spread time, and writes the result as a plain property. Half
+ * of the mixin is accessors - emailVerified, showVerifyButton, verifyButtonLabel
+ * - so spreading it produces an object whose "getters" are frozen answers from
+ * before the component existed, and reading them at that moment calls
+ * verifyEmailRaw(), which the host has not supplied yet. The component throws on
+ * init and Alpine renders none of it: no Validate Email button, and a Create
+ * Account button that is never disabled.
+ *
+ * Property descriptors carry the accessors themselves. The host's own
+ * descriptors are applied second, so a name the component defines wins.
+ */
+const kkWithSignupVerification = (own, routes) => Object.defineProperties(
+    kkSignupVerification(routes),
+    Object.getOwnPropertyDescriptors(own),
+);
+
+// The header's signup modal is declared in a blade <script>, not in this
+// bundle, and needs both of these.
+window.kkSignupVerification = kkSignupVerification;
+window.kkWithSignupVerification = kkWithSignupVerification;
+
+Alpine.data('kkRegisterForm', (serverErrors = {}, provedEmail = '', routes = {}) => kkWithSignupVerification({
     // One message slot per field, seeded from whatever the server just said, so
     // a rejected submit and a live check write to the same place and a field can
     // never end up showing two contradictory messages at once.
@@ -1106,6 +1464,98 @@ Alpine.data('kkRegisterForm', (serverErrors = {}) => ({
     ),
 
     fields: ['full_name', 'email', 'phone', 'password', 'password_confirmation', 'terms'],
+
+    /**
+     * The two eye toggles.
+     *
+     * They used to be a nested `x-data="{ show: false }"` on each password
+     * wrapper, and that quietly cost this component its refs: x-ref registers on
+     * the closest x-data root and $refs only walks up, so $refs.password
+     * belonged to that inner scope and read as undefined here. Held on the
+     * component, the wrappers need no scope of their own and the refs land where
+     * they are read. Two flags, not one: revealing the password should not
+     * reveal the confirmation.
+     */
+    showPassword: false,
+    showConfirm: false,
+
+    // ---- email verification ------------------------------------------------
+    //
+    // The state and the requests live in kkSignupVerification() above, applied
+    // by kkWithSignupVerification around this literal; this component supplies
+    // only the two things that are its own - where the address is read from,
+    // and where a message about it is written to. The header's signup modal
+    // keeps both somewhere else entirely and shares everything in between
+    // verbatim.
+    /**
+     * A REACTIVE copy of the email box.
+     *
+     * This component reads every other field straight off the DOM through
+     * $refs, which is fine for the checks it already had: they run from
+     * @input/@blur and write their answers into `errors`, and `errors` is what
+     * the template watches. The verification getters are different - x-show and
+     * :disabled bind to them directly, so Alpine has to be able to SEE them
+     * change, and an <input>'s value is not something it can see. Bound to a
+     * ref alone, the Validate Email button evaluated once against an empty box,
+     * decided "no", and never looked again.
+     */
+    emailMirror: '',
+
+    /**
+     * Bumped on every field event, for the same reason.
+     *
+     * canSubmit asks messageFor() about all six fields, and five of those read
+     * the DOM. Reading this first gives the effect something reactive to depend
+     * on, so the Create Account button actually tracks the form instead of
+     * freezing at whatever was true when the page loaded.
+     */
+    formTick: 0,
+
+    verifyEmailRaw() {
+        return this.emailMirror;
+    },
+
+    verifySetEmailError(message) {
+        this.errors.email = message;
+        this.touched.email = true;
+    },
+
+    /**
+     * Whether Create Account is offered. The server decides whether it works.
+     *
+     * messageFor() rather than this.errors, because an untouched field has no
+     * message and is not therefore correct - the button would go live on an
+     * empty form the moment the address was proved.
+     */
+    get canSubmit() {
+        // Registers the dependency; the value itself is not used.
+        void this.formTick;
+
+        if (! this.emailVerified) return false;
+
+        return this.fields.every((f) => this.messageFor(f) === '');
+    },
+
+    init() {
+        // old('email') repopulates the box after a rejected submit, so the
+        // mirror starts from whatever is already in it rather than from ''.
+        this.emailMirror = this.$refs.email ? this.$refs.email.value : '';
+
+        // A signup rejected for something other than the address comes back with
+        // the box refilled and this component brand new, so it has no memory of
+        // the tick. The server does, and said so when it rendered the page - so
+        // the customer is not asked to prove an address they have already proved
+        // in order to fix their mobile number. It is still only a mirror: the
+        // create-account post re-reads the row regardless.
+        if (provedEmail && _normalizeEmailForVerify(provedEmail) === this.emailMirror.trim().toLowerCase()) {
+            this.verifyState = 'verified';
+            this.verifyFor = _normalizeEmailForVerify(provedEmail);
+        }
+
+        this.verifyInit();
+    },
+
+    destroy() { this.verifyDestroy(); },
 
     messageFor(field) {
         const el = this.$refs[field];
@@ -1132,7 +1582,17 @@ Alpine.data('kkRegisterForm', (serverErrors = {}) => ({
 
     check(field) { this.errors[field] = this.messageFor(field); },
 
+    /** Keep the reactive copies in step with the boxes. */
+    sync(field) {
+        this.formTick++;
+
+        if (field === 'email') {
+            this.emailMirror = this.$refs.email ? this.$refs.email.value : '';
+        }
+    },
+
     blur(field) {
+        this.sync(field);
         this.touched[field] = true;
         this.check(field);
     },
@@ -1146,6 +1606,8 @@ Alpine.data('kkRegisterForm', (serverErrors = {}) => ({
     // so the first one to appear marks the field touched and takes over from
     // there like any other message.
     input(field) {
+        this.sync(field);
+
         // A password is the exception to waiting for blur. Its rule has four
         // parts and its characters are dots on the screen, so being told after
         // the fact that the password just invented is a character short means
@@ -1158,6 +1620,18 @@ Alpine.data('kkRegisterForm', (serverErrors = {}) => ({
         if (field === 'password' || field === 'password_confirmation') {
             const box = this.$refs[field];
             if (box && box.value) this.touched[field] = true;
+        }
+
+        // Editing the address gives up whatever was proved about the old one.
+        //
+        // This is the case the whole design turns on: someone verifies
+        // abc@example.com, then changes the box to xyz@example.com. The tick has
+        // to go on the keystroke that makes the two differ, not on blur and not
+        // at submit - and the proof that is being dropped was for an address the
+        // server will not accept for this signup anyway, which is why the check
+        // is a comparison rather than a flag.
+        if (field === 'email') {
+            this.verifyOnEmailChanged();
         }
 
         if (this.touched[field]) {
@@ -1182,6 +1656,23 @@ Alpine.data('kkRegisterForm', (serverErrors = {}) => ({
             this.check(field);
             if (this.errors[field] && !first) first = field;
         }
+
+        // The address has to have been proved, and proved for what is in the
+        // box now. Belt and braces on top of the disabled button - a submit can
+        // still be reached by pressing Enter in a field, and the button's
+        // disabled attribute is one line of console away from gone.
+        //
+        // Not a substitute for the server check. RegisterController reads the
+        // verification row itself and refuses the post regardless of what
+        // happens here; this only means the customer is told before the round
+        // trip rather than after it.
+        if (!this.emailVerified && !first) {
+            this.errors.email = this.errors.email
+                || 'Please verify your email address before creating your account.';
+            this.touched.email = true;
+            first = 'email';
+        }
+
         if (!first) return; // nothing local left to catch - let the POST go
         event.preventDefault();
         const el = this.$refs[first];
@@ -1190,7 +1681,7 @@ Alpine.data('kkRegisterForm', (serverErrors = {}) => ({
             el.scrollIntoView({ block: 'center', behavior: 'smooth' });
         }
     },
-}));
+}, routes));
 
 Alpine.store('popupQueue', {
     members: {},   // id -> registration options
