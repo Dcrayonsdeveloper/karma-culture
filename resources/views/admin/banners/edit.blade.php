@@ -158,7 +158,7 @@
                                 <input type="file" name="image" id="banner-image"
                                        accept="image/jpeg,image/png,image/webp,image/gif" class="form-input">
                                 <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
-                                    JPG, PNG, WebP or GIF &middot; max 5MB.
+                                    JPG, PNG, WebP or GIF &middot; max {{ \App\Rules\ValidationRules::megabytes(\App\Support\BannerMedia::MAX_IMAGE_KB) }}MB.
                                     @if($banner->image_url) Leave empty to keep the current image. @endif
                                 </p>
                                 @error('image')
@@ -208,7 +208,7 @@
                                 <input type="file" name="mobile_image" id="banner-mobile-image"
                                        accept="image/jpeg,image/png,image/webp,image/gif" class="form-input">
                                 <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
-                                    JPG, PNG, WebP or GIF &middot; max 5MB.
+                                    JPG, PNG, WebP or GIF &middot; max {{ \App\Rules\ValidationRules::megabytes(\App\Support\BannerMedia::MAX_IMAGE_KB) }}MB.
                                     @if($banner->mobile_image_url) Leave empty to keep the current one. @endif
                                 </p>
                                 @if($banner->mobile_image_url)

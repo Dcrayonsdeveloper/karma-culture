@@ -423,6 +423,36 @@ final class ValidationRules
     }
 
     /**
+     * The messages {@see image()} needs, keyed for one field.
+     *
+     * Laravel states the size rule in kilobytes - "must not be greater than
+     * 12288 kilobytes" - which nobody has to hand when they are looking at a
+     * file manager showing MB. The admin who hit this had to divide by 1024 to
+     * find out how much too big their banner was.
+     *
+     * @return array<string, string>
+     */
+    public static function imageMessages(string $field, int $maxKb = 5120): array
+    {
+        $label = str_replace('_', ' ', $field);
+
+        return [
+            "{$field}.max" => 'The '.$label.' may not be larger than '.self::megabytes($maxKb).' MB.',
+            "{$field}.mimes" => 'The '.$label.' must be a JPG, PNG, WebP or GIF file.',
+            "{$field}.mimetypes" => 'The '.$label.' must be a JPG, PNG, WebP or GIF file.',
+            "{$field}.dimensions" => 'The '.$label.' is too large in pixels. Export it at a smaller size and try again.',
+        ];
+    }
+
+    /** Kilobytes as the megabytes a person reads off their file manager. */
+    public static function megabytes(int $kb): string
+    {
+        $mb = $kb / 1024;
+
+        return rtrim(rtrim(number_format($mb, 1, '.', ''), '0'), '.');
+    }
+
+    /**
      * The messages {@see video()} needs, keyed for one field.
      *
      * Laravel names the rule, not the reason, so `mimes` on a .avi reads "The
@@ -447,6 +477,12 @@ final class ValidationRules
      * Both 'mimes' (extension) and 'mimetypes' (sniffed content type) are
      * applied: 'mimes' alone trusts the filename, and a .png that is really a
      * PHP script passes it.
+     *
+     * AVIF is deliberately NOT accepted, even though production's GD, Imagick
+     * and finfo all read it. Laravel's own `image` rule hardcodes its list -
+     * jpg, jpeg, png, gif, bmp, webp - so adding avif to `mimes` here would
+     * advertise a format that `image` then refuses anyway, which is a worse
+     * experience than not offering it. Revisit if that list ever grows.
      *
      * Client-side counterpart:
      *   type="file" accept="image/jpeg,image/png,image/webp"

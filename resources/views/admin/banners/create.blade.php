@@ -134,7 +134,7 @@
                                      which offers the admin an SVG or a TIFF the upload will then refuse. --}}
                                 <input type="file" name="image" id="banner-image"
                                        accept="image/jpeg,image/png,image/webp,image/gif" class="form-input">
-                                <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">JPG, PNG, WebP or GIF &middot; max 5MB</p>
+                                <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">JPG, PNG, WebP or GIF &middot; max {{ \App\Rules\ValidationRules::megabytes(\App\Support\BannerMedia::MAX_IMAGE_KB) }}MB</p>
                                 @error('image')
                                     <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
                                 @enderror
@@ -162,7 +162,7 @@
                                 <label for="banner-mobile-image" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Mobile Image</label>
                                 <input type="file" name="mobile_image" id="banner-mobile-image"
                                        accept="image/jpeg,image/png,image/webp,image/gif" class="form-input">
-                                <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">JPG, PNG, WebP or GIF &middot; max 5MB</p>
+                                <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">JPG, PNG, WebP or GIF &middot; max {{ \App\Rules\ValidationRules::megabytes(\App\Support\BannerMedia::MAX_IMAGE_KB) }}MB</p>
                                 @error('mobile_image')
                                     <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
                                 @enderror

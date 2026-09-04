@@ -227,13 +227,13 @@ class HomepageController extends Controller
         return [
             'name' => V::text(required: false, max: 255),
             'image' => $mediaRequired
-                ? ['required_without:video', ...V::image(required: false, maxKb: 5120, allowGif: true)]
-                : V::image(required: false, maxKb: 5120, allowGif: true),
+                ? ['required_without:video', ...V::image(required: false, maxKb: BannerMedia::MAX_IMAGE_KB, allowGif: true, maxWidth: BannerMedia::MAX_IMAGE_EDGE, maxHeight: BannerMedia::MAX_IMAGE_EDGE)]
+                : V::image(required: false, maxKb: BannerMedia::MAX_IMAGE_KB, allowGif: true, maxWidth: BannerMedia::MAX_IMAGE_EDGE, maxHeight: BannerMedia::MAX_IMAGE_EDGE),
             'video' => V::video(required: false, maxKb: self::MAX_VIDEO_KB),
             // The mobile pair is an override, never a requirement: a banner
             // with neither still shows its desktop media on phones, so nothing
             // here is conditional on the desktop fields being filled.
-            'mobile_image' => V::image(required: false, maxKb: 5120, allowGif: true),
+            'mobile_image' => V::image(required: false, maxKb: BannerMedia::MAX_IMAGE_KB, allowGif: true, maxWidth: BannerMedia::MAX_IMAGE_EDGE, maxHeight: BannerMedia::MAX_IMAGE_EDGE),
             'mobile_video' => V::video(required: false, maxKb: self::MAX_VIDEO_KB),
             'link' => ['nullable', 'string', 'max:255', 'regex:'.self::LINK_REGEX],
             'title' => V::text(required: false, max: 255),
@@ -263,8 +263,10 @@ class HomepageController extends Controller
             'ends_at.after' => 'The end date must be later than the start date.',
             'starts_at.date' => 'Enter a valid start date and time.',
             'ends_at.date' => 'Enter a valid end date and time.',
-        ] + V::videoMessages('video', self::MAX_VIDEO_KB)
-          + V::videoMessages('mobile_video', self::MAX_VIDEO_KB);
+        ] + V::imageMessages('image', BannerMedia::MAX_IMAGE_KB)
+          + V::imageMessages('mobile_image', BannerMedia::MAX_IMAGE_KB)
+          + V::videoMessages('video', BannerMedia::MAX_VIDEO_KB)
+          + V::videoMessages('mobile_video', BannerMedia::MAX_VIDEO_KB);
     }
 
     /** Names the schedule fields as an admin would, so the messages read as English. */

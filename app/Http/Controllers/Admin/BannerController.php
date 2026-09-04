@@ -128,14 +128,14 @@ class BannerController extends Controller
             'name' => V::text(max: 255, min: 2),
             'position' => V::option(self::POSITIONS),
             'image' => $mediaRequired
-                ? ['required_without:video', ...V::image(required: false, maxKb: 5120, allowGif: true)]
-                : V::image(required: false, maxKb: 5120, allowGif: true),
-            'video' => V::video(),
+                ? ['required_without:video', ...V::image(required: false, maxKb: BannerMedia::MAX_IMAGE_KB, allowGif: true, maxWidth: BannerMedia::MAX_IMAGE_EDGE, maxHeight: BannerMedia::MAX_IMAGE_EDGE)]
+                : V::image(required: false, maxKb: BannerMedia::MAX_IMAGE_KB, allowGif: true, maxWidth: BannerMedia::MAX_IMAGE_EDGE, maxHeight: BannerMedia::MAX_IMAGE_EDGE),
+            'video' => V::video(maxKb: BannerMedia::MAX_VIDEO_KB),
             // The mobile pair is an override, never a requirement: a banner
             // without one shows its desktop media on phones, so nothing here is
             // conditional on the desktop fields being filled.
-            'mobile_image' => V::image(required: false, maxKb: 5120, allowGif: true),
-            'mobile_video' => V::video(),
+            'mobile_image' => V::image(required: false, maxKb: BannerMedia::MAX_IMAGE_KB, allowGif: true, maxWidth: BannerMedia::MAX_IMAGE_EDGE, maxHeight: BannerMedia::MAX_IMAGE_EDGE),
+            'mobile_video' => V::video(maxKb: BannerMedia::MAX_VIDEO_KB),
             'title' => V::text(required: false, max: 255),
             'subtitle' => V::text(required: false, max: 500),
             'button_text' => V::text(required: false, max: 100),
@@ -169,8 +169,10 @@ class BannerController extends Controller
         return [
             'image.required_without' => 'Add a desktop image or a desktop video - a banner with no artwork cannot be shown.',
             'link.regex' => 'Enter a path such as /products, or a full https:// address.',
-        ] + V::videoMessages('video')
-          + V::videoMessages('mobile_video');
+        ] + V::imageMessages('image', BannerMedia::MAX_IMAGE_KB)
+          + V::imageMessages('mobile_image', BannerMedia::MAX_IMAGE_KB)
+          + V::videoMessages('video', BannerMedia::MAX_VIDEO_KB)
+          + V::videoMessages('mobile_video', BannerMedia::MAX_VIDEO_KB);
     }
 
     /**

@@ -88,7 +88,7 @@
                             <div>
                                 <label for="hero-new-image" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Image</label>
                                 <input type="file" name="image" id="hero-new-image" accept="image/jpeg,image/png,image/webp,image/gif" class="form-input">
-                                <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">JPG, PNG, WebP or GIF &middot; max 5MB</p>
+                                <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">JPG, PNG, WebP or GIF &middot; max {{ \App\Rules\ValidationRules::megabytes(\App\Support\BannerMedia::MAX_IMAGE_KB) }}MB</p>
                             </div>
                             <div>
                                 <label for="hero-new-video" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Video</label>
@@ -108,7 +108,7 @@
                             <div>
                                 <label for="hero-new-mobile-image" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Mobile Image</label>
                                 <input type="file" name="mobile_image" id="hero-new-mobile-image" accept="image/jpeg,image/png,image/webp,image/gif" class="form-input">
-                                <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">JPG, PNG, WebP or GIF &middot; max 5MB</p>
+                                <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">JPG, PNG, WebP or GIF &middot; max {{ \App\Rules\ValidationRules::megabytes(\App\Support\BannerMedia::MAX_IMAGE_KB) }}MB</p>
                             </div>
                             <div>
                                 <label for="hero-new-mobile-video" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Mobile Video</label>
@@ -452,7 +452,7 @@
                                             <label for="hero-{{ $banner->id }}-image" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Replace Image</label>
                                             <input type="file" name="image" id="hero-{{ $banner->id }}-image" accept="image/jpeg,image/png,image/webp,image/gif" class="form-input">
                                             <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
-                                                JPG, PNG, WebP or GIF &middot; max 5MB.
+                                                JPG, PNG, WebP or GIF &middot; max {{ \App\Rules\ValidationRules::megabytes(\App\Support\BannerMedia::MAX_IMAGE_KB) }}MB.
                                                 @if($banner->image_url) Leave empty to keep the current image. @endif
                                             </p>
                                         </div>
@@ -479,7 +479,7 @@
                                             <label for="hero-{{ $banner->id }}-mobile-image" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Replace Mobile Image</label>
                                             <input type="file" name="mobile_image" id="hero-{{ $banner->id }}-mobile-image" accept="image/jpeg,image/png,image/webp,image/gif" class="form-input">
                                             <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
-                                                JPG, PNG, WebP or GIF &middot; max 5MB.
+                                                JPG, PNG, WebP or GIF &middot; max {{ \App\Rules\ValidationRules::megabytes(\App\Support\BannerMedia::MAX_IMAGE_KB) }}MB.
                                                 @if($banner->mobile_image_url) Leave empty to keep the current one. @endif
                                             </p>
                                             @if($banner->mobile_image_url)
