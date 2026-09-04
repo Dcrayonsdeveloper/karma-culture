@@ -11,6 +11,7 @@ use App\Models\Quality;
 use App\Models\Setting;
 use App\Models\ShopFilterExclusion;
 use App\Rules\ValidationRules as V;
+use App\Services\InstagramReelService;
 use App\Support\BannerMedia;
 use App\Support\ShopFilterCatalogue;
 use Illuminate\Database\Eloquent\Builder;
@@ -669,11 +670,109 @@ class HomepageController extends Controller
      * scaffolding behind, and a fourth clip had nowhere to go. Reels are rows
      * now - add one, delete one, reorder them, hide one without losing it.
      */
-    public function aboutReels()
+    public function aboutReels(InstagramReelService $instagram)
     {
         $reels = AboutReel::ordered()->get();
 
-        return view('admin.homepage.about-reels', compact('reels'));
+        $instagramState = [
+            'configured' => $instagram->configured(),
+            'username' => $instagram->username(),
+            'limit' => $instagram->limit(),
+            'last_synced_at' => $instagram->lastSyncedAt(),
+            'token_expires_at' => $instagram->tokenExpiresAt(),
+            'synced_count' => $reels->whereNotNull('instagram_media_id')->count(),
+        ];
+
+        return view('admin.homepage.about-reels', compact('reels', 'instagramState'));
+    }
+
+    /**
+     * Save the Instagram credentials and check them on the spot.
+     *
+     * Checked here rather than at the next sync because the two things that go
+     * wrong - a mistyped token, and the wrong KIND of token - are both
+     * invisible until something calls the API, and finding out days later that
+     * the strip never updated is a poor way to learn it.
+     */
+    public function updateInstagram(Request $request, InstagramReelService $instagram)
+    {
+        $validated = $request->validate([
+            // Left blank means "keep the saved one": the field renders masked,
+            // so an admin changing only the count must not wipe the token by
+            // submitting the placeholder back.
+            'access_token' => ['nullable', 'string', 'max:512'],
+            'reel_limit' => ['required', 'integer', 'min:1', 'max:20'],
+        ], [
+            'reel_limit.max' => 'The strip can hold at most 20 reels.',
+        ]);
+
+        Setting::set(InstagramReelService::LIMIT_KEY, (string) $validated['reel_limit'], 'integer', 'instagram');
+
+        $token = trim((string) ($validated['access_token'] ?? ''));
+
+        if ($token !== '') {
+            Setting::set(InstagramReelService::TOKEN_KEY, $token, 'string', 'instagram');
+            // A pasted token is a fresh long-lived one until Instagram says
+            // otherwise; refreshing later replaces this with the real date.
+            Setting::set(InstagramReelService::TOKEN_EXPIRES_KEY, now()->addDays(60)->toDateTimeString(), 'string', 'instagram');
+        }
+
+        Cache::forget('settings.group.instagram');
+
+        if (! $instagram->configured()) {
+            return back()->with('success', 'Settings saved. Add an access token to connect an Instagram account.');
+        }
+
+        $result = $instagram->connect();
+
+        if (! $result['ok']) {
+            return back()->with('error', $result['error']);
+        }
+
+        return back()->with('success', 'Connected to @'.$result['username'].'. Use "Sync reels now" to pull the clips in.');
+    }
+
+    /**
+     * Pull the reels in now.
+     *
+     * A button rather than a schedule because nothing on this host runs
+     * `schedule:run`. The command exists for a host that does; here this is the
+     * thing that actually fires.
+     */
+    public function syncInstagram(InstagramReelService $instagram)
+    {
+        $result = $instagram->sync();
+
+        if (! $result['ok']) {
+            return back()->with('error', $result['error']);
+        }
+
+        $parts = [];
+        foreach (['added' => 'added', 'updated' => 'kept up to date', 'removed' => 'removed', 'skipped' => 'skipped'] as $key => $label) {
+            if ($result[$key] > 0) {
+                $parts[] = $result[$key].' '.$label;
+            }
+        }
+
+        $message = $parts === [] ? 'Nothing changed.' : implode(', ', $parts).'.';
+
+        return back()->with($result['skipped'] > 0 ? 'warning' : 'success', 'Sync complete: '.$message);
+    }
+
+    public function refreshInstagramToken(InstagramReelService $instagram)
+    {
+        $result = $instagram->refreshToken();
+
+        return $result['ok']
+            ? back()->with('success', 'Token refreshed. It now runs until '.$result['expires_at'].'.')
+            : back()->with('error', $result['error']);
+    }
+
+    public function disconnectInstagram(InstagramReelService $instagram)
+    {
+        $removed = $instagram->disconnect();
+
+        return back()->with('success', 'Instagram disconnected and '.$removed.' synced reel(s) removed. Uploaded clips were left alone.');
     }
 
     public function storeAboutReel(Request $request)
