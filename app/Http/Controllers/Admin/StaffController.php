@@ -46,7 +46,7 @@ class StaffController extends Controller
             'role' => 'required|in:manager,cashier,support,warehouse',
             'is_active' => 'boolean',
             'permissions' => 'nullable|array',
-            'permissions.*' => 'string|in:dashboard,orders,catalog,customers,sellers,staff,marketing,storefront,content,reports,settings',
+            'permissions.*' => 'string|in:dashboard,orders,abandoned_carts,catalog,customers,sellers,staff,marketing,storefront,content,reports,settings',
         ], V::passwordMessages());
 
         $user = User::create([
@@ -94,7 +94,7 @@ class StaffController extends Controller
             'role' => 'required|in:manager,cashier,support,warehouse',
             'is_active' => 'boolean',
             'permissions' => 'nullable|array',
-            'permissions.*' => 'string|in:dashboard,orders,catalog,customers,sellers,staff,marketing,storefront,content,reports,settings',
+            'permissions.*' => 'string|in:dashboard,orders,abandoned_carts,catalog,customers,sellers,staff,marketing,storefront,content,reports,settings',
         ], V::passwordMessages());
 
         $staff->user->update([

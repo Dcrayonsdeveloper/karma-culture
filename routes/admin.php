@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AbandonedCartController;
 use App\Http\Controllers\Admin\AttributeController;
 use App\Http\Controllers\Admin\AttributeValueController;
 use App\Http\Controllers\Admin\AuditLogController;
@@ -117,6 +118,34 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('chatbot/leads', [App\Http\Controllers\Admin\ChatbotAnalyticsController::class, 'leads'])->name('chatbot.leads');
             Route::get('chatbot/conversations/{conversation}', [App\Http\Controllers\Admin\ChatbotAnalyticsController::class, 'show'])->name('chatbot.conversation');
             Route::put('chatbot/conversations/{conversation}/lead-status', [App\Http\Controllers\Admin\ChatbotAnalyticsController::class, 'updateLeadStatus'])->name('chatbot.lead-status');
+        });
+
+        // Abandoned carts
+        //
+        // Its own section rather than a corner of `orders`: the screen exposes
+        // customer email and phone and can send mail on the store's behalf, so
+        // it has to be grantable to a recovery desk without also handing over
+        // every order, and withheld from warehouse staff who hold `orders` for
+        // fulfilment. Admins are unaffected either way - isAdmin() short-circuits
+        // every section check.
+        Route::middleware('admin.section:abandoned_carts')->group(function () {
+            Route::prefix('abandoned-carts')->name('abandoned-carts.')->group(function () {
+                // Literal paths before {abandonedCart}, and the wildcard pinned
+                // to digits. Declaring them the other way round is how
+                // /cart/remove-coupon got swallowed once already.
+                Route::get('/', [AbandonedCartController::class, 'index'])->name('index');
+                Route::get('/export', [AbandonedCartController::class, 'export'])->name('export');
+                Route::get('/settings', [AbandonedCartController::class, 'settings'])->name('settings');
+                Route::put('/settings', [AbandonedCartController::class, 'updateSettings'])->name('settings.update');
+                Route::post('/scan', [AbandonedCartController::class, 'scan'])->name('scan');
+                Route::post('/bulk-action', [AbandonedCartController::class, 'bulkAction'])->name('bulk-action');
+
+                Route::get('/{abandonedCart}', [AbandonedCartController::class, 'show'])->whereNumber('abandonedCart')->name('show');
+                Route::post('/{abandonedCart}/remind', [AbandonedCartController::class, 'remind'])->whereNumber('abandonedCart')->name('remind');
+                Route::post('/{abandonedCart}/contacted', [AbandonedCartController::class, 'markContacted'])->whereNumber('abandonedCart')->name('contacted');
+                Route::post('/{abandonedCart}/recovered', [AbandonedCartController::class, 'markRecovered'])->whereNumber('abandonedCart')->name('recovered');
+                Route::post('/{abandonedCart}/archive', [AbandonedCartController::class, 'archive'])->whereNumber('abandonedCart')->name('archive');
+            });
         });
 
         // Catalog

@@ -21,6 +21,23 @@
         </div>
 
         <div class="container mx-auto px-4 pb-10">
+            {{-- Flash notices.
+
+                 The storefront layout renders none, so every redirect that
+                 lands here carrying a message has been arriving silently -
+                 including CheckoutController's "we could not reserve your
+                 stock" bounce. Cart recovery links land here too, so the banner
+                 lives on this page rather than in the shared layout. --}}
+            @foreach(['success' => ['#e6f6ec', '#1a7a2e'], 'info' => ['#eaf4ff', '#005bd3'], 'error' => ['#fdecea', '#d72c0d']] as $flashKey => $flashColours)
+                @if(session($flashKey))
+                    <div role="status"
+                         class="mb-4 rounded-lg px-4 py-3 text-sm font-medium"
+                         style="background: {{ $flashColours[0] }}; color: {{ $flashColours[1] }};">
+                        {{ session($flashKey) }}
+                    </div>
+                @endif
+            @endforeach
+
             {{-- Skeleton: visible until Alpine initializes, then removed --}}
             <div x-data x-init="$el.remove()" class="animate-pulse">
                 <div class="flex items-center justify-between mb-4">

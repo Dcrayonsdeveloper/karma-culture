@@ -155,6 +155,20 @@ Route::prefix('cart')->name('cart.')->group(function () {
     // literal route being swallowed the same way.
     Route::get('/data', [App\Http\Controllers\CartController::class, 'data'])->name('data');
     Route::get('/recommendations', [App\Http\Controllers\CartController::class, 'recommendations'])->name('recommendations');
+
+    // Reopening an abandoned cart from the link in a recovery email. Open to
+    // guests because the whole point is a customer whose session has expired;
+    // the controller re-checks ownership before it binds anything. Throttled
+    // because the 64-character token in the URL is the only credential, and an
+    // unthrottled route would be a free oracle for guessing one.
+    //
+    // /cart is already in robots.txt's Disallow list, so this path is covered
+    // by it and a token cannot end up in a search index.
+    Route::get('/recover/{token}', App\Http\Controllers\CartRecoveryController::class)
+        ->middleware('throttle:10,1')
+        ->where('token', '[A-Za-z0-9]{64}')
+        ->name('recover');
+
     Route::get('/', [App\Http\Controllers\CartController::class, 'index'])->name('index');
 
     // Putting something in a cart takes an account. The store owner asked for
