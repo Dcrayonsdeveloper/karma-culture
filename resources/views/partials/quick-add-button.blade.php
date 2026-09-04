@@ -1,4 +1,4 @@
-{{-- The round add-to-cart button that sits above a card's "View Product" bar.
+{{-- The round add-to-cart button that sits beside a card's "View Product" bar.
 
      Icon only and circular on purpose: it shares the strip with a full-width
      lettered CTA, and a second lettered bar there read as two competing primary

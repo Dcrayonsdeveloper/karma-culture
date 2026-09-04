@@ -103,19 +103,21 @@
             </div>
         @endif
 
-        {{-- View Product --}}
+        {{-- Actions. The CTA and the add-to-cart shortcut share one line: the
+             button used to sit on its own row above the bar, which spent a
+             whole line of card height on a 40px control. --}}
         @if($showAddToCart)
-            <div class="mt-2 px-1">
-                @unless($outOfStock)
-                    @include('partials.quick-add-button', ['product' => $product])
-                @endunless
+            <div class="mt-2 px-1 kk-card-actions">
                 <a href="{{ route('product.show', $product) }}"
-                   class="block w-full py-2.5 text-[12px] font-semibold text-white rounded-md transition-colors duration-200 text-center"
+                   class="kk-card-actions__cta py-2.5 text-[12px] font-semibold text-white rounded-md transition-colors duration-200 text-center"
                    style="background:#2D1810;"
                    onmouseover="this.style.background='#1F1109'"
                    onmouseout="this.style.background='#2D1810'">
                     View Product
                 </a>
+                @unless($outOfStock)
+                    @include('partials.quick-add-button', ['product' => $product])
+                @endunless
             </div>
         @endif
     </div>
@@ -248,19 +250,21 @@
                 </div>
             @endif
 
-            {{-- View Product --}}
+            {{-- Actions, on one line. mt-auto keeps the strip pinned to the
+                 bottom of the card so it lines up across a row whatever the
+                 name above it wraps to. --}}
             @if($showAddToCart)
-                <div class="mt-auto pt-2">
-                    @unless($outOfStock)
-                        @include('partials.quick-add-button', ['product' => $product])
-                    @endunless
+                <div class="mt-auto pt-2 kk-card-actions">
                     <a href="{{ route('product.show', $product) }}"
-                       class="block w-full py-2.5 text-[13px] font-semibold text-white rounded-md transition-colors duration-200 text-center"
+                       class="kk-card-actions__cta py-2.5 text-[13px] font-semibold text-white rounded-md transition-colors duration-200 text-center"
                        style="background:#2D1810;"
                        onmouseover="this.style.background='#1F1109'"
                        onmouseout="this.style.background='#2D1810'">
                         View Product
                     </a>
+                    @unless($outOfStock)
+                        @include('partials.quick-add-button', ['product' => $product])
+                    @endunless
                 </div>
             @endif
         </div>
