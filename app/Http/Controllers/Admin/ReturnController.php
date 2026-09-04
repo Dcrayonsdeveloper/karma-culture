@@ -75,9 +75,20 @@ class ReturnController extends Controller
             $updates['processed_by'] = auth()->id();
         }
 
+        $previousStatus = $return->status;
+
         $return->update($updates);
 
-        ReturnRequested::dispatch($return);
+        // Only on an actual transition. The listener behind this event mails
+        // "Return Request Approved" whenever the return *is* approved rather
+        // than when it *becomes* approved, and this dispatch fired on every
+        // submit - so a double-click, a browser refresh of the PUT, or saving
+        // the form again after assigning a pickup partner sent the customer
+        // another approval email each time. Order::updateStatus has guarded its
+        // own event this way all along; this is the same guard.
+        if ($previousStatus !== $validated['status']) {
+            ReturnRequested::dispatch($return);
+        }
 
         return back()->with('success', 'Return status updated');
     }

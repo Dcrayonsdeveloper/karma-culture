@@ -6,11 +6,13 @@ use App\Models\Category;
 use App\Models\Setting;
 use App\Models\UserAddress;
 use App\Rules\ValidationRules;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -84,6 +86,55 @@ class AppServiceProvider extends ServiceProvider
         } catch (\Exception $e) {
             // Settings table may not exist during migrations
         }
+
+        // The verification link, anchored to the configured site address.
+        //
+        // Laravel builds it with a temporary signed route, which resolves
+        // against the *incoming request's* host. This app trusts proxies with
+        // `at: '*'` and accepts X-Forwarded-Host (bootstrap/app.php), and
+        // registers no trusted-host list, so that host is whatever the caller
+        // says it is. Anyone can post this shop's own registration form with
+        // somebody else's address and `X-Forwarded-Host: example.invalid`, and
+        // that person is emailed a genuine, signed, "verify your email" message
+        // from us pointing at the attacker's domain.
+        //
+        // This is the open item the password-reset fix named and did not close;
+        // App\Notifications\ResetPasswordNotification anchors its own link the
+        // same way, off config('app.url'), which is set on the server and no
+        // header can move.
+        //
+        // Pinned by generating the URL under a forced root rather than by
+        // stitching config('app.url') onto a relative route, because the route
+        // is behind `signed` and that middleware validates the *absolute* URL:
+        // a signature computed over a relative path would be recomputed over
+        // the full one and every verification link would 403. Forcing the root
+        // first means the signature covers exactly the address the customer is
+        // sent to, which is also what makes a spoofed host fail validation
+        // instead of working.
+        VerifyEmail::createUrlUsing(function (object $notifiable): string {
+            // The scheme has to be pinned as well as the host: forceRootUrl
+            // keeps the host but the generator still takes the scheme from the
+            // current request, so a link generated off an http request - or
+            // from the console, which has none - would be signed as http and
+            // then fail validation when the customer arrives over https.
+            $root = (string) config('app.url');
+            URL::forceRootUrl($root);
+            URL::forceScheme(parse_url($root, PHP_URL_SCHEME) ?: 'https');
+
+            try {
+                return URL::temporarySignedRoute(
+                    'verification.verify',
+                    now()->addMinutes((int) config('auth.verification.expire', 60)),
+                    [
+                        'id' => $notifiable->getKey(),
+                        'hash' => sha1($notifiable->getEmailForVerification()),
+                    ]
+                );
+            } finally {
+                URL::forceRootUrl(null);
+                URL::forceScheme(null);
+            }
+        });
 
         Route::model('address', UserAddress::class);
 

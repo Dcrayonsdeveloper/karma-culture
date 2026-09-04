@@ -7,6 +7,7 @@ use App\Models\NotificationPreference;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 
 class NotificationService
 {
@@ -34,15 +35,80 @@ class NotificationService
         }
     }
 
+    /**
+     * Put one transactional email in front of a customer.
+     *
+     * Sent, not queued. This line was `Mail::to()->queue()`, and production runs
+     * QUEUE_CONNECTION=database with no worker and no cron to start one - so
+     * every order confirmation, shipping, delivery, return-approved and refund
+     * mail this method has ever produced went into the `jobs` table and stopped
+     * there. 52 were still sitting unsent when this was found, the oldest from
+     * April, each one owed to a customer the checkout page had already told a
+     * confirmation was on its way.
+     *
+     * The rest of the app already sends synchronously - the enquiry reply, the
+     * low-stock alert, the back-in-stock notice and the abandoned-cart reminder
+     * are all `Mail::to()->send()`, and the password-reset notification was
+     * deliberately left unqueued for this same reason. This method was the only
+     * caller that queued, which is why it was the only one that never arrived.
+     *
+     * Queuing is the right shape once a worker exists; that is a server change,
+     * not something this method can decide. Until then, delivering beats
+     * deferring.
+     *
+     * Every caller reaches here after its database work has committed - both
+     * checkout controllers dispatch OrderPlaced outside the transaction - so the
+     * SMTP round trip holds no locks. It does cost the request about three
+     * seconds against Gmail, which is the price of the mail arriving at all.
+     *
+     * The failure is logged and swallowed on purpose: the order, shipment or
+     * refund behind it has already happened, and turning an undeliverable
+     * address into a 500 would cost the customer the page confirming it.
+     * `Throwable` rather than `Exception` because a template referencing a
+     * missing variable surfaces as an `Error` out of the compiled view - and
+     * these templates have never once been rendered for delivery, so that is a
+     * live possibility rather than a theoretical one.
+     */
     public function notifyByEmail(User $user, \Illuminate\Mail\Mailable $mailable): void
     {
+        // Every one of these templates links back to the shop with route(), and
+        // route() resolves against the incoming request's host. That did not
+        // matter while the mail was queued: a worker renders with no request, so
+        // the links fell back to APP_URL. Sending inside the request would have
+        // handed that host to the caller instead - and this app trusts proxies
+        // with `at: '*'`, accepts X-Forwarded-Host and registers no trusted-host
+        // list, so a checkout carrying `X-Forwarded-Host: example.invalid` would
+        // produce a genuine, deliverable order confirmation from us whose "View
+        // Your Order" button points at somebody else's domain.
+        //
+        // Pinning the root for the duration of the render keeps the links the
+        // queue used to produce. The scheme has to be pinned with it, because
+        // forceRootUrl fixes the host but the generator still reads the scheme
+        // off the current request - a link built during an http request would
+        // otherwise reach the customer as http on an https-only shop. Both are
+        // restored in a finally: the response for this same request is built
+        // after we return and has no business being rewritten.
+        $root = (string) config('app.url');
+        URL::forceRootUrl($root);
+        URL::forceScheme(parse_url($root, PHP_URL_SCHEME) ?: 'https');
+
         try {
-            Mail::to($user->email)->queue($mailable);
-        } catch (\Exception $e) {
+            Mail::to($user->email)->send($mailable);
+        } catch (\Throwable $e) {
+            // Which mailable and which exception class: that is what tells a
+            // rejected recipient apart from a failed handshake, a refused
+            // password and a broken template. The old line recorded neither, so
+            // a silent mail failure left nothing to work from but the words
+            // "Failed to send email notification".
             Log::error('Failed to send email notification', [
                 'user_id' => $user->id,
+                'mailable' => $mailable::class,
+                'exception' => $e::class,
                 'error' => $e->getMessage(),
             ]);
+        } finally {
+            URL::forceRootUrl(null);
+            URL::forceScheme(null);
         }
     }
 

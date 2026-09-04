@@ -9,6 +9,8 @@ use App\Events\OrderStatusChanged;
 use App\Models\Notification;
 use App\Models\Order;
 use App\Models\User;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
@@ -50,6 +52,43 @@ class SingleNotificationPerEventTest extends TestCase
                 class_basename($event).' has listeners the $listen map does not declare - discovery is on again.'
             );
         }
+    }
+
+    /**
+     * The half of the doubling that turning discovery off did not reach.
+     *
+     * Registered is not in our $listen map, so this was never about discovery:
+     * the parent provider's configureEmailVerification() hooks the verification
+     * listener on whenever the map is silent about it, and both provider
+     * instances ran that. App\Providers\EventServiceProvider now stands its own
+     * copy down and leaves the framework's, so exactly one remains.
+     */
+    public function test_the_verification_listener_is_registered_once(): void
+    {
+        $this->assertCount(
+            1,
+            Event::getListeners(Registered::class),
+            'Registration hooks SendEmailVerificationNotification more than once - every signup mails the customer twice.'
+        );
+    }
+
+    /** The symptom, end to end: one signup, one verification email. */
+    public function test_registering_sends_one_verification_email(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+
+        $this->post(route('register'), [
+            'full_name' => 'Asha Menon',
+            'email' => 'asha.menon@example.com',
+            'phone' => '9876543210',
+            'password' => 'Correct-Horse-14',
+            'password_confirmation' => 'Correct-Horse-14',
+            'terms' => 'on',
+        ])->assertSessionHasNoErrors();
+
+        $user = User::where('email', 'asha.menon@example.com')->firstOrFail();
+
+        \Illuminate\Support\Facades\Notification::assertSentToTimes($user, VerifyEmail::class, 1);
     }
 
     /** The symptom, end to end: one order, one row per person. */
