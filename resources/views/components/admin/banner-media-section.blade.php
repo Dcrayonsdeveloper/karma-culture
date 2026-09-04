@@ -3,6 +3,12 @@
     'width' => 0,
     'height' => 0,
     'ratio' => '',
+    // The caps the server enforces, in megabytes. Stated at the top of the
+    // section as well as under each input because an oversized clip is refused
+    // only once it has finished uploading, and on a home connection that is
+    // several minutes spent to be told a number that was readable up front.
+    'imageMaxMb' => 5,
+    'videoMaxMb' => 64,
 ])
 
 {{-- One breakpoint's worth of hero uploads, headed by the size that breakpoint
@@ -43,6 +49,15 @@
         Anything at the same proportions works. A different shape still fills the
         slide edge to edge, but it is centred and cropped to get there, so keep
         anything that must be read - a headline, a face - away from the edges.
+    </p>
+
+    {{-- The same formats the file inputs below filter the OS picker on, and the
+         same limits the server enforces. Said once here as well, because the
+         per-input notes are only read after a file has been chosen and the size
+         cap is the one rule that costs a whole upload to discover. --}}
+    <p style="font-size: 12px; color: #616161; margin: -0.55rem 0 0.85rem 0; line-height: 1.5;">
+        Images JPG, PNG, WebP or GIF, up to {{ $imageMaxMb }} MB &middot;
+        video MP4, WebM or MOV, up to {{ $videoMaxMb }} MB.
     </p>
 
     <div style="display: flex; flex-direction: column; gap: 0.85rem;">

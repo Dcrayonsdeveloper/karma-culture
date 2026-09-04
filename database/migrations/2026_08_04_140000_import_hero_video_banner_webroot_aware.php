@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\Banner;
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -16,13 +16,20 @@ return new class extends Migration
      * the video played on the homepage.
      *
      * The file is now looked for in every location it legitimately lives in.
+     *
+     * Written against the query builder rather than the Banner model on
+     * purpose. A migration runs against the schema as it stood at the time, but
+     * a model is always the CURRENT one - so the day SoftDeletes was added to
+     * Banner, this migration began asking for a `deleted_at` column that would
+     * not exist for another month of migrations, and every fresh install and
+     * every test run died right here.
      */
     private const VIDEO = '/images/karmaa-kulture-web-banner-v3.mp4';
 
     public function up(): void
     {
         // Never override a hero someone configured deliberately.
-        if (Banner::where('position', 'hero')->exists()) {
+        if (DB::table('banners')->where('position', 'hero')->exists()) {
             return;
         }
 
@@ -30,19 +37,22 @@ return new class extends Migration
             return;
         }
 
-        Banner::create([
+        DB::table('banners')->insert([
             'name' => 'Homepage hero video',
             'position' => 'hero',
             'video_url' => self::VIDEO,
             'overlay_style' => 'left-dark',
             'priority' => 0,
             'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
     }
 
     public function down(): void
     {
-        Banner::where('position', 'hero')
+        DB::table('banners')
+            ->where('position', 'hero')
             ->where('video_url', self::VIDEO)
             ->delete();
     }

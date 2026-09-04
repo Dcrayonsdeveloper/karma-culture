@@ -11,11 +11,11 @@ use App\Models\Quality;
 use App\Models\Setting;
 use App\Models\ShopFilterExclusion;
 use App\Rules\ValidationRules as V;
+use App\Support\BannerMedia;
 use App\Support\ShopFilterCatalogue;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -78,24 +78,22 @@ class HomepageController extends Controller
      */
     private const RETIRED_SECTION_KEYS = ['testimonials'];
 
-    /** Video uploads: extension, sniffed type and size all checked. */
+    /**
+     * Video uploads: extension, sniffed type and size all checked.
+     *
+     * The rules themselves live in {@see V::video()} now, because the same five
+     * were written out by hand on the banner, category and product forms and had
+     * already drifted apart on the size cap. Kept as a method only because the
+     * About Us reel endpoints below prepend `required` to it.
+     */
     private function videoRules(): array
     {
-        return [
-            'nullable', 'file',
-            'mimes:mp4,webm,mov',
-            'mimetypes:video/mp4,video/webm,video/quicktime',
-            'max:'.self::MAX_VIDEO_KB,
-        ];
+        return V::video(required: false, maxKb: self::MAX_VIDEO_KB);
     }
 
     private function videoMessages(string $field): array
     {
-        return [
-            "{$field}.mimes" => 'The video must be an MP4, WebM or MOV file.',
-            "{$field}.mimetypes" => 'The video must be an MP4, WebM or MOV file.',
-            "{$field}.max" => 'The video may not be larger than '.(self::MAX_VIDEO_KB / 1024).' MB.',
-        ];
+        return V::videoMessages($field, self::MAX_VIDEO_KB);
     }
 
     public function index()
@@ -217,25 +215,39 @@ class HomepageController extends Controller
     /**
      * Rules shared by the add and edit hero banner forms.
      *
+     * `$banner` is the row being edited, and is only there for the schedule: a
+     * start date that has already passed must stay acceptable, or renaming a
+     * banner that went live last week would demand its start be dragged forward
+     * before the form would save at all.
+     *
      * @return array<string, mixed>
      */
-    private function heroBannerRules(bool $mediaRequired): array
+    private function heroBannerRules(bool $mediaRequired, ?Banner $banner = null): array
     {
         return [
             'name' => V::text(required: false, max: 255),
             'image' => $mediaRequired
                 ? ['required_without:video', ...V::image(required: false, maxKb: 5120, allowGif: true)]
                 : V::image(required: false, maxKb: 5120, allowGif: true),
-            'video' => $this->videoRules(),
+            'video' => V::video(required: false, maxKb: self::MAX_VIDEO_KB),
             // The mobile pair is an override, never a requirement: a banner
             // with neither still shows its desktop media on phones, so nothing
             // here is conditional on the desktop fields being filled.
             'mobile_image' => V::image(required: false, maxKb: 5120, allowGif: true),
-            'mobile_video' => $this->videoRules(),
+            'mobile_video' => V::video(required: false, maxKb: self::MAX_VIDEO_KB),
             'link' => ['nullable', 'string', 'max:255', 'regex:'.self::LINK_REGEX],
             'title' => V::text(required: false, max: 255),
             'subtitle' => V::text(required: false, max: 500),
             'button_text' => V::text(required: false, max: 100),
+            // Read out in place of the artwork. Optional because a banner with
+            // none falls back to its heading, which is what a screen reader was
+            // given before there was a column for it.
+            'alt_text' => V::text(required: false, max: 255),
+            // Both ends optional and independent: "from Monday", "until the end
+            // of the sale" and "from now until further notice" are all things an
+            // admin means, and only the last needs no dates at all.
+            'starts_at' => V::scheduleStart(required: false, current: $banner?->starts_at),
+            'ends_at' => V::scheduleEnd('starts_at', required: false, current: $banner?->ends_at),
             'overlay_style' => V::option(array_keys(Banner::OVERLAY_STYLES), required: false),
             'remove_video' => V::boolean(),
             'remove_mobile_image' => V::boolean(),
@@ -248,57 +260,57 @@ class HomepageController extends Controller
         return [
             'image.required_without' => 'Upload an image, or a video to use instead.',
             'link.regex' => 'Enter a path such as /products, or a full https:// address.',
-        ] + $this->videoMessages('video')
-          + $this->videoMessages('mobile_video');
+            'ends_at.after' => 'The end date must be later than the start date.',
+            'starts_at.date' => 'Enter a valid start date and time.',
+            'ends_at.date' => 'Enter a valid end date and time.',
+        ] + V::videoMessages('video', self::MAX_VIDEO_KB)
+          + V::videoMessages('mobile_video', self::MAX_VIDEO_KB);
     }
 
-    /**
-     * Store an uploaded hero file, deleting the one it replaces.
-     *
-     * Only a public-disk key is removed. The hero clip that shipped with the
-     * theme is recorded as a path under the web root, and handing that to the
-     * public disk would either miss or, with the right name, delete the wrong
-     * file entirely.
-     */
-    private function replaceHeroFile(?UploadedFile $file, ?string $previous, string $directory): string
+    /** Names the schedule fields as an admin would, so the messages read as English. */
+    private function heroBannerAttributes(): array
     {
-        $this->deleteHeroFile($previous);
-
-        return $file->store($directory, 'public');
-    }
-
-    /** Remove a stored hero upload; absolute URLs and web-root paths are left alone. */
-    private function deleteHeroFile(?string $path): void
-    {
-        if ($path && ! str_starts_with($path, 'http') && ! str_starts_with($path, '/')) {
-            Storage::disk('public')->delete($path);
-        }
+        return [
+            'alt_text' => 'image description',
+            'starts_at' => 'start date',
+            'ends_at' => 'end date',
+        ];
     }
 
     public function storeHeroBanner(Request $request)
     {
         // A banner needs a video or an image, not necessarily both. When a video
         // is supplied the image becomes optional and acts as the poster frame.
-        $request->validate($this->heroBannerRules(mediaRequired: true), $this->heroBannerMessages());
+        $request->validate(
+            $this->heroBannerRules(mediaRequired: true),
+            $this->heroBannerMessages(),
+            $this->heroBannerAttributes(),
+        );
 
         Banner::create([
             'name' => $request->name,
             'title' => $request->title,
             'subtitle' => $request->subtitle,
             'button_text' => $request->button_text,
+            // Which directory each column's file belongs in is BannerMedia's to
+            // know. Spelling it out here is how the two banner screens came to
+            // file the same mobile image in two different places.
             'image_url' => $request->hasFile('image')
-                ? $request->file('image')->store('banners', 'public')
+                ? BannerMedia::store($request->file('image'), 'image_url')
                 : null,
             'video_url' => $request->hasFile('video')
-                ? $request->file('video')->store('banners/video', 'public')
+                ? BannerMedia::store($request->file('video'), 'video_url')
                 : null,
             'mobile_image_url' => $request->hasFile('mobile_image')
-                ? $request->file('mobile_image')->store('banners/mobile', 'public')
+                ? BannerMedia::store($request->file('mobile_image'), 'mobile_image_url')
                 : null,
             'mobile_video_url' => $request->hasFile('mobile_video')
-                ? $request->file('mobile_video')->store('banners/mobile/video', 'public')
+                ? BannerMedia::store($request->file('mobile_video'), 'mobile_video_url')
                 : null,
             'link' => $request->link,
+            'alt_text' => $request->alt_text,
+            'starts_at' => $request->starts_at,
+            'ends_at' => $request->ends_at,
             'overlay_style' => $request->overlay_style ?? 'left-dark',
             'position' => 'hero',
             'priority' => Banner::where('position', 'hero')->max('priority') + 1,
@@ -312,7 +324,11 @@ class HomepageController extends Controller
 
     public function updateHeroBanner(Request $request, Banner $banner)
     {
-        $request->validate($this->heroBannerRules(mediaRequired: false), $this->heroBannerMessages());
+        $request->validate(
+            $this->heroBannerRules(mediaRequired: false, banner: $banner),
+            $this->heroBannerMessages(),
+            $this->heroBannerAttributes(),
+        );
 
         // A video-only banner is legitimate - the image is optional when a video
         // is supplied - so ticking "remove the video and show the image instead"
@@ -327,17 +343,23 @@ class HomepageController extends Controller
                 ->withErrors(['remove_video' => 'Upload an image first - removing the video would leave this banner with nothing to show.']);
         }
 
-        $data = $request->only(['name', 'title', 'subtitle', 'button_text', 'link', 'overlay_style']);
+        // Every field the form posts has to be named here: only() drops what it
+        // is not asked for, so a field added to the Blade and forgotten in this
+        // list saves cleanly and changes nothing, with no error to explain it.
+        $data = $request->only([
+            'name', 'title', 'subtitle', 'button_text', 'link',
+            'alt_text', 'starts_at', 'ends_at', 'overlay_style',
+        ]);
 
         if ($request->hasFile('image')) {
-            $data['image_url'] = $this->replaceHeroFile($request->file('image'), $banner->image_url, 'banners');
+            $data['image_url'] = BannerMedia::replace($request->file('image'), 'image_url', $banner->image_url);
         }
 
         if ($request->hasFile('video')) {
-            $data['video_url'] = $this->replaceHeroFile($request->file('video'), $banner->video_url, 'banners/video');
+            $data['video_url'] = BannerMedia::replace($request->file('video'), 'video_url', $banner->video_url);
         } elseif ($request->boolean('remove_video') && $banner->video_url) {
             // Explicit removal, so a banner can go back to being image-only.
-            $this->deleteHeroFile($banner->video_url);
+            BannerMedia::delete($banner->video_url);
             $data['video_url'] = null;
         }
 
@@ -345,16 +367,16 @@ class HomepageController extends Controller
         // override leaves the banner showing its desktop media on phones, which
         // is what a banner without one does anyway.
         if ($request->hasFile('mobile_image')) {
-            $data['mobile_image_url'] = $this->replaceHeroFile($request->file('mobile_image'), $banner->mobile_image_url, 'banners/mobile');
+            $data['mobile_image_url'] = BannerMedia::replace($request->file('mobile_image'), 'mobile_image_url', $banner->mobile_image_url);
         } elseif ($request->boolean('remove_mobile_image') && $banner->mobile_image_url) {
-            $this->deleteHeroFile($banner->mobile_image_url);
+            BannerMedia::delete($banner->mobile_image_url);
             $data['mobile_image_url'] = null;
         }
 
         if ($request->hasFile('mobile_video')) {
-            $data['mobile_video_url'] = $this->replaceHeroFile($request->file('mobile_video'), $banner->mobile_video_url, 'banners/mobile/video');
+            $data['mobile_video_url'] = BannerMedia::replace($request->file('mobile_video'), 'mobile_video_url', $banner->mobile_video_url);
         } elseif ($request->boolean('remove_mobile_video') && $banner->mobile_video_url) {
-            $this->deleteHeroFile($banner->mobile_video_url);
+            BannerMedia::delete($banner->mobile_video_url);
             $data['mobile_video_url'] = null;
         }
 
@@ -366,9 +388,12 @@ class HomepageController extends Controller
 
     public function deleteHeroBanner(Banner $banner)
     {
-        foreach ([$banner->image_url, $banner->video_url, $banner->mobile_image_url, $banner->mobile_video_url] as $path) {
-            $this->deleteHeroFile($path);
-        }
+        BannerMedia::deleteAll([
+            $banner->image_url,
+            $banner->video_url,
+            $banner->mobile_image_url,
+            $banner->mobile_video_url,
+        ]);
         $banner->delete();
         Cache::flush();
 

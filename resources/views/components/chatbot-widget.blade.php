@@ -564,7 +564,16 @@ function chatbotWidget() {
             this.hasBeenOpened = true;
             this.unreadCount  = 0;
             // Bring back whatever was said before this page load.
+            //
+            // Signed-in visitors only: /chatbot/history sits behind the `auth`
+            // middleware, and the global axios interceptor turns a 401 into a
+            // navigation to /login. The launcher is shown to guests as well -
+            // the layout gates only on the assistant being configured - so
+            // without this guard, merely OPENING the chat panel threw a guest
+            // off the page they were reading and onto the sign-in form.
+            @auth
             this.loadHistory();
+            @endauth
             this.$nextTick(() => {
                 this.scrollToBottom();
                 this.$refs.chatInput?.focus();

@@ -35,6 +35,23 @@
         };
         $kkDeskRatio = $kkRatio($kkDeskW, $kkDeskH);
         $kkMobRatio = $kkRatio($kkMobW, $kkMobH);
+
+        // Four states, only one of which reaches a shopper. The badge used to
+        // read straight off the Active switch, so a banner whose window had not
+        // opened yet - or had already closed - said Active while the home page
+        // showed nothing, and the screen offered no way to tell which. That
+        // disagreement is the reason scheduling was taken off this table once
+        // before, so the badge answers Banner::$state now and not the switch.
+        $kkStateChips = [
+            'live' => ['Live', '#cdfee1', '#1a7a2e'],
+            'scheduled' => ['Scheduled', '#ffeacc', '#8a5300'],
+            'expired' => ['Expired', '#ffe9e8', '#8e1f0b'],
+            'hidden' => ['Hidden', '#ebebeb', '#616161'],
+        ];
+
+        // Now, floored to the minute the way the datetime-local inputs are, so
+        // the min= floor below matches what NotPastDateTime will accept.
+        $kkNow = now()->format('Y-m-d\TH:i');
     @endphp
 
     <div style="margin-bottom: 0.25rem;">
@@ -105,6 +122,15 @@
                             </p>
                         </x-admin.banner-media-section>
                         <div>
+                            <label for="hero-new-alt" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Image Description</label>
+                            <input type="text" name="alt_text" id="hero-new-alt" maxlength="255" class="form-input" placeholder="Model wearing the linen co-ord set">
+                            {{-- Read out instead of the artwork by a screen reader, and shown
+                                 in its place when the file fails to load. Optional: left empty
+                                 the heading is used, which is what was read out before this
+                                 field existed. --}}
+                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">What the artwork shows. Leave empty to use the heading.</p>
+                        </div>
+                        <div>
                             <label for="hero-new-title" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Heading Text</label>
                             <input type="text" name="title" id="hero-new-title" maxlength="255" class="form-input" placeholder="Banner heading">
                         </div>
@@ -134,6 +160,23 @@
                                 @endforeach
                             </select>
                         </div>
+                        {{-- Both ends optional. Left empty the banner runs from the moment
+                             it is switched on until it is switched off again, which is what
+                             every banner made before this field existed already does. --}}
+                        <div>
+                            <label for="hero-new-starts-at" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Starts</label>
+                            <input type="datetime-local" name="starts_at" id="hero-new-starts-at" value="{{ old('starts_at') }}"
+                                   min="{{ $kkNow }}" data-schedule-start
+                                   class="form-input" style="width: 100%;">
+                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Leave empty to go live as soon as it is switched on.</p>
+                        </div>
+                        <div>
+                            <label for="hero-new-ends-at" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Ends</label>
+                            <input type="datetime-local" name="ends_at" id="hero-new-ends-at" value="{{ old('ends_at') }}"
+                                   min="{{ $kkNow }}" data-schedule-end="hero-new-starts-at"
+                                   class="form-input" style="width: 100%;">
+                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Leave empty to run until it is hidden.</p>
+                        </div>
                         <button type="submit" class="btn btn-primary" style="font-size: 13px; width: 100%;">Add Banner</button>
                     </div>
                 </form>
@@ -144,12 +187,14 @@
         <div x-data="bannerSorter()">
             @php
                 // The badge is a promise about the storefront, so it has to count the
-                // way the storefront does: hidden banners are not rendered, so they
-                // cannot hold a slot in the running order.
+                // way the storefront does. That means Banner::$is_visible and not the
+                // Active switch: a banner switched on for a campaign that starts next
+                // Monday is not in this week's running order, and numbering it #2 told
+                // the admin a slide was playing that nobody could see.
                 $kkLivePositions = [];
                 $kkLiveSlot = 0;
                 foreach ($banners as $kkBanner) {
-                    if ($kkBanner->is_active) {
+                    if ($kkBanner->is_visible) {
                         $kkLivePositions[$kkBanner->id] = ++$kkLiveSlot;
                     }
                 }
@@ -161,6 +206,9 @@
                          x-data="{ editing: false }"
                          draggable="true"
                          data-id="{{ $banner->id }}"
+                         {{-- Read by updateBadges() after a drag, so the renumbering it does
+                              on screen counts the same rows the server counted above. --}}
+                         data-live="{{ $banner->is_visible ? '1' : '0' }}"
                          x-on:dragstart="onDragStart($event)"
                          x-on:dragover.prevent="onDragOver($event)"
                          x-on:dragend="onDragEnd()"
@@ -180,7 +228,7 @@
                             <div style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.75rem;">
                                 <!-- Drag Handle + Position -->
                                 <div style="display: flex; flex-direction: column; align-items: center; gap: 0.25rem; flex-shrink: 0; padding-top: 0.25rem;">
-                                    <span class="pos-badge" title="{{ $banner->is_active ? 'Position on the storefront' : 'Hidden - not shown on the storefront' }}" style="font-size: 12px; font-weight: 700; color: #616161; width: 1.5rem; height: 1.5rem; display: flex; align-items: center; justify-content: center; background: #f6f6f7; border-radius: 0.25rem;">{{ isset($kkLivePositions[$banner->id]) ? '#'.$kkLivePositions[$banner->id] : '--' }}</span>
+                                    <span class="pos-badge" title="{{ $banner->is_visible ? 'Position on the storefront' : $banner->state_label.' - not shown on the storefront' }}" style="font-size: 12px; font-weight: 700; color: #616161; width: 1.5rem; height: 1.5rem; display: flex; align-items: center; justify-content: center; background: #f6f6f7; border-radius: 0.25rem;">{{ isset($kkLivePositions[$banner->id]) ? '#'.$kkLivePositions[$banner->id] : '--' }}</span>
                                     <div style="cursor: grab; color: #616161;" title="Drag to reorder">
                                         <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/>
@@ -238,11 +286,8 @@
                                 <div style="flex: 1 1 14rem; min-width: 0;">
                                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem;">
                                         <span style="font-size: 13px; font-weight: 600; color: #303030;">{{ $banner->name ?: $banner->title ?: 'Banner #' . $banner->id }}</span>
-                                        @if($banner->is_active)
-                                            <span style="display: inline-block; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 12px; font-weight: 500; background: #cdfee1; color: #1a7a2e;">Active</span>
-                                        @else
-                                            <span style="display: inline-block; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 12px; font-weight: 500; background: #ebebeb; color: #616161;">Hidden</span>
-                                        @endif
+                                        @php([$kkChipText, $kkChipBg, $kkChipFg] = $kkStateChips[$banner->state] ?? $kkStateChips['hidden'])
+                                        <span title="{{ $banner->state_label }}" style="display: inline-block; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 12px; font-weight: 500; background: {{ $kkChipBg }}; color: {{ $kkChipFg }};">{{ $kkChipText }}</span>
                                     </div>
                                     @if($banner->title)
                                         <p style="font-size: 13px; color: #303030; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ $banner->title }}</p>
@@ -266,9 +311,30 @@
                                                 ? ($banner->has_mobile_video ? 'own video' : 'own image')
                                                 : 'uses desktop' }}
                                         </span>
+                                        @php
+                                            // The chip says the state in one word; this says when.
+                                            // A row reading "Scheduled" and nothing else gives no
+                                            // way to find out what it is waiting for short of
+                                            // opening the edit form.
+                                            $kkWhen = null;
+                                            if ($banner->state === 'scheduled' || $banner->state === 'expired') {
+                                                $kkWhen = $banner->state_label;
+                                            } elseif ($banner->starts_at?->isFuture()) {
+                                                $kkWhen = 'Starts '.$banner->starts_at->format('j M Y, H:i');
+                                            } elseif ($banner->ends_at) {
+                                                $kkWhen = 'Ends '.$banner->ends_at->format('j M Y, H:i');
+                                            }
+                                        @endphp
+                                        @if($kkWhen)
+                                            <span style="color: #8a5300;">{{ $kkWhen }}</span>
+                                        @endif
                                     </div>
                                     <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.75rem;">
                                         <button @click="editing = true" type="button" class="btn btn-primary" style="font-size: 12px; padding: 0.25rem 0.5rem;">Edit</button>
+                                        {{-- The one way to see a scheduled or expired banner as a
+                                             shopper would: the home page will not show it, and the
+                                             thumbnail here is the desktop still, cropped and small. --}}
+                                        <a href="{{ route('admin.banners.preview', $banner) }}" target="_blank" rel="noopener" class="btn btn-secondary" style="font-size: 12px; padding: 0.25rem 0.5rem; text-decoration: none;">Preview</a>
                                         <form action="{{ route('admin.homepage.hero-banners.toggle', $banner) }}" method="POST" style="display: inline;">
                                             @csrf
                                             @method('PUT')
@@ -329,6 +395,35 @@
                                                 <option value="{{ $key }}" {{ $banner->overlay_style === $key ? 'selected' : '' }}>{{ $label }}</option>
                                             @endforeach
                                         </select>
+                                    </div>
+                                    <div style="grid-column: 1 / -1;">
+                                        <label for="hero-{{ $banner->id }}-alt" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Image Description</label>
+                                        <input type="text" name="alt_text" id="hero-{{ $banner->id }}-alt" value="{{ $banner->alt_text }}" maxlength="255" class="form-input" placeholder="Model wearing the linen co-ord set">
+                                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Read out in place of the artwork. Leave empty to use the heading.</p>
+                                    </div>
+                                    @php
+                                        // A date the banner already holds stays acceptable, so
+                                        // renaming a banner that went live last week does not
+                                        // demand its start be dragged into the future first. The
+                                        // floor below matches what V::scheduleStart() enforces.
+                                        $kkStart = $banner->starts_at?->format('Y-m-d\TH:i');
+                                        $kkEnd = $banner->ends_at?->format('Y-m-d\TH:i');
+                                        $kkStartFloor = $kkStart && $kkStart < $kkNow ? $kkStart : $kkNow;
+                                        $kkEndFloor = $kkEnd && $kkEnd < $kkNow ? $kkEnd : $kkNow;
+                                    @endphp
+                                    <div>
+                                        <label for="hero-{{ $banner->id }}-starts-at" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Starts</label>
+                                        <input type="datetime-local" name="starts_at" id="hero-{{ $banner->id }}-starts-at" value="{{ $kkStart }}"
+                                               min="{{ $kkStartFloor }}" data-schedule-start data-schedule-original="{{ $kkStart }}"
+                                               class="form-input" style="width: 100%;">
+                                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Empty means live as soon as it is switched on.</p>
+                                    </div>
+                                    <div>
+                                        <label for="hero-{{ $banner->id }}-ends-at" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Ends</label>
+                                        <input type="datetime-local" name="ends_at" id="hero-{{ $banner->id }}-ends-at" value="{{ $kkEnd }}"
+                                               min="{{ $kkEndFloor }}" data-schedule-end="hero-{{ $banner->id }}-starts-at" data-schedule-original="{{ $kkEnd }}"
+                                               class="form-input" style="width: 100%;">
+                                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Empty means it runs until it is hidden.</p>
                                     </div>
                                 </div>
 
@@ -520,10 +615,17 @@
                     this.saveOrder();
                 },
 
+                // Counts the way the server did when it rendered the badges: only
+                // banners a shopper can actually see hold a slot. Numbering every
+                // card 1..n put a scheduled or hidden banner back into the running
+                // order the moment anything was dragged, contradicting the page
+                // that had just been loaded.
                 updateBadges() {
-                    this.getItems().forEach((el, i) => {
+                    let slot = 0;
+                    this.getItems().forEach((el) => {
                         const badge = el.querySelector('.pos-badge');
-                        if (badge) badge.textContent = '#' + (i + 1);
+                        if (!badge) return;
+                        badge.textContent = el.dataset.live === '1' ? '#' + (++slot) : '--';
                     });
                 },
 

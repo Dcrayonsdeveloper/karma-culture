@@ -387,10 +387,57 @@ final class ValidationRules
     public static function passwordMessages(string $attribute = 'password'): array
     {
         return [
-            "{$attribute}.min" => 'Your password must be at least ' . self::PASSWORD_MIN . ' characters long.',
+            "{$attribute}.min" => 'Your password must be at least '.self::PASSWORD_MIN.' characters long.',
             "{$attribute}.password.mixed" => 'Your password must include both an uppercase and a lowercase letter.',
             "{$attribute}.password.numbers" => 'Your password must include at least one number.',
             "{$attribute}.password.symbols" => 'Your password must include at least one special character, such as @ # ! or ?.',
+        ];
+    }
+
+    /**
+     * An uploaded video - MP4, WebM or MOV, up to $maxKb.
+     *
+     * The same rules were written out by hand in five places and had already
+     * drifted: the banner screens capped at 64 MB and matched on `mimes:`,
+     * while categories and products capped at 50 MB and matched on
+     * `extensions:`. One helper, so a clip the product form accepts is not
+     * refused by the banner form.
+     *
+     * Both `mimes` and `mimetypes`, for the reason {@see image()} gives:
+     * `mimes` reads the filename, `mimetypes` reads the bytes, and a video is
+     * the upload most worth being sure about - these files are served straight
+     * back out of the public disk.
+     *
+     * Its counterpart in the browser is the accept attribute
+     * `accept="video/mp4,video/webm,video/quicktime"`.
+     */
+    public static function video(bool $required = false, int $maxKb = 65536): array
+    {
+        return [
+            $required ? 'required' : 'nullable',
+            'file',
+            'mimes:mp4,webm,mov',
+            'mimetypes:video/mp4,video/webm,video/quicktime',
+            "max:{$maxKb}",
+        ];
+    }
+
+    /**
+     * The messages {@see video()} needs, keyed for one field.
+     *
+     * Laravel names the rule, not the reason, so `mimes` on a .avi reads "The
+     * video field must be a file of type: mp4, webm, mov." Both mime rules are
+     * given the same sentence because a shopper-facing admin should not have to
+     * know there are two of them.
+     *
+     * @return array<string, string>
+     */
+    public static function videoMessages(string $field, int $maxKb = 65536): array
+    {
+        return [
+            "{$field}.mimes" => 'The video must be an MP4, WebM or MOV file.',
+            "{$field}.mimetypes" => 'The video must be an MP4, WebM or MOV file.',
+            "{$field}.max" => 'The video may not be larger than '.(int) ($maxKb / 1024).' MB.',
         ];
     }
 

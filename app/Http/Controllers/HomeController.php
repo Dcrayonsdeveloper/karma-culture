@@ -20,7 +20,7 @@ class HomeController extends Controller
         $featuredProducts = Product::query()
             ->where('is_active', true)
             ->where('is_featured', true)
-            ->with(['category', 'brand', 'primaryImage'])
+            ->with(['category', 'brand', 'images'])
             ->inStockFirst()
             ->orderBy('created_at', 'desc')
             ->take(10)
@@ -29,7 +29,7 @@ class HomeController extends Controller
         // New arrivals
         $newArrivals = Product::query()
             ->where('is_active', true)
-            ->with(['category', 'brand', 'primaryImage'])
+            ->with(['category', 'brand', 'images'])
             ->inStockFirst()
             ->orderBy('created_at', 'desc')
             ->take(10)
@@ -38,7 +38,7 @@ class HomeController extends Controller
         // Bestsellers
         $bestsellers = Product::query()
             ->where('is_active', true)
-            ->with(['category', 'brand', 'primaryImage'])
+            ->with(['category', 'brand', 'images'])
             ->inStockFirst()
             ->orderBy('sales_count', 'desc')
             ->take(10)
@@ -49,7 +49,7 @@ class HomeController extends Controller
         // Falls back to recent sellers so the row is never empty on a quiet week.
         $trending = Product::query()
             ->where('is_active', true)
-            ->with(['category', 'brand', 'primaryImage'])
+            ->with(['category', 'brand', 'images'])
             ->withCount(['views as recent_views' => fn ($q) => $q->where('product_views.created_at', '>=', now()->subDays(30))])
             ->having('recent_views', '>', 0)
             ->inStockFirst()
@@ -60,7 +60,7 @@ class HomeController extends Controller
         if ($trending->count() < 4) {
             $trending = Product::query()
                 ->where('is_active', true)
-                ->with(['category', 'brand', 'primaryImage'])
+                ->with(['category', 'brand', 'images'])
                 ->inStockFirst()
                 ->orderByDesc('sales_count')
                 ->orderByDesc('created_at')
@@ -72,7 +72,7 @@ class HomeController extends Controller
         $deals = Product::query()
             ->where('is_active', true)
             ->whereColumn('price', '<', 'mrp')
-            ->with(['category', 'brand', 'primaryImage'])
+            ->with(['category', 'brand', 'images'])
             ->inStockFirst()
             ->orderByRaw('(mrp - price) / mrp DESC')
             ->take(10)
@@ -87,12 +87,21 @@ class HomeController extends Controller
             ->take(8)
             ->get();
 
-        // Banners
+        // Banners. `visible` is the model's one definition of what a shopper
+        // should be seeing right now - switched on, started, not yet ended - and
+        // the API reads the same scope, so a scheduled campaign cannot go live
+        // on the website an hour before it goes live in the app.
+        //
+        // A banner carrying no artwork at all is dropped here rather than in the
+        // view: the slide count decides how many dots the carousel draws, so a
+        // banner filtered out downstream would leave a dot pointing at nothing.
         $banners = Banner::query()
-            ->where('is_active', true)
+            ->visible()
             ->where('position', 'hero')
             ->orderBy('priority')
-            ->get();
+            ->get()
+            ->filter(fn (Banner $banner) => $banner->has_media)
+            ->values();
 
         // Homepage sections. Inactive rows are loaded too, not filtered out: the
         // home page markup is hand-built rather than generated from this table,

@@ -32,6 +32,24 @@ class Review extends Model
         'moderated_at',
     ];
 
+    /**
+     * Kept out of toArray()/toJson().
+     *
+     * GET /api/v1/products/{product}/reviews is public and unauthenticated and
+     * returned whole Review rows, so anyone could page through every guest
+     * reviewer's email address, and through the moderation trail besides. The
+     * admin screens and the reviewer emails read these attributes directly off
+     * the model, which $hidden does not affect, so nothing that legitimately
+     * needs them loses them. Same precedent as Product::$hidden = ['cost_price'].
+     */
+    protected $hidden = [
+        'guest_email',
+        'moderated_by',
+        'moderated_at',
+        'is_generated',
+        'generated_from_order_item_id',
+    ];
+
     protected function casts(): array
     {
         return [

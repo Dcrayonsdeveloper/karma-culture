@@ -47,8 +47,14 @@
                         <div>
                             <label for="description" class="form-label form-label-required">Description</label>
                             {{-- `required` removed: CKEditor hides this textarea so HTML5 validation silently blocks submit. Server validates instead. --}}
+                            {{-- Escaped, not raw. The description is stored exactly as
+                                 submitted (validated only as string|max:65535, and the CSV
+                                 import writes it too), so printing it raw let a stored
+                                 `</textarea><script>` close the field and run in the
+                                 admin's session. The HTML parser decodes the entities when
+                                 reading .value, so CKEditor still loads the real markup. --}}
                             <textarea name="description" id="description" rows="6"
-                                      class="form-input w-full @error('description') form-input-error @enderror">{!! old('description', $product->description) !!}</textarea>
+                                      class="form-input w-full @error('description') form-input-error @enderror">{{ old('description', $product->description) }}</textarea>
                             @error('description') <p class="form-error">{{ $message }}</p> @enderror
                         </div>
                     </div>
