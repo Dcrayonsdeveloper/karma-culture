@@ -47,6 +47,36 @@ class BannerMedia
     public const IMAGE_COLUMNS = ['image_url', 'mobile_image_url'];
 
     /**
+     * How big a banner still may be.
+     *
+     * 5 MB was the figure, and it was the wrong one for this form in a way that
+     * only showed up on the mobile field. A desktop banner is a 1426x370 strip
+     * and compresses to well under a megabyte; the phone artwork beside it is
+     * 1080x720 or taller and comes out of a design tool several times heavier,
+     * so the same cap refused the mobile file while accepting the desktop one -
+     * which reads, from the admin's side, as "the mobile field does not work".
+     *
+     * 12 MB clears real banner artwork with room to spare and is still far
+     * below the 256 MB the server accepts in a request. Stated here once: the
+     * rules, the help text, the browser-side check and the error message all
+     * read it, so the number cannot drift between what is enforced and what the
+     * screen promises.
+     */
+    public const MAX_IMAGE_KB = 12288;
+
+    /** And a clip, unchanged - it was never the thing being refused. */
+    public const MAX_VIDEO_KB = 65536;
+
+    /**
+     * The pixel ceiling, a decompression-bomb guard rather than a design rule.
+     *
+     * Raised for banners specifically: a phone-shot or a full-bleed export
+     * routinely runs past 5,000px on its long edge, and refusing that as though
+     * it were an attack is the same class of mistake as the size cap above.
+     */
+    public const MAX_IMAGE_EDGE = 10000;
+
+    /**
      * Store an upload for one column and hand back its disk key.
      *
      * A still also gets a WebP sibling where the server can make one, which is

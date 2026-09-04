@@ -3,13 +3,22 @@
     'width' => 0,
     'height' => 0,
     'ratio' => '',
-    // The caps the server enforces, in megabytes. Stated at the top of the
-    // section as well as under each input because an oversized clip is refused
-    // only once it has finished uploading, and on a home connection that is
-    // several minutes spent to be told a number that was readable up front.
-    'imageMaxMb' => 5,
-    'videoMaxMb' => 64,
+    // The caps the server enforces, read from the server's own constants so
+    // the sentence under the field and the rule that refuses the file cannot
+    // say different numbers. Stated here as well as under each input because
+    // an oversized file is otherwise refused only once it has finished
+    // uploading, and on a home connection that is several minutes spent to be
+    // told a limit that was readable up front.
+    'imageMaxMb' => null,
+    'videoMaxMb' => null,
 ])
+
+@php
+    $kkImageMaxKb = \App\Support\BannerMedia::MAX_IMAGE_KB;
+    $kkVideoMaxKb = \App\Support\BannerMedia::MAX_VIDEO_KB;
+    $kkImageMaxMb = $imageMaxMb ?? \App\Rules\ValidationRules::megabytes($kkImageMaxKb);
+    $kkVideoMaxMb = $videoMaxMb ?? \App\Rules\ValidationRules::megabytes($kkVideoMaxKb);
+@endphp
 
 {{-- One breakpoint's worth of hero uploads, headed by the size that breakpoint
      actually draws at. The two devices are separated because the answer to
@@ -56,11 +65,65 @@
          per-input notes are only read after a file has been chosen and the size
          cap is the one rule that costs a whole upload to discover. --}}
     <p style="font-size: 12px; color: #616161; margin: -0.55rem 0 0.85rem 0; line-height: 1.5;">
-        Images JPG, PNG, WebP or GIF, up to {{ $imageMaxMb }} MB &middot;
-        video MP4, WebM or MOV, up to {{ $videoMaxMb }} MB.
+        Images JPG, PNG, WebP or GIF, up to {{ $kkImageMaxMb }} MB &middot;
+        video MP4, WebM or MOV, up to {{ $kkVideoMaxMb }} MB.
     </p>
 
-    <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+    <div style="display: flex; flex-direction: column; gap: 0.85rem;"
+         data-kk-upload-limits
+         data-kk-image-max="{{ $kkImageMaxKb }}"
+         data-kk-video-max="{{ $kkVideoMaxKb }}">
         {{ $slot }}
     </div>
 </div>
+
+@once
+    {{-- Say no before the upload, not after it.
+
+         The server refuses an oversized file, but only once every byte of it
+         has arrived - so an admin on a home connection watches a 20 MB photo
+         upload for a minute and is then told the number in kilobytes, with the
+         rest of the form reset around them. This checks the size the moment the
+         file is chosen, names the limit in the unit their file manager uses,
+         and clears the field so the form cannot be submitted with it.
+
+         Delegated from the document, so it covers the add form and every row's
+         edit form including any added after this script ran. --}}
+    <script>
+        (function () {
+            function mb(kb) {
+                var v = kb / 1024;
+                return (Math.round(v * 10) / 10).toString();
+            }
+
+            document.addEventListener('change', function (event) {
+                var input = event.target;
+
+                if (! input.matches || ! input.matches('input[type="file"]')) return;
+
+                var scope = input.closest('[data-kk-upload-limits]');
+                if (! scope) return;
+
+                var note = scope.parentElement.querySelector('[data-kk-upload-error]');
+                if (note) { note.remove(); }
+
+                var file = input.files && input.files[0];
+                if (! file) return;
+
+                var isVideo = (input.accept || '').indexOf('video/') !== -1;
+                var maxKb = Number(scope.getAttribute(isVideo ? 'data-kk-video-max' : 'data-kk-image-max'));
+                if (! maxKb || file.size <= maxKb * 1024) return;
+
+                input.value = '';
+
+                var p = document.createElement('p');
+                p.setAttribute('data-kk-upload-error', '');
+                p.setAttribute('role', 'alert');
+                p.style.cssText = 'margin: 0.5rem 0 0; font-size: 12px; color: #8e1f0b;';
+                p.textContent = 'That file is ' + mb(file.size / 1024) + ' MB. The limit is '
+                    + mb(maxKb) + ' MB - export it smaller and choose it again.';
+                scope.parentElement.appendChild(p);
+            });
+        }());
+    </script>
+@endonce
