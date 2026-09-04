@@ -1557,7 +1557,7 @@
                                     last = now;
 
                                     if (!this.paused) {
-                                        x -= 90 * dt;
+                                        x -= 45 * dt;
 
                                         const first = lead();
                                         if (-x >= first) {

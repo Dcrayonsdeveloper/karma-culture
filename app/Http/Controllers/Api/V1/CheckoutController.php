@@ -274,6 +274,11 @@ class CheckoutController extends Controller
             throw $e;
         }
 
+        // Same attribution the web checkout records, and outside the transaction
+        // for the same reason - see the comment there. The abandoned-cart record
+        // is found by cart_id, which outlives the cart being emptied above.
+        app(\App\Services\AbandonedCartService::class)->markRecoveredFromCheckout($cart, $order);
+
         // COD has no gateway to wait on, so placement is confirmation. Prepaid
         // orders stay pending until their payment callback lands.
         if ($validated['payment_method'] === 'cod') {

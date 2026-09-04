@@ -76,7 +76,13 @@ class OrderPlacedNotificationTest extends TestCase
             'channel' => 'database',
         ]);
 
-        Mail::assertQueued(OrderConfirmation::class);
+        // assertSent, not assertQueued. Mail::fake() records both, so this
+        // assertion passed for months while NotificationService pushed the
+        // confirmation onto a database queue that has no worker and never had
+        // one - the mail was queued, the test was green, and the customer got
+        // nothing. Asserting the send is what ties the test to delivery.
+        Mail::assertSent(OrderConfirmation::class);
+        Mail::assertNothingQueued();
     }
 
     /**

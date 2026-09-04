@@ -39,6 +39,15 @@ class ProductFilters
      */
     public const SORTS = ['newest', 'price_asc', 'price_desc', 'rating', 'bestselling', 'name', 'relevance', 'discount'];
 
+    /**
+     * Shown under the two price boxes when they are filled in the wrong order.
+     *
+     * One string, because the sidebar renders it server-side and Alpine repeats
+     * the same check as the shopper types - two spellings of the same complaint
+     * would read as two different problems.
+     */
+    public const PRICE_ORDER_ERROR = 'Min price must be lower than max price.';
+
     /** Query keys the sidebar owns - the "is anything filtered" checks read this. */
     public const KEYS = [
         'category', 'subcategory', 'brand', 'size', 'colour', 'texture',
@@ -681,7 +690,7 @@ class ProductFilters
      * one of its elements fails `size.*` - it would have handed the bad element
      * straight back.
      *
-     * @return array{category: ?string, subcategory: array<int, string>, size: array<int, string>, colour: array<int, string>, texture: array<int, string>, brand: array<int, string>, min_price: ?float, max_price: ?float, rating: ?int, in_stock: bool, on_sale: bool, sort: string}
+     * @return array{category: ?string, subcategory: array<int, string>, size: array<int, string>, colour: array<int, string>, texture: array<int, string>, brand: array<int, string>, min_price: ?float, max_price: ?float, price_error: ?string, rating: ?int, in_stock: bool, on_sale: bool, sort: string}
      */
     public static function normalise(Request $request): array
     {
@@ -710,7 +719,8 @@ class ProductFilters
         $rating = $safe['rating'] ?? null;
         $sort = $safe['sort'] ?? null;
 
-        [$minPrice, $maxPrice] = self::orderedRange($number('min_price'), $number('max_price'));
+        $minPrice = $number('min_price');
+        $maxPrice = $number('max_price');
 
         return [
             'category' => ($category === null || $category === '') ? null : $category,
@@ -721,6 +731,7 @@ class ProductFilters
             'brand' => self::stringList($request->input('brand'), 120),
             'min_price' => $minPrice,
             'max_price' => $maxPrice,
+            'price_error' => self::priceRangeError($minPrice, $maxPrice),
             'rating' => ($rating === null || $rating === '') ? null : (int) $rating,
             'in_stock' => filter_var($safe['in_stock'] ?? false, FILTER_VALIDATE_BOOLEAN),
             'on_sale' => filter_var($safe['on_sale'] ?? false, FILTER_VALIDATE_BOOLEAN),
@@ -729,31 +740,32 @@ class ProductFilters
     }
 
     /**
-     * A price pair, smaller bound first.
+     * What is wrong with the price pair, or null if nothing is.
      *
      * Min 1000 with Max 0 is `price >= 1000 AND price <= 0` - a range nothing
-     * can ever be in - so the shop answered "0 products found" with an Active
-     * Filters chip reading "₹1,000 - ₹0" and nothing anywhere saying what was
-     * wrong. The two numbers still name one range, so they are put back in
-     * order rather than refused: a 422 on a public, shareable, crawled URL is
-     * worse, and dropping one bound would silently widen the grid past what
-     * the shopper asked for.
+     * can ever be in - so the shop answered "0 products found" beside an Active
+     * Filters chip reading "₹1,000 - ₹0" and said nothing about why.
      *
-     * It happens here, in normalise(), because most of these never come from
-     * the sidebar's two boxes - a link a shopper shared, a crawler, and a
-     * "Shop It Your Way" hanger an admin typed backwards all arrive as a query
-     * string. Everything downstream reads what normalise() returns, so the
-     * boxes and the chip redraw as the corrected range too, which is what
-     * tells the shopper it was reordered.
+     * The two numbers are NOT quietly swapped into a range that works. That was
+     * tried, and a shopper who typed 1000 and 0 got a grid of results for
+     * ₹0-₹1,000 - an answer to a question they had not asked, with no way to
+     * tell whether the shop had misread them or they had misread the boxes. A
+     * filter has to do what it says, so the wrong-way-round pair is left exactly
+     * as typed and named as the mistake it is: the message goes back to the
+     * sidebar, under the two boxes that are still holding the numbers, and the
+     * shopper fixes the one they meant to change.
      *
-     * Equal bounds are left alone: min == max is the exact-price filter, not a
+     * The bound still applies, so the grid honestly answers the impossible range
+     * it was given. Dropping it instead would widen the results past anything
+     * that was asked for, which is the same "answering a different question"
+     * problem in the other direction.
+     *
+     * Equal bounds are fine: min == max is the exact-price filter, not a
      * mistake.
-     *
-     * @return array{0: ?float, 1: ?float}
      */
-    public static function orderedRange(?float $min, ?float $max): array
+    public static function priceRangeError(?float $min, ?float $max): ?string
     {
-        return ($min !== null && $max !== null && $min > $max) ? [$max, $min] : [$min, $max];
+        return ($min !== null && $max !== null && $min > $max) ? self::PRICE_ORDER_ERROR : null;
     }
 
     /**

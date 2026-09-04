@@ -96,11 +96,25 @@
     </style>
 @endonce
 
-{{-- x-data, empty, so the debounced auto-submit on the radios below has a scope
-     of its own. It used to borrow one from whichever section wrapped it; those
-     wrappers are gone, and the fragment this same file serves to the header's
-     Filters drawer is injected on its own, with no Alpine ancestor guaranteed. --}}
-<form action="{{ $filterPanel['action'] }}" method="GET" x-data>
+{{-- x-data, so the debounced auto-submit on the radios below has a scope of its
+     own. It used to borrow one from whichever section wrapped it; those wrappers
+     are gone, and the fragment this same file serves to the header's Filters
+     drawer is injected on its own, with no Alpine ancestor guaranteed.
+
+     It carries one piece of state: whether the two price boxes are the wrong way
+     round. That has to live at form level rather than beside the boxes, because
+     the guard below is the other half of the message - a range nothing can match
+     should not reach the grid at all - and `submit` only fires on the form.
+     Seeded from the server so a link that arrives backwards is already blocked
+     before the shopper has touched anything.
+
+     The guard stops Apply, not the auto-submitting ticks: a shopper who fixes a
+     size while the price boxes are wrong is doing the thing that will most
+     likely surface the message, and freezing the whole sidebar over one bad pair
+     would be a worse trap than the empty grid it prevents. --}}
+<form action="{{ $filterPanel['action'] }}" method="GET"
+      x-data="{ priceError: @js($kkValues['price_error']) }"
+      @submit="priceError && $event.preventDefault()">
     {{-- Anything the page needs carried through a filter submit: the search
          term, a sale scope, and the chosen ordering. --}}
     @foreach($filterPanel['hidden'] ?? [] as $kkName => $kkValue)
@@ -334,39 +348,45 @@
             </svg>
         </summary>
         <div class="kk-filter-body">
-            {{-- The two boxes name one range, so they are kept in order as they
-                 are filled in. Min 1000 with Max 0 asks the shop for
-                 `price >= 1000 AND price <= 0` - a range nothing can be in - and
-                 the grid came back "0 products found" under a chip reading
-                 "₹1,000 - ₹0", with nothing anywhere saying what was wrong.
+            {{-- Min 1000 with Max 0 asks the shop for `price >= 1000 AND
+                 price <= 0` - a range nothing can be in - so the grid came back
+                 "0 products found" under a chip reading "₹1,000 - ₹0", with
+                 nothing anywhere saying what was wrong.
 
-                 Swapped rather than the submit being blocked: a native
-                 "value must be less than" bubble fires on a control the shopper
-                 may have already scrolled past inside the phone drawer, so the
-                 form would stop dead with the reason off screen. Swapping puts
-                 the numbers the right way round in front of them before they
-                 press Apply.
+                 The two numbers are not swapped into a range that works. That
+                 was tried, and a shopper who typed 1000 and 0 was handed results
+                 for ₹0-₹1,000 - an answer to a question they had not asked, and
+                 no way to tell whether the shop had misread them or they had
+                 misread the boxes. They are left as typed and the mistake is
+                 named instead, right under the boxes still holding the numbers.
 
-                 One listener on the row, because `change` bubbles - and change,
-                 not input, so a half-typed "1" in Max does not jump into Min
-                 mid-keystroke.
+                 The message is live as they type (`input`, so it clears the
+                 moment the pair makes sense again) and is also rendered by the
+                 server, so a shared link or a "Shop It Your Way" hanger typed
+                 backwards explains itself on arrival with no JS at all. Both
+                 read ProductFilters::PRICE_ORDER_ERROR, so there is one wording.
 
-                 ProductFilters::orderedRange() does the same server-side, which
-                 is what covers a range that never passes through these boxes: a
-                 link a shopper shared, a crawler, a "Shop It Your Way" hanger an
-                 admin typed backwards. That is also the half that still works
-                 with the sidebar's JS unavailable. --}}
-            <div class="flex items-center gap-2" x-data
-                 @change="
+                 priceError lives on the form's own x-data because that is where
+                 the Apply guard reads it: an invalid range must not submit, and
+                 the submit event only fires on the form. --}}
+            <div class="flex items-center gap-2"
+                 @input="
                      const lo = $refs.minPrice, hi = $refs.maxPrice;
-                     if (lo.value !== '' && hi.value !== '' && Number(lo.value) > Number(hi.value)) {
-                         [lo.value, hi.value] = [hi.value, lo.value];
-                     }
+                     priceError = (lo.value !== '' && hi.value !== '' && Number(lo.value) > Number(hi.value))
+                         ? @js(\App\Support\ProductFilters::PRICE_ORDER_ERROR)
+                         : null;
                  ">
                 <div class="relative flex-1">
                     <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-neutral-600">&#8377;</span>
                     <input type="number" name="min_price" value="{{ $kkValues['min_price'] }}" min="0" step="any" inputmode="decimal"
                            placeholder="Min" aria-label="Minimum price" x-ref="minPrice"
+                           {{-- The tint goes on as an inline style, not a class:
+                                border-neutral-200 below and a border-red-* utility
+                                are both single classes, so which one wins is
+                                decided by their order in the built stylesheet
+                                rather than by the order here. --}}
+                           :aria-invalid="priceError ? 'true' : null"
+                           :style="priceError && 'border-color:#f87171'"
                            class="w-full pl-6 pr-2 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:border-[#6F9CA2] bg-neutral-50">
                 </div>
                 <span class="text-neutral-300 text-sm">-</span>
@@ -374,9 +394,24 @@
                     <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-neutral-600">&#8377;</span>
                     <input type="number" name="max_price" value="{{ $kkValues['max_price'] }}" min="0" step="any" inputmode="decimal"
                            placeholder="Max" aria-label="Maximum price" x-ref="maxPrice"
+                           {{-- The tint goes on as an inline style, not a class:
+                                border-neutral-200 below and a border-red-* utility
+                                are both single classes, so which one wins is
+                                decided by their order in the built stylesheet
+                                rather than by the order here. --}}
+                           :aria-invalid="priceError ? 'true' : null"
+                           :style="priceError && 'border-color:#f87171'"
                            class="w-full pl-6 pr-2 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:border-[#6F9CA2] bg-neutral-50">
                 </div>
             </div>
+            {{-- role=alert so a screen reader hears it when Alpine reveals it,
+                 rather than only on the next full page load. Hidden inline when
+                 the server has nothing to report: x-show manages `display` from
+                 then on, and if the bundle never loads a message that was never
+                 true stays hidden - which is the right resting state. --}}
+            <p class="mt-1.5 text-xs text-red-600" role="alert"
+               x-show="priceError" x-text="priceError"
+               @unless($kkValues['price_error']) style="display:none" @endunless>{{ $kkValues['price_error'] }}</p>
         </div>
     </details>
 
