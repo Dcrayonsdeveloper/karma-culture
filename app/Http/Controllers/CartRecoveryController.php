@@ -33,6 +33,17 @@ class CartRecoveryController extends Controller
 
     public function __invoke(Request $request, string $token): RedirectResponse
     {
+        return tap($this->open($request, $token), function (RedirectResponse $response) {
+            // Keep the tokenised URL out of search indexes. robots.txt is not
+            // the cover it looks like: production serves a static
+            // public_html/robots.txt that allows everything and overrides the
+            // dynamic route's Disallow list.
+            $response->headers->set('X-Robots-Tag', 'noindex, nofollow');
+        });
+    }
+
+    private function open(Request $request, string $token): RedirectResponse
+    {
         $episode = AbandonedCart::where('token', $token)->first();
 
         // One message for "no such token", "expired" and "archived" on purpose.

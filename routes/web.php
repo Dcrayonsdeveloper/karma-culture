@@ -162,8 +162,13 @@ Route::prefix('cart')->name('cart.')->group(function () {
     // because the 64-character token in the URL is the only credential, and an
     // unthrottled route would be a free oracle for guessing one.
     //
-    // /cart is already in robots.txt's Disallow list, so this path is covered
-    // by it and a token cannot end up in a search index.
+    // The route sends X-Robots-Tag itself rather than relying on robots.txt.
+    // The Disallow list in the dynamic /robots.txt route below does name /cart,
+    // but production serves a STATIC public_html/robots.txt that overrides it
+    // and allows everything, so that cover does not actually exist. (Token
+    // leakage through the Referer header is separately handled: SecurityHeaders
+    // sets Referrer-Policy: strict-origin-when-cross-origin, so a third party
+    // never sees the path.)
     Route::get('/recover/{token}', App\Http\Controllers\CartRecoveryController::class)
         ->middleware('throttle:10,1')
         ->where('token', '[A-Za-z0-9]{64}')

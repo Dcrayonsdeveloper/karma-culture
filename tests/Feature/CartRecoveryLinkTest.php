@@ -273,6 +273,21 @@ class CartRecoveryLinkTest extends TestCase
             'The basket moved to another cart, but the record still sits in the admin list pointing at an empty one.');
     }
 
+    public function test_the_recovery_url_is_kept_out_of_search_indexes(): void
+    {
+        // robots.txt is not the cover it looks like: production serves a static
+        // public_html/robots.txt that allows everything and overrides the
+        // dynamic route's Disallow list. The header has to come from the route.
+        $episode = $this->episodeFor($this->owner);
+
+        $this->actingAs($this->owner)
+            ->get($episode->recoveryUrl())
+            ->assertHeader('X-Robots-Tag', 'noindex, nofollow');
+
+        $this->get('/cart/recover/'.str_repeat('d', 64))
+            ->assertHeader('X-Robots-Tag', 'noindex, nofollow');
+    }
+
     public function test_the_route_is_rate_limited(): void
     {
         $bad = '/cart/recover/'.str_repeat('b', 64);
