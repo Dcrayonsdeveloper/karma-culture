@@ -63,9 +63,13 @@ class EnquiryController extends Controller
     {
         $enquiry->markAsRead();
 
-        // Mark related notifications as read
+        // Mark this admin's own notification for the enquiry as read. A new
+        // enquiry writes one row per admin, so without the user_id scope the
+        // first admin to open the page cleared it for everyone and the other
+        // bells went quiet about work nobody else had seen yet.
         Notification::where('type', 'new_enquiry')
             ->where('data->enquiry_id', $enquiry->id)
+            ->where('user_id', auth('admin')->id())
             ->unread()
             ->update(['is_read' => true, 'read_at' => now()]);
 

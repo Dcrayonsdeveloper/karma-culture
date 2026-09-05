@@ -3,14 +3,19 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AboutReel;
 use App\Models\Banner;
 use App\Models\HomepageSection;
 use App\Models\NavigationMenu;
 use App\Models\Quality;
 use App\Models\Setting;
-use App\Models\ShopFilterItem;
+use App\Models\ShopFilterExclusion;
 use App\Rules\ValidationRules as V;
-use App\Support\ShopFilterTiles;
+use App\Services\InstagramReelService;
+use App\Support\BannerMedia;
+use App\Support\ShopFilterCatalogue;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
@@ -74,24 +79,22 @@ class HomepageController extends Controller
      */
     private const RETIRED_SECTION_KEYS = ['testimonials'];
 
-    /** Video uploads: extension, sniffed type and size all checked. */
+    /**
+     * Video uploads: extension, sniffed type and size all checked.
+     *
+     * The rules themselves live in {@see V::video()} now, because the same five
+     * were written out by hand on the banner, category and product forms and had
+     * already drifted apart on the size cap. Kept as a method only because the
+     * About Us reel endpoints below prepend `required` to it.
+     */
     private function videoRules(): array
     {
-        return [
-            'nullable', 'file',
-            'mimes:mp4,webm,mov',
-            'mimetypes:video/mp4,video/webm,video/quicktime',
-            'max:'.self::MAX_VIDEO_KB,
-        ];
+        return V::video(required: false, maxKb: self::MAX_VIDEO_KB);
     }
 
     private function videoMessages(string $field): array
     {
-        return [
-            "{$field}.mimes" => 'The video must be an MP4, WebM or MOV file.',
-            "{$field}.mimetypes" => 'The video must be an MP4, WebM or MOV file.',
-            "{$field}.max" => 'The video may not be larger than '.(self::MAX_VIDEO_KB / 1024).' MB.',
-        ];
+        return V::videoMessages($field, self::MAX_VIDEO_KB);
     }
 
     public function index()
@@ -124,9 +127,6 @@ class HomepageController extends Controller
             'whatsapp_number' => Setting::get('whatsapp_number', ''),
             'contact_address' => Setting::get('contact_address', ''),
             'announcement_text' => Setting::get('announcement_text', ''),
-            'about_us_video_url' => Setting::get('about_us_video_url', ''),
-            'about_us_video_url_2' => Setting::get('about_us_video_url_2', ''),
-            'about_us_video_url_3' => Setting::get('about_us_video_url_3', ''),
         ];
 
         return view('admin.homepage.site-settings', compact('settings'));
@@ -164,20 +164,11 @@ class HomepageController extends Controller
             $rules["social_{$network}"] = V::url(required: false, max: 255);
         }
 
-        $messages = [];
-
-        foreach ([1, 2, 3] as $slot) {
-            $urlField = $slot === 1 ? 'about_us_video_url' : "about_us_video_url_{$slot}";
-            $fileField = $slot === 1 ? 'about_us_video_file' : "about_us_video_file_{$slot}";
-
-            $rules[$urlField] = ['nullable', 'string', 'max:255', 'regex:'.self::VIDEO_SRC_REGEX];
-            $rules[$fileField] = $this->videoRules();
-
-            $messages["{$urlField}.regex"] = 'Enter a full https:// address, or a path to an .mp4, .webm or .mov file.';
-            $messages += $this->videoMessages($fileField);
-        }
-
-        $validated = $request->validate($rules, $messages);
+        // The three about_us_video_* slots used to be validated and stored here.
+        // The About Us strip is a list of its own now (Homepage > About Reels),
+        // so this screen no longer accepts them: a field on two screens is a
+        // field whose value depends on which one you saved last.
+        $validated = $request->validate($rules);
 
         $fields = [
             'site_name', 'site_tagline', 'site_description',
@@ -186,8 +177,6 @@ class HomepageController extends Controller
             'social_youtube', 'social_tiktok', 'social_pinterest',
             'contact_email', 'contact_phone', 'whatsapp_number', 'contact_address',
             'announcement_text',
-            // The About Us section renders three videos; all three are editable.
-            'about_us_video_url', 'about_us_video_url_2', 'about_us_video_url_3',
         ];
 
         foreach ($fields as $field) {
@@ -211,25 +200,6 @@ class HomepageController extends Controller
             }
         }
 
-        // About Us video uploads - an uploaded file overrides that slot's URL field.
-        foreach ([
-            'about_us_video_file' => 'about_us_video_url',
-            'about_us_video_file_2' => 'about_us_video_url_2',
-            'about_us_video_file_3' => 'about_us_video_url_3',
-        ] as $fileField => $urlSetting) {
-            if ($request->hasFile($fileField)) {
-                $previous = (string) Setting::get($urlSetting, '');
-                $videoPath = $request->file($fileField)->store('storefront/about', 'public');
-                Setting::set($urlSetting, 'storage/'.$videoPath, 'string', 'homepage');
-
-                // These clips run to tens of megabytes each; leaving the replaced
-                // one behind on every re-upload filled the disk for no purpose.
-                if ($previous && str_starts_with($previous, 'storage/')) {
-                    Storage::disk('public')->delete(substr($previous, strlen('storage/')));
-                }
-            }
-        }
-
         Cache::flush();
 
         return back()->with('success', 'Site settings updated successfully.');
@@ -246,25 +216,39 @@ class HomepageController extends Controller
     /**
      * Rules shared by the add and edit hero banner forms.
      *
+     * `$banner` is the row being edited, and is only there for the schedule: a
+     * start date that has already passed must stay acceptable, or renaming a
+     * banner that went live last week would demand its start be dragged forward
+     * before the form would save at all.
+     *
      * @return array<string, mixed>
      */
-    private function heroBannerRules(bool $mediaRequired): array
+    private function heroBannerRules(bool $mediaRequired, ?Banner $banner = null): array
     {
         return [
             'name' => V::text(required: false, max: 255),
             'image' => $mediaRequired
-                ? ['required_without:video', ...V::image(required: false, maxKb: 5120, allowGif: true)]
-                : V::image(required: false, maxKb: 5120, allowGif: true),
-            'video' => $this->videoRules(),
+                ? ['required_without:video', ...V::image(required: false, maxKb: BannerMedia::MAX_IMAGE_KB, allowGif: true, maxWidth: BannerMedia::MAX_IMAGE_EDGE, maxHeight: BannerMedia::MAX_IMAGE_EDGE)]
+                : V::image(required: false, maxKb: BannerMedia::MAX_IMAGE_KB, allowGif: true, maxWidth: BannerMedia::MAX_IMAGE_EDGE, maxHeight: BannerMedia::MAX_IMAGE_EDGE),
+            'video' => V::video(required: false, maxKb: self::MAX_VIDEO_KB),
             // The mobile pair is an override, never a requirement: a banner
             // with neither still shows its desktop media on phones, so nothing
             // here is conditional on the desktop fields being filled.
-            'mobile_image' => V::image(required: false, maxKb: 5120, allowGif: true),
-            'mobile_video' => $this->videoRules(),
+            'mobile_image' => V::image(required: false, maxKb: BannerMedia::MAX_IMAGE_KB, allowGif: true, maxWidth: BannerMedia::MAX_IMAGE_EDGE, maxHeight: BannerMedia::MAX_IMAGE_EDGE),
+            'mobile_video' => V::video(required: false, maxKb: self::MAX_VIDEO_KB),
             'link' => ['nullable', 'string', 'max:255', 'regex:'.self::LINK_REGEX],
             'title' => V::text(required: false, max: 255),
             'subtitle' => V::text(required: false, max: 500),
             'button_text' => V::text(required: false, max: 100),
+            // Read out in place of the artwork. Optional because a banner with
+            // none falls back to its heading, which is what a screen reader was
+            // given before there was a column for it.
+            'alt_text' => V::text(required: false, max: 255),
+            // Both ends optional and independent: "from Monday", "until the end
+            // of the sale" and "from now until further notice" are all things an
+            // admin means, and only the last needs no dates at all.
+            'starts_at' => V::scheduleStart(required: false, current: $banner?->starts_at),
+            'ends_at' => V::scheduleEnd('starts_at', required: false, current: $banner?->ends_at),
             'overlay_style' => V::option(array_keys(Banner::OVERLAY_STYLES), required: false),
             'remove_video' => V::boolean(),
             'remove_mobile_image' => V::boolean(),
@@ -277,57 +261,59 @@ class HomepageController extends Controller
         return [
             'image.required_without' => 'Upload an image, or a video to use instead.',
             'link.regex' => 'Enter a path such as /products, or a full https:// address.',
-        ] + $this->videoMessages('video')
-          + $this->videoMessages('mobile_video');
+            'ends_at.after' => 'The end date must be later than the start date.',
+            'starts_at.date' => 'Enter a valid start date and time.',
+            'ends_at.date' => 'Enter a valid end date and time.',
+        ] + V::imageMessages('image', BannerMedia::MAX_IMAGE_KB)
+          + V::imageMessages('mobile_image', BannerMedia::MAX_IMAGE_KB)
+          + V::videoMessages('video', BannerMedia::MAX_VIDEO_KB)
+          + V::videoMessages('mobile_video', BannerMedia::MAX_VIDEO_KB);
     }
 
-    /**
-     * Store an uploaded hero file, deleting the one it replaces.
-     *
-     * Only a public-disk key is removed. The hero clip that shipped with the
-     * theme is recorded as a path under the web root, and handing that to the
-     * public disk would either miss or, with the right name, delete the wrong
-     * file entirely.
-     */
-    private function replaceHeroFile(?\Illuminate\Http\UploadedFile $file, ?string $previous, string $directory): string
+    /** Names the schedule fields as an admin would, so the messages read as English. */
+    private function heroBannerAttributes(): array
     {
-        $this->deleteHeroFile($previous);
-
-        return $file->store($directory, 'public');
-    }
-
-    /** Remove a stored hero upload; absolute URLs and web-root paths are left alone. */
-    private function deleteHeroFile(?string $path): void
-    {
-        if ($path && ! str_starts_with($path, 'http') && ! str_starts_with($path, '/')) {
-            Storage::disk('public')->delete($path);
-        }
+        return [
+            'alt_text' => 'image description',
+            'starts_at' => 'start date',
+            'ends_at' => 'end date',
+        ];
     }
 
     public function storeHeroBanner(Request $request)
     {
         // A banner needs a video or an image, not necessarily both. When a video
         // is supplied the image becomes optional and acts as the poster frame.
-        $request->validate($this->heroBannerRules(mediaRequired: true), $this->heroBannerMessages());
+        $request->validate(
+            $this->heroBannerRules(mediaRequired: true),
+            $this->heroBannerMessages(),
+            $this->heroBannerAttributes(),
+        );
 
         Banner::create([
             'name' => $request->name,
             'title' => $request->title,
             'subtitle' => $request->subtitle,
             'button_text' => $request->button_text,
+            // Which directory each column's file belongs in is BannerMedia's to
+            // know. Spelling it out here is how the two banner screens came to
+            // file the same mobile image in two different places.
             'image_url' => $request->hasFile('image')
-                ? $request->file('image')->store('banners', 'public')
+                ? BannerMedia::store($request->file('image'), 'image_url')
                 : null,
             'video_url' => $request->hasFile('video')
-                ? $request->file('video')->store('banners/video', 'public')
+                ? BannerMedia::store($request->file('video'), 'video_url')
                 : null,
             'mobile_image_url' => $request->hasFile('mobile_image')
-                ? $request->file('mobile_image')->store('banners/mobile', 'public')
+                ? BannerMedia::store($request->file('mobile_image'), 'mobile_image_url')
                 : null,
             'mobile_video_url' => $request->hasFile('mobile_video')
-                ? $request->file('mobile_video')->store('banners/mobile/video', 'public')
+                ? BannerMedia::store($request->file('mobile_video'), 'mobile_video_url')
                 : null,
             'link' => $request->link,
+            'alt_text' => $request->alt_text,
+            'starts_at' => $request->starts_at,
+            'ends_at' => $request->ends_at,
             'overlay_style' => $request->overlay_style ?? 'left-dark',
             'position' => 'hero',
             'priority' => Banner::where('position', 'hero')->max('priority') + 1,
@@ -341,7 +327,11 @@ class HomepageController extends Controller
 
     public function updateHeroBanner(Request $request, Banner $banner)
     {
-        $request->validate($this->heroBannerRules(mediaRequired: false), $this->heroBannerMessages());
+        $request->validate(
+            $this->heroBannerRules(mediaRequired: false, banner: $banner),
+            $this->heroBannerMessages(),
+            $this->heroBannerAttributes(),
+        );
 
         // A video-only banner is legitimate - the image is optional when a video
         // is supplied - so ticking "remove the video and show the image instead"
@@ -356,17 +346,23 @@ class HomepageController extends Controller
                 ->withErrors(['remove_video' => 'Upload an image first - removing the video would leave this banner with nothing to show.']);
         }
 
-        $data = $request->only(['name', 'title', 'subtitle', 'button_text', 'link', 'overlay_style']);
+        // Every field the form posts has to be named here: only() drops what it
+        // is not asked for, so a field added to the Blade and forgotten in this
+        // list saves cleanly and changes nothing, with no error to explain it.
+        $data = $request->only([
+            'name', 'title', 'subtitle', 'button_text', 'link',
+            'alt_text', 'starts_at', 'ends_at', 'overlay_style',
+        ]);
 
         if ($request->hasFile('image')) {
-            $data['image_url'] = $this->replaceHeroFile($request->file('image'), $banner->image_url, 'banners');
+            $data['image_url'] = BannerMedia::replace($request->file('image'), 'image_url', $banner->image_url);
         }
 
         if ($request->hasFile('video')) {
-            $data['video_url'] = $this->replaceHeroFile($request->file('video'), $banner->video_url, 'banners/video');
+            $data['video_url'] = BannerMedia::replace($request->file('video'), 'video_url', $banner->video_url);
         } elseif ($request->boolean('remove_video') && $banner->video_url) {
             // Explicit removal, so a banner can go back to being image-only.
-            $this->deleteHeroFile($banner->video_url);
+            BannerMedia::delete($banner->video_url);
             $data['video_url'] = null;
         }
 
@@ -374,16 +370,16 @@ class HomepageController extends Controller
         // override leaves the banner showing its desktop media on phones, which
         // is what a banner without one does anyway.
         if ($request->hasFile('mobile_image')) {
-            $data['mobile_image_url'] = $this->replaceHeroFile($request->file('mobile_image'), $banner->mobile_image_url, 'banners/mobile');
+            $data['mobile_image_url'] = BannerMedia::replace($request->file('mobile_image'), 'mobile_image_url', $banner->mobile_image_url);
         } elseif ($request->boolean('remove_mobile_image') && $banner->mobile_image_url) {
-            $this->deleteHeroFile($banner->mobile_image_url);
+            BannerMedia::delete($banner->mobile_image_url);
             $data['mobile_image_url'] = null;
         }
 
         if ($request->hasFile('mobile_video')) {
-            $data['mobile_video_url'] = $this->replaceHeroFile($request->file('mobile_video'), $banner->mobile_video_url, 'banners/mobile/video');
+            $data['mobile_video_url'] = BannerMedia::replace($request->file('mobile_video'), 'mobile_video_url', $banner->mobile_video_url);
         } elseif ($request->boolean('remove_mobile_video') && $banner->mobile_video_url) {
-            $this->deleteHeroFile($banner->mobile_video_url);
+            BannerMedia::delete($banner->mobile_video_url);
             $data['mobile_video_url'] = null;
         }
 
@@ -395,9 +391,12 @@ class HomepageController extends Controller
 
     public function deleteHeroBanner(Banner $banner)
     {
-        foreach ([$banner->image_url, $banner->video_url, $banner->mobile_image_url, $banner->mobile_video_url] as $path) {
-            $this->deleteHeroFile($path);
-        }
+        BannerMedia::deleteAll([
+            $banner->image_url,
+            $banner->video_url,
+            $banner->mobile_image_url,
+            $banner->mobile_video_url,
+        ]);
         $banner->delete();
         Cache::flush();
 
@@ -425,7 +424,7 @@ class HomepageController extends Controller
 
     public function toggleHeroBanner(Banner $banner)
     {
-        $banner->update(['is_active' => !$banner->is_active]);
+        $banner->update(['is_active' => ! $banner->is_active]);
         Cache::flush();
 
         return back()->with('success', 'Banner status updated.');
@@ -536,7 +535,7 @@ class HomepageController extends Controller
     {
         $this->abortIfRetired($section);
 
-        $section->update(['is_active' => !$section->is_active]);
+        $section->update(['is_active' => ! $section->is_active]);
         Cache::flush();
 
         return back()->with('success', 'Section visibility updated.');
@@ -557,8 +556,8 @@ class HomepageController extends Controller
      * so each ran in creation order permanently. Swapping with the adjacent row
      * keeps the numbers contiguous and needs no drag surface.
      *
-     * @param  \Illuminate\Database\Eloquent\Model  $row
-     * @param  \Illuminate\Database\Eloquent\Builder  $scope  the list $row belongs to
+     * @param  Model  $row
+     * @param  Builder  $scope  the list $row belongs to
      */
     private function swapPosition($row, $scope, string $direction): void
     {
@@ -601,112 +600,260 @@ class HomepageController extends Controller
     }
 
     // ============================================================
-    // Shop It Your Way - Size / Price / Shade filter items
+    // Shop It Your Way - the filter rails, derived from the catalogue
     // ============================================================
 
     /**
-     * shade_hex is interpolated into `style="color: ..."` on the home page.
-     * Blade escapes the value, so the attribute cannot be broken out of, but
-     * anything that is not a colour is still arbitrary CSS in the page. Hex
-     * only - which is all the field was ever meant to hold.
+     * The rails, as the catalogue currently spells them.
      *
-     * @return array<string, mixed>
+     * Nothing here is a stored list any more. Size comes off the variants,
+     * Shade and Texture off each product's own lists, Price off the live
+     * spread - so a value an admin types into a product is on the rail the
+     * moment it is saved, and the last product carrying a value takes it away
+     * again. What the admin owns on this screen is the other half: whether a
+     * value the catalogue carries should be offered to a shopper.
      */
-    private function shopFilterRules(): array
-    {
-        return [
-            'type' => V::option(ShopFilterItem::TYPES),
-            'label' => V::text(max: 120),
-            'sub_label' => V::text(required: false, max: 120),
-            'shade_hex' => ['nullable', 'string', 'max:9', 'regex:/^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/'],
-            'query_string' => ['nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9_\-=&%.+,\[\]]+$/'],
-        ];
-    }
-
-    private function shopFilterMessages(): array
-    {
-        return [
-            'shade_hex.regex' => 'Enter a hex colour such as #b8895a.',
-            'query_string.regex' => 'Enter a query string such as size=M or price_min=1000&price_max=2000.',
-        ];
-    }
-
     public function shopFilters()
     {
-        $items = ShopFilterItem::ordered()->get();
-
         return view('admin.homepage.shop-filters', [
-            'items' => $items->groupBy('type'),
-            // What each hanger's query string actually returns. A hanger that
-            // returns nothing is left off the home page, so the screen that
-            // owns it has to say so - and say which values would work.
-            'matches' => ShopFilterTiles::counts($items),
-            // Keys the shop ignores. A hanger carrying one filters nothing while
-            // its count reads as healthy, which is the quieter half of the bug.
-            'unread' => $items->mapWithKeys(
-                fn ($item) => [$item->id => ShopFilterTiles::unreadKeys($item->query_string)]
-            )->all(),
-            'suggestions' => ShopFilterTiles::suggestions(),
+            // Hidden values included: the screen has to show what has been
+            // taken away in order to offer it back.
+            'groups' => ShopFilterCatalogue::groups(includeHidden: true),
         ]);
     }
 
-    public function storeShopFilter(Request $request)
+    /**
+     * Hide one derived value.
+     *
+     * The value is not deleted from anything - no product loses its colour,
+     * its size or its texture. Only the offer is withdrawn, and it stays
+     * withdrawn: a new product arriving with the same value does not quietly
+     * put it back, which is the whole reason this is a stored decision rather
+     * than a flag on a row that is itself derived.
+     */
+    public function storeShopFilterExclusion(Request $request)
     {
-        $data = $request->validate($this->shopFilterRules(), $this->shopFilterMessages());
+        $data = $request->validate([
+            'type' => V::option(ShopFilterExclusion::TYPES),
+            // The normalised key, not the label: it is what identifies the
+            // value across every spelling of it the catalogue holds.
+            'value_key' => ['required', 'string', 'max:191'],
+            'label' => V::text(max: 191),
+        ]);
 
-        $data['position'] = (ShopFilterItem::where('type', $data['type'])->max('position') ?? 0) + 1;
-        $data['is_active'] = true;
-        ShopFilterItem::create($data);
-        Cache::flush();
+        // firstOrCreate, not create: the unique index is the real guard, and
+        // two admins hiding the same value at the same moment should both
+        // succeed rather than one of them meeting a 500.
+        ShopFilterExclusion::firstOrCreate(
+            ['type' => $data['type'], 'value_key' => $data['value_key']],
+            ['label' => $data['label']],
+        );
 
-        return back()->with('success', 'Filter item added.');
+        return back()->with('success', 'Hidden from the shop filters. The products keep the value.');
     }
 
-    public function updateShopFilter(Request $request, ShopFilterItem $shopFilter)
+    /** Offer a hidden value again. Bound on the uuid, never on a row id. */
+    public function destroyShopFilterExclusion(ShopFilterExclusion $exclusion)
     {
-        $data = $request->validate($this->shopFilterRules(), $this->shopFilterMessages());
+        $exclusion->delete();
 
-        $shopFilter->update($data);
-        Cache::flush();
+        return back()->with('success', 'Shown in the shop filters again.');
+    }
 
-        return back()->with('success', 'Filter item updated.');
+    // ============================================================
+    // About Us reels - the clip strip under "Crafted to Last"
+    // ============================================================
+
+    /**
+     * The strip used to be three fixed settings keys, so it could only ever
+     * hold three clips: a store with one left two empty cards' worth of
+     * scaffolding behind, and a fourth clip had nowhere to go. Reels are rows
+     * now - add one, delete one, reorder them, hide one without losing it.
+     */
+    public function aboutReels(InstagramReelService $instagram)
+    {
+        $reels = AboutReel::ordered()->get();
+
+        $instagramState = [
+            'configured' => $instagram->configured(),
+            'username' => $instagram->username(),
+            'limit' => $instagram->limit(),
+            'last_synced_at' => $instagram->lastSyncedAt(),
+            'token_expires_at' => $instagram->tokenExpiresAt(),
+            'synced_count' => $reels->whereNotNull('instagram_media_id')->count(),
+        ];
+
+        return view('admin.homepage.about-reels', compact('reels', 'instagramState'));
     }
 
     /**
-     * Swap a filter item with its neighbour inside its own tab.
+     * Save the Instagram credentials and check them on the spot.
      *
-     * The page says the hangers are "ordered by position" and nothing could set
-     * one after creation, so the rails ran in creation order for good.
+     * Checked here rather than at the next sync because the two things that go
+     * wrong - a mistyped token, and the wrong KIND of token - are both
+     * invisible until something calls the API, and finding out days later that
+     * the strip never updated is a poor way to learn it.
      */
-    public function moveShopFilter(Request $request, ShopFilterItem $shopFilter)
+    public function updateInstagram(Request $request, InstagramReelService $instagram)
+    {
+        $validated = $request->validate([
+            // Left blank means "keep the saved one": the field renders masked,
+            // so an admin changing only the count must not wipe the token by
+            // submitting the placeholder back.
+            'access_token' => ['nullable', 'string', 'max:512'],
+            'reel_limit' => ['required', 'integer', 'min:1', 'max:20'],
+        ], [
+            'reel_limit.max' => 'The strip can hold at most 20 reels.',
+        ]);
+
+        Setting::set(InstagramReelService::LIMIT_KEY, (string) $validated['reel_limit'], 'integer', 'instagram');
+
+        $token = trim((string) ($validated['access_token'] ?? ''));
+
+        if ($token !== '') {
+            Setting::set(InstagramReelService::TOKEN_KEY, $token, 'string', 'instagram');
+            // A pasted token is a fresh long-lived one until Instagram says
+            // otherwise; refreshing later replaces this with the real date.
+            Setting::set(InstagramReelService::TOKEN_EXPIRES_KEY, now()->addDays(60)->toDateTimeString(), 'string', 'instagram');
+        }
+
+        Cache::forget('settings.group.instagram');
+
+        if (! $instagram->configured()) {
+            return back()->with('success', 'Settings saved. Add an access token to connect an Instagram account.');
+        }
+
+        $result = $instagram->connect();
+
+        if (! $result['ok']) {
+            return back()->with('error', $result['error']);
+        }
+
+        return back()->with('success', 'Connected to @'.$result['username'].'. Use "Sync reels now" to pull the clips in.');
+    }
+
+    /**
+     * Pull the reels in now.
+     *
+     * A button rather than a schedule because nothing on this host runs
+     * `schedule:run`. The command exists for a host that does; here this is the
+     * thing that actually fires.
+     */
+    public function syncInstagram(InstagramReelService $instagram)
+    {
+        $result = $instagram->sync();
+
+        if (! $result['ok']) {
+            return back()->with('error', $result['error']);
+        }
+
+        $parts = [];
+        foreach (['added' => 'added', 'updated' => 'kept up to date', 'removed' => 'removed', 'skipped' => 'skipped'] as $key => $label) {
+            if ($result[$key] > 0) {
+                $parts[] = $result[$key].' '.$label;
+            }
+        }
+
+        $message = $parts === [] ? 'Nothing changed.' : implode(', ', $parts).'.';
+
+        return back()->with($result['skipped'] > 0 ? 'warning' : 'success', 'Sync complete: '.$message);
+    }
+
+    public function refreshInstagramToken(InstagramReelService $instagram)
+    {
+        $result = $instagram->refreshToken();
+
+        return $result['ok']
+            ? back()->with('success', 'Token refreshed. It now runs until '.$result['expires_at'].'.')
+            : back()->with('error', $result['error']);
+    }
+
+    public function disconnectInstagram(InstagramReelService $instagram)
+    {
+        $removed = $instagram->disconnect();
+
+        return back()->with('success', 'Instagram disconnected and '.$removed.' synced reel(s) removed. Uploaded clips were left alone.');
+    }
+
+    public function storeAboutReel(Request $request)
+    {
+        $request->validate(
+            [
+                // required_without nothing: a reel IS its clip, so unlike a hero
+                // banner there is no second medium that could stand in for it.
+                'video' => ['required', ...$this->videoRules()],
+            ],
+            $this->videoMessages('video') + ['video.required' => 'Choose a video file to add as a reel.'],
+        );
+
+        AboutReel::create([
+            'video_path' => 'storage/'.$request->file('video')->store('storefront/about', 'public'),
+            'position' => (AboutReel::max('position') ?? 0) + 1,
+            'is_active' => true,
+        ]);
+        Cache::flush();
+
+        return back()->with('success', 'Reel added.');
+    }
+
+    /** Swap a reel's clip for another, keeping its place in the strip. */
+    public function updateAboutReel(Request $request, AboutReel $aboutReel)
+    {
+        $request->validate(
+            ['video' => ['required', ...$this->videoRules()]],
+            $this->videoMessages('video') + ['video.required' => 'Choose the video file to replace this reel with.'],
+        );
+
+        // Only a file this row owns: a bundled clip ships with the repo and is
+        // not ours to delete just because one reel was pointed elsewhere.
+        $previous = $aboutReel->ownsFile() ? $aboutReel->storagePath() : null;
+
+        $aboutReel->update([
+            'video_path' => 'storage/'.$request->file('video')->store('storefront/about', 'public'),
+        ]);
+
+        // These clips run to tens of megabytes; leaving the replaced one behind
+        // on every re-upload fills the disk for no purpose.
+        if ($previous) {
+            Storage::disk('public')->delete($previous);
+        }
+
+        Cache::flush();
+
+        return back()->with('success', 'Reel updated.');
+    }
+
+    public function toggleAboutReel(AboutReel $aboutReel)
+    {
+        $aboutReel->update(['is_active' => ! $aboutReel->is_active]);
+        Cache::flush();
+
+        return back()->with('success', 'Reel visibility updated.');
+    }
+
+    public function moveAboutReel(Request $request, AboutReel $aboutReel)
     {
         $validated = $request->validate(['direction' => V::option(['up', 'down'])]);
 
-        // Scoped to the item's own type: the three rails are numbered separately.
-        $this->swapPosition(
-            $shopFilter,
-            ShopFilterItem::where('type', $shopFilter->type),
-            $validated['direction'],
-        );
+        $this->swapPosition($aboutReel, AboutReel::query(), $validated['direction']);
         Cache::flush();
 
-        return back()->with('success', 'Filter order updated.');
+        return back()->with('success', 'Reel order updated.');
     }
 
-    public function toggleShopFilter(ShopFilterItem $shopFilter)
+    public function deleteAboutReel(AboutReel $aboutReel)
     {
-        $shopFilter->update(['is_active' => !$shopFilter->is_active]);
+        // Only a file this row owns. A bundled clip is shipped with the repo and
+        // an https:// link is somebody else's server - deleting either because a
+        // card was taken off the home page would be well beyond what was asked.
+        if ($aboutReel->ownsFile()) {
+            Storage::disk('public')->delete($aboutReel->storagePath());
+        }
+
+        $aboutReel->delete();
         Cache::flush();
 
-        return back()->with('success', 'Filter visibility updated.');
-    }
-
-    public function deleteShopFilter(ShopFilterItem $shopFilter)
-    {
-        $shopFilter->delete();
-        Cache::flush();
-
-        return back()->with('success', 'Filter item deleted.');
+        return back()->with('success', 'Reel deleted.');
     }
 
     // ============================================================
@@ -788,7 +935,7 @@ class HomepageController extends Controller
 
     public function toggleQuality(Quality $quality)
     {
-        $quality->update(['is_active' => !$quality->is_active]);
+        $quality->update(['is_active' => ! $quality->is_active]);
         Cache::flush();
 
         return back()->with('success', 'Quality visibility updated.');

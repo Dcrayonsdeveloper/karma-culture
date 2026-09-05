@@ -1,0 +1,396 @@
+<?php
+
+namespace Tests\Feature\Auth;
+
+use App\Models\User;
+use App\Notifications\ResetPasswordNotification;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
+use Tests\TestCase;
+
+/**
+ * The half of "forgot password" that the existing tests never looked at.
+ *
+ * PasswordResetTest asserts that the endpoints answer without validation
+ * errors, which they did even while production was configured with the `log`
+ * mailer and no customer ever received anything. A green suite and a feature
+ * nobody can actually use are not supposed to be compatible, so these tests
+ * follow the mail itself: that a reset request really dispatches a
+ * notification, that the link inside it opens the reset form, and that the
+ * password on the account genuinely changes afterwards.
+ */
+class PasswordResetEmailTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private const OLD_PASSWORD = 'OldPassword123!';
+
+    private const NEW_PASSWORD = 'BrandNewPassword456!';
+
+    private User $user;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->user = User::factory()->create([
+            'email' => 'shopper@example.com',
+            'password' => Hash::make(self::OLD_PASSWORD),
+            'is_active' => true,
+        ]);
+    }
+
+    public function test_requesting_a_reset_actually_dispatches_the_email(): void
+    {
+        Notification::fake();
+
+        $this->post('/password/email', ['email' => 'shopper@example.com'])
+            ->assertSessionHasNoErrors();
+
+        Notification::assertSentTo($this->user, ResetPasswordNotification::class);
+    }
+
+    /**
+     * The shop's own notification, not Illuminate's stock one.
+     *
+     * The override lives on the User model, which is a single line that a
+     * later edit could drop without anything else failing - the framework
+     * would quietly fall back to its generic email and nobody would notice
+     * until a customer asked why the mail looked like a phishing attempt.
+     */
+    public function test_the_reset_email_is_the_shops_own_branded_one(): void
+    {
+        Notification::fake();
+
+        $this->post('/password/email', ['email' => 'shopper@example.com']);
+
+        Notification::assertSentTo(
+            $this->user,
+            ResetPasswordNotification::class,
+            function (ResetPasswordNotification $notification) {
+                $mail = $notification->toMail($this->user);
+                $rendered = (string) $mail->render();
+
+                // Wording that only exists in resources/views/emails/reset-password.blade.php.
+                // Illuminate's stock notification opens "You are receiving this
+                // email because we received a password reset request for your
+                // account.", so either of these failing means the override on
+                // the User model has stopped taking effect.
+                $this->assertStringContainsString('Reset Your Password', $rendered);
+                $this->assertStringContainsString('If You Did Not Request This', $rendered);
+
+                $this->assertStringContainsString(
+                    'Hi '.$this->user->first_name,
+                    $rendered,
+                    'The email should greet the customer by name, as the rest of our mail does.'
+                );
+
+                // The address rides in the query string, where @ is percent-encoded.
+                $this->assertStringContainsString(
+                    'email='.rawurlencode('shopper@example.com'),
+                    $mail->viewData['url'],
+                    'The link has to carry the address back, or the reset form posts a blank email.'
+                );
+
+                return true;
+            }
+        );
+    }
+
+    /**
+     * Nothing is sent for an address with no account.
+     *
+     * The endpoint answers identically either way on purpose, so the only
+     * place this can be checked is at the notification layer.
+     */
+    public function test_no_email_goes_out_for_an_unknown_address(): void
+    {
+        Notification::fake();
+
+        $this->post('/password/email', ['email' => 'stranger@example.com'])
+            ->assertSessionHasNoErrors();
+
+        Notification::assertNothingSent();
+    }
+
+    /**
+     * Follow the link out of the email rather than a hand-made token.
+     *
+     * PasswordResetTest builds its own token with Password::createToken, which
+     * would keep passing even if the URL in the email were malformed. This
+     * takes the URL the customer is actually given.
+     */
+    public function test_the_link_in_the_email_opens_the_reset_form(): void
+    {
+        Notification::fake();
+
+        $this->post('/password/email', ['email' => 'shopper@example.com']);
+
+        $url = $this->capturedResetUrl();
+
+        $this->assertStringContainsString('/password/reset/', $url);
+        $this->assertStringContainsString('email=', $url);
+
+        $this->get($url)->assertOk()->assertSee('shopper@example.com', false);
+    }
+
+    public function test_the_password_really_changes_and_the_old_one_stops_working(): void
+    {
+        Notification::fake();
+
+        $this->post('/password/email', ['email' => 'shopper@example.com']);
+
+        $token = $this->capturedResetToken();
+
+        $this->post('/password/reset', [
+            'token' => $token,
+            'email' => 'shopper@example.com',
+            'password' => self::NEW_PASSWORD,
+            'password_confirmation' => self::NEW_PASSWORD,
+        ])->assertSessionHasNoErrors();
+
+        $this->user->refresh();
+
+        $this->assertTrue(
+            Hash::check(self::NEW_PASSWORD, $this->user->password),
+            'The new password was not written to the account.'
+        );
+
+        $this->assertFalse(
+            Hash::check(self::OLD_PASSWORD, $this->user->password),
+            'The old password still works after a reset.'
+        );
+    }
+
+    public function test_the_customer_can_log_in_with_the_new_password_afterwards(): void
+    {
+        Notification::fake();
+
+        $this->post('/password/email', ['email' => 'shopper@example.com']);
+
+        $this->post('/password/reset', [
+            'token' => $this->capturedResetToken(),
+            'email' => 'shopper@example.com',
+            'password' => self::NEW_PASSWORD,
+            'password_confirmation' => self::NEW_PASSWORD,
+        ])->assertSessionHasNoErrors();
+
+        $this->post('/login', [
+            'email' => 'shopper@example.com',
+            'password' => self::OLD_PASSWORD,
+        ])->assertSessionHasErrors();
+
+        $this->assertGuest();
+
+        $this->post('/login', [
+            'email' => 'shopper@example.com',
+            'password' => self::NEW_PASSWORD,
+        ]);
+
+        $this->assertAuthenticatedAs($this->user);
+    }
+
+    /**
+     * A used token cannot be replayed.
+     *
+     * Worth pinning because the reset link travels through a mailbox, which is
+     * exactly where an old one sits around waiting to be found.
+     */
+    public function test_a_reset_token_cannot_be_used_twice(): void
+    {
+        Notification::fake();
+
+        $this->post('/password/email', ['email' => 'shopper@example.com']);
+
+        $token = $this->capturedResetToken();
+
+        $payload = [
+            'token' => $token,
+            'email' => 'shopper@example.com',
+            'password' => self::NEW_PASSWORD,
+            'password_confirmation' => self::NEW_PASSWORD,
+        ];
+
+        $this->post('/password/reset', $payload)->assertSessionHasNoErrors();
+
+        $this->post('/password/reset', [
+            ...$payload,
+            'password' => 'ThirdPassword789!',
+            'password_confirmation' => 'ThirdPassword789!',
+        ])->assertSessionHasErrors(['email']);
+
+        $this->user->refresh();
+
+        $this->assertTrue(
+            Hash::check(self::NEW_PASSWORD, $this->user->password),
+            'The second use of a spent token changed the password anyway.'
+        );
+    }
+
+    /**
+     * The reset link must point at us, whatever the caller claims the host is.
+     *
+     * The app trusts proxies with `at: '*'` and honours X-Forwarded-Host, and
+     * registers no trusted-host list, so url() would build the link from a
+     * header an unauthenticated attacker controls - emailing the victim a valid
+     * token on the attacker's domain.
+     */
+    public function test_the_reset_link_ignores_a_spoofed_forwarded_host(): void
+    {
+        Notification::fake();
+
+        $this->withServerVariables(['HTTP_X_FORWARDED_HOST' => 'attacker.invalid'])
+            ->post('/password/email', ['email' => 'shopper@example.com']);
+
+        $url = $this->capturedResetUrl();
+
+        $this->assertStringStartsWith(
+            rtrim((string) config('app.url'), '/'),
+            $url,
+            'The reset link was built from a caller-supplied host.'
+        );
+
+        $this->assertStringNotContainsString('attacker.invalid', $url);
+    }
+
+    /**
+     * A successful reset has to actually say so.
+     *
+     * The controller flashed this under 'status', which the login page does not
+     * render - so the last step of the whole flow silently showed a blank sign-in
+     * form and the customer had no way to tell the reset from a no-op.
+     */
+    public function test_a_successful_reset_confirms_itself_on_the_login_page(): void
+    {
+        Notification::fake();
+
+        $this->post('/password/email', ['email' => 'shopper@example.com']);
+
+        $response = $this->post('/password/reset', [
+            'token' => $this->capturedResetToken(),
+            'email' => 'shopper@example.com',
+            'password' => self::NEW_PASSWORD,
+            'password_confirmation' => self::NEW_PASSWORD,
+        ]);
+
+        $response->assertRedirect(route('login'));
+
+        $this->followRedirects($response)->assertSee('Your password has been reset', false);
+    }
+
+    /**
+     * Resetting has to end the account's other live sessions.
+     *
+     * Rotating remember_token only clears remember-me cookies. Sessions are
+     * stored in the database, so without an explicit sweep the intruder whose
+     * access prompted the reset simply stayed signed in.
+     */
+    public function test_resetting_signs_out_the_accounts_other_sessions(): void
+    {
+        Notification::fake();
+
+        DB::table('sessions')->insert([
+            'id' => 'session-belonging-to-an-intruder',
+            'user_id' => $this->user->id,
+            'ip_address' => '203.0.113.9',
+            'user_agent' => 'stolen',
+            'payload' => base64_encode('x'),
+            'last_activity' => time(),
+        ]);
+
+        $this->post('/password/email', ['email' => 'shopper@example.com']);
+
+        $this->post('/password/reset', [
+            'token' => $this->capturedResetToken(),
+            'email' => 'shopper@example.com',
+            'password' => self::NEW_PASSWORD,
+            'password_confirmation' => self::NEW_PASSWORD,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseMissing('sessions', [
+            'id' => 'session-belonging-to-an-intruder',
+        ]);
+    }
+
+    /**
+     * An impatient customer must not throttle themselves into silence.
+     *
+     * The broker keeps its own 60-second window and returns RESET_THROTTLED
+     * without sending. Those used to be charged to the per-address bucket, so
+     * three quick submissions spent the whole quota while posting one letter,
+     * then bought fifteen minutes of nothing - each attempt still answering
+     * "check your inbox".
+     */
+    public function test_broker_throttled_retries_do_not_spend_the_per_address_quota(): void
+    {
+        Notification::fake();
+
+        for ($i = 0; $i < 3; $i++) {
+            $this->post('/password/email', ['email' => 'shopper@example.com'])
+                ->assertSessionHasNoErrors();
+        }
+
+        $key = 'password-reset-address:'.sha1(Str::lower(trim('shopper@example.com')));
+
+        $this->assertSame(
+            1,
+            RateLimiter::attempts($key),
+            'Retries the broker refused to send were still charged to the customer.'
+        );
+
+        // Only the first submission produced mail, which is the broker's doing.
+        Notification::assertSentToTimes($this->user, ResetPasswordNotification::class, 1);
+    }
+
+    /**
+     * The header login modal has to offer a way out too.
+     *
+     * The /login page carried a "Forgot password?" link from the start, so the
+     * flow looked reachable, but the modal in partials/header.blade.php is what
+     * opens when a customer clicks the account icon over whatever page they are
+     * already on - and it had no link at all. Anyone who never navigated to
+     * /login directly simply could not reset a password.
+     */
+    public function test_the_header_login_modal_offers_a_forgot_password_link(): void
+    {
+        $response = $this->get('/');
+
+        $response->assertOk()
+            ->assertSee(route('password.request'), false)
+            ->assertSee('Forgot password?', false);
+    }
+
+    /** Pull the reset URL out of the notification the customer was sent. */
+    private function capturedResetUrl(): string
+    {
+        $url = null;
+
+        Notification::assertSentTo(
+            $this->user,
+            ResetPasswordNotification::class,
+            function (ResetPasswordNotification $notification) use (&$url) {
+                $url = $notification->toMail($this->user)->viewData['url'] ?? null;
+
+                return true;
+            }
+        );
+
+        $this->assertIsString($url, 'The reset email carried no link.');
+
+        return $url;
+    }
+
+    private function capturedResetToken(): string
+    {
+        $path = parse_url($this->capturedResetUrl(), PHP_URL_PATH) ?: '';
+        $token = basename($path);
+
+        $this->assertNotSame('', $token, 'No token in the reset link.');
+
+        return $token;
+    }
+}

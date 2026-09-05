@@ -272,6 +272,63 @@ Alpine.store('toast', {
 });
 
 /**
+ * The cart and the wishlist take an account.
+ *
+ * Both are asynchronous, so a signed-out customer pressing either used to get
+ * a request, a failure and a red toast - or, before the routes were gated, a
+ * basket the shop could never contact anybody about. Now the button never
+ * makes the request: it hands the browser to the login page and names the page
+ * it was pressed on, so signing in comes back to the product rather than to a
+ * dashboard with the thread lost.
+ *
+ * The signal is `data-authenticated` on <body>, which the layout has always
+ * rendered. Reading it per press rather than once at boot matters: a session
+ * that expires in an open tab flips nothing in JS, and the 401 handler below
+ * is what catches that case.
+ *
+ * Returns true when the caller may go ahead.
+ */
+function kkRequireLogin() {
+    if (document.body.dataset.authenticated === 'true') return true;
+
+    kkGoToLogin();
+
+    return false;
+}
+
+/** The trip to the login page, carrying where to come back to. */
+function kkGoToLogin() {
+    // Path only, never the absolute URL: this becomes url.intended server-side,
+    // and a full URL there is one bad validation away from an open redirect.
+    const next = window.location.pathname + window.location.search;
+
+    window.location.assign('/login?next=' + encodeURIComponent(next));
+}
+
+// Exposed because pages with their own inline handlers need the same trip -
+// /cart builds its calls with raw fetch(), which never passes through the axios
+// interceptor below. Reimplementing it there would duplicate the path-only rule
+// that keeps `next` from becoming an open redirect.
+window.kkGoToLogin = kkGoToLogin;
+
+/**
+ * The stale-tab case: signed in when the page loaded, signed out by the time
+ * the button was pressed. The gate on the routes answers 401, and this turns
+ * that into the same trip to the login page rather than a red toast reading
+ * "Failed to add to cart".
+ */
+axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response && error.response.status === 401) {
+            kkGoToLogin();
+        }
+
+        return Promise.reject(error);
+    }
+);
+
+/**
  * Cart store
  */
 Alpine.store('cart', {
@@ -322,7 +379,19 @@ Alpine.store('cart', {
     // the recommendations request that normally confirm it. Buy Now needs that:
     // it is about to navigate to checkout, so opening the drawer only flashes it
     // on screen for a frame. Returns whether the item actually made it in.
-    async add(productId, quantity = 1, variantId = null, size = null, colour = null, { reveal = true } = {}) {
+    //
+    // Texture rides in that same options object rather than becoming a sixth
+    // positional argument, because buyNow() in products/show.blade.php already
+    // passes `{ reveal: false }` in that slot: a positional texture would take the
+    // options object itself as the texture string and lose the quiet add along
+    // with it, and nothing would throw to say so.
+    async add(productId, quantity = 1, variantId = null, size = null, colour = null, { reveal = true, texture = null } = {}) {
+        // A cart takes an account. Sent to the login page from here rather than
+        // after a round trip, so the customer is not told "added" by a toast and
+        // then handed an empty cart, and so the page they were shopping on is
+        // still on screen to name as where to come back to.
+        if (!kkRequireLogin()) return false;
+
         this.isLoading = true;
         try {
             const response = await axios.post('/cart/add', {
@@ -330,7 +399,8 @@ Alpine.store('cart', {
                 variant_id: variantId,
                 quantity: quantity,
                 size: size,
-                colour: colour
+                colour: colour,
+                texture: texture
             });
             // Update count immediately from response
             if (response.data.cart_count !== undefined) {
@@ -367,6 +437,13 @@ Alpine.store('cart', {
     },
 
     async update(itemId, quantity) {
+        // Clamped here, where the payload is built, rather than at each button.
+        // /cart validates quantity with V::quantity(max: 99); the cart page guards
+        // its own controls, but the drawer did not, so pressing + on a line
+        // already at 99 sent quantity: 100 and came back 422 - which this catch
+        // could only report as a flat "Failed to update cart".
+        quantity = Math.max(1, Math.min(99, parseInt(quantity, 10) || 1));
+
         this.isLoading = true;
         try {
             const response = await axios.put(`/cart/${itemId}`, {
@@ -431,6 +508,171 @@ Alpine.store('cart', {
 });
 
 /**
+ * Quick-add store — the round cart button on a product card.
+ *
+ * A listing card cannot just POST to /cart/add: nearly everything in this shop
+ * is sold in a size and a colour, and /cart/add refuses a line that names one
+ * the product does not offer (and the packing slip is useless without one). So
+ * the button opens this popup, which asks for exactly what the product page
+ * asks for and then hands the same payload to the cart store.
+ *
+ * The options are fetched per open rather than rendered into every card: a shop
+ * page carries 24 of them, and the size rows and colour list are two more
+ * relations per card for a popup most visits never open.
+ */
+Alpine.store('quickAdd', {
+    isOpen: false,
+    isLoading: false,
+    isAdding: false,
+    product: null,
+    size: null,
+    colour: null,
+    quantity: 1,
+
+    async show(productId) {
+        // Same trip the cart and wishlist buttons take, and taken before the
+        // request rather than after the shopper has picked a size: being sent to
+        // the login page having chosen nothing is better than losing a choice
+        // already made.
+        if (!kkRequireLogin()) return;
+
+        this.isOpen = true;
+        this.isLoading = true;
+        this.product = null;
+        this.size = null;
+        this.colour = null;
+        this.quantity = 1;
+        document.body.style.overflow = 'hidden';
+
+        try {
+            const response = await axios.get(`/product/${productId}/quick-view`);
+            this.product = response.data;
+            // Open on a buyable choice, the way the product page does, so the
+            // popup is one press from done for the common case.
+            this.size = response.data.sizes?.[0]?.label ?? null;
+            this.colour = response.data.colours?.[0]?.name ?? null;
+        } catch (error) {
+            // A 401 has already sent the browser to the login page.
+            if (error.response?.status !== 401) {
+                Alpine.store('toast').error('Could not load this product');
+            }
+            this.close();
+        } finally {
+            this.isLoading = false;
+        }
+    },
+
+    close() {
+        this.isOpen = false;
+        this.isLoading = false;
+        this.product = null;
+        document.body.style.overflow = '';
+    },
+
+    get sizes() {
+        return this.product?.sizes ?? [];
+    },
+
+    get colours() {
+        return this.product?.colours ?? [];
+    },
+
+    /** The size row behind the current selection, when the product has one. */
+    get selectedRow() {
+        return this.sizes.find((s) => s.label === this.size) ?? null;
+    },
+
+    get price() {
+        const row = this.selectedRow;
+
+        return row && row.price > 0 ? row.price : (this.product?.price ?? 0);
+    },
+
+    get mrp() {
+        const row = this.selectedRow;
+
+        return row && row.mrp > 0 ? row.mrp : (this.product?.mrp ?? 0);
+    },
+
+    get variantId() {
+        return this.selectedRow?.variant_id ?? null;
+    },
+
+    /**
+     * Stock for what is currently selected - the size row's when the product is
+     * sold by size rows, the product's otherwise. This is the same number
+     * /cart/add checks, so the popup refuses what the cart would refuse instead
+     * of sending it and showing an error toast.
+     */
+    get available() {
+        const row = this.selectedRow;
+
+        return row ? row.stock : (this.product?.stock_quantity ?? 0);
+    },
+
+    /** 1-10 like the product page, never past what is actually on the shelf. */
+    get quantityOptions() {
+        const max = Math.max(1, Math.min(10, this.available));
+
+        return Array.from({ length: max }, (_, i) => i + 1);
+    },
+
+    get canAdd() {
+        if (!this.product || this.isAdding) return false;
+        if (this.sizes.length && !this.size) return false;
+        if (this.colours.length && !this.colour) return false;
+
+        return this.available > 0;
+    },
+
+    selectSize(label) {
+        this.size = label;
+        // A size with two left must not keep a quantity of five chosen against
+        // the last one.
+        if (this.quantity > this.available) {
+            this.quantity = Math.max(1, this.available);
+        }
+    },
+
+    selectColour(name) {
+        this.colour = name;
+    },
+
+    async submit() {
+        if (!this.product || this.isAdding) return;
+
+        // A product that offers sizes or colours cannot be bought without
+        // picking one - the same rule the product page enforces, for the same
+        // reason: the order reaches packing with no idea what to put in the box.
+        if (this.sizes.length && !this.size) {
+            Alpine.store('toast').error('Please select a size');
+
+            return;
+        }
+        if (this.colours.length && !this.colour) {
+            Alpine.store('toast').error('Please select a colour');
+
+            return;
+        }
+
+        this.isAdding = true;
+        const productId = this.product.id;
+
+        try {
+            const added = await Alpine.store('cart').add(
+                productId, this.quantity, this.variantId, this.size, this.colour
+            );
+            // A failed add has shown its own error toast and the popup stays
+            // open, so the shopper can pick a different size rather than start
+            // again from the card.
+            if (added) this.close();
+        } finally {
+            this.isAdding = false;
+        }
+    },
+});
+
+/**
  * Wishlist store
  */
 Alpine.store('wishlist', {
@@ -475,7 +717,7 @@ Alpine.store('wishlist', {
         if (!this.ids.length) { this.items = []; this.loadFailed = false; return; }
         this.isLoading = true;
         try {
-            const res = await axios.get('/wishlist-items', { params: { ids: this.ids.join(',') } });
+            const res = await axios.get('/wishlist/items', { params: { ids: this.ids.join(',') } });
             const byId = {};
             (res.data.items || []).forEach(p => byId[p.id] = p);
             this.items = this.ids.map(id => byId[id]).filter(Boolean);
@@ -505,6 +747,11 @@ Alpine.store('wishlist', {
     },
 
     async toggle(productId) {
+        // Both halves, not just adding: a wishlist that takes an account to
+        // fill but not to empty is a wishlist a signed-out browser can still
+        // quietly rearrange.
+        if (!kkRequireLogin()) return;
+
         productId = parseInt(productId, 10);
         if (this.has(productId)) {
             this.remove(productId);
@@ -514,6 +761,8 @@ Alpine.store('wishlist', {
     },
 
     async add(productId) {
+        if (!kkRequireLogin()) return;
+
         productId = parseInt(productId, 10);
         if (this.has(productId)) return;
 
@@ -645,7 +894,9 @@ Alpine.store('authModal', {
         try {
             await axios.post('/login', { email, password, remember });
             this.close();
-            window.location.reload();
+            // Signing in mid-listing must not also throw the shopper back to the
+            // top: kkReload() refreshes without the reload-scrolls-to-top rule.
+            window.kkReload ? window.kkReload() : window.location.reload();
         } catch (error) {
             this.fail(error);
         } finally {
@@ -683,7 +934,9 @@ Alpine.store('authModal', {
                 terms: true,
             });
             this.close();
-            window.location.reload();
+            // Signing in mid-listing must not also throw the shopper back to the
+            // top: kkReload() refreshes without the reload-scrolls-to-top rule.
+            window.kkReload ? window.kkReload() : window.location.reload();
         } catch (error) {
             this.fail(error);
         } finally {
@@ -831,6 +1084,7 @@ Alpine.data('imageGallery', (images = []) => ({
     }
 }));
 
+<<<<<<< HEAD
 /**
  * Search component with debounce
  */
@@ -915,6 +1169,8 @@ Alpine.data('search', (endpoint = '/api/search') => ({
     }
 }));
 
+=======
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
 // ========================================
 // Initialize on page load
 // ========================================
@@ -1220,6 +1476,11 @@ const _instantError = (field, value) => {
     if (!trimmed) return '';
 
     if (field === 'full_name') {
+        // Every name box on the site now carries maxlength="30", so a shopper
+        // cannot type or paste their way past this. It stays because maxlength
+        // is a UI bound and not a value bound: autofill, a password manager and
+        // anything else that assigns to .value land a longer name in the field
+        // without ever passing it.
         if ([...trimmed].length > 30) return 'Please keep your name to 30 characters or fewer.';
         // A digit or a symbol in a name is wrong the moment it appears. The
         // rest of _fullNameError (too short, reads as a URL) is not: both can
@@ -1238,7 +1499,382 @@ const _instantError = (field, value) => {
     return '';
 };
 
-Alpine.data('kkRegisterForm', (serverErrors = {}) => ({
+// The signup form's half of email verification.
+//
+// Four seconds between polls is quick enough that the tick lands while the
+// customer is still looking at the tab they clicked from, and the ceiling is the
+// link's own hour - after that there is nothing left to wait for and a tab left
+// open overnight should stop asking.
+const _VERIFY_POLL_MS = 4000;
+const _VERIFY_POLL_CEILING_MS = 60 * 60 * 1000;
+
+// Mirrors App\Models\SignupEmailVerification::normalizeEmail, which is what
+// decides whether the address in the box is the one that was proved. Case and
+// surrounding space only - nothing that would merge two addresses their owner
+// considers different.
+const _normalizeEmailForVerify = (v) => (v || '').trim().toLowerCase();
+
+/**
+ * Email verification, shared by both signup forms.
+ *
+ * There are two of them - the Create Account panel on /login and the signup tab
+ * of the header modal - and they keep their fields in completely different
+ * places: one reads the DOM through x-ref, the other holds a `form` object.
+ * Those two facts are the only things that differ, so they are the only two a
+ * host supplies:
+ *
+ *     verifyEmailRaw()               -> whatever is in the email box right now
+ *     verifySetEmailError(message)   -> put this sentence under it
+ *
+ * plus a call to verifyInit() from the host's init() and verifyDestroy() from
+ * its destroy(). Everything else - the request, the polling, the cooldown, the
+ * binding of a proof to one address - is here once.
+ *
+ * NONE OF IT IS AUTHORITY. Every flag below mirrors state the server holds;
+ * RegisterController reads the verification row itself and refuses a signup
+ * whatever this object says. Setting verifyState = 'verified' from a console
+ * enables a button that then comes back with a sentence under the email box,
+ * and that is the whole of what it achieves.
+ */
+const kkSignupVerification = (routes = {}) => ({
+    routes: {
+        create: routes.create || '',
+        // A template carrying __ID__ - the attempt's uuid only exists once the
+        // server has issued one, and the placeholder has to survive route()'s
+        // rawurlencode, which a colon would not.
+        status: routes.status || '',
+    },
+
+    /** '' | 'sending' | 'sent' | 'verified' */
+    verifyState: '',
+
+    /**
+     * The address the state above belongs to, normalised.
+     *
+     * Verification is a fact about an ADDRESS, so every flag here is meaningless
+     * without knowing which one - and comparing this against the box is the
+     * whole of "changing the email drops the tick".
+     */
+    verifyFor: '',
+
+    verifyNotice: '',
+    verifyError: '',
+    attemptId: '',
+    resendIn: 0,
+
+    _pollTimer: null,
+    _tickTimer: null,
+    _pollUntil: 0,
+    _onWake: null,
+
+    verifyInit() {
+        // Coming back to the tab is the common case: the link was opened in
+        // another tab, or on a phone, and the customer switches back here
+        // expecting the form to have noticed. Asking on wake means it has,
+        // without waiting out the poll interval.
+        this._onWake = () => {
+            if (this.verifyState === 'sent' && !document.hidden) this.pollStatus();
+        };
+        document.addEventListener('visibilitychange', this._onWake);
+        window.addEventListener('focus', this._onWake);
+    },
+
+    verifyDestroy() {
+        this._stopPolling();
+        if (this._tickTimer) { clearInterval(this._tickTimer); this._tickTimer = null; }
+        if (this._onWake) {
+            document.removeEventListener('visibilitychange', this._onWake);
+            window.removeEventListener('focus', this._onWake);
+            this._onWake = null;
+        }
+    },
+
+    /** The address currently in the box, in the form the server compares. */
+    get emailValue() {
+        return _normalizeEmailForVerify(this.verifyEmailRaw());
+    },
+
+    /**
+     * Is the address well-formed enough to offer to verify?
+     *
+     * _emailError is the same check App\Rules\EmailAddress makes, so the button
+     * appears exactly when the server would accept the address - never on
+     * "asha@", never on a half-typed domain.
+     */
+    get emailLooksValid() {
+        return this.emailValue !== '' && _emailError(this.emailValue) === '';
+    },
+
+    /** Verified, and verified for the address that is in the box right now. */
+    get emailVerified() {
+        return this.verifyState === 'verified'
+            && this.emailValue !== ''
+            && this.verifyFor === this.emailValue;
+    },
+
+    /**
+     * Whether the verification control is on screen at all.
+     *
+     * Nothing is offered for an address that is not yet an address - a button on
+     * "asha@" would send a message nowhere, and the customer would then have
+     * been told to wait for it.
+     */
+    get showVerifyButton() {
+        return !this.emailVerified && this.emailLooksValid;
+    },
+
+    /** One label, four states - kept here rather than as four x-shows in a blade. */
+    get verifyButtonLabel() {
+        if (this.verifyState === 'sending') return 'Sending...';
+        if (this.verifyState === 'sent') {
+            return this.resendIn > 0 ? 'Resend in ' + this.resendIn + 's' : 'Resend verification email';
+        }
+        return 'Validate Email';
+    },
+
+    /** In flight, or inside the cooldown that keeps Resend from being a send button. */
+    get verifyButtonDisabled() {
+        return this.verifyState === 'sending' || this.resendIn > 0;
+    },
+
+    /**
+     * Drop the verification whenever it stops belonging to what is on screen.
+     *
+     * The case the whole design turns on: someone verifies abc@example.com and
+     * then changes the box to xyz@example.com. The tick goes on the keystroke
+     * that makes the two differ - not on blur, and not at submit - because from
+     * that keystroke on nothing is proved about the address being signed up
+     * with.
+     */
+    verifyOnEmailChanged() {
+        if (this.verifyState !== '' && this.verifyFor !== this.emailValue) {
+            this._resetVerification();
+        }
+    },
+
+    _resetVerification() {
+        this._stopPolling();
+        if (this._tickTimer) { clearInterval(this._tickTimer); this._tickTimer = null; }
+        this.verifyState = '';
+        this.verifyFor = '';
+        this.verifyNotice = '';
+        this.verifyError = '';
+        this.attemptId = '';
+        this.resendIn = 0;
+    },
+
+    /** Ask the server to post a link to whatever is in the email box. */
+    async requestVerification() {
+        if (this.verifyState === 'sending' || this.resendIn > 0) return;
+
+        // Judge the box first, so pressing the button on a malformed address
+        // says what is wrong with it rather than round-tripping to be told the
+        // same thing.
+        const problem = _emailError(this.emailValue);
+        if (problem) {
+            this.verifySetEmailError(problem);
+            return;
+        }
+
+        const email = this.emailValue;
+
+        this.verifyState = 'sending';
+        this.verifyError = '';
+        this.verifyNotice = '';
+
+        try {
+            const res = await fetch(this.routes.create, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': _csrf(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                // The address and nothing else. The password is on this form and
+                // must never leave it by this route.
+                body: JSON.stringify({ email }),
+            });
+
+            let data = {};
+            try { data = await res.json(); } catch (e) {}
+
+            // The address moved while the request was in flight, so whatever
+            // came back describes an address this signup is no longer using.
+            if (this.emailValue !== email) return;
+
+            if (res.status === 409) {
+                // Already an account. Said under the email box like any other
+                // problem with that field, because that is what it is.
+                this.verifyState = '';
+                this.verifySetEmailError(
+                    (data.errors && data.errors.email && data.errors.email[0])
+                    || data.message
+                    || 'Email address already exists. Please log in or use another email.'
+                );
+                return;
+            }
+
+            if (res.status === 429) {
+                // A cooldown refusal still describes a live attempt, and says
+                // which one - so adopt it and start watching. Without this a
+                // customer who pressed the button twice was left on a form that
+                // had a link waiting in the inbox and no intention of ever
+                // noticing it had been clicked.
+                if (data.id) {
+                    this.attemptId = data.id;
+                    this.verifyFor = email;
+                }
+
+                this.verifyState = this.attemptId ? 'sent' : '';
+                this.verifyError = data.message || 'Please wait a moment before trying again.';
+                this._startCooldown(data.retry_after || 60);
+
+                if (this.verifyState === 'sent') this._startPolling();
+
+                return;
+            }
+
+            if (!res.ok && res.status !== 200) {
+                this.verifyState = '';
+                this.verifyError = (data.errors && data.errors.email && data.errors.email[0])
+                    || data.message
+                    || 'We could not send the verification email. Please try again.';
+                return;
+            }
+
+            this.attemptId = data.id || '';
+
+            // 200 means the server already held a live, unspent verification for
+            // this address - a reloaded tab, or a second window - and sent
+            // nothing. Show the tick rather than pretending to send.
+            if (data.status === 'verified') {
+                this._markVerified(data.email || email);
+                return;
+            }
+
+            this.verifyState = 'sent';
+            // The waiting state belongs to an address too: editing the box while
+            // a link is in flight has to drop the wait, not go on polling an
+            // attempt made for what used to be typed there.
+            this.verifyFor = email;
+            this.verifyNotice = 'Verification email sent. Open the link in your email to validate your address.';
+            this._startCooldown(data.resend_available_in || 60);
+            this._startPolling();
+        } catch (e) {
+            if (this.emailValue !== email) return;
+            this.verifyState = '';
+            this.verifyError = 'We could not reach the server. Please check your connection and try again.';
+        }
+    },
+
+    /** Has the link been opened? Asked on a timer and whenever the tab wakes. */
+    async pollStatus() {
+        if (!this.attemptId || this.verifyState !== 'sent') return;
+
+        const email = this.emailValue;
+
+        try {
+            const res = await fetch(this.routes.status.replace('__ID__', encodeURIComponent(this.attemptId)), {
+                headers: { 'Accept': 'application/json' },
+            });
+
+            if (!res.ok) return;
+
+            const data = await res.json();
+
+            if (this.emailValue !== email) return;
+
+            // The answer is believed only for the address it names. A status
+            // about a different one is a status about a different signup.
+            if (data.status === 'verified' && data.email === email) {
+                this._markVerified(data.email);
+                return;
+            }
+
+            if (data.status === 'expired') {
+                this._stopPolling();
+                this.verifyState = '';
+                this.verifyFor = '';
+                this.verifyNotice = '';
+                this.verifyError = 'This verification link has expired. Please request a new verification email.';
+                this.resendIn = 0;
+                // The attempt goes with the state. Left set, a later cooldown
+                // refusal would read it as evidence of a live send and put the
+                // form back into "waiting" for a link that had expired.
+                this.attemptId = '';
+            }
+        } catch (e) {
+            // A dropped poll is not worth a message: the next one is four
+            // seconds away, and the customer is looking at their inbox.
+        }
+    },
+
+    _markVerified(email) {
+        this._stopPolling();
+        this.verifyState = 'verified';
+        this.verifyFor = _normalizeEmailForVerify(email);
+        this.verifyNotice = '';
+        this.verifyError = '';
+        this.resendIn = 0;
+        this.verifySetEmailError('');
+    },
+
+    _startPolling() {
+        this._stopPolling();
+        this._pollUntil = Date.now() + _VERIFY_POLL_CEILING_MS;
+        this._pollTimer = setInterval(() => {
+            if (Date.now() > this._pollUntil) { this._stopPolling(); return; }
+            // A hidden tab is not being watched, and the wake handler asks the
+            // moment it comes back - so there is nothing to learn by polling it.
+            if (document.hidden) return;
+            this.pollStatus();
+        }, _VERIFY_POLL_MS);
+    },
+
+    _stopPolling() {
+        if (this._pollTimer) { clearInterval(this._pollTimer); this._pollTimer = null; }
+    },
+
+    /** The countdown that keeps Resend from being a send button. */
+    _startCooldown(seconds) {
+        this.resendIn = Math.max(0, parseInt(seconds, 10) || 0);
+        if (this._tickTimer) clearInterval(this._tickTimer);
+        if (this.resendIn === 0) return;
+        this._tickTimer = setInterval(() => {
+            this.resendIn -= 1;
+            if (this.resendIn <= 0) { this.resendIn = 0; clearInterval(this._tickTimer); this._tickTimer = null; }
+        }, 1000);
+    },
+});
+
+/**
+ * Give a signup component the verification mixin, GETTERS INCLUDED.
+ *
+ * Not `{...kkSignupVerification(routes), ...own}`, and this is not a style
+ * preference. Object spread copies VALUES: it reads every accessor on the
+ * source once, at spread time, and writes the result as a plain property. Half
+ * of the mixin is accessors - emailVerified, showVerifyButton, verifyButtonLabel
+ * - so spreading it produces an object whose "getters" are frozen answers from
+ * before the component existed, and reading them at that moment calls
+ * verifyEmailRaw(), which the host has not supplied yet. The component throws on
+ * init and Alpine renders none of it: no Validate Email button, and a Create
+ * Account button that is never disabled.
+ *
+ * Property descriptors carry the accessors themselves. The host's own
+ * descriptors are applied second, so a name the component defines wins.
+ */
+const kkWithSignupVerification = (own, routes) => Object.defineProperties(
+    kkSignupVerification(routes),
+    Object.getOwnPropertyDescriptors(own),
+);
+
+// The header's signup modal is declared in a blade <script>, not in this
+// bundle, and needs both of these.
+window.kkSignupVerification = kkSignupVerification;
+window.kkWithSignupVerification = kkWithSignupVerification;
+
+Alpine.data('kkRegisterForm', (serverErrors = {}, provedEmail = '', routes = {}) => kkWithSignupVerification({
     // One message slot per field, seeded from whatever the server just said, so
     // a rejected submit and a live check write to the same place and a field can
     // never end up showing two contradictory messages at once.
@@ -1252,6 +1888,98 @@ Alpine.data('kkRegisterForm', (serverErrors = {}) => ({
     ),
 
     fields: ['full_name', 'email', 'phone', 'password', 'password_confirmation', 'terms'],
+
+    /**
+     * The two eye toggles.
+     *
+     * They used to be a nested `x-data="{ show: false }"` on each password
+     * wrapper, and that quietly cost this component its refs: x-ref registers on
+     * the closest x-data root and $refs only walks up, so $refs.password
+     * belonged to that inner scope and read as undefined here. Held on the
+     * component, the wrappers need no scope of their own and the refs land where
+     * they are read. Two flags, not one: revealing the password should not
+     * reveal the confirmation.
+     */
+    showPassword: false,
+    showConfirm: false,
+
+    // ---- email verification ------------------------------------------------
+    //
+    // The state and the requests live in kkSignupVerification() above, applied
+    // by kkWithSignupVerification around this literal; this component supplies
+    // only the two things that are its own - where the address is read from,
+    // and where a message about it is written to. The header's signup modal
+    // keeps both somewhere else entirely and shares everything in between
+    // verbatim.
+    /**
+     * A REACTIVE copy of the email box.
+     *
+     * This component reads every other field straight off the DOM through
+     * $refs, which is fine for the checks it already had: they run from
+     * @input/@blur and write their answers into `errors`, and `errors` is what
+     * the template watches. The verification getters are different - x-show and
+     * :disabled bind to them directly, so Alpine has to be able to SEE them
+     * change, and an <input>'s value is not something it can see. Bound to a
+     * ref alone, the Validate Email button evaluated once against an empty box,
+     * decided "no", and never looked again.
+     */
+    emailMirror: '',
+
+    /**
+     * Bumped on every field event, for the same reason.
+     *
+     * canSubmit asks messageFor() about all six fields, and five of those read
+     * the DOM. Reading this first gives the effect something reactive to depend
+     * on, so the Create Account button actually tracks the form instead of
+     * freezing at whatever was true when the page loaded.
+     */
+    formTick: 0,
+
+    verifyEmailRaw() {
+        return this.emailMirror;
+    },
+
+    verifySetEmailError(message) {
+        this.errors.email = message;
+        this.touched.email = true;
+    },
+
+    /**
+     * Whether Create Account is offered. The server decides whether it works.
+     *
+     * messageFor() rather than this.errors, because an untouched field has no
+     * message and is not therefore correct - the button would go live on an
+     * empty form the moment the address was proved.
+     */
+    get canSubmit() {
+        // Registers the dependency; the value itself is not used.
+        void this.formTick;
+
+        if (! this.emailVerified) return false;
+
+        return this.fields.every((f) => this.messageFor(f) === '');
+    },
+
+    init() {
+        // old('email') repopulates the box after a rejected submit, so the
+        // mirror starts from whatever is already in it rather than from ''.
+        this.emailMirror = this.$refs.email ? this.$refs.email.value : '';
+
+        // A signup rejected for something other than the address comes back with
+        // the box refilled and this component brand new, so it has no memory of
+        // the tick. The server does, and said so when it rendered the page - so
+        // the customer is not asked to prove an address they have already proved
+        // in order to fix their mobile number. It is still only a mirror: the
+        // create-account post re-reads the row regardless.
+        if (provedEmail && _normalizeEmailForVerify(provedEmail) === this.emailMirror.trim().toLowerCase()) {
+            this.verifyState = 'verified';
+            this.verifyFor = _normalizeEmailForVerify(provedEmail);
+        }
+
+        this.verifyInit();
+    },
+
+    destroy() { this.verifyDestroy(); },
 
     messageFor(field) {
         const el = this.$refs[field];
@@ -1278,7 +2006,17 @@ Alpine.data('kkRegisterForm', (serverErrors = {}) => ({
 
     check(field) { this.errors[field] = this.messageFor(field); },
 
+    /** Keep the reactive copies in step with the boxes. */
+    sync(field) {
+        this.formTick++;
+
+        if (field === 'email') {
+            this.emailMirror = this.$refs.email ? this.$refs.email.value : '';
+        }
+    },
+
     blur(field) {
+        this.sync(field);
         this.touched[field] = true;
         this.check(field);
     },
@@ -1292,6 +2030,8 @@ Alpine.data('kkRegisterForm', (serverErrors = {}) => ({
     // so the first one to appear marks the field touched and takes over from
     // there like any other message.
     input(field) {
+        this.sync(field);
+
         // A password is the exception to waiting for blur. Its rule has four
         // parts and its characters are dots on the screen, so being told after
         // the fact that the password just invented is a character short means
@@ -1304,6 +2044,18 @@ Alpine.data('kkRegisterForm', (serverErrors = {}) => ({
         if (field === 'password' || field === 'password_confirmation') {
             const box = this.$refs[field];
             if (box && box.value) this.touched[field] = true;
+        }
+
+        // Editing the address gives up whatever was proved about the old one.
+        //
+        // This is the case the whole design turns on: someone verifies
+        // abc@example.com, then changes the box to xyz@example.com. The tick has
+        // to go on the keystroke that makes the two differ, not on blur and not
+        // at submit - and the proof that is being dropped was for an address the
+        // server will not accept for this signup anyway, which is why the check
+        // is a comparison rather than a flag.
+        if (field === 'email') {
+            this.verifyOnEmailChanged();
         }
 
         if (this.touched[field]) {
@@ -1328,6 +2080,23 @@ Alpine.data('kkRegisterForm', (serverErrors = {}) => ({
             this.check(field);
             if (this.errors[field] && !first) first = field;
         }
+
+        // The address has to have been proved, and proved for what is in the
+        // box now. Belt and braces on top of the disabled button - a submit can
+        // still be reached by pressing Enter in a field, and the button's
+        // disabled attribute is one line of console away from gone.
+        //
+        // Not a substitute for the server check. RegisterController reads the
+        // verification row itself and refuses the post regardless of what
+        // happens here; this only means the customer is told before the round
+        // trip rather than after it.
+        if (!this.emailVerified && !first) {
+            this.errors.email = this.errors.email
+                || 'Please verify your email address before creating your account.';
+            this.touched.email = true;
+            first = 'email';
+        }
+
         if (!first) return; // nothing local left to catch - let the POST go
         event.preventDefault();
         const el = this.$refs[first];
@@ -1336,7 +2105,7 @@ Alpine.data('kkRegisterForm', (serverErrors = {}) => ({
             el.scrollIntoView({ block: 'center', behavior: 'smooth' });
         }
     },
-}));
+}, routes));
 
 Alpine.store('popupQueue', {
     members: {},   // id -> registration options
@@ -1785,6 +2554,11 @@ Alpine.data('exitPopup', (code = 'KARMAA10', minutes = 10, accountEmail = '') =>
         if (!q.homePage) {
             this._onScroll = () => {
                 const y = window.scrollY;
+                // A reload correcting itself to the top (see the head script in
+                // partials/scroll-top-on-reload.blade.php) is a large upward
+                // jump ending at zero - this heuristic's exact signature, and
+                // not an exit gesture. Take the reading, draw no conclusion.
+                if (window.kkScrollTopInProgress) { this._lastY = y; return; }
                 if (this._lastY - y > 60 && y < 120) this.trigger();
                 this._lastY = y;
             };
@@ -1822,7 +2596,9 @@ Alpine.data('exitPopup', (code = 'KARMAA10', minutes = 10, accountEmail = '') =>
     close() {
         this.open = false;
         if (this._tick) window.clearInterval(this._tick);
-        if (this._reloadHost) window.location.reload();
+        // The host page reloads to show the claimed discount, so it has to come
+        // back where it was rather than at the top.
+        if (this._reloadHost) { window.kkReload ? window.kkReload() : window.location.reload(); }
     },
     async claim() {
         if (this.submitting) return;
@@ -1966,6 +2742,7 @@ Alpine.start();
     const ERROR_CLASS = 'kk-field-error';
     const INVALID_CLASS = 'kk-input-invalid';
 
+<<<<<<< HEAD
     // ------------------------------------------------------------------
     // Server-rendered messages, owned by the same system as the live ones
     // ------------------------------------------------------------------
@@ -2161,6 +2938,34 @@ Alpine.start();
         adoptServerNotes(document);
     }
 
+=======
+    /**
+     * A form that reports for itself, and gets no messages from here.
+     *
+     * `novalidate` says the browser must not judge this form - and everything
+     * in this module IS that judgement, only rendered into our own markup
+     * instead of the browser's bubble. The submit handler below has always read
+     * it that way and stood down; the blur, invalid, keystroke and password
+     * paths only checked data-no-validate, so half of the module kept running
+     * on a form that had already opted out.
+     *
+     * What the customer saw was the same complaint twice under one box, in two
+     * different wordings and two different places: on the register form,
+     * "Enter a 10-digit Indian mobile number starting with 6, 7, 8 or 9."
+     * above kkRegisterForm's own "Please enter a valid 10-digit mobile number
+     * starting with 6, 7, 8 or 9." Every novalidate form on this site is an
+     * Alpine component with its own per-field messages - the register form, the
+     * login modal, the newsletter, the offer and exit popups - so there is
+     * nothing here for this module to add to any of them.
+     *
+     * data-no-validate stays as the explicit opt-out, for a form that keeps
+     * native validation but wants no messages from this module.
+     */
+    function reportsForItself(form) {
+        return !!(form && (form.hasAttribute('data-no-validate') || form.hasAttribute('novalidate')));
+    }
+
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
     function labelFor(field) {
         if (field.labels && field.labels.length) {
             return field.labels[0].textContent.replace(/\*/g, '').trim().replace(/:$/, '');
@@ -2278,6 +3083,43 @@ Alpine.start();
         return field;
     }
 
+    // A note dropped into a NON-WRAPPING flex row has nowhere to go.
+    //
+    // .kk-field-error carries flex-basis: 100%, which is what keeps it under
+    // the field rather than beside it - but that only works if the row can
+    // wrap. The newsletter pill cannot:
+    //
+    //     .kk-newsletter-form { display: flex }          <- no flex-wrap
+    //     .kk-newsletter-form input { flex: 1; min-width: 0 }
+    //
+    // so the note claimed the full width, the input shrank to zero against it,
+    // and the customer was told to enter an email address with nowhere left to
+    // type one. Stepping out puts the message under the whole control.
+    //
+    // Only nowrap ROWS. A wrapping row already breaks the note onto its own
+    // line, and a flex COLUMN is the ordinary stack of fields - moving the
+    // message out of one would carry it away from the field it belongs to.
+    const ROW_MAX_DEPTH = 3;
+
+    function rowAwareAnchor(anchor) {
+        for (let depth = 0; depth < ROW_MAX_DEPTH; depth++) {
+            const parent = anchor.parentElement;
+            // Not 'form': on the newsletter pill the FORM is the flex row, so
+            // stopping at it left the note inside the very row that squeezes it.
+            if (!parent || parent.matches('body')) break;
+
+            const style = getComputedStyle(parent);
+            const isFlex = style.display === 'flex' || style.display === 'inline-flex';
+            if (!isFlex) break;
+            if (style.flexDirection.indexOf('column') === 0) break;
+            if (style.flexWrap !== 'nowrap') break;
+
+            anchor = parent;
+        }
+
+        return anchor;
+    }
+
     function showError(field, message) {
         clearError(field);
 
@@ -2315,7 +3157,7 @@ Alpine.start();
         // The previous rule only stepped out to the wrapper when it was NOT the
         // field's direct parent, which is the rarer arrangement; in the common
         // one it anchored to the input and inserted the note inside the box.
-        const anchor = wrapperFor(field);
+        const anchor = rowAwareAnchor(wrapperFor(field));
         anchor.parentNode.insertBefore(note, anchor.nextSibling);
         field._kkErrorNote = note;
     }
@@ -2349,6 +3191,7 @@ Alpine.start();
     document.addEventListener('submit', function (event) {
         const form = event.target;
         if (!(form instanceof HTMLFormElement)) return;
+<<<<<<< HEAD
 
         // STEP 1 of every submission, and it runs for EVERY form - including the
         // ones that opt out of the checks below, and the ones Alpine submits
@@ -2359,6 +3202,9 @@ Alpine.start();
         dropFormServerState(form);
 
         if (optedOut(form)) return;
+=======
+        if (reportsForItself(form)) return;
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
 
         const fields = Array.from(form.elements).filter(function (el) {
             return el.willValidate && !el.disabled && el.type !== 'hidden';
@@ -2564,8 +3410,16 @@ Alpine.start();
         const field = event.target;
         if (!field || typeof field.value !== 'string') return;
 
+<<<<<<< HEAD
         const form = field.form;
         if (handsOff(form)) return;
+=======
+        // data-no-validate turns this handler off outright - a form that wants
+        // nothing from this module gets no keystroke filtering either. A
+        // novalidate form is a different case and is handled further down: it
+        // keeps the filtering and only forgoes the note.
+        if (field.form && field.form.hasAttribute('data-no-validate')) return;
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
 
         const policy = charPolicy(field);
         if (!policy) return;
@@ -2611,12 +3465,21 @@ Alpine.start();
         field.value = cleaned;
         try { field.setSelectionRange(caret - removedBeforeCaret, caret - removedBeforeCaret); } catch (e) { /* unsupported on some types */ }
 
+<<<<<<< HEAD
         // The character is refused either way - that is the useful half, and no
         // component duplicates it. The NOTE is this module's to print only when
         // the form has no validator of its own; on one that does, saying so here
         // would put a second sentence under a box the component is already
         // writing to.
         if (optedOut(field.form)) return;
+=======
+        // The character is refused either way - that is this handler's job and
+        // it belongs to no form's validator. Only the note is held back on a
+        // form that reports for itself, or it would print a second complaint
+        // beside the one that form is already showing, and the hand-back below
+        // would leave it there for good.
+        if (reportsForItself(field.form)) return;
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
 
         showError(field, policy.message);
 
@@ -2734,8 +3597,13 @@ Alpine.start();
         const role = passwordRole(field);
         if (!role) return;
 
+<<<<<<< HEAD
         const form = field.form;
         if (optedOut(form)) return;
+=======
+        // kkRegisterForm judges its own password box, in its own wording.
+        if (reportsForItself(field.form)) return;
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
 
         const value = field.value || '';
         let message = '';
@@ -2833,7 +3701,11 @@ Alpine.start();
         if (!field || !field.willValidate || field.disabled) return true;
         if (field.type === 'checkbox' || field.type === 'radio') return true;
 
+<<<<<<< HEAD
         return optedOut(field.form);
+=======
+        return reportsForItself(field.form);
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
     }
 
     document.addEventListener('blur', function (event) {
@@ -2868,6 +3740,7 @@ Alpine.start();
         const field = event.target;
         if (!field || !field.willValidate) return;
 
+<<<<<<< HEAD
         const form = field.form;
         if (optedOut(form)) return;
 
@@ -2893,6 +3766,9 @@ Alpine.start();
         // notes showError is about to add, so repeating it costs nothing and
         // removes the ordering assumption entirely.
         if (form) dropFormServerState(form);
+=======
+        if (reportsForItself(field.form)) return;
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
 
         showError(field, messageFor(field));
 

@@ -387,10 +387,87 @@ final class ValidationRules
     public static function passwordMessages(string $attribute = 'password'): array
     {
         return [
-            "{$attribute}.min" => 'Your password must be at least ' . self::PASSWORD_MIN . ' characters long.',
+            "{$attribute}.min" => 'Your password must be at least '.self::PASSWORD_MIN.' characters long.',
             "{$attribute}.password.mixed" => 'Your password must include both an uppercase and a lowercase letter.',
             "{$attribute}.password.numbers" => 'Your password must include at least one number.',
             "{$attribute}.password.symbols" => 'Your password must include at least one special character, such as @ # ! or ?.',
+        ];
+    }
+
+    /**
+     * An uploaded video - MP4, WebM or MOV, up to $maxKb.
+     *
+     * The same rules were written out by hand in five places and had already
+     * drifted: the banner screens capped at 64 MB and matched on `mimes:`,
+     * while categories and products capped at 50 MB and matched on
+     * `extensions:`. One helper, so a clip the product form accepts is not
+     * refused by the banner form.
+     *
+     * Both `mimes` and `mimetypes`, for the reason {@see image()} gives:
+     * `mimes` reads the filename, `mimetypes` reads the bytes, and a video is
+     * the upload most worth being sure about - these files are served straight
+     * back out of the public disk.
+     *
+     * Its counterpart in the browser is the accept attribute
+     * `accept="video/mp4,video/webm,video/quicktime"`.
+     */
+    public static function video(bool $required = false, int $maxKb = 65536): array
+    {
+        return [
+            $required ? 'required' : 'nullable',
+            'file',
+            'mimes:mp4,webm,mov',
+            'mimetypes:video/mp4,video/webm,video/quicktime',
+            "max:{$maxKb}",
+        ];
+    }
+
+    /**
+     * The messages {@see image()} needs, keyed for one field.
+     *
+     * Laravel states the size rule in kilobytes - "must not be greater than
+     * 12288 kilobytes" - which nobody has to hand when they are looking at a
+     * file manager showing MB. The admin who hit this had to divide by 1024 to
+     * find out how much too big their banner was.
+     *
+     * @return array<string, string>
+     */
+    public static function imageMessages(string $field, int $maxKb = 5120): array
+    {
+        $label = str_replace('_', ' ', $field);
+
+        return [
+            "{$field}.max" => 'The '.$label.' may not be larger than '.self::megabytes($maxKb).' MB.',
+            "{$field}.mimes" => 'The '.$label.' must be a JPG, PNG, WebP or GIF file.',
+            "{$field}.mimetypes" => 'The '.$label.' must be a JPG, PNG, WebP or GIF file.',
+            "{$field}.dimensions" => 'The '.$label.' is too large in pixels. Export it at a smaller size and try again.',
+        ];
+    }
+
+    /** Kilobytes as the megabytes a person reads off their file manager. */
+    public static function megabytes(int $kb): string
+    {
+        $mb = $kb / 1024;
+
+        return rtrim(rtrim(number_format($mb, 1, '.', ''), '0'), '.');
+    }
+
+    /**
+     * The messages {@see video()} needs, keyed for one field.
+     *
+     * Laravel names the rule, not the reason, so `mimes` on a .avi reads "The
+     * video field must be a file of type: mp4, webm, mov." Both mime rules are
+     * given the same sentence because a shopper-facing admin should not have to
+     * know there are two of them.
+     *
+     * @return array<string, string>
+     */
+    public static function videoMessages(string $field, int $maxKb = 65536): array
+    {
+        return [
+            "{$field}.mimes" => 'The video must be an MP4, WebM or MOV file.',
+            "{$field}.mimetypes" => 'The video must be an MP4, WebM or MOV file.',
+            "{$field}.max" => 'The video may not be larger than '.(int) ($maxKb / 1024).' MB.',
         ];
     }
 
@@ -400,6 +477,12 @@ final class ValidationRules
      * Both 'mimes' (extension) and 'mimetypes' (sniffed content type) are
      * applied: 'mimes' alone trusts the filename, and a .png that is really a
      * PHP script passes it.
+     *
+     * AVIF is deliberately NOT accepted, even though production's GD, Imagick
+     * and finfo all read it. Laravel's own `image` rule hardcodes its list -
+     * jpg, jpeg, png, gif, bmp, webp - so adding avif to `mimes` here would
+     * advertise a format that `image` then refuses anyway, which is a worse
+     * experience than not offering it. Revisit if that list ever grows.
      *
      * Client-side counterpart:
      *   type="file" accept="image/jpeg,image/png,image/webp"

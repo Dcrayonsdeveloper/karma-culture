@@ -167,7 +167,7 @@
                                             </a>
                                             <p class="text-xs text-neutral-600 mt-0.5">
                                                 @php($orderUnits = $order->items->sum('quantity'))
-                                                {{ $order->created_at->format('M d, Y') }} &middot; {{ $orderUnits }} {{ Str::plural('item', $orderUnits) }}
+                                                {{ format_date($order->created_at) }} &middot; {{ $orderUnits }} {{ Str::plural('item', $orderUnits) }}
                                             </p>
                                         </div>
                                     </div>

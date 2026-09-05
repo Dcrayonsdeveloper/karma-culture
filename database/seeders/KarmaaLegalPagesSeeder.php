@@ -98,7 +98,7 @@ HTML,
 <p>Delivery estimates are provided at checkout. Title and risk of loss pass to you upon delivery to the carrier. We are not liable for delays caused by carriers or events beyond our control.</p>
 
 <h2>6. Returns &amp; Refunds</h2>
-<p>See our <a href="/returns">Returns &amp; Refunds policy</a> for full details. In short: most items are returnable within 14 days of delivery in unused, original-tag condition. Sale items are final sale unless defective.</p>
+<p>See our <a href="/returns-policy">Returns &amp; Refunds policy</a> for full details. In short: most items are returnable within 14 days of delivery in unused, original-tag condition. Sale items are final sale unless defective.</p>
 
 <h2>7. Intellectual Property</h2>
 <p>All content on the Site - including logos, designs, photography, product descriptions, and code - is owned by {$brand} or our licensors and is protected by copyright and trademark law. You may not copy, reproduce, or use any content commercially without written permission.</p>

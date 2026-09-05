@@ -12,7 +12,12 @@ class WishlistController extends Controller
     public function index(Request $request): JsonResponse
     {
         $wishlists = $request->user()->wishlists()
-            ->with('product:id,name,slug,price,mrp,images')
+            // images is a relation, not a column. Inside the colon list it was
+            // read as one, so the query asked products for an "images" column and
+            // the endpoint 500'd for anyone whose wishlist was not empty. Nested
+            // relations load as their own entry - the same shape the working
+            // Api/V1/Product/ProductController::show already uses.
+            ->with(['product:id,name,slug,price,mrp', 'product.images'])
             ->latest()
             ->paginate(20);
 

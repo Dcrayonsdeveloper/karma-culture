@@ -47,7 +47,17 @@ class ProfileController extends Controller
             if (!Hash::check($request->current_password, $user->password)) {
                 return back()->withErrors(['current_password' => 'Current password is incorrect']);
             }
-            $user->password = Hash::make($validated['password']);
+
+            // Only when a new password was actually typed.
+            //
+            // `password` is nullable, so confirming the current password while
+            // leaving the new one blank reached Hash::make(null) - which hashes
+            // the empty string and silently replaced the admin's own password
+            // with a blank one. Proving who you are is not a request to change
+            // anything.
+            if (! empty($validated['password'])) {
+                $user->password = Hash::make($validated['password']);
+            }
         }
 
         $user->save();

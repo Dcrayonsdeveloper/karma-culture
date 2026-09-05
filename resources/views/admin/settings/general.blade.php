@@ -51,54 +51,13 @@
                 </div>
             </div>
 
-            <!-- Regional Settings -->
-            <div class="card">
-                <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;">
-                    <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Regional Settings</h2>
-                </div>
-                <div style="padding: 1rem; display: flex; flex-direction: column; gap: 1rem;">
-                    <div>
-                        <label class="form-label form-label-required" style="font-size: 12px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Timezone</label>
-                        <select name="timezone" required class="form-select">
-                            @foreach(timezone_identifiers_list() as $tz)
-                                <option value="{{ $tz }}" @selected(old('timezone', $settings['timezone'] ?? 'UTC') === $tz)>{{ $tz }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div>
-                        <label class="form-label form-label-required" style="font-size: 12px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Date Format</label>
-                        <select name="date_format" required class="form-select">
-                            <option value="M d, Y" @selected(old('date_format', $settings['date_format'] ?? 'M d, Y') === 'M d, Y')>{{ now()->format('M d, Y') }}</option>
-                            <option value="d/m/Y" @selected(old('date_format', $settings['date_format'] ?? '') === 'd/m/Y')>{{ now()->format('d/m/Y') }}</option>
-                            <option value="m/d/Y" @selected(old('date_format', $settings['date_format'] ?? '') === 'm/d/Y')>{{ now()->format('m/d/Y') }}</option>
-                            <option value="Y-m-d" @selected(old('date_format', $settings['date_format'] ?? '') === 'Y-m-d')>{{ now()->format('Y-m-d') }}</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="form-label form-label-required" style="font-size: 12px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Currency</label>
-                        <select name="currency" required class="form-select">
-                            <option value="USD" @selected(old('currency', $settings['currency'] ?? 'USD') === 'USD')>USD - US Dollar</option>
-                            <option value="EUR" @selected(old('currency', $settings['currency'] ?? '') === 'EUR')>EUR - Euro</option>
-                            <option value="GBP" @selected(old('currency', $settings['currency'] ?? '') === 'GBP')>GBP - British Pound</option>
-                            <option value="INR" @selected(old('currency', $settings['currency'] ?? '') === 'INR')>INR - Indian Rupee</option>
-                            <option value="CAD" @selected(old('currency', $settings['currency'] ?? '') === 'CAD')>CAD - Canadian Dollar</option>
-                            <option value="AUD" @selected(old('currency', $settings['currency'] ?? '') === 'AUD')>AUD - Australian Dollar</option>
-                            <option value="JPY" @selected(old('currency', $settings['currency'] ?? '') === 'JPY')>JPY - Japanese Yen</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="form-label form-label-required" style="font-size: 12px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Currency Symbol</label>
-                        <input type="text" name="currency_symbol" value="{{ old('currency_symbol', $settings['currency_symbol'] ?? '$') }}" required maxlength="5" class="form-input" placeholder="e.g. $, €, £, ₹, ¥">
-                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">The symbol displayed with prices (e.g. $, €, £, ₹, ¥)</p>
-                    </div>
-                    <div>
-                        <label class="form-label form-label-required" style="font-size: 12px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Currency Position</label>
-                        <select name="currency_position" required class="form-select">
-                            <option value="before" @selected(old('currency_position', $settings['currency_position'] ?? 'before') === 'before')>Before amount ($99.99)</option>
-                            <option value="after" @selected(old('currency_position', $settings['currency_position'] ?? '') === 'after')>After amount (99.99$)</option>
-                        </select>
-                    </div>
-                </div>
+            {{-- The Regional Settings card was removed on request. Timezone,
+                 date format, currency, symbol and position are still stored and
+                 still in force - the storefront reads them through
+                 currency_config() and format_date(), and the timezone is applied
+                 at boot. They simply have no editor on this screen any more, so
+                 the rules for them in updateGeneral() are nullable: a save that
+                 does not carry them leaves the stored values alone. --}}
             </div>
         </div>
 

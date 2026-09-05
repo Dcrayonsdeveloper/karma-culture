@@ -130,9 +130,20 @@ class MobileSearchTest extends TestCase
         // would both post to /search and fight over focus.
         $html = $this->get('/')->assertOk()->getContent();
 
-        $ok = preg_match('/<div x-data="\{ open: false, \.\.\.searchBar\(\) \}"[^>]*>|class="sm:hidden fixed inset-0/', $html);
-        $this->assertSame(1, $ok);
-        $this->assertStringContainsString('sm:hidden fixed inset-0', $html);
+        // The panel is rendered once, and its ROOT carries sm:hidden - that is
+        // what keeps it off desktop. It used to be asserted as the literal
+        // string "sm:hidden fixed inset-0", which stopped being true when the
+        // panel moved into partials/mobile-search.blade.php and the positioning
+        // classes moved to an inner element. The panel was still mobile-only
+        // throughout; only the assertion had gone stale.
+        $this->assertStringContainsString('x-data="{ open: false, ...searchBar() }"', $html);
+
+        // The opening tag cannot be cut at the first ">": the Alpine handlers on
+        // it contain arrow functions. Take a generous window after the marker
+        // and require the sm:hidden class inside it instead.
+        $root = substr($html, strpos($html, 'x-data="{ open: false, ...searchBar() }"'), 2000);
+
+        $this->assertStringContainsString('class="sm:hidden"', $root, 'The mobile search panel must not render on desktop.');
     }
 
     public function test_the_suggestions_endpoint_the_panel_calls_still_answers(): void

@@ -26,6 +26,12 @@ class CategoryController extends Controller
 
     public function show(Request $request, Category $category): View
     {
+        // A built-in listing lives in this table too, but it is a destination,
+        // not a classification - it has no subtree, no breadcrumb and no place
+        // in the menu. Its page is /collection/{slug}; serving it here as well
+        // would be a second URL for the same listing.
+        abort_if($category->is_system, 404);
+
         abort_unless($category->is_active, 404);
 
         // Any category that sits UNDER a gender root (Men's/Women's) is browsed within
@@ -69,10 +75,10 @@ class CategoryController extends Controller
 
             if ($subIds !== null && ! in_array('subcategory', $except, true)) {
                 // Force an empty result (not "no filter") if the slugs resolve to nothing.
-                return $query->whereIn('products.category_id', $subIds ?: [0]);
+                return $query->inAnyCategory($subIds);
             }
 
-            return $query->whereIn('products.category_id', $pageIds);
+            return $query->inAnyCategory($pageIds);
         };
 
         $filters = ProductFilters::for($request, $bound, [
@@ -96,7 +102,7 @@ class CategoryController extends Controller
                 'products_total',
                 $filters->query(['category', 'subcategory'])
                     ->reorder()
-                    ->whereIn('products.category_id', $tree->descendantIds($sub->id))
+                    ->inAnyCategory($tree->descendantIds($sub->id))
                     ->count()
             ))
             ->values();

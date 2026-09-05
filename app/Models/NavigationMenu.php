@@ -11,6 +11,9 @@ class NavigationMenu extends Model
     protected $fillable = [
         'location', 'label', 'url', 'icon',
         'parent_id', 'position', 'is_active', 'open_in_new_tab',
+        // Set when the row was generated from a CMS page's placement field.
+        // Null for the links an admin hand-adds in the Navigation editor.
+        'page_id',
     ];
 
     protected function casts(): array

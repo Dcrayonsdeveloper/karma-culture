@@ -165,4 +165,90 @@ class ReportDateRangeTest extends TestCase
             ->assertSee('from=' . $from, false)
             ->assertSee('to=' . $to, false);
     }
+
+    /**
+     * The dashboard has always refused a backwards window. What it did not do
+     * was say so: the redirect landed back on a screen that renders no errors
+     * at all, so picking an end date before the start looked like a button
+     * that did nothing.
+     */
+    public function test_a_backwards_window_on_the_dashboard_says_why_it_was_refused(): void
+    {
+        $from = Carbon::today()->format('Y-m-d');
+        $to = Carbon::today()->subDays(2)->format('Y-m-d');
+
+        $this->actingAs($this->adminUser, 'admin')
+            ->from('/admin')
+            ->get('/admin?start_date=' . $from . '&end_date=' . $to)
+            ->assertRedirect('/admin')
+            ->assertSessionHasErrors('end_date');
+
+        $this->actingAs($this->adminUser, 'admin')
+            ->get('/admin')
+            ->assertStatus(200)
+            ->assertSee('The end date must be on or after the start date.');
+    }
+
+    /**
+     * And the window that was refused has to come back on screen with the
+     * message, or it explains dates the admin can no longer see.
+     */
+    public function test_the_refused_window_is_still_in_the_boxes(): void
+    {
+        $from = Carbon::today()->format('Y-m-d');
+        $to = Carbon::today()->subDays(2)->format('Y-m-d');
+
+        $this->actingAs($this->adminUser, 'admin')
+            ->from('/admin')
+            ->get('/admin?start_date=' . $from . '&end_date=' . $to);
+
+        $this->actingAs($this->adminUser, 'admin')
+            ->get('/admin')
+            ->assertSee('value="' . $from . '"', false)
+            ->assertSee('value="' . $to . '"', false);
+    }
+
+    /**
+     * Both boxes carry max="today". The server used to accept a future window
+     * anyway and answer it with an empty report.
+     */
+    public function test_a_future_window_on_the_dashboard_is_refused(): void
+    {
+        $this->actingAs($this->adminUser, 'admin')
+            ->from('/admin')
+            ->get('/admin?start_date=' . Carbon::today()->format('Y-m-d')
+                . '&end_date=' . Carbon::today()->addDay()->format('Y-m-d'))
+            ->assertSessionHasErrors('end_date');
+    }
+
+    /**
+     * The guard stops at backwards, not at short: one day is a real report, and
+     * both the browser mirror and the server rule allow the two dates to match.
+     */
+    public function test_a_single_day_window_is_accepted(): void
+    {
+        $today = Carbon::today()->format('Y-m-d');
+
+        $this->actingAs($this->adminUser, 'admin')
+            ->get('/admin?start_date=' . $today . '&end_date=' . $today)
+            ->assertStatus(200)
+            ->assertSessionHasNoErrors();
+    }
+
+    /**
+     * The round trip above is the backstop. The picker itself has to refuse a
+     * backwards window before it is submitted, on every screen that filters by
+     * one.
+     *
+     * @dataProvider reportScreens
+     */
+    public function test_the_picker_bounds_the_end_date_by_the_start_date(string $uri): void
+    {
+        $this->actingAs($this->adminUser, 'admin')
+            ->get($uri)
+            ->assertStatus(200)
+            ->assertSee('data-range-from', false)
+            ->assertSee('data-range-to', false)
+            ->assertSee('to.min = from.value', false);
+    }
 }

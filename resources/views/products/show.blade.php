@@ -579,9 +579,28 @@
                     $kkColours = $kkColourList->pluck('name');
                     $kkColourHex = $kkColourList->pluck('hex', 'name')->filter();
 
+                    // Textures are a product-level list too, but plain strings: there is no
+                    // swatch to carry, so nothing to store beside the name. The {name: ...}
+                    // shape is still accepted in case the attributes JSON was hand-edited.
+                    // No size-row fallback here - unlike colours, textures were never kept
+                    // on the variant rows, so there is nothing older to fall back to.
+                    $kkTextures = collect(data_get($product->attributes, 'Textures', []))
+                        ->map(fn ($t) => trim((string) (is_array($t) ? ($t['name'] ?? '') : $t)))
+                        ->filter(fn ($t) => $t !== '')
+                        ->unique()
+                        ->values();
+
                     // size => variant id. Selecting a size points the page at that row so
                     // the existing currentPrice/currentMrp getters show its price.
                     $kkSizeVariant = $kkRows->reverse()->mapWithKeys(fn ($v) => [trim((string) $v->name) => $v->id])->filter(fn ($id, $n) => $n !== '');
+
+                    // Open the page on a buyable choice: pre-select the first
+                    // size and colour instead of leaving the customer to discover
+                    // an empty selector on their way to the cart.
+                    $kkDefaultSize = $kkSizes->first();
+                    $kkDefaultColour = $kkColours->first();
+                    $kkDefaultTexture = $kkTextures->first();
+                    $kkDefaultVariant = $kkDefaultSize !== null ? ($kkSizeVariant[$kkDefaultSize] ?? null) : null;
                 @endphp
                 @if($kkSizes->isNotEmpty())
                 <section class="kk-sizeguide" id="kk-size-select" aria-label="Select size">
@@ -620,6 +639,21 @@
                                 <span class="kk-colorpick__dot" style="background-color: {{ $kkColourHex[$kkC] ?? '#dddddd' }};"></span>
                                 <span>{{ $kkC }}</span>
                             </button>
+                        @endforeach
+                    </div>
+                </section>
+                @endif
+
+                @if($kkTextures->isNotEmpty())
+                {{-- Chips, not swatches: a texture has no colour to preview, so it borrows
+                     the size buttons' styling rather than the colour picker's dot. --}}
+                <section class="kk-sizeguide" id="kk-texture-select" aria-label="Select texture">
+                    <h2 class="kk-sizeguide__title">Select Texture<span class="kk-sizeguide__sel" x-show="selectedTexture" x-cloak> - <span x-text="selectedTexture"></span></span></h2>
+                    <div class="kk-sizeguide__row">
+                        @foreach($kkTextures as $kkT)
+                            <button type="button" class="kk-sizeguide__size"
+                                    :class="selectedTexture === '{{ $kkT }}' ? 'is-selected' : ''"
+                                    @click="selectedTexture = '{{ $kkT }}'">{{ $kkT }}</button>
                         @endforeach
                     </div>
                 </section>
@@ -981,8 +1015,9 @@
                         @if($product->category)<dt>Category</dt><dd>{{ $product->category->name }}</dd>@endif
                         @if($product->attributes && count($product->attributes) > 0)
                             @foreach($product->attributes as $key => $value)
-                                {{-- Colours render as swatches above, so they are not repeated here. --}}
-                                @continue($key === 'Colours')
+                                {{-- Colours and textures already have their own pickers above, so
+                                     listing the raw arrays here would repeat them as a text row. --}}
+                                @continue($key === 'Colours' || $key === 'Textures')
                                 @php
                                     $kkVal = is_array($value)
                                         ? collect($value)->map(fn ($v) => is_array($v) ? ($v['name'] ?? implode(' ', $v)) : $v)->filter()->implode(', ')
@@ -2118,12 +2153,14 @@
             imageCount: {{ count($media) }},
             touchStartX: 0,
             quantity: 1,
-            selectedSize: null,
-            selectedColor: null,
+            selectedSize: @json($kkDefaultSize),
+            selectedColor: @json($kkDefaultColour),
+            selectedTexture: @json($kkDefaultTexture),
             // Only enforce a choice for options this product actually offers.
             hasSizes: {{ $kkSizes->isNotEmpty() ? 'true' : 'false' }},
             hasColours: {{ $kkColours->isNotEmpty() ? 'true' : 'false' }},
-            selectedVariant: null,
+            hasTextures: {{ $kkTextures->isNotEmpty() ? 'true' : 'false' }},
+            selectedVariant: @json($kkDefaultVariant),
             selectedAttributes: {},
             variants: @json($variantData),
             showZoom: false,
@@ -2150,8 +2187,16 @@
             },
 
             init() {
-                this.$el.addEventListener('mobile-add-to-cart', () => this.addToCart());
-                this.$el.addEventListener('mobile-buy-now', () => this.buyNow());
+                // Bound on window, not on this.$el.
+                //
+                // The mobile sticky bar sits OUTSIDE the productPage() element -
+                // it is a sibling of .pdp-wrapper, rendered after that div has
+                // closed - so the CustomEvent $dispatch fires bubbles bar ->
+                // body -> window and never passes through this.$el at all. Both
+                // buttons were therefore completely inert: on a phone, the Add
+                // to Cart and Buy Now a shopper actually reaches did nothing.
+                window.addEventListener('mobile-add-to-cart', () => this.addToCart());
+                window.addEventListener('mobile-buy-now', () => this.buyNow());
                 // Pause any playing gallery/zoom video when the active item or zoom changes,
                 // so audio never keeps playing after the user navigates away.
                 this.$watch('currentImage', () => this.pauseVideos());
@@ -2224,12 +2269,17 @@
                     document.getElementById('kk-color-select')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     return false;
                 }
+                if (this.hasTextures && !this.selectedTexture) {
+                    Alpine.store('toast').error('Please select a texture');
+                    document.getElementById('kk-texture-select')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return false;
+                }
                 return true;
             },
 
             async addToCart() {
                 if (!this.requireSelection()) return;
-                await Alpine.store('cart').add({{ $product->id }}, this.quantity, this.selectedVariant, this.selectedSize, this.selectedColor);
+                await Alpine.store('cart').add({{ $product->id }}, this.quantity, this.selectedVariant, this.selectedSize, this.selectedColor, { texture: this.selectedTexture });
             },
 
             async buyNow() {
@@ -2238,7 +2288,7 @@
                 // frame later, which read as a glitch on the way to checkout.
                 const added = await Alpine.store('cart').add(
                     {{ $product->id }}, this.quantity, this.selectedVariant, this.selectedSize, this.selectedColor,
-                    { reveal: false }
+                    { reveal: false, texture: this.selectedTexture }
                 );
                 // A failed add (stock gone, session expired) has already shown its own
                 // error toast, and there would be nothing to check out with.

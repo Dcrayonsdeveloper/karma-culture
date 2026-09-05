@@ -134,6 +134,7 @@
                             $sections = [
                                 'dashboard' => 'Dashboard',
                                 'orders' => 'Orders & Returns',
+                                'abandoned_carts' => 'Abandoned Carts',
                                 'catalog' => 'Catalog & Inventory',
                                 'customers' => 'Customers',
                                 'sellers' => 'Sellers',

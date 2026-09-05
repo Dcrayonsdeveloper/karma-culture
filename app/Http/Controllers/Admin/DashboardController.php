@@ -22,10 +22,15 @@ class DashboardController extends Controller
         // Carbon::parse() unchecked and come back as a 500 rather than as an
         // unusable filter, and an end before the start silently returned an
         // empty report.
+        // Both inputs carry max="today", so the future rules are what keeps the
+        // server from accepting by URL what the picker will not offer - not an
+        // extra restriction on top of it.
         $filters = $request->validate([
-            'start_date' => ['nullable', 'date'],
-            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'start_date' => ['nullable', 'date', 'before_or_equal:today'],
+            'end_date' => ['nullable', 'date', 'before_or_equal:today', 'after_or_equal:start_date'],
         ], [
+            'start_date.before_or_equal' => 'The start date cannot be in the future.',
+            'end_date.before_or_equal' => 'The end date cannot be in the future.',
             'end_date.after_or_equal' => 'The end date must be on or after the start date.',
         ]);
 
@@ -208,7 +213,21 @@ class DashboardController extends Controller
         $activeProducts = Product::where('is_active', true)->count();
         $productActiveRate = $totalProducts > 0 ? round(($activeProducts / $totalProducts) * 100) : 0;
 
+        // Abandoned carts. Read back from the abandoned_carts table rather than
+        // recomputed here, so this block and the Abandoned Carts screen can
+        // never quote different numbers. Deliberately NOT date-filtered: the
+        // recovery rate is a lifetime figure and slicing it by the dashboard's
+        // window would make it swing wildly on a quiet week.
+        //
+        // Skipped entirely for anyone who cannot open the section - the card is
+        // gated in the view, and this is three aggregate queries on a dashboard
+        // that already runs about twenty.
+        $abandonedCartStats = auth('admin')->user()?->canAccessSection('abandoned_carts')
+            ? app(\App\Services\AbandonedCartService::class)->stats()
+            : null;
+
         return view('admin.dashboard.index', compact(
+            'abandonedCartStats',
             'topOrders',
             'topRevenue',
             'totalOrders',

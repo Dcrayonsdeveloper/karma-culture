@@ -26,7 +26,7 @@ class SearchController extends Controller
             })
             ->with(['category:id,name,slug', 'brand:id,name,slug'])
             ->inStockFirst()
-            ->paginate($request->per_page ?? 20);
+            ->paginate($this->perPage($request));
 
         return response()->json($products);
     }

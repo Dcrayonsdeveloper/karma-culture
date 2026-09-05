@@ -48,6 +48,13 @@ class Setting extends Model
         // cache for an hour and look like it had not been applied.
         $forget = function (self $setting) {
             Cache::forget("setting.{$setting->key}");
+            unset(static::$memo["setting.{$setting->key}"]);
+
+            // The whole-table map every read goes through. Every write path in
+            // the app - Setting::set(), and the admin screens' updateOrCreate -
+            // goes through the model, so clearing it here covers all of them.
+            Cache::forget(self::ALL_KEY);
+            unset(static::$memo[self::ALL_KEY]);
 
             if ($setting->group) {
                 Cache::forget("settings.group.{$setting->group}");
@@ -56,7 +63,17 @@ class Setting extends Model
             foreach (array_unique([$setting->group, $setting->getOriginal('group')]) as $group) {
                 if ($group) {
                     Cache::forget("settings.group.{$group}");
+                    unset(static::$memo["settings.group.{$group}"]);
                 }
+            }
+
+            // Values derived from settings rather than stored as one. Nothing
+            // cleared `currency_config`, so changing the currency symbol or its
+            // position under Settings sat behind the hour-long cache and read as
+            // "the setting does nothing".
+            foreach (static::DERIVED_KEYS as $derived) {
+                Cache::forget($derived);
+                unset(static::$memo["derived.{$derived}"]);
             }
         };
 
@@ -65,6 +82,45 @@ class Setting extends Model
     }
     /** Marks "no row in the database" so a missing setting is still cached. */
     private const MISSING = '__kk_setting_missing__';
+
+    /** Cache keys holding values computed from settings, cleared on any save. */
+    private const DERIVED_KEYS = ['currency_config'];
+
+    /** Cache key for the whole settings table, read as one row set. */
+    private const ALL_KEY = 'settings.all';
+
+    /**
+     * Values already read during THIS request.
+     *
+     * Cache::remember() is not free: on shared hosting the cache store is the
+     * database, so every call is a round trip to the `cache` table. A storefront
+     * page reads the same handful of settings once per rendered price, per date
+     * and per partial - a product listing was issuing over 200 `select * from
+     * cache` queries to answer three distinct questions.
+     *
+     * This memo lives for one request only, so an admin save is still visible on
+     * the very next one; the writers above clear it so a save is visible even
+     * within the request that made it.
+     *
+     * @var array<string, mixed>
+     */
+    private static array $memo = [];
+
+    /** Drop the per-request memo. Tests that write settings directly need this. */
+    public static function flushMemo(): void
+    {
+        static::$memo = [];
+    }
+
+    /**
+     * Cache::remember() with the same per-request memo in front of it, for
+     * settings-derived values that are not a single setting row - currency
+     * formatting being the one that gets read on every price.
+     */
+    public static function remembered(string $key, callable $resolve, int $ttl = 3600): mixed
+    {
+        return static::$memo["derived.{$key}"] ??= Cache::remember($key, $ttl, $resolve);
+    }
 
     /**
      * The default must not be cached.
@@ -77,17 +133,41 @@ class Setting extends Model
      */
     public static function get(string $key, $default = null)
     {
-        $value = Cache::remember("setting.{$key}", 3600, function () use ($key) {
-            $setting = static::where('key', $key)->first();
-
-            return $setting ? ($setting->value ?? self::MISSING) : self::MISSING;
-        });
+        $value = static::all_()[$key] ?? self::MISSING;
 
         if ($value === self::MISSING || $value === '') {
             return $default;
         }
 
         return $value;
+    }
+
+    /**
+     * Every setting, keyed by key, read in ONE query.
+     *
+     * The layout alone asks for 43 distinct settings - site name, logo, socials,
+     * the two popups, the analytics ids, the announcement bar. One cache round
+     * trip each meant 43 `select * from cache` queries before the page had
+     * rendered anything, and on shared hosting the cache store IS the database.
+     * The table is a settings table - 52 rows - so fetching all of it once is
+     * cheaper than fetching three of them individually.
+     *
+     * Values come off the model, not off a pluck(), so the integer/boolean/json
+     * casts in getValueAttribute() still apply.
+     *
+     * @return array<string, mixed>
+     */
+    private static function all_(): array
+    {
+        return static::$memo[self::ALL_KEY] ??= Cache::remember(self::ALL_KEY, 3600, function () {
+            $map = [];
+
+            foreach (static::query()->get() as $setting) {
+                $map[$setting->key] = $setting->value ?? self::MISSING;
+            }
+
+            return $map;
+        });
     }
 
     public static function set(string $key, $value, string $type = 'string', string $group = 'general'): self
@@ -98,6 +178,7 @@ class Setting extends Model
         );
 
         Cache::forget("setting.{$key}");
+        unset(static::$memo["setting.{$key}"]);
 
         return $setting;
     }
@@ -124,7 +205,7 @@ class Setting extends Model
 
     public static function getGroup(string $group): array
     {
-        return Cache::remember("settings.group.{$group}", 3600, function () use ($group) {
+        return static::$memo["settings.group.{$group}"] ??= Cache::remember("settings.group.{$group}", 3600, function () use ($group) {
             return static::where('group', $group)
                 ->pluck('value', 'key')
                 ->toArray();

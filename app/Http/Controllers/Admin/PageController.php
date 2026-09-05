@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\NavigationMenu;
 use App\Models\Page;
 use App\Rules\ValidationRules as V;
 use Illuminate\Http\RedirectResponse;
@@ -15,6 +16,25 @@ class PageController extends Controller
 {
     /** A URL segment: lower-case words joined by single hyphens. */
     private const SLUG_REGEX = '/^[a-z0-9]+(?:-[a-z0-9]+)*$/';
+
+    /**
+     * Where a page can be listed, keyed by the navigation_menus.location value.
+     *
+     * The wording matches the Navigation editor's own labels, so an admin who
+     * picks "Footer - Policies" here finds the link under that same heading
+     * there. Header and the three footer columns are the only locations the
+     * storefront actually renders; there is no sidebar menu to offer.
+     */
+    private const NAV_LOCATIONS = [
+        // The header is deliberately not offered. It is a short, ordered bar of
+        // shopping destinations, and a CMS page dropped into it pushes those
+        // out; policy and information pages belong in the footer columns. A
+        // header link to a page is still possible by hand under Online Store ->
+        // Homepage -> Navigation, which is where menu order is managed anyway.
+        'footer_col1' => 'Footer - Quick Links',
+        'footer_col2' => 'Footer - Customer Service',
+        'footer_col3' => 'Footer - Policies',
+    ];
 
     /**
      * Tags the rich-text editor is allowed to produce.
@@ -56,7 +76,7 @@ class PageController extends Controller
 
     public function create(): View
     {
-        return view('admin.pages.create');
+        return view('admin.pages.create', ['navLocations' => self::NAV_LOCATIONS]);
     }
 
     /**
@@ -108,6 +128,10 @@ class PageController extends Controller
             'seo_data.meta_title' => V::text(required: false, max: 255),
             'seo_data.meta_description' => V::textarea(required: false, max: 500),
             'is_published' => V::boolean(),
+
+            // Blank means "do not list this page anywhere", which is also what
+            // every page created before this field existed says.
+            'nav_location' => ['nullable', Rule::in(array_keys(self::NAV_LOCATIONS))],
         ];
     }
 
@@ -149,14 +173,19 @@ class PageController extends Controller
             $validated['published_at'] = now();
         }
 
-        Page::create($validated);
+        $page = Page::create($validated);
+        $this->syncMenuLink($page, $request->input('nav_location'));
 
         return redirect()->route('admin.pages.index')->with('success', 'Page created successfully');
     }
 
     public function edit(Page $page): View
     {
-        return view('admin.pages.edit', compact('page'));
+        return view('admin.pages.edit', [
+            'page' => $page,
+            'navLocations' => self::NAV_LOCATIONS,
+            'navLocation' => $page->menuLink?->location,
+        ]);
     }
 
     public function update(Request $request, Page $page): RedirectResponse
@@ -172,9 +201,65 @@ class PageController extends Controller
             $validated['published_at'] = null;
         }
 
+        // Read before the save: update() re-syncs the model's originals, so
+        // getOriginal('title') inside syncMenuLink() would hand back the new
+        // title and every label would look like it had been retyped by hand.
+        $previousTitle = $page->title;
+
         $page->update($validated);
+        $this->syncMenuLink($page, $request->input('nav_location'), $previousTitle);
 
         return redirect()->route('admin.pages.index')->with('success', 'Page updated successfully');
+    }
+
+    /**
+     * Put the page's link where the form says, or take it out of the menus.
+     *
+     * One row per page, found by page_id rather than by URL so a renamed slug
+     * moves its own link instead of orphaning it and adding a second.
+     *
+     * The link tracks the page on three counts: its address (a renamed slug
+     * would otherwise 404 from the menu), the column it belongs in, and
+     * whether it is live. A draft page's link is parked inactive rather than
+     * pointing visitors at a page that answers 404 - publishing lights it up,
+     * and the form says so.
+     *
+     * The label is the exception. It follows the page title only while nobody
+     * has retyped it in the Navigation editor: an admin who shortened "Shipping
+     * & Delivery Policy" to "Shipping" there does not want the next content
+     * edit to undo that.
+     */
+    private function syncMenuLink(Page $page, ?string $location, ?string $previousTitle = null): void
+    {
+        $existing = NavigationMenu::where('page_id', $page->id)->first();
+
+        if (! $location) {
+            $existing?->delete();
+
+            return;
+        }
+
+        $attributes = [
+            'location' => $location,
+            'url' => route('page.show', $page->slug, absolute: false),
+            'is_active' => (bool) $page->is_published,
+        ];
+
+        if (! $existing) {
+            NavigationMenu::create($attributes + [
+                'page_id' => $page->id,
+                'label' => $page->title,
+                'position' => (int) NavigationMenu::where('location', $location)->max('position') + 1,
+            ]);
+
+            return;
+        }
+
+        if ($existing->label === ($previousTitle ?? $page->title)) {
+            $attributes['label'] = $page->title;
+        }
+
+        $existing->update($attributes);
     }
 
     /**

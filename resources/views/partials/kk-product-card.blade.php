@@ -41,6 +41,9 @@
             @endif
         </div>
         <div class="kk-product__cta">
+            @if($product->isInStock())
+                @include('partials.quick-add-button', ['product' => $product])
+            @endif
             <a href="{{ route('product.show', $product) }}" class="kk-btn-brown"
                style="width:100%; border-radius:6px;">View Product</a>
         </div>

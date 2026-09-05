@@ -12,7 +12,9 @@ class OrderController extends Controller
     public function index(Request $request): JsonResponse
     {
         $orders = $request->user()->orders()
-            ->with(['items.product:id,name,slug,images'])
+            // Same defect the cart and wishlist lists had: images is a relation,
+            // not a column, so this 500'd for anyone who had ever ordered.
+            ->with(['items.product:id,name,slug', 'items.product.images'])
             ->latest()
             ->paginate(15);
 
@@ -24,7 +26,8 @@ class OrderController extends Controller
         $this->assertOwned($request, $order);
 
         $order->load([
-            'items.product:id,name,slug,images',
+            'items.product:id,name,slug',
+            'items.product.images',
             'shippingAddress',
             'billingAddress',
             'payments',

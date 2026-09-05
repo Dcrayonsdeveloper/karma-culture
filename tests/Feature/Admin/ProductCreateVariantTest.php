@@ -351,6 +351,18 @@ class ProductCreateVariantTest extends TestCase
                 'mrp' => 1299,
                 'stock_quantity' => 5,
                 'category_id' => $this->category->id,
+<<<<<<< HEAD
+=======
+                // A size and a colour are required, so a payload without them is
+                // now a validation error rather than a saved product. Tests that
+                // care about either one override these.
+                'variants' => [
+                    ['name' => 'M', 'price' => 999, 'stock_quantity' => 5, 'sku' => '', 'is_active' => 1],
+                ],
+                'colours' => [
+                    ['name' => 'Navy', 'hex' => '#001f3f'],
+                ],
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
             ], $overrides)
         );
     }

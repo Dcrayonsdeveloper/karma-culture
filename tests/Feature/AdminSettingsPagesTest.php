@@ -25,14 +25,11 @@ class AdminSettingsPagesTest extends TestCase
     {
         return [
             'general' => ['admin.settings.general'],
-            'payment' => ['admin.settings.payment'],
             'shipping' => ['admin.settings.shipping'],
             'tax' => ['admin.settings.tax'],
-            'email' => ['admin.settings.email'],
             'seo' => ['admin.settings.seo'],
             'features' => ['admin.settings.product-card'],
             'popups' => ['admin.settings.popups'],
-            'integrations' => ['admin.settings.integrations'],
             'currencies' => ['admin.settings.currencies.index'],
             'currency create' => ['admin.settings.currencies.create'],
             'roles' => ['admin.settings.roles.index'],
@@ -50,6 +47,30 @@ class AdminSettingsPagesTest extends TestCase
         $this->actingAs($this->admin(), 'admin')
             ->get(route($routeName))
             ->assertOk();
+    }
+
+    /**
+     * The Payment, Email and Integrations tabs were removed.
+     *
+     * Only the screens went: the keys they wrote are still read by checkout,
+     * by the mailer bootstrap in AppServiceProvider and by the chatbot, so
+     * this asserts the routes are unregistered rather than asserting anything
+     * about the stored settings.
+     */
+    public function test_removed_settings_tabs_are_gone(): void
+    {
+        $admin = $this->admin();
+
+        foreach (['payment', 'email', 'integrations'] as $tab) {
+            $this->assertNull(
+                \Illuminate\Support\Facades\Route::getRoutes()->getByName("admin.settings.{$tab}"),
+                "admin.settings.{$tab} should no longer be registered."
+            );
+
+            $this->actingAs($admin, 'admin')
+                ->get("/admin/settings/{$tab}")
+                ->assertNotFound();
+        }
     }
 
     public function test_every_tab_marks_exactly_one_tab_active(): void
@@ -85,25 +106,6 @@ class AdminSettingsPagesTest extends TestCase
         ])->assertRedirect();
 
         $this->assertDatabaseHas('settings', ['key' => 'tax_enabled', 'value' => '0']);
-    }
-
-    public function test_integrations_tab_saves(): void
-    {
-        // Every option in the model picker was outside the controller's in:
-        // rule, so this request used to bounce with a validation error.
-        $this->actingAs($this->admin(), 'admin')
-            ->put(route('admin.settings.integrations.update'), [
-                'ai_provider' => 'anthropic',
-                'anthropic_model' => 'claude-opus-5',
-                'sms_provider' => 'none',
-            ])
-            ->assertSessionHasNoErrors()
-            ->assertRedirect();
-
-        $this->assertDatabaseHas('settings', [
-            'key' => 'anthropic_model',
-            'value' => 'claude-opus-5',
-        ]);
     }
 
     public function test_shipping_zone_can_be_deactivated_and_takes_regions(): void

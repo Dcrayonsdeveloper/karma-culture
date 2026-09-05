@@ -479,6 +479,235 @@ body:not(.layout-admin) a.text-white {
 }
 .kk-product__cta { margin-top: auto; padding-top: 12px; }
 
+/* ===================================================================
+   Quick add — the round cart button on a product card, and the popup
+   it opens.
+
+   The button is deliberately icon-only and circular: it shares a line
+   with the "View Product" bar, and a second lettered bar there read as
+   two competing primary actions rather than one CTA with a shortcut
+   beside it.
+   =================================================================== */
+.kk-quickadd-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 8px;
+}
+
+/* The card's action strip: the CTA and the add-to-cart shortcut on one
+   line, rather than the shortcut stacked above the bar.
+
+   The CTA takes the room that is left and the button squares itself off
+   against whatever height the bar ends up - `aspect-ratio` with a
+   stretched height, so it stays a circle if the bar's padding or font
+   size ever changes rather than turning into an oval that has to be
+   re-measured by hand.
+
+   The width/height overrides need the two-class selector to beat
+   `.kk-quickadd`'s own 40px, which still applies anywhere the button is
+   used outside this strip. */
+.kk-card-actions {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+}
+.kk-card-actions__cta {
+    flex: 1 1 auto;
+    /* Without this the anchor refuses to shrink below its text and pushes
+       the button off the card on a two-column phone grid. */
+    min-width: 0;
+    white-space: nowrap;
+}
+.kk-card-actions .kk-quickadd-row {
+    flex: 0 0 auto;
+    margin-bottom: 0;
+}
+.kk-card-actions .kk-quickadd {
+    width: auto;
+    height: auto;
+    align-self: stretch;
+    aspect-ratio: 1 / 1;
+}
+
+/* Two cards to a row on a 360px phone leaves the CTA 78px, and "View
+   Product" at 12px semibold needs about 85 - so the label was being
+   clipped by its own box. Measured, not guessed: at 390px it fits with
+   room to spare, and only the narrowest common phones need this.
+
+   The label keeps its words. Shrinking the shortcut and the gap hands
+   the bar 14px back and dropping to 11px costs the text about 7, which
+   clears it - and that is better than truncating "View Product" to
+   "View", which reads like a different action. */
+@media (max-width: 380px) {
+    .kk-card-actions { gap: 6px; }
+    .kk-card-actions__cta { font-size: 11px; letter-spacing: -0.01em; }
+    /* Both axes and no stretch: width alone, against a height still
+       filling the 42px bar, would have made an oval. */
+    .kk-card-actions .kk-quickadd {
+        aspect-ratio: auto;
+        align-self: center;
+        width: 34px;
+        height: 34px;
+    }
+    .kk-card-actions .kk-quickadd svg { width: 16px; height: 16px; }
+}
+.kk-quickadd {
+    width: 40px; height: 40px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 999px;
+    background: var(--kk-cream-lighter, #fbf5e8);
+    border: 1px solid var(--kk-brown-dark, #2d1810);
+    color: var(--kk-brown-dark, #2d1810);
+    padding: 0;
+    transition: background .18s ease, color .18s ease, transform .18s ease;
+}
+.kk-quickadd svg { width: 19px; height: 19px; }
+.kk-quickadd:hover { background: var(--kk-brown-dark, #2d1810); color: var(--kk-cream, #efe2cb); }
+.kk-quickadd:active { transform: scale(.94); }
+.kk-quickadd:focus-visible { outline: 2px solid var(--kk-tan-dark, #8c5c34); outline-offset: 2px; }
+
+/* The popup itself. */
+.kk-qa__backdrop {
+    position: fixed; inset: 0; z-index: 80;
+    background: rgba(31, 17, 9, .55);
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+    overflow-y: auto;
+}
+/* Capped and split into head / scrolling body / foot: a product with a dozen
+   sizes and eight colours made the panel taller than a phone screen, which put
+   Add to Cart off the bottom of it with nothing to scroll. */
+.kk-qa__panel {
+    position: relative;
+    width: 100%; max-width: 420px;
+    max-height: 88vh;
+    margin: auto;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 24px 60px rgba(31, 17, 9, .3);
+    overflow: hidden;
+    display: flex; flex-direction: column;
+}
+/* The template inside the panel is one wrapper div, so it carries the split. */
+.kk-qa__panel > div { display: flex; flex-direction: column; min-height: 0; }
+.kk-qa__close {
+    position: absolute; top: 10px; right: 10px; z-index: 2;
+    width: 34px; height: 34px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 999px; border: none;
+    background: rgba(255, 255, 255, .9);
+    color: var(--kk-text-muted, #7a6555);
+}
+.kk-qa__close:hover { background: var(--kk-cream-dark, #e3d2b3); color: var(--kk-text, #2d1810); }
+.kk-qa__close svg { width: 18px; height: 18px; }
+
+.kk-qa__head {
+    display: flex; gap: 14px;
+    padding: 18px 52px 16px 18px;
+    border-bottom: 1px solid var(--kk-cream-dark, #e3d2b3);
+}
+.kk-qa__thumb {
+    width: 76px; height: 95px; flex: 0 0 auto;
+    border-radius: 8px; overflow: hidden;
+    background: var(--kk-cream-dark, #e3d2b3);
+}
+.kk-qa__thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.kk-qa__brand {
+    font-size: 10px; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--kk-text-muted, #7a6555); font-weight: 600;
+    margin: 0 0 3px;
+}
+.kk-qa__name {
+    font-family: var(--kk-display, Georgia, serif);
+    font-size: 16px; line-height: 1.25; color: var(--kk-text, #2d1810);
+    margin: 0 0 8px;
+}
+.kk-qa__price { font-size: 15px; font-weight: 700; color: var(--kk-text, #2d1810); }
+.kk-qa__price del { font-size: 12px; font-weight: 400; color: var(--kk-text-muted, #7a6555); margin-left: 6px; }
+.kk-qa__off { font-size: 12px; font-weight: 700; color: #b06d0f; margin-left: 6px; }
+
+.kk-qa__head { flex: 0 0 auto; }
+.kk-qa__body { padding: 16px 18px 4px; flex: 1 1 auto; overflow-y: auto; min-height: 0; }
+.kk-qa__group { margin-bottom: 16px; }
+.kk-qa__label {
+    font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--kk-text-muted, #7a6555); font-weight: 700;
+    margin: 0 0 8px;
+}
+.kk-qa__label span { text-transform: none; letter-spacing: normal; color: var(--kk-text, #2d1810); }
+.kk-qa__row { display: flex; flex-wrap: wrap; gap: 8px; }
+.kk-qa__chip {
+    min-width: 46px;
+    padding: 9px 12px;
+    background: #fff;
+    border: 1px solid #c9b393;
+    border-radius: 6px;
+    font-size: 13px; font-weight: 600; color: var(--kk-text, #2d1810);
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.kk-qa__chip:hover:not(:disabled) { border-color: var(--kk-tan-dark, #8c5c34); }
+.kk-qa__chip.is-selected {
+    border-color: var(--kk-brown-dark, #2d1810);
+    box-shadow: inset 0 0 0 1px var(--kk-brown-dark, #2d1810);
+}
+/* A size with nothing left is shown, not hidden: "sold out in your size" is
+   information, and a silently missing size reads as a bug. */
+.kk-qa__chip:disabled {
+    color: #b3a595; border-color: #e3d2b3;
+    background: repeating-linear-gradient(135deg, #fff, #fff 5px, #f6efe3 5px, #f6efe3 6px);
+}
+.kk-qa__chip--colour { display: inline-flex; align-items: center; gap: 7px; padding-left: 8px; }
+.kk-qa__dot {
+    width: 18px; height: 18px; border-radius: 50%; flex: 0 0 auto;
+    border: 1px solid rgba(45, 24, 16, .18);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .55);
+}
+.kk-qa__qty {
+    padding: 9px 12px;
+    border: 1px solid #c9b393; border-radius: 6px;
+    background: #fff; font-size: 13px; font-weight: 600; color: var(--kk-text, #2d1810);
+    min-width: 84px;
+}
+.kk-qa__note { font-size: 12px; color: #b3261e; margin: 0; }
+
+.kk-qa__foot {
+    padding: 12px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+    display: flex; flex-direction: column; gap: 10px;
+    flex: 0 0 auto;
+    background: #fff;
+    border-top: 1px solid var(--kk-cream-dark, #e3d2b3);
+}
+.kk-qa__cta {
+    width: 100%; padding: 13px 18px;
+    background: var(--kk-brown-dark, #2d1810); color: var(--kk-cream, #efe2cb);
+    border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    transition: background .2s ease;
+}
+.kk-qa__cta:hover:not(:disabled) { background: var(--kk-brown-darker, #1f1109); }
+.kk-qa__cta:disabled { background: #b3a595; }
+.kk-qa__link {
+    text-align: center; font-size: 12px; font-weight: 600;
+    color: var(--kk-tan-dark, #8c5c34); text-decoration: none;
+}
+.kk-qa__link:hover { text-decoration: underline; }
+
+.kk-qa__loading { padding: 44px 18px; text-align: center; color: var(--kk-text-muted, #7a6555); font-size: 13px; }
+.kk-qa__spinner {
+    width: 26px; height: 26px; margin: 0 auto 12px;
+    border: 2px solid var(--kk-cream-dark, #e3d2b3);
+    border-top-color: var(--kk-brown-dark, #2d1810);
+    border-radius: 50%;
+    animation: kk-qa-spin .7s linear infinite;
+}
+@keyframes kk-qa-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 480px) {
+    .kk-qa__panel { max-width: 100%; max-height: 85vh; border-radius: 14px 14px 0 0; margin: auto 0 0; }
+    .kk-qa__backdrop { padding: 0; align-items: flex-end; }
+    .kk-qa__chip { flex: 1 0 auto; text-align: center; padding: 11px 12px; }
+}
+
 /* Storefront sits on cream — keep the fixed-header spacer and any
    layout gaps from flashing white. Admin keeps its own background. */
 body:not(.layout-admin) {

@@ -48,6 +48,17 @@ class LoginController extends Controller
                 ])->onlyInput('email');
             }
 
+            // A deactivated account must not be able to sign in to the panel
+            // either. The admin guard shares the users provider with `web`, so
+            // without this the deactivate toggle stopped nobody here.
+            if (! $user->is_active) {
+                Auth::guard('admin')->logout();
+
+                return back()->withErrors([
+                    'email' => 'This account has been deactivated.',
+                ])->onlyInput('email');
+            }
+
             $request->session()->regenerate();
 
             return redirect()->intended(route('admin.dashboard'));
@@ -62,9 +73,45 @@ class LoginController extends Controller
     {
         Auth::guard('admin')->logout();
 
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        $this->endSessionKeeping($request, 'web');
 
         return redirect()->route('admin.login');
     }
+
+    /**
+     * Sign this guard out without taking the other one with it.
+     *
+     * One session cookie carries both guards: config/auth.php gives `admin` and
+     * `web` the same users provider, and Laravel keeps each guard's login state
+     * under its own `login_<guard>_<hash>` key in the one session. Throwing the
+     * whole session away therefore signed out whoever was working in the other
+     * tab as well - a shopper logging out took the admin panel down with them,
+     * notification polling and all, and an admin logging out emptied a
+     * shopper's session mid-checkout.
+     *
+     * Everything else still goes. This is invalidate() - flush plus a new
+     * session id, so nothing the departing side left behind can be read by
+     * whoever uses the browser next - with only the other guard's own login
+     * keys carried across into the fresh session.
+     */
+    private function endSessionKeeping(Request $request, string $guard): void
+    {
+        $prefix = 'login_'.$guard.'_';
+
+        $keep = [];
+        foreach ($request->session()->all() as $key => $value) {
+            if (str_starts_with($key, $prefix)) {
+                $keep[$key] = $value;
+            }
+        }
+
+        $request->session()->invalidate();
+
+        foreach ($keep as $key => $value) {
+            $request->session()->put($key, $value);
+        }
+
+        $request->session()->regenerateToken();
+    }
+
 }

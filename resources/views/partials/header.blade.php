@@ -219,7 +219,7 @@
                 </nav>
 
                 {{-- Mobile search (below sm, where the inline bar is hidden). Opens the
-                     full-screen panel rather than linking to /search: that page has no
+                     field in this row rather than linking to /search: that page has no
                      field to type in until it already has a query, so the link left the
                      shopper on an empty screen asking for a keyword. --}}
                 <button type="button"
@@ -288,7 +288,10 @@
                          class="absolute left-0 right-0 top-full mt-1 bg-kk-cream-lighter border border-kk-cream-dark rounded-lg shadow-dropdown z-50 overflow-hidden">
                         <div x-show="results.length > 0" class="max-h-60 overflow-y-auto">
                             <ul class="py-1">
-                                <template x-for="result in results" :key="result.id">
+                                {{-- Keyed on type+id: products, categories and brands each have their own id
+                                     sequence, so keying on the id alone made Alpine treat a product
+                                     and a category that happened to share one as the same node. --}}
+                                <template x-for="result in results" :key="result.type + '-' + result.id">
                                     <li>
                                         <a :href="result.url" class="flex items-center gap-2.5 px-3 py-2 hover:bg-kk-cream transition-colors">
                                             {{-- Contained, not cropped: at 32px a cover crop of a
@@ -346,6 +349,39 @@
                     </span>
                 </a>
 
+                {{-- Notifications. The storefront header carried no indicator of any
+                     kind, so a signed-in customer had no way to learn a notification
+                     existed short of guessing the account URL.
+
+                     The count cannot come from an Alpine store the way the cart and
+                     wishlist badges do - nothing publishes it to the browser - so it
+                     is counted here, once, per request, and only for a signed-in
+                     customer. forCustomer() keeps an admin's own store alerts out of
+                     the shopper-facing bell: both audiences share this table and are
+                     keyed only by user_id.
+
+                     A plain link rather than a dropdown: this header is already tight
+                     at lg, and the link adds no width the layout cannot absorb. It
+                     follows the wishlist's hidden sm:flex, because below sm the whole
+                     cluster gives way to the mobile nav, which carries its own
+                     Notifications entry. --}}
+                @auth
+                    @php
+                        $unreadNotificationCount = auth()->user()->notifications()->forCustomer()->unread()->count();
+                    @endphp
+                    <a href="{{ route('account.notifications') }}"
+                       class="relative p-2 lg:p-1.5 xl:p-2 text-kk-brown hover:text-kk-tan-dark transition-colors hidden sm:flex"
+                       aria-label="Notifications{{ $unreadNotificationCount > 0 ? ', ' . $unreadNotificationCount . ' unread' : '' }}">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                        </svg>
+                        @if($unreadNotificationCount > 0)
+                            <span aria-hidden="true"
+                                  class="absolute -top-0.5 -right-0.5 w-4 h-4 bg-kk-tan-dark text-kk-cream text-[10px] font-bold rounded-full flex items-center justify-center">{{ $unreadNotificationCount > 9 ? '9+' : $unreadNotificationCount }}</span>
+                        @endif
+                    </a>
+                @endauth
+
                 <!-- User account - desktop -->
                 @guest
                     <button type="button"
@@ -397,6 +433,11 @@
                     </span>
                 </a>
             </div>
+
+            {{-- Search, below sm, takes this row over rather than opening a
+                 screen of its own. It lives inside the row so its `absolute
+                 inset-0` lands on the row exactly, with no measuring. --}}
+            @include('partials.mobile-search')
         </div>
     </div>
 </header>
@@ -471,6 +512,7 @@
                 {{-- Signup-only: full name --}}
                 <div class="kk-loginmodal__group" x-show="mode === 'signup'">
                     <label class="kk-loginmodal__label" for="kk-auth-name">Full Name</label>
+<<<<<<< HEAD
                     {{-- @input="recheck(...)": a message this modal put under a box
                          is the verdict on a value that is no longer in it the moment
                          the shopper starts fixing it. Only the password pair used to
@@ -493,18 +535,63 @@
                            placeholder="Enter your full name" autocomplete="name">
                     <p class="kk-loginmodal__fielderror" id="kk-auth-name-error" role="alert"
                        x-show="fieldErrors.full_name" x-text="fieldErrors.full_name" x-cloak></p>
+=======
+                    {{-- maxlength is the 30 the server asks for (RegisterController::NAME_LIMIT),
+                         so the box stops at the 30th character instead of taking a name the
+                         endpoint is about to hand back. novalidate does not affect it: maxlength
+                         blocks the keystroke and the paste, it is not a submit-time check. The
+                         >30 branch in validate() below stays, because a value set from script -
+                         autofill, a password manager - reaches x-model without passing it. --}}
+                    <input type="text" id="kk-auth-name" class="kk-loginmodal__field"
+                           :class="fieldErrors.full_name && 'has-error'"
+                           maxlength="30"
+                           x-model="form.full_name" placeholder="Enter your full name" autocomplete="name">
+                    <p class="kk-loginmodal__fielderror" x-show="fieldErrors.full_name" x-text="fieldErrors.full_name" x-cloak></p>
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
                 </div>
 
                 <div class="kk-loginmodal__group">
                     <label class="kk-loginmodal__label" for="kk-auth-email">Email Address</label>
                     <input type="email" id="kk-auth-email" class="kk-loginmodal__field"
                            :class="fieldErrors.email && 'has-error'"
+<<<<<<< HEAD
                            x-model="form.email" @input="recheck('email')"
                            :aria-invalid="fieldErrors.email ? 'true' : 'false'"
                            :aria-describedby="fieldErrors.email ? 'kk-auth-email-error' : null"
                            placeholder="you@example.com" autocomplete="email">
                     <p class="kk-loginmodal__fielderror" id="kk-auth-email-error" role="alert"
                        x-show="fieldErrors.email" x-text="fieldErrors.email" x-cloak></p>
+=======
+                           x-model="form.email" placeholder="you@example.com" autocomplete="email">
+                    <p class="kk-loginmodal__fielderror" x-show="fieldErrors.email" x-text="fieldErrors.email" x-cloak></p>
+
+                    {{-- Signup-only: proving the address.
+
+                         Below the field, inside the same group, so the modal
+                         keeps its width and the phone box below simply moves
+                         down by one line. The email box itself is shared with
+                         the Login tab, which is why this block is gated on the
+                         mode rather than the group being. --}}
+                    <div class="kk-loginmodal__verify" x-show="mode === 'signup'" x-cloak>
+                        <p class="kk-loginmodal__verified" x-show="emailVerified">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true">
+                                <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Email Validated
+                        </p>
+
+                        <button type="button" class="kk-loginmodal__validate"
+                                x-show="showVerifyButton"
+                                @click="requestVerification()"
+                                :disabled="verifyButtonDisabled"
+                                x-text="verifyButtonLabel"></button>
+
+                        {{-- Never says "validated": only the server's answer to
+                             the status poll writes that. --}}
+                        <p class="kk-loginmodal__verifynote" x-show="verifyNotice" x-text="verifyNotice" x-cloak></p>
+                        <p class="kk-loginmodal__verifywarn" x-show="verifyError" x-text="verifyError" x-cloak></p>
+                    </div>
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
                 </div>
 
                 {{-- Signup-only: phone --}}
@@ -583,12 +670,27 @@
                        x-show="fieldErrors.password_confirmation" x-text="fieldErrors.password_confirmation" x-cloak></p>
                 </div>
 
-                <label class="kk-loginmodal__notify" x-show="mode === 'login'">
-                    <input type="checkbox" x-model="form.remember">
-                    <span>Remember me</span>
-                </label>
+                {{-- Login-only: remember me, and the way back in for someone who
+                     cannot remember the password at all. The /login page has
+                     carried a forgot-password link all along, but this modal is
+                     where most customers actually meet the form - the header
+                     opens it over whatever page they were already on - and it
+                     offered no route to a reset, so from here the password was
+                     simply unrecoverable. --}}
+                <div class="kk-loginmodal__loginrow" x-show="mode === 'login'">
+                    <label class="kk-loginmodal__notify">
+                        <input type="checkbox" x-model="form.remember">
+                        <span>Remember me</span>
+                    </label>
+                    <a href="{{ route('password.request') }}" class="kk-loginmodal__forgot">Forgot password?</a>
+                </div>
 
-                <button type="submit" class="kk-loginmodal__submit" :disabled="loading">
+                {{-- Signup cannot be submitted until the address has been proved.
+                     A courtesy only - submit() refuses it again below, and
+                     RegisterController reads the verification row for itself
+                     and refuses it there whatever this attribute says. --}}
+                <button type="submit" class="kk-loginmodal__submit"
+                        :disabled="loading || (mode === 'signup' && !emailVerified)">
                     <span x-show="!loading" x-text="mode === 'login' ? 'Login' : 'Create Account'">Login</span>
                     <span x-show="loading" x-cloak>Please wait...</span>
                 </button>
@@ -611,7 +713,14 @@
 
 <script>
     function kkAuthModal() {
-        return {
+        // kkWithSignupVerification, not object spread: spread copies the VALUE
+        // of an accessor, and half the mixin is accessors (emailVerified,
+        // showVerifyButton, verifyButtonLabel). Spreading it freezes them into
+        // answers computed before this component existed - and computing them
+        // then calls verifyEmailRaw(), which does not exist yet, so the whole
+        // component throws on init and Alpine renders none of it. Descriptors
+        // carry the accessors themselves; see the note on the helper in app.js.
+        return window.kkWithSignupVerification({
             open: false,
             mode: 'login',
             loading: false,
@@ -622,6 +731,7 @@
             fieldErrors: {},
             form: { full_name: '', email: '', phone: '', password: '', password_confirmation: '', remember: false },
             csrf: '{{ csrf_token() }}',
+<<<<<<< HEAD
             /**
              * LoginController::CREDENTIALS_FAILED, verbatim.
              *
@@ -635,6 +745,36 @@
              * address.
              */
             credentialsFailed: 'The provided credentials do not match our records.',
+=======
+
+            // Email verification is shared verbatim with the Create Account
+            // panel on /login (kkSignupVerification in resources/js/app.js).
+            // This modal is a second, equally real signup form - it posts to the
+            // very same endpoint - so it needs the same Validate Email step, and
+            // a second copy of the state machine here is how the two would
+            // drift apart. The routes it needs are the last argument to
+            // kkWithSignupVerification, at the bottom of this function.
+            //
+            // Only the two host hooks below are this modal's own: the address
+            // lives in `form.email` rather than behind an x-ref, and a message
+            // about it goes in `fieldErrors.email`.
+            verifyEmailRaw() { return this.form.email; },
+
+            verifySetEmailError(message) {
+                this.fieldErrors = { ...this.fieldErrors, email: message };
+            },
+
+            init() {
+                this.verifyInit();
+                // x-model writes straight to form.email, so there is no @input
+                // to hang this on the way the /login form does - editing a
+                // verified address has to drop the tick from here.
+                this.$watch('form.email', () => this.verifyOnEmailChanged());
+            },
+
+            destroy() { this.verifyDestroy(); },
+
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
             openModal() { this.open = true; this.error = ''; this.notice = ''; this.fieldErrors = {}; },
             switchMode(m) {
                 this.mode = m;
@@ -643,6 +783,10 @@
                 // Errors belong to the form that produced them; carrying them
                 // across marks fields the other tab doesn't even show.
                 this.fieldErrors = {};
+                // And so does a verification: the sign-in tab shares this email
+                // box, so a poll left running would be asking about an address
+                // nobody is signing up with any more.
+                this._resetVerification();
                 this.showPassword = false;
                 this.showConfirm = false;
             },
@@ -884,6 +1028,12 @@
                 this.notice = '';
 
                 if (!this.validate()) return;
+                // Reachable with the disabled attribute removed, or by pressing
+                // Enter in a field. Says the same sentence the endpoint would.
+                if (this.mode === 'signup' && !this.emailVerified) {
+                    this.verifySetEmailError('Please verify your email address before creating your account.');
+                    return;
+                }
                 this.loading = true;
                 const url = this.mode === 'login' ? '{{ route('login') }}' : '{{ route('register') }}';
                 try {
@@ -915,7 +1065,7 @@
                     // token.
                     if (res.status === 419) {
                         this.error = 'Your session expired. Refreshing the page…';
-                        setTimeout(() => window.location.reload(), 1200);
+                        setTimeout(() => (window.kkReload ? window.kkReload() : window.location.reload()), 1200);
                         return;
                     }
                     const data = await res.json().catch(() => ({}));
@@ -927,8 +1077,14 @@
                             this.form.phone = '';
                             this.form.password = '';
                             this.form.password_confirmation = '';
+                            // The verification has been spent on the account
+                            // that was just made and can never back another, so
+                            // the tick must not survive into the next signup.
+                            this._resetVerification();
                         } else {
-                            window.location.reload();
+                            // Keep the shopper on the row they signed in from; the
+                            // reload is only here to pick the session up.
+                            window.kkReload ? window.kkReload() : window.location.reload();
                         }
                     } else {
                         // Nothing is worded here and nothing from the body is
@@ -997,7 +1153,10 @@
                 }
                 this.loading = false;
             }
-        };
+        }, {
+            create: @js(route('signup.email-verifications.store')),
+            status: @js(route('signup.email-verifications.show', ['uuid' => '__ID__'])),
+        });
     }
 </script>
 
@@ -1095,12 +1254,49 @@
     .kk-loginmodal__fielderror {
         margin: 5px 0 0; font-size: 11.5px; color: #d72c0d; line-height: 1.4;
     }
+    /* Proving the email address. Sized off __fielderror and __forgot so the
+       block reads as part of the field it sits under rather than as a second
+       call to action competing with Create Account. */
+    .kk-loginmodal__verify { margin-top: 7px; }
+    .kk-loginmodal__validate {
+        display: inline-flex; align-items: center; justify-content: center;
+        padding: 6px 12px; border: 1px solid rgba(45, 24, 16, 0.35); border-radius: 4px;
+        background: #fff; color: #2d1810;
+        font-size: 12px; font-weight: 600; line-height: 1;
+        cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .kk-loginmodal__validate:hover:not(:disabled) { background: #f6f1ec; border-color: #2d1810; }
+    .kk-loginmodal__validate:disabled { opacity: 0.55; cursor: not-allowed; }
+    .kk-loginmodal__verified {
+        display: inline-flex; align-items: center; gap: 6px;
+        margin: 0; font-size: 12px; font-weight: 600; color: #1a7a2e;
+    }
+    .kk-loginmodal__verified svg { width: 13px; height: 13px; }
+    .kk-loginmodal__verifynote {
+        margin: 6px 0 0; font-size: 11.5px; color: #6b6b6b; line-height: 1.4;
+    }
+    .kk-loginmodal__verifywarn {
+        margin: 6px 0 0; font-size: 11.5px; color: #a15c07; line-height: 1.4;
+    }
+    /* Remember-me on the left, forgot-password on the right. Wraps rather than
+       squeezing, so the link never collides with the checkbox on a narrow
+       phone. */
+    .kk-loginmodal__loginrow {
+        display: flex; align-items: center; justify-content: space-between;
+        flex-wrap: wrap; gap: 6px 12px;
+        margin-bottom: 16px;
+    }
     .kk-loginmodal__notify {
         display: flex; align-items: center; gap: 8px;
         font-size: 12px; color: #6b6b6b;
-        margin-bottom: 16px; cursor: pointer;
+        cursor: pointer;
     }
     .kk-loginmodal__notify input { width: 14px; height: 14px; accent-color: #2d1810; cursor: pointer; }
+    .kk-loginmodal__forgot {
+        font-size: 12px; font-weight: 600; color: #2d1810;
+        text-decoration: none; white-space: nowrap;
+    }
+    .kk-loginmodal__forgot:hover { text-decoration: underline; }
     .kk-loginmodal__submit {
         width: 100%; padding: 12px; border: none; border-radius: 4px;
         background: #2d1810; color: #fff;

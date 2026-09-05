@@ -1,3 +1,29 @@
+{{--
+    Admin sidebar: an off-canvas drawer below lg, a static column from lg up.
+
+    Three things about the drawer are deliberate and easy to undo by accident.
+
+    1. STACKING. The backdrop must stay below the drawer. It does not do that
+       on its own - see the `z-index: 20` rule further down and the comment
+       above it. This was why the drawer opened but could not be used at all.
+
+    2. HEIGHT. The drawer and its backdrop are `position: fixed`, and a fixed
+       box sized with `inset-y-0` is measured against the initial containing
+       block. On a phone that block is the *large* viewport - the one with the
+       browser's URL bar retracted - so the drawer's bottom edge fell outside
+       the visible screen. The nav is the scrolling element inside the drawer,
+       so its scrollport ended off-screen too and the sections below Online
+       Store could not be scrolled into view however far you dragged. An
+       explicit `dvh` height tracks the visible viewport instead; the `vh`
+       line above it is the fallback for engines without `dvh`.
+
+    3. OPEN/CLOSED STATE. The drawer used to choose its transform with
+       `:class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"`, so it
+       carried *neither* class during the first paint - before Alpine boots -
+       and flashed open across the page on every admin page load. Closed is
+       now the CSS default and Alpine only adds `.is-open`, so the very first
+       paint is already right.
+--}}
 <style>
 .admin-nav-item {
     display: flex;
@@ -39,9 +65,87 @@
         min-height: 2.5rem;
     }
 }
+
+/* --- The drawer -----------------------------------------------------------
+   Written mobile-first on purpose. Writing it the other way round - drawer
+   rules inside `@media (max-width: 1023.98px)` - leaves a hairline range
+   between 1023.98px and Tailwind's `lg` (min-width: 1024px) where neither the
+   drawer rules nor `lg:static` apply, and a fixed box with no height there
+   collapses to its content. Defaulting to the drawer and resetting at exactly
+   `lg` cannot fall through that gap. */
+.admin-sidebar { background: #1a1a1a; }
+
+.admin-sidebar,
+.admin-sidebar__backdrop {
+    height: 100vh;
+    height: 100dvh;
+}
+
+.admin-sidebar {
+    /* 240px is comfortable from 360px up; on a 320px screen an unbounded
+       drawer would leave no page showing behind it to tap back to. */
+    max-width: 85vw;
+    transform: translateX(-100%);
+    /* Off-canvas links must not be reachable by Tab or a screen reader. The
+       zero-length visibility transition is delayed so the drawer stays
+       painted through the closing slide. */
+    visibility: hidden;
+    transition: transform 0.2s ease-in-out, visibility 0s linear 0.2s;
+}
+
+.admin-sidebar.is-open {
+    transform: translateX(0);
+    visibility: visible;
+    transition: transform 0.2s ease-in-out, visibility 0s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .admin-sidebar,
+    .admin-sidebar.is-open { transition: none; }
+}
+
+/* From lg up it is a plain static column in the shell's flex row again.
+   `.is-open` is listed alongside the bare class because it is (0,2,0) and
+   would otherwise outrank this (0,1,0) reset even from inside the media
+   query - the drawer flag can still be set here after a resize. */
+@media (min-width: 1024px) {
+    .admin-sidebar,
+    .admin-sidebar.is-open {
+        height: auto;
+        max-width: none;
+        transform: none;
+        visibility: visible;
+        transition: none;
+    }
+}
+
+/* The nav is the only scrolling box in the drawer, so it needs a floor of zero
+   to be allowed to shrink inside the flex column. The safe-area term resolves
+   to 0px as things stand - the layout's viewport meta has no viewport-fit=cover,
+   so the browser already insets the viewport past the home indicator - and is
+   here so the last nav row keeps its clearance if that ever changes. */
+.admin-sidebar__nav {
+    min-height: 0;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* THE ONE THAT MADE THE DRAWER USELESS. app.css carries an unlayered modal
+   rule, `.layout-admin [x-show].fixed { z-index: 50 }`. Alpine leaves `x-show`
+   on the element, so this backdrop matched it and was lifted to 50 - above the
+   z-30 drawer. Tailwind's `.z-20` could not hold it down: that utility lives in
+   `@layer utilities`, and an unlayered declaration outranks a layered one
+   whatever the specificity (it also loses (0,1,0) to (0,3,0) on specificity
+   alone). So the drawer slid in *underneath* its own scrim: the nav could not
+   be dragged, because every touch landed on the backdrop, and a tap ran the
+   backdrop's @click and shut the drawer. The washed-out look in the bug report
+   is the same scrim. The extra class here makes the selector (0,4,0), so it
+   wins wherever this rule block ends up in the document. */
+.layout-admin [x-show].admin-sidebar__backdrop.fixed { z-index: 20; }
 </style>
 
-<!-- Mobile sidebar backdrop -->
+<!-- Mobile drawer backdrop -->
 <div x-cloak
      x-show="sidebarOpen"
      x-transition:enter="transition-opacity ease-out duration-300"
@@ -51,19 +155,13 @@
      x-transition:leave-start="opacity-100"
      x-transition:leave-end="opacity-0"
      @click="sidebarOpen = false"
-     class="fixed inset-0 bg-black/50 z-20 lg:hidden"></div>
+     aria-hidden="true"
+     class="admin-sidebar__backdrop fixed inset-x-0 top-0 bg-black/50 z-20 lg:hidden"></div>
 
 <!-- Sidebar -->
-{{-- The closed position is a real class in `class`, not only in `:class`, so the
-     drawer is already off-canvas at first paint. Vite ships Alpine as a module
-     script, which runs after the first paint, so a binding-only closed state let
-     the drawer paint open and then animate shut on every admin page load — most
-     obvious on mobile when paging through a list. `:class` uses the object form
-     because that is the only one Alpine will use to remove a class it did not
-     add itself; with the ternary the static `-translate-x-full` would stick. --}}
-<aside :class="{ 'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen }"
-       class="fixed inset-y-0 left-0 z-30 w-60 flex flex-col transform -translate-x-full transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0"
-       style="background: #1a1a1a;">
+<aside id="admin-sidebar"
+       :class="{ 'is-open': sidebarOpen }"
+       class="admin-sidebar fixed top-0 left-0 z-30 w-60 flex flex-col lg:static">
 
     <!-- Store name + logo -->
     <div class="flex items-center gap-2.5 h-14 shrink-0 px-4" style="border-bottom: 1px solid #2a2a2a;">
@@ -75,10 +173,21 @@
         <a href="{{ route('admin.dashboard') }}" class="text-sm font-semibold text-white truncate">
             {{ config('app.name') }}
         </a>
+        {{-- A way out from inside the drawer: the backdrop strip left of it is
+             only ~15% of a phone screen and is easy to miss. --}}
+        <button type="button"
+                @click="sidebarOpen = false"
+                class="lg:hidden ml-auto -mr-1.5 p-1.5 rounded-lg shrink-0"
+                style="color: #b5b5b5;"
+                aria-label="Close menu">
+            <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
     </div>
 
     <!-- Navigation -->
-    <nav class="flex-1 min-h-0 px-2 py-3 space-y-0.5 overflow-y-auto scrollbar-dark" style="overscroll-behavior: contain;">
+    <nav class="admin-sidebar__nav flex-1 px-2 py-3 space-y-0.5 overflow-y-auto scrollbar-dark" aria-label="Admin">
         @php $user = auth('admin')->user(); @endphp
 
         <!-- Dashboard -->
@@ -92,11 +201,27 @@
         </a>
         @endif
 
+        {{-- Ungated on purpose: the notifications route carries no admin.section
+             middleware, so every admin can open the page the header bell links to. --}}
+        <a href="{{ route('admin.notifications') }}"
+           class="admin-nav-item {{ request()->routeIs('admin.notifications') ? 'active' : '' }}">
+            <svg style="width: 18px; height: 18px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+            Notifications
+        </a>
+
         <!-- Orders Section -->
-        @if($user->canAccessSection('orders'))
+        {{-- The heading follows the Customers block below: it shows when the
+             user can reach ANY item under it, so a recovery-desk staff member
+             holding only `abandoned_carts` still gets a labelled group instead
+             of a stray link floating under Notifications. --}}
+        @if($user->canAccessSection('orders') || $user->canAccessSection('abandoned_carts'))
         <div class="pt-4 pb-1">
             <p class="admin-nav-section">Orders</p>
         </div>
+        @endif
+        @if($user->canAccessSection('orders'))
         <a href="{{ route('admin.orders.index') }}"
            class="admin-nav-item {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}">
             <svg style="width: 18px; height: 18px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -110,6 +235,15 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
             </svg>
             Returns
+        </a>
+        @endif
+        @if($user->canAccessSection('abandoned_carts'))
+        <a href="{{ route('admin.abandoned-carts.index') }}"
+           class="admin-nav-item {{ request()->routeIs('admin.abandoned-carts.*') ? 'active' : '' }}">
+            <svg style="width: 18px; height: 18px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17M9 21a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z"/>
+            </svg>
+            Abandoned Carts
         </a>
         @endif
 

@@ -4,7 +4,7 @@
         $kkCatName = $kkCatSlug ? ($filterPanel['categories']->firstWhere('slug', $kkCatSlug)?->name ?? null) : null;
     @endphp
 
-    <x-slot name="title">{{ $kkCatName ?? ($kkCatSlug ? 'Products' : 'Kids Clothing & Accessories') }} - {{ config('app.name') }}</x-slot>
+    <x-slot name="title">{{ $listingTitle ?? $kkCatName ?? ($kkCatSlug ? 'Products' : 'Kids Clothing & Accessories') }} - {{ config('app.name') }}</x-slot>
 
     @push('meta')
         @php
@@ -27,7 +27,7 @@
         <meta name="twitter:card" content="summary">
         <meta name="twitter:title" content="{{ $metaCat ?? ($metaBrand ?? 'Kids Clothing & Accessories') }} - {{ config('app.name') }}">
         <meta name="twitter:description" content="{{ $metaDesc }}">
-        @if(request()->anyFilled(['category', 'brand', 'size', 'colour', 'min_price', 'max_price', 'rating', 'in_stock', 'on_sale', 'sort']))
+        @if(request()->anyFilled(['category', 'brand', 'size', 'colour', 'texture', 'min_price', 'max_price', 'rating', 'in_stock', 'on_sale', 'sort']))
         <meta name="robots" content="noindex, follow">
         @endif
     @endpush
@@ -42,8 +42,10 @@
     <!-- Header -->
     <div class="bg-[#F8931D]">
         <div class="container mx-auto px-4 py-6 md:py-8">
-            <h1 class="text-2xl md:text-3xl font-bold text-white mb-1">All Products</h1>
-            <p class="text-white text-sm">Browse our full range of men's and women's clothing</p>
+            {{-- A collection page reuses this listing whole, so the heading has
+                 to come from the caller rather than being hard-wired to the shop. --}}
+            <h1 class="text-2xl md:text-3xl font-bold text-white mb-1">{{ $listingTitle ?? 'All Products' }}</h1>
+            <p class="text-white text-sm">{{ $listingDescription ?? 'Browse our full range of men\'s and women\'s clothing' }}</p>
             <p class="text-white/80 text-xs mt-2">{{ $products->total() }} products</p>
         </div>
     </div>

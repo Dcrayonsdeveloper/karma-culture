@@ -5,29 +5,28 @@ namespace Tests\Feature\Homepage;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariant;
-use App\Models\ShopFilterItem;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * A "Shop It Your Way" hanger has to open a listing with something on it.
+ * A "Shop It Your Way" hanger can no longer be a dead end.
  *
- * The reported bug: /shop?size=cd, reached by clicking a hanger on the home
+ * The reported bug: /products?size=cd, reached by clicking a hanger on the home
  * page, showed "0 products found" with "cd" drawn in the sidebar as though it
  * were a size the shop sells. "cd" was a typo an admin had saved into a hanger
  * months earlier, and nothing between that field and the shopper's screen ever
  * checked it against a product. On the live catalogue six of the eight size
  * hangers and all six shade hangers were the same dead end.
  *
- * The rail was made to hide those hangers and that was taken back out: it
- * emptied the whole Shade tab off the live storefront, and a section the admin
- * curated disappearing on its own is worse than one that opens an empty
- * listing. So the rail hangs every active hanger, and the count that would
- * have hidden it is reported in Homepage > Shop Filters instead, where it can
- * be fixed. What is still fixed here: the sidebar stops offering a value off
- * the URL that no product carries, and the admin screen flags the hangers that
- * lead nowhere.
+ * Two rounds of fixes tried to catch that after the fact - hide the empty
+ * hangers (which emptied the whole Shade tab off the live site and was taken
+ * back out), then report the count on the admin screen so somebody could go and
+ * fix them by hand. The rail is derived from the catalogue now, which removes
+ * the cause instead: a hanger exists only while a product carries its value, so
+ * there is no field left to type "cd" into. What this file pins is that this is
+ * really true end to end, and that the OTHER half of the original fix still
+ * holds: a value that arrives in the URL and that nothing carries must not be
+ * drawn in the sidebar as though the shop sold it.
  */
 class ShopFilterDeadEndTest extends TestCase
 {
@@ -50,7 +49,10 @@ class ShopFilterDeadEndTest extends TestCase
             'category_id' => $category->id,
             'status' => 'approved',
             'is_active' => true,
-            'attributes' => ['Colours' => [['name' => 'Black', 'hex' => '#000000']]],
+            'attributes' => [
+                'Colours' => [['name' => 'Black', 'hex' => '#000000']],
+                'Textures' => ['Matte'],
+            ],
         ]);
 
         ProductVariant::create([
@@ -63,89 +65,61 @@ class ShopFilterDeadEndTest extends TestCase
         ]);
     }
 
-    private function hanger(string $type, string $label, ?string $query, int $position = 0): ShopFilterItem
-    {
-        return ShopFilterItem::create([
-            'type' => $type,
-            'label' => $label,
-            'query_string' => $query,
-            'position' => $position,
-            'is_active' => true,
-        ]);
-    }
+    // ------------------------------------------------------------------
+    // The rail hangs the catalogue, so every hanger leads somewhere
+    // ------------------------------------------------------------------
 
-    /**
-     * The rail shows what the admin saved. A hanger onto an empty listing is a
-     * hanger to fix in the admin, not one for the storefront to quietly drop -
-     * dropping them took the Shade tab off the live site altogether.
-     */
-    public function test_a_size_the_shop_does_not_stock_still_hangs(): void
+    public function test_every_hanger_on_the_rail_opens_a_listing_with_products_on_it(): void
     {
-        $this->hanger('size', 'M', 'size=M');
-        $this->hanger('size', 'cd', 'size=cd', 1);
-
         $html = $this->get('/')->assertOk()->getContent();
 
+        // The one product's own values, and nothing else.
         $this->assertStringContainsString('?size=M"', $html);
-        $this->assertStringContainsString('?size=cd"', $html);
-        // And the rail is sized to every hanger on it.
-        $this->assertStringContainsString('--kk-rail-count: 2', $html);
-    }
-
-    public function test_a_shade_no_product_lists_still_hangs(): void
-    {
-        $this->hanger('shade', 'Black', 'shade=Black');
-        $this->hanger('shade', 'Cinnamon', 'shade=cinnamon', 1);
-
-        $html = $this->get('/')->assertOk()->getContent();
-
         $this->assertStringContainsString('?shade=Black"', $html);
-        $this->assertStringContainsString('?shade=cinnamon"', $html);
-        // The tab itself is the point: this is the one that went missing.
-        $this->assertStringContainsString("tab='shade'", $html);
+        $this->assertStringContainsString('?texture=Matte"', $html);
+
+        foreach (['?size=M', '?shade=Black', '?texture=Matte'] as $query) {
+            $this->get('/products'.$query)->assertOk()->assertSee('Oxford Shirt');
+        }
     }
 
-    public function test_a_price_bound_holding_nothing_still_hangs(): void
+    public function test_a_size_the_shop_does_not_stock_cannot_get_onto_the_rail(): void
     {
-        $this->hanger('price', 'Under 1k', 'price_max=1000');
-        $this->hanger('price', 'Over 7k', 'price_min=7000', 1);
-
+        // "cd" was the live typo. There is no longer a field to put it in: the
+        // rail can only ever say what a product says.
         $html = $this->get('/')->assertOk()->getContent();
 
-        $this->assertStringContainsString('?price_max=1000"', $html);
-        $this->assertStringContainsString('?price_min=7000"', $html);
+        $this->assertStringNotContainsString('?size=cd"', $html);
+        $this->assertStringContainsString('--kk-rail-count: 1', $html);
     }
 
-    /** A hanger with no query is a plain tile, not a dead end - it still hangs. */
-    public function test_a_hanger_with_no_query_string_still_hangs(): void
+    public function test_a_tab_the_catalogue_has_nothing_for_is_not_rendered(): void
     {
-        $this->hanger('size', 'Coming Soon', null);
-
-        $this->get('/')->assertOk()->assertSee('Coming Soon');
-    }
-
-    /** A tab the admin has saved nothing for is a button onto a bare rail. */
-    public function test_a_tab_with_no_hangers_saved_is_not_rendered(): void
-    {
-        $this->hanger('size', 'M', 'size=M');
-
+        // One product at one price, so there is no price band to offer - and a
+        // tab with nothing on it is a button onto a bare rail.
         $html = $this->get('/')->assertOk()->getContent();
 
         $this->assertStringContainsString("tab='size'", $html);
-        $this->assertStringNotContainsString("tab='shade'", $html);
+        $this->assertStringNotContainsString("tab='price'", $html);
     }
 
-    /** The size off a hanger still filters the shop it opens. */
-    public function test_a_live_hanger_opens_a_listing_with_products_on_it(): void
+    public function test_deactivating_the_product_takes_its_hangers_off_the_rail(): void
     {
-        $this->get('/shop?size=M')
-            ->assertOk()
-            ->assertSee('Oxford Shirt');
+        Product::query()->firstOrFail()->update(['is_active' => false]);
+
+        $html = $this->get('/')->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('?size=M"', $html);
+        $this->assertStringNotContainsString('?shade=Black"', $html);
     }
+
+    // ------------------------------------------------------------------
+    // A value that only the URL believes in
+    // ------------------------------------------------------------------
 
     public function test_the_sidebar_does_not_offer_a_size_no_product_carries(): void
     {
-        $response = $this->get('/shop?size=cd')->assertOk();
+        $response = $this->get('/products?size=cd')->assertOk();
 
         // Not a pickable size...
         $response->assertDontSee('name="size[]" value="cd"', false)
@@ -158,10 +132,22 @@ class ShopFilterDeadEndTest extends TestCase
 
     public function test_the_sidebar_does_not_offer_a_colour_no_product_lists(): void
     {
-        $response = $this->get('/shop?shade=cinnamon')->assertOk();
+        $response = $this->get('/products?shade=cinnamon')->assertOk();
 
         $response->assertDontSee('name="colour[]" value="cinnamon"', false)
             ->assertSee('cinnamon');
+
+        $this->assertSame(0, $response->viewData('products')->total());
+    }
+
+    public function test_the_sidebar_does_not_offer_a_texture_no_product_lists(): void
+    {
+        $response = $this->get('/products?texture=corduroy')->assertOk();
+
+        $response->assertDontSee('name="texture[]" value="corduroy"', false)
+            // The chip above the grid is what takes it back off.
+            ->assertSee('Texture: corduroy', false)
+            ->assertSee('name="texture[]" value="Matte"', false);
 
         $this->assertSame(0, $response->viewData('products')->total());
     }
@@ -173,39 +159,15 @@ class ShopFilterDeadEndTest extends TestCase
      */
     public function test_a_stocked_size_stays_tickable_once_another_filter_empties_it(): void
     {
-        $this->get('/shop?size=M&max_price=1')
+        $this->get('/products?size=M&max_price=1')
             ->assertOk()
             ->assertSee('name="size[]" value="M"', false);
     }
 
-    public function test_the_admin_screen_flags_a_hanger_that_matches_nothing(): void
+    public function test_a_stocked_texture_stays_tickable_once_another_filter_empties_it(): void
     {
-        $this->hanger('size', 'M', 'size=M');
-        $this->hanger('size', 'cd', 'size=cd', 1);
-
-        $this->actingAs(User::factory()->create(['role' => 'admin']), 'admin')
-            ->get(route('admin.homepage.shop-filters'))
+        $this->get('/products?texture=Matte&max_price=1')
             ->assertOk()
-            ->assertSee('0 &middot; hidden', false)
-            // And it offers the sizes that would work instead of leaving the
-            // admin to guess at them.
-            ->assertSee('<option value="size=M">', false);
-    }
-
-    /**
-     * The quieter half: `price=2` is not a bound the shop reads, so the hanger
-     * opens the whole catalogue. It is not a dead end and stays hung - but the
-     * count beside it would read as healthy, so the screen has to say why.
-     */
-    public function test_the_admin_screen_flags_a_query_the_shop_does_not_read(): void
-    {
-        $this->hanger('price', '1k - 2k', 'price=2');
-
-        $this->actingAs(User::factory()->create(['role' => 'admin']), 'admin')
-            ->get(route('admin.homepage.shop-filters'))
-            ->assertOk()
-            ->assertSee('>ignored<', false);
-
-        $this->get('/')->assertOk()->assertSee('?price=2"', false);
+            ->assertSee('name="texture[]" value="Matte"', false);
     }
 }

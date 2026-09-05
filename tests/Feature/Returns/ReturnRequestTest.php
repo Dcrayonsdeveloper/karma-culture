@@ -110,7 +110,11 @@ class ReturnRequestTest extends TestCase
             ->post('/account/returns', [
                 'order_id' => $this->order->id,
                 'type' => 'return',
-                'reason' => 'Product defective',
+                // One of ReturnController::REASONS. The reason stopped being a
+                // free string when the form became a select, so the value this
+                // used to post failed validation and no return was ever created
+                // - the test redirected back to the form and called it a pass.
+                'reason' => 'Defective or damaged product',
                 'description' => 'The product arrived with a tear on the side.',
                 'items' => [
                     [
@@ -122,6 +126,9 @@ class ReturnRequestTest extends TestCase
                 ],
             ]);
 
+        // Assert no validation errors before the redirect: a rejected form also
+        // redirects, which is how this failure hid.
+        $response->assertSessionHasNoErrors();
         $response->assertRedirect();
 
         $this->assertDatabaseHas('returns', [

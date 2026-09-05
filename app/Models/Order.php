@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Events\OrderStatusChanged;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -370,7 +371,17 @@ class Order extends Model
 
     public function updateStatus(string $status, ?int $userId = null, ?string $comment = null): void
     {
+        // OrderStatusChanged had a listener and no dispatcher - nothing in the
+        // app ever fired it, so the customer was never told their order was
+        // cancelled, packed, ready or on its way. Fired here because this is
+        // the one funnel every admin status change goes through.
+        $previous = (string) $this->status;
+
         $this->update(['status' => $status]);
+
+        if ($previous !== $status) {
+            OrderStatusChanged::dispatch($this, $previous, $status);
+        }
 
         $this->statusHistory()->create([
             'status' => $status,

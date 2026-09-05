@@ -43,6 +43,23 @@ class CartApiTest extends TestCase
         ]);
     }
 
+    public function test_a_cart_with_something_in_it_can_be_read(): void
+    {
+        $h = ['Authorization' => 'Bearer '.$this->token];
+
+        // test_get_cart below only ever read an EMPTY cart, which skips the
+        // items.product eager load entirely - so the defect that made this
+        // endpoint 500 the moment a shopper added anything was invisible.
+        $this->withHeaders($h)->postJson('/api/v1/cart/items', [
+            'product_id' => $this->product->id,
+            'quantity' => 1,
+        ])->assertSuccessful();
+
+        $this->withHeaders($h)->getJson('/api/v1/cart')
+            ->assertOk()
+            ->assertJsonPath('data.items.0.product.id', $this->product->id);
+    }
+
     public function test_get_cart(): void
     {
         $response = $this->withHeaders([

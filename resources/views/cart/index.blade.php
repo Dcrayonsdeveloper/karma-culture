@@ -21,6 +21,23 @@
         </div>
 
         <div class="container mx-auto px-4 pb-10">
+            {{-- Flash notices.
+
+                 The storefront layout renders none, so every redirect that
+                 lands here carrying a message has been arriving silently -
+                 including CheckoutController's "we could not reserve your
+                 stock" bounce. Cart recovery links land here too, so the banner
+                 lives on this page rather than in the shared layout. --}}
+            @foreach(['success' => ['#e6f6ec', '#1a7a2e'], 'info' => ['#eaf4ff', '#005bd3'], 'error' => ['#fdecea', '#d72c0d']] as $flashKey => $flashColours)
+                @if(session($flashKey))
+                    <div role="status"
+                         class="mb-4 rounded-lg px-4 py-3 text-sm font-medium"
+                         style="background: {{ $flashColours[0] }}; color: {{ $flashColours[1] }};">
+                        {{ session($flashKey) }}
+                    </div>
+                @endif
+            @endforeach
+
             {{-- Skeleton: visible until Alpine initializes, then removed --}}
             <div x-data x-init="$el.remove()" class="animate-pulse">
                 <div class="flex items-center justify-between mb-4">
@@ -121,6 +138,9 @@
                                                 </template>
                                                 <template x-if="item.colour">
                                                     <p class="text-[11px] text-neutral-600 mt-0.5">Colour: <span class="font-medium text-neutral-800" x-text="item.colour"></span></p>
+                                                </template>
+                                                <template x-if="item.texture">
+                                                    <p class="text-[11px] text-neutral-600 mt-0.5">Texture: <span class="font-medium text-neutral-800" x-text="item.texture"></span></p>
                                                 </template>
 
                                                 <!-- Price -->
@@ -321,11 +341,38 @@
                                             </div>
                                         </template>
 
-                                        @php $kkFreeShip = (int) \App\Models\Setting::get('free_shipping_threshold', 999); @endphp
+                                        {{-- The amount, not the word - the same fix the checkout
+                                             summary got. This row printed FREE unconditionally and
+                                             the threshold beside it was a hardcoded 999 default,
+                                             so a shop charging for delivery above a 400 minimum
+                                             showed every basket "FREE (free over 999)" and then
+                                             quoted a total with no delivery in it. The figure is
+                                             the server's - see cart_shipping in CartController. --}}
                                         <div class="flex items-center justify-between text-[13px]">
-                                            <span class="text-neutral-600">Shipping <span class="text-neutral-400">(free over ₹{{ number_format($kkFreeShip) }})</span></span>
-                                            <span class="text-success-600 font-semibold">FREE</span>
+                                            <span class="text-neutral-600">
+                                                Shipping
+                                                <template x-if="shipping > 0 && freeShipThreshold > 0">
+                                                    <span class="text-neutral-400" x-text="'(free over ' + fp(freeShipThreshold) + ')'"></span>
+                                                </template>
+                                            </span>
+                                            <template x-if="shipping > 0">
+                                                <span class="font-semibold text-neutral-900" x-text="fp(shipping)"></span>
+                                            </template>
+                                            <template x-if="shipping <= 0">
+                                                <span class="text-success-600 font-semibold">FREE</span>
+                                            </template>
                                         </div>
+
+                                        {{-- Tax, shown only when there is some. The cart has always
+                                             stored it and the checkout now shows it; leaving it out
+                                             here alone would have made this page's total the one
+                                             figure on the site that disagreed with what is charged. --}}
+                                        <template x-if="tax > 0">
+                                            <div class="flex items-center justify-between text-[13px]">
+                                                <span class="text-neutral-600">Tax</span>
+                                                <span class="font-medium text-neutral-900" x-text="fp(tax)"></span>
+                                            </div>
+                                        </template>
                                     </div>
 
                                     <div class="border-t border-dashed border-neutral-200 my-3"></div>
@@ -420,6 +467,7 @@
                 'variant_label' => $item->variant ? $item->variant->attributeValues->pluck('value')->join(' / ') : null,
                 'size' => $item->size,
                 'colour' => $item->colour,
+                'texture' => $item->texture,
                 'price' => (float) $item->price,
                 'mrp' => (float) $item->product->mrp,
                 'discount_pct' => $item->product->discount_percentage ?? 0,
@@ -448,6 +496,18 @@
                 items: @json($cartItems),
                 coupon: @json($cartCoupon),
                 discount: {{ $cartDiscount }},
+                // Delivery and tax as the server worked them out. Every mutation
+                // below re-reads them from its response rather than recomputing
+                // them here, so this page can never quote a delivery charge the
+                // checkout would disagree with.
+                shipping: {{ (float) $cart->shipping }},
+                tax: {{ (float) $cart->tax }},
+                // Display only: what the "free over X" note says, and 0 when
+                // there is no offer to announce. Read through ShippingCharge
+                // rather than off the setting, because the stored threshold
+                // outlives the switch being turned off. The decision itself is
+                // ShippingCharge's, never this number's.
+                freeShipThreshold: {{ \App\Support\ShippingCharge::freeShippingThreshold() }},
                 couponCode: '',
                 couponError: '',
                 applyingCoupon: false,
@@ -479,9 +539,16 @@
                 get productDiscount() {
                     return this.totalMrp - this.subtotal;
                 },
+                // The same four terms the checkout adds up, in the same order.
+                // This was subtotal - discount, so the "Total Amount" a shopper
+                // agreed to on the cart page was short by the delivery charge
+                // and the tax that the next page would go on to bill them.
                 get totalAmount() {
-                    return this.subtotal - this.discount;
+                    return this.subtotal - this.discount + this.shipping + this.tax;
                 },
+                // Savings are what came off the goods. Delivery is a charge, not
+                // a saving, so it stays out of this - adding it would have let
+                // "You will save" grow when the basket got more expensive.
                 get totalSavings() {
                     return this.productDiscount + this.discount;
                 },
@@ -590,7 +657,11 @@
                         // survive a request nobody can vouch for.
                         if (!res.ok || data === null) {
                             item.quantity = oldQty;
+<<<<<<< HEAD
                             this.toast(this.failureMessage(res, data), 'error');
+=======
+                            this.handleRefusal(res, data, 'Failed to update');
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
                         } else {
                             this.syncCouponData(data);
                             this.updateCartBadge();
@@ -628,7 +699,11 @@
                             this.updateCartBadge();
                             this.toast('Item removed from cart');
                         } else {
+<<<<<<< HEAD
                             this.toast(this.failureMessage(res, data), 'error');
+=======
+                            this.handleRefusal(res, data, 'Failed to remove');
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
                             item.updating = false;
                         }
                     } catch (e) {
@@ -658,13 +733,26 @@
                             this.items = [];
                             this.coupon = null;
                             this.discount = 0;
+                            // Clearing empties the basket client-side without going
+                            // through syncCouponData, so these have to be dropped by
+                            // hand - otherwise an emptied cart kept quoting the
+                            // delivery charge its last item had earned.
+                            this.shipping = 0;
+                            this.tax = 0;
                             this.updateCartBadge();
                             this.toast('Cart cleared');
                         } else {
+<<<<<<< HEAD
                             // There was no else at all here: a rejected clear left
                             // the bag on screen exactly as it was, with nothing said,
                             // which reads as a dead button rather than a refusal.
                             this.toast(this.failureMessage(res, data), 'error');
+=======
+                            // There was no else here: pressing Clear Cart on a lapsed
+                            // session did nothing at all - no toast, no error, no change.
+                            const data = await res.json().catch(() => ({}));
+                            this.handleRefusal(res, data, 'Could not clear the cart');
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
                         }
                     } catch (e) {
                         this.toast(window.kkApiError(e).message, 'error');
@@ -712,7 +800,10 @@
                             this.syncCouponData(data);
                             this.couponCode = '';
                             this.toast('Coupon applied successfully');
+                        } else if (res.status === 401 || res.status === 419) {
+                            if (window.kkGoToLogin) window.kkGoToLogin();
                         } else {
+<<<<<<< HEAD
                             // Mapped from the status rather than read straight
                             // out of the body: a 500's `message` is the
                             // exception's own text, and a 419 is a dead token
@@ -721,6 +812,9 @@
                             // under the box and nowhere else - never also in a
                             // toast.
                             this.couponError = this.failureMessage(res, data);
+=======
+                            this.couponError = data.error || data.message || 'Invalid coupon';
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
                         }
                     } catch (e) {
                         this.couponError = window.kkApiError(e).message;
@@ -741,6 +835,7 @@
                                 'Accept': 'application/json',
                             },
                         });
+<<<<<<< HEAD
                         const data = await this.readBody(res);
                         // Success here IS syncCouponData() being told there is no
                         // coupon any more, which is the one thing an unreadable body
@@ -755,6 +850,14 @@
                             // stayed, the discount stayed, and the shopper was left
                             // to guess whether the coupon had come off.
                             this.toast(this.failureMessage(res, data), 'error');
+=======
+                        const data = await res.json().catch(() => ({}));
+                        if (res.ok) {
+                            this.syncCouponData(data);
+                            this.toast('Coupon removed');
+                        } else {
+                            this.handleRefusal(res, data, 'Could not remove the coupon');
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
                         }
                     } catch (e) {
                         this.toast(window.kkApiError(e).message, 'error');
@@ -766,6 +869,18 @@
                 syncCouponData(data) {
                     if (data.cart_discount !== undefined) {
                         this.discount = data.cart_discount;
+                    }
+                    // Every mutation - quantity, removal, coupon on, coupon off -
+                    // funnels through here, which makes it the one place the
+                    // recalculated delivery charge and tax need reading back.
+                    // Guarded on undefined rather than truthiness: a basket that
+                    // has just qualified for free delivery answers 0, and `if (0)`
+                    // would have left the old charge on screen.
+                    if (data.cart_shipping !== undefined) {
+                        this.shipping = data.cart_shipping;
+                    }
+                    if (data.cart_tax !== undefined) {
+                        this.tax = data.cart_tax;
                     }
                     if (data.coupon) {
                         this.coupon = data.coupon;
@@ -787,10 +902,42 @@
                 },
 
                 updateCartBadge() {
+                    // Refetch rather than write the store by hand. The header badge reads
+                    // store.itemCount, which assigning store.items never touched, so it
+                    // kept showing the pre-change number until the shopper navigated
+                    // away - and this page holds only quantity and price, so writing
+                    // store.items from it stripped the name, image and url the drawer
+                    // renders from the same array. Refetching is what the drawer's own
+                    // add/update/remove already do.
                     const store = Alpine.store('cart');
-                    if (store) {
-                        store.items = this.items.map(i => ({ quantity: i.quantity, price: i.price }));
+                    if (store) store.fetch();
+                },
+
+                /**
+                 * What to do with a response that was not ok.
+                 *
+                 * These handlers are raw fetch(), so they never pass through the axios
+                 * 401 interceptor in app.js - a session that lapsed in an open tab
+                 * produced "Failed to update" and a silent revert instead of the trip
+                 * to the login page every other control on the site makes.
+                 *
+                 * The message read is widened too: the cart's own refusals come back
+                 * as {error}, but a framework refusal (403, 419, 429) carries
+                 * {message}, so reading only .error showed the generic fallback.
+                 *
+                 * Returns true when it has taken over (i.e. we are leaving).
+                 */
+                handleRefusal(res, data, fallback) {
+                    if (res.status === 401 || res.status === 419) {
+                        if (window.kkGoToLogin) {
+                            window.kkGoToLogin();
+                            return true;
+                        }
                     }
+
+                    this.toast((data && (data.error || data.message)) || fallback, 'error');
+
+                    return false;
                 },
 
                 toast(message, type = 'success') {

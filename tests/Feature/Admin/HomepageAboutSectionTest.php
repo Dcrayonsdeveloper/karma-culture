@@ -2,16 +2,17 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Models\AboutReel;
 use App\Models\HomepageSection;
-use App\Models\Setting;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
  * The About Us block on the home page is driven by a homepage_sections row for
- * its wording and by three settings for its videos. Both halves were
+ * its wording and by a list of reels for its clips. Both halves were once
  * unreachable: nothing ever created the row, and the admin exposed only the
- * first of the three video fields.
+ * first of the three video slots the clips used to live in.
  */
 class HomepageAboutSectionTest extends TestCase
 {
@@ -54,43 +55,34 @@ class HomepageAboutSectionTest extends TestCase
         $this->assertIsArray($section->fresh()->content);
     }
 
-    public function test_all_three_about_video_settings_round_trip(): void
+    /**
+     * The videos were three settings keys and are rows now, so what this file
+     * used to pin - a Site Settings field per slot, and a controller that
+     * persisted all three - has moved to Homepage > About Reels. The rule
+     * behind it has not: every clip the page renders has to be editable from
+     * the admin, which is what left two of the three cards unreachable before.
+     *
+     * The reels' own add / delete / hide / reorder behaviour is covered in
+     * Tests\Feature\Homepage\AboutReelsTest.
+     */
+    public function test_every_reel_the_page_renders_is_editable_from_the_admin(): void
     {
-        foreach ([
-            'about_us_video_url' => 'storage/storefront/about/one.mp4',
-            'about_us_video_url_2' => 'storage/storefront/about/two.mp4',
-            'about_us_video_url_3' => 'https://cdn.example.com/three.mp4',
-        ] as $key => $value) {
-            Setting::set($key, $value, 'string', 'homepage');
+        AboutReel::query()->delete();
+
+        foreach (['storage/storefront/about/one.mp4', 'https://cdn.example.com/two.mp4'] as $i => $path) {
+            AboutReel::create(['video_path' => $path, 'position' => $i + 1, 'is_active' => true]);
         }
 
-        $this->assertSame('storage/storefront/about/one.mp4', Setting::get('about_us_video_url'));
-        $this->assertSame('storage/storefront/about/two.mp4', Setting::get('about_us_video_url_2'));
-        $this->assertSame('https://cdn.example.com/three.mp4', Setting::get('about_us_video_url_3'));
-    }
+        $admin = User::factory()->create(['role' => 'admin']);
+        $home = $this->get('/')->assertOk()->getContent();
+        $screen = $this->actingAs($admin, 'admin')->get(route('admin.homepage.about-reels'))->assertOk();
 
-    public function test_the_admin_form_offers_a_field_for_every_video_the_page_renders(): void
-    {
-        $markup = file_get_contents(resource_path('views/admin/homepage/site-settings.blade.php'));
-
-        foreach (['about_us_video_url', 'about_us_video_url_2', 'about_us_video_url_3'] as $field) {
-            $this->assertStringContainsString(
-                "'{$field}'",
-                $markup,
-                "The home page renders {$field}, so the admin must be able to set it."
-            );
-        }
-    }
-
-    public function test_the_controller_persists_every_video_field_it_offers(): void
-    {
-        $source = file_get_contents(app_path('Http/Controllers/Admin/HomepageController.php'));
-
-        foreach (['about_us_video_url_2', 'about_us_video_url_3'] as $field) {
-            $this->assertStringContainsString($field, $source);
-        }
-        foreach (['about_us_video_file_2', 'about_us_video_file_3'] as $upload) {
-            $this->assertStringContainsString($upload, $source);
+        foreach (AboutReel::ordered()->get() as $reel) {
+            $this->assertStringContainsString($reel->url, $home, 'The page renders this reel...');
+            // ...so the admin screen has to show it, with the controls to
+            // replace or delete it.
+            $screen->assertSee($reel->url, false)
+                ->assertSee(route('admin.homepage.about-reels.destroy', $reel), false);
         }
     }
 }

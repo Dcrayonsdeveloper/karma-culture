@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BackInStockSubscription;
+use App\Models\Category;
 use App\Models\Coupon;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -11,6 +12,7 @@ use App\Models\ProductView;
 use App\Services\RecommendationService;
 use App\Services\ReviewSchemaService;
 use App\Support\ProductFilters;
+use App\Support\ProductOptions;
 use App\Rules\ValidationRules as V;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,6 +20,20 @@ use Illuminate\View\View;
 
 class ProductController extends Controller
 {
+    /**
+     * The picks for /products, if the admin has made any.
+     *
+     * Shared by index() and filtersPanel() so the grid and the filter drawer
+     * can never describe different sets of products - the drawer is fetched on
+     * every page of the site, so a divergence here shows up everywhere.
+     *
+     * @return array<int, int>
+     */
+    private function shopAllPicks(): array
+    {
+        return Category::pickedProductIds('shop_all');
+    }
+
     public function index(Request $request): View
     {
         // The Shop It Your Way tiles store price_min/price_max/shade, so accept
@@ -27,9 +43,13 @@ class ProductController extends Controller
         // through the same one to know whether it leads anywhere.
         $request->merge(ProductFilters::tileAliases($request));
 
+        $picked = $this->shopAllPicks();
+
         $filters = ProductFilters::for(
             $request,
-            fn () => Product::query()->where('is_active', true),
+            fn () => $picked === []
+                ? Product::query()->where('is_active', true)
+                : Product::query()->where('is_active', true)->whereIn('products.id', $picked),
             ['action' => route('shop'), 'reset' => route('shop')],
         );
 
@@ -57,9 +77,14 @@ class ProductController extends Controller
     {
         $request->merge(ProductFilters::tileAliases($request));
 
+        // Same bound as index(), deliberately. See shopAllPicks().
+        $picked = $this->shopAllPicks();
+
         $filters = ProductFilters::for(
             $request,
-            fn () => Product::query()->where('is_active', true),
+            fn () => $picked === []
+                ? Product::query()->where('is_active', true)
+                : Product::query()->where('is_active', true)->whereIn('products.id', $picked),
             ['action' => route('shop'), 'reset' => route('shop')],
         );
 
@@ -105,7 +130,7 @@ class ProductController extends Controller
             $fill = Product::query()
                 ->where('is_active', true)
                 ->whereNotIn('id', $exclude)
-                ->with(['category', 'primaryImage'])
+                ->with(['category', 'images'])
                 ->withCount('images')
                 ->inStockFirst()
                 ->orderByDesc('images_count')
@@ -124,7 +149,7 @@ class ProductController extends Controller
             ->values();
 
         // Ensure the relations the product card needs are loaded (cached models may be lean).
-        $relatedProducts->loadMissing(['category', 'brand', 'primaryImage', 'images']);
+        $relatedProducts->loadMissing(['category', 'brand', 'images']);
 
         // Breadcrumbs
         $breadcrumbs = [];
@@ -144,7 +169,7 @@ class ProductController extends Controller
             ->where('id', '!=', $product->id)
             ->where('category_id', $product->category_id)
             ->whereHas('images')
-            ->with(['primaryImage'])
+            ->with(['images'])
             ->inStockFirst()
             ->inRandomOrder()
             ->take(3)
@@ -155,7 +180,7 @@ class ProductController extends Controller
                 ->where('is_active', true)
                 ->where('id', '!=', $product->id)
                 ->where('category_id', $product->category_id)
-                ->with(['primaryImage'])
+                ->with(['images'])
                 ->inStockFirst()
                 ->inRandomOrder()
                 ->take(3)
@@ -168,7 +193,7 @@ class ProductController extends Controller
             ->where('id', '!=', $product->id)
             ->where('category_id', $product->category_id)
             ->whereHas('images')
-            ->with(['brand', 'primaryImage'])
+            ->with(['brand', 'images'])
             ->inStockFirst()
             ->inRandomOrder()
             ->take(4)
@@ -179,7 +204,7 @@ class ProductController extends Controller
                 ->where('is_active', true)
                 ->where('id', '!=', $product->id)
                 ->where('category_id', $product->category_id)
-                ->with(['brand', 'primaryImage'])
+                ->with(['brand', 'images'])
                 ->inStockFirst()
                 ->inRandomOrder()
                 ->take(4)
@@ -232,7 +257,30 @@ class ProductController extends Controller
     {
         abort_unless($product->is_active, 404);
 
-        $product->load(['brand', 'images', 'category']);
+        $product->load(['brand', 'images', 'category', 'variants']);
+
+        // The same list the product page renders and the same one /cart/add
+        // validates against, so the quick-add popup on a listing card can only
+        // ever offer a size and colour the cart will accept.
+        $options = ProductOptions::for($product);
+        $hex = $options->colourHex();
+
+        // Per-size price and stock, so picking a size in the popup updates the
+        // price the way it does on the product page instead of quoting the base
+        // price and charging the row's.
+        $sizes = $options->sizes->map(function (string $label) use ($options, $product) {
+            $variant = $options->rows->firstWhere('id', $options->sizeVariants[$label] ?? null);
+
+            return [
+                'label' => $label,
+                'variant_id' => $variant?->id,
+                'price' => (float) ($variant?->price > 0 ? $variant->price : $product->price),
+                'mrp' => (float) ($variant?->mrp > 0 ? $variant->mrp : $product->mrp),
+                // A product with no size rows falls back to the free-text Size
+                // attribute, and those sizes carry no stock of their own.
+                'stock' => (int) ($variant ? $variant->stock_quantity : $product->stock_quantity),
+            ];
+        })->values();
 
         return response()->json([
             'id' => $product->id,
@@ -251,6 +299,10 @@ class ProductController extends Controller
             'stock_quantity' => $product->stock_quantity,
             'images' => $product->images->pluck('url')->values(),
             'primary_image' => $product->primary_image_url,
+            'sizes' => $sizes,
+            'colours' => $options->colours
+                ->map(fn (array $c) => ['name' => $c['name'], 'hex' => $hex[$c['name']] ?? null])
+                ->values(),
         ]);
     }
 
@@ -281,9 +333,20 @@ class ProductController extends Controller
      */
     private function curated(Request $request, string $view, string $routeName, string $defaultSort, array $empty): View
     {
+        // Hand-picked wins over computed, per page. Tick products into the
+        // "New In" or "Bestsellers" collection on the product form and this
+        // page shows those instead of the whole catalogue in date or sales
+        // order; untick them all and it goes back to computing itself.
+        $handles = ['new-arrivals' => 'new_in', 'bestsellers' => 'bestsellers'];
+        $picked = isset($handles[$routeName])
+            ? Category::pickedProductIds($handles[$routeName])
+            : [];
+
         $filters = ProductFilters::for(
             $request,
-            fn () => Product::query()->where('is_active', true),
+            fn () => $picked === []
+                ? Product::query()->where('is_active', true)
+                : Product::query()->where('is_active', true)->whereIn('products.id', $picked),
             [
                 'action' => route($routeName),
                 'reset' => route($routeName),
@@ -292,7 +355,7 @@ class ProductController extends Controller
         );
 
         $products = $filters
-            ->sort($filters->query()->with(['category', 'brand', 'primaryImage'])->inStockFirst())
+            ->sort($filters->query()->with(['category', 'brand', 'images'])->inStockFirst())
             ->paginate(24)
             ->withQueryString();
 

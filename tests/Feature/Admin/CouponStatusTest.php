@@ -250,4 +250,92 @@ class CouponStatusTest extends TestCase
         $this->assertStringContainsString('Scheduled', $html);
         $this->assertStringNotContainsString('>Inactive<', $html);
     }
+    /**
+     * The second half of the same bug. status() is right, but it is right about
+     * the instant the page rendered, and nothing tells a tab left open that the
+     * clock moved on. A coupon that went live two minutes after the screen was
+     * drawn kept reading "Scheduled" for as long as nobody reloaded - which is
+     * indistinguishable, from the chair, from the schedule not working at all.
+     */
+    public function test_a_scheduled_badge_carries_the_moment_it_turns_active(): void
+    {
+        $coupon = $this->coupon('SOON', [
+            'starts_at'  => now()->addMinutes(2),
+            'expires_at' => now()->addWeek(),
+        ]);
+
+        $transition = $coupon->statusTransition();
+
+        $this->assertSame(Coupon::STATUS_ACTIVE, $transition['status']);
+        $this->assertTrue($coupon->starts_at->equalTo($transition['at']));
+
+        $html = $this->actingAs($this->adminUser, 'admin')
+            ->get(route('admin.coupons.edit', $coupon))
+            ->assertOk()
+            ->getContent();
+
+        // Written with its offset, so the badge turns over on the coupon's own
+        // schedule rather than on the clock of whoever is reading it.
+        $this->assertStringContainsString(
+            'data-status-at="'.$coupon->starts_at->toIso8601String().'"',
+            $html
+        );
+        $this->assertStringContainsString('data-status-label="Active"', $html);
+        $this->assertStringContainsString('data-status-to="badge-success"', $html);
+    }
+
+    public function test_a_running_coupon_waits_on_its_expiry_instead(): void
+    {
+        $coupon = $this->coupon('RUNNING', [
+            'starts_at'  => now()->subDay(),
+            'expires_at' => now()->addWeek(),
+        ]);
+
+        $transition = $coupon->statusTransition();
+
+        $this->assertSame(Coupon::STATUS_EXPIRED, $transition['status']);
+        $this->assertTrue($coupon->expires_at->equalTo($transition['at']));
+    }
+
+    public function test_a_coupon_with_no_boundary_left_carries_none(): void
+    {
+        // Expired is the end of the line, and a coupon with no expiry date only
+        // leaves the active state when somebody acts on it - which arrives as a
+        // request, and a request brings a fresh badge with it.
+        $this->assertNull($this->coupon('GONE', [
+            'starts_at' => now()->subMonth(), 'expires_at' => now()->subDay(),
+        ])->statusTransition());
+
+        $this->assertNull($this->coupon('OPENENDED', [
+            'starts_at' => now()->subDay(), 'expires_at' => null,
+        ])->statusTransition());
+
+        $html = $this->actingAs($this->adminUser, 'admin')
+            ->get(route('admin.coupons.edit', Coupon::where('code', 'GONE')->sole()))
+            ->assertOk()
+            ->getContent();
+
+        // The attribute form, not the bare name: the script pushed alongside
+        // the badge selects on it, so it appears on every page either way.
+        $this->assertStringNotContainsString('data-status-at="', $html);
+    }
+
+    /**
+     * The expiry only has to follow the start on the form, so rows written
+     * before that rule can still reach their expiry first. Turning one of those
+     * "Active" on its start date would be the badge lying the other way.
+     */
+    public function test_a_start_that_lands_after_the_expiry_waits_on_the_expiry(): void
+    {
+        $coupon = $this->coupon('BACKWARDS', [
+            'starts_at'  => now()->addDays(2),
+            'expires_at' => now()->addDay(),
+        ]);
+
+        $transition = $coupon->statusTransition();
+
+        $this->assertSame(Coupon::STATUS_SCHEDULED, $coupon->status());
+        $this->assertSame(Coupon::STATUS_EXPIRED, $transition['status']);
+        $this->assertTrue($coupon->expires_at->equalTo($transition['at']));
+    }
 }

@@ -31,9 +31,9 @@ class HeroBannerMobileMediaTest extends TestCase
      */
     private function heroMarkup(): string
     {
-        $html = $this->get("/")->getContent();
-        $start = strpos($html, "<section class=\"kk-hero\"");
-        $end = strpos($html, "</section>", $start);
+        $html = $this->get('/')->getContent();
+        $start = strpos($html, '<section class="kk-hero"');
+        $end = strpos($html, '</section>', $start);
 
         return substr($html, $start, $end - $start);
     }
@@ -69,23 +69,55 @@ class HeroBannerMobileMediaTest extends TestCase
         $this->assertStringNotContainsString('kk-hero-media--mobile', $html);
     }
 
-    public function test_a_mobile_image_adds_a_second_frame_and_neither_carries_a_src(): void
+    public function test_two_stills_are_chosen_between_by_the_browser_not_by_a_script(): void
     {
+        // Two images is the case <picture> was made for, and it beats handing
+        // the choice to a script: the browser still fetches exactly one, but it
+        // finds that one while parsing instead of after Alpine has run. This is
+        // the page's largest paint, so the difference is the difference between
+        // the hero being discoverable by the preload scanner and not.
         $this->hero(['mobile_image_url' => 'banners/mobile/portrait.jpg']);
 
         $html = $this->heroMarkup();
 
-        $this->assertStringContainsString('kk-hero-media--desktop', $html);
-        $this->assertStringContainsString('kk-hero-media--mobile', $html);
-        $this->assertStringContainsString('data-kk-for="mobile"', $html);
-        $this->assertStringContainsString('storage/banners/mobile/portrait.jpg', $html);
+        $this->assertStringContainsString('<picture>', $html);
+        $this->assertStringContainsString(
+            '<source media="(max-width: 767px)" srcset="'.asset_v('storage/banners/mobile/portrait.jpg').'">',
+            $html
+        );
+        // The desktop still is the <img>, so a browser that understands none of
+        // this gets the wide artwork rather than nothing.
+        $this->assertStringContainsString(' src="'.asset_v('storage/banners/desktop.jpg').'"', $html);
 
-        // Neither frame may name a source the browser would fetch on its own -
-        // that is the whole point of handing the choice to the script. The
-        // leading space matters: `data-kk-src="..."` ends in the same
-        // characters and is exactly what should be there instead.
-        $this->assertStringNotContainsString(' src="'.asset_v('storage/banners/desktop.jpg').'"', $html);
-        $this->assertStringNotContainsString(' src="'.asset_v('storage/banners/mobile/portrait.jpg').'"', $html);
+        // 767, not 767.98: the same integer the slide's aspect-ratio flip and
+        // the video hand-over script use. A hairline range where the picture
+        // and the layout disagreed would show phone artwork in a desktop-shaped
+        // box.
+        $this->assertStringContainsString('(max-width: 767px)', $html);
+
+        // No script is involved in this case at all any more.
+        $this->assertStringNotContainsString('data-kk-src', $html);
+    }
+
+    public function test_a_decorative_banner_is_hidden_from_screen_readers(): void
+    {
+        // An admin who clears the alt text is saying the artwork carries no
+        // information. Reading the banner's internal name out instead - which
+        // is what happened before there was a column for this - is worse than
+        // saying nothing.
+        $this->hero(['title' => 'Summer', 'alt_text' => '']);
+
+        $html = $this->heroMarkup();
+
+        $this->assertStringContainsString('alt="" aria-hidden="true"', $html);
+        $this->assertStringNotContainsString('alt="Summer"', $html);
+    }
+
+    public function test_the_alt_text_the_admin_wrote_is_what_is_read_out(): void
+    {
+        $this->hero(['title' => 'Summer', 'alt_text' => 'Three models in linen on a beach']);
+
+        $this->assertStringContainsString('alt="Three models in linen on a beach"', $this->heroMarkup());
     }
 
     public function test_a_mobile_video_gives_the_phone_a_clip_and_the_desktop_a_still(): void

@@ -16,6 +16,7 @@ class OrderItem extends Model
         'variant_name',
         'size',
         'colour',
+        'texture',
         'sku',
         'mrp',
         'price',

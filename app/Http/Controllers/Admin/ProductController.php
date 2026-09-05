@@ -41,7 +41,19 @@ class ProductController extends Controller
     private const STOCK_RULES = ['required', 'integer', 'min:0', 'max:1000000'];
 
     /** A #rrggbb swatch, which is all <input type="color"> ever posts. */
-    private const HEX_RULES = ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'];
+    private const HEX_RULES = ['string', 'regex:/^#[0-9A-Fa-f]{6}$/'];
+
+    /**
+     * Sizes and colours are the two things a customer picks before Add to cart,
+     * so neither form saves a product without them. The wording is shared so the
+     * create and edit screens explain the rule the same way.
+     */
+    private const CHOICE_MESSAGES = [
+        'variants.required' => 'Add at least one size - a product with no sizes gives a customer nothing to add to their cart.',
+        'colours.required' => 'Add at least one colour - a product has to say which colours it comes in.',
+        'colours.*.name.required' => 'Name every colour, or remove the empty row.',
+        'colours.*.hex.required' => 'Pick a swatch for every colour - one is no longer filled in for you.',
+    ];
 
     /**
      * `extensions` checks the filename and `mimetypes` sniffs the bytes; both
@@ -144,6 +156,14 @@ class ProductController extends Controller
             'delete' => $products->delete(),
         };
 
+        // Those are query-builder writes: they touch the rows directly and fire
+        // no model events, so the Product saved/deleted hooks that bump the
+        // filter cache version never run. Without this, activating, hiding or
+        // deleting a batch leaves the shop's size, colour and texture rails
+        // still offering products nobody can buy - until some unrelated save
+        // happens to refresh them.
+        ProductVariant::bumpFilterCache();
+
         $actionLabel = match ($validated['action']) {
             'activate' => 'activated',
             'deactivate' => 'deactivated',
@@ -157,11 +177,17 @@ class ProductController extends Controller
     public function create(): View
     {
         $categories = Category::assignableOptions();
+        $extraCategoryIds = [];
+        $collections = Category::system()->orderBy('position')->orderBy('name')->get();
+        $selectedCollectionIds = [];
         $sellers = Seller::with('user')->orderBy('store_name')->get();
         $brands = Brand::where('is_active', true)->orderBy('name')->get();
         $attributes = Attribute::with('values')->orderBy('name')->get();
 
-        return view('admin.products.create', compact('categories', 'sellers', 'brands', 'attributes'));
+        return view('admin.products.create', compact(
+            'categories', 'sellers', 'brands', 'attributes',
+            'extraCategoryIds', 'collections', 'selectedCollectionIds'
+        ));
     }
 
     public function store(Request $request): RedirectResponse
@@ -182,6 +208,14 @@ class ProductController extends Controller
             'cost_price' => V::money(required: false),
             'stock_quantity' => self::STOCK_RULES,
             'category_id' => V::foreignId('categories'),
+
+            // The other shelves this product appears on. The primary above is
+            // added to them on save, so it never has to be ticked twice.
+            'extra_category_ids' => ['nullable', 'array', 'max:20'],
+            'extra_category_ids.*' => V::foreignId('categories'),
+
+            'collection_ids' => ['nullable', 'array', 'max:20'],
+            'collection_ids.*' => V::foreignId('categories'),
             'seller_id' => V::foreignId('sellers', required: false),
             'brand_id' => V::foreignId('brands', required: false),
             'is_active' => V::boolean(),
@@ -204,10 +238,17 @@ class ProductController extends Controller
             ...$this->variantRules($request),
             // Read straight off the request further down, so it has to be
             // validated here or it reaches the JSON column unchecked.
-            'colours' => ['nullable', 'array', 'max:50'],
-            'colours.*.name' => ['nullable', 'string', 'max:60', new NoHtml],
-            'colours.*.hex' => self::HEX_RULES,
-        ]);
+            'colours' => ['bail', 'required', 'array', 'max:50'],
+            'colours.*.name' => ['required', 'string', 'max:60', new NoHtml],
+            // Required, and no longer defaulted: a swatch the admin never picked
+            // used to be stored as black, a colour nobody chose.
+            'colours.*.hex' => ['required', ...self::HEX_RULES],
+            // A texture is a name and nothing else - there is no swatch to pick,
+            // so no hex to validate - and unlike a colour a product may honestly
+            // have none. Same 60 as the cart_items.texture column it ends up in.
+            'textures' => ['nullable', 'array', 'max:50'],
+            'textures.*' => ['nullable', 'string', 'max:60', new NoHtml],
+        ], self::CHOICE_MESSAGES);
 
         $validated['slug'] = $validated['slug'] ?? Str::slug($validated['name']);
         $validated['is_active'] = $request->boolean('is_active');
@@ -234,9 +275,11 @@ class ProductController extends Controller
         $colours = collect($request->input('colours', []))
             ->map(fn ($c) => [
                 'name' => trim((string) ($c['name'] ?? '')),
-                'hex' => trim((string) ($c['hex'] ?? '')) ?: '#000000',
+                // Whatever the admin picked, and nothing when they picked nothing:
+                // the rules above have already refused a colour without a swatch.
+                'hex' => trim((string) ($c['hex'] ?? '')),
             ])
-            ->filter(fn ($c) => $c['name'] !== '')
+            ->filter(fn ($c) => $c['name'] !== '' && $c['hex'] !== '')
             ->unique('name')
             ->values()
             ->all();
@@ -244,6 +287,26 @@ class ProductController extends Controller
             $productAttributes['Colours'] = $colours;
         } else {
             unset($productAttributes['Colours']);
+        }
+
+        // Textures sit beside the colours, but as bare names: there is no swatch
+        // to carry, so the list is plain strings. "Matte" and "matte" are one
+        // texture told twice - stored as two they would open two rows in the shop
+        // filter rail - so the de-duplication ignores case. values() keeps it a
+        // JSON array; a gap in the keys would encode it as an object instead.
+        $textures = collect($request->input('textures', []))
+            ->map(fn ($t) => trim((string) $t))
+            ->filter(fn (string $t) => $t !== '')
+            ->unique(fn (string $t) => mb_strtolower($t))
+            ->values()
+            ->all();
+        if ($textures) {
+            $productAttributes['Textures'] = $textures;
+        } else {
+            // Removing every row posts no textures at all, so without this the
+            // previous list would simply survive and the admin could never
+            // empty it.
+            unset($productAttributes['Textures']);
         }
 
         $validated['attributes'] = ! empty($productAttributes) ? $productAttributes : null;
@@ -258,10 +321,19 @@ class ProductController extends Controller
             $validated['main_image'],
             $validated['product_attributes'],
             $validated['colours'],
+<<<<<<< HEAD
+=======
+            $validated['textures'],
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
             $validated['variants'],
         );
 
         $product = Product::create($validated);
+        $this->syncShelves($product, $request);
+
+        if (is_array($variantsData)) {
+            $this->syncVariants($product, $variantsData);
+        }
 
         if (is_array($variantsData)) {
             $this->syncVariants($product, $variantsData);
@@ -327,7 +399,21 @@ class ProductController extends Controller
         $attributes = Attribute::with('values')->orderBy('name')->get();
         $product->load(['images', 'variants']);
 
-        return view('admin.products.edit', compact('product', 'categories', 'sellers', 'brands', 'attributes'));
+        // The primary is shown by its own picker, so it is not repeated in the
+        // "also show in" list - ticking it there would say nothing new.
+        $extraCategoryIds = $product->categories()
+            ->pluck('categories.id')
+            ->reject(fn ($id) => $id === $product->category_id)
+            ->values()
+            ->all();
+
+        $collections = Category::system()->orderBy('position')->orderBy('name')->get();
+        $selectedCollectionIds = $product->collections()->pluck('categories.id')->all();
+
+        return view('admin.products.edit', compact(
+            'product', 'categories', 'sellers', 'brands', 'attributes',
+            'extraCategoryIds', 'collections', 'selectedCollectionIds'
+        ));
     }
 
     public function update(Request $request, Product $product): RedirectResponse
@@ -346,6 +432,14 @@ class ProductController extends Controller
             'cost_price' => V::money(required: false),
             'stock_quantity' => self::STOCK_RULES,
             'category_id' => V::foreignId('categories'),
+
+            // The other shelves this product appears on. The primary above is
+            // added to them on save, so it never has to be ticked twice.
+            'extra_category_ids' => ['nullable', 'array', 'max:20'],
+            'extra_category_ids.*' => V::foreignId('categories'),
+
+            'collection_ids' => ['nullable', 'array', 'max:20'],
+            'collection_ids.*' => V::foreignId('categories'),
             'seller_id' => V::foreignId('sellers', required: false),
             'brand_id' => V::foreignId('brands', required: false),
             'is_active' => V::boolean(),
@@ -376,10 +470,17 @@ class ProductController extends Controller
             'product_attributes.*.*' => ['nullable', 'string', 'max:255', new NoHtml],
             ...$this->variantRules($request, $product),
             // Colours are a product-level list, not a per-size value, so one
-            // colour is entered once instead of on every size row.
-            'colours' => ['nullable', 'array', 'max:50'],
-            'colours.*.name' => ['nullable', 'string', 'max:60', new NoHtml],
-            'colours.*.hex' => self::HEX_RULES,
+            // colour is entered once instead of on every size row. Required here
+            // too: a colour the create form insists on may not be dropped a
+            // minute later on the edit screen.
+            'colours' => ['bail', 'required', 'array', 'max:50'],
+            'colours.*.name' => ['required', 'string', 'max:60', new NoHtml],
+            'colours.*.hex' => ['required', ...self::HEX_RULES],
+            // A texture is a name and nothing else - there is no swatch to pick,
+            // so no hex to validate - and unlike a colour a product may honestly
+            // have none. Same 60 as the cart_items.texture column it ends up in.
+            'textures' => ['nullable', 'array', 'max:50'],
+            'textures.*' => ['nullable', 'string', 'max:60', new NoHtml],
             // Both models land on the PUBLIC disk, so the extension has to be
             // pinned: `file|max:10240` alone accepted a .php upload into a
             // web-served directory.
@@ -387,7 +488,7 @@ class ProductController extends Controller
             'model_usdz' => ['nullable', 'file', 'extensions:usdz', 'mimetypes:model/vnd.usdz+zip,application/zip,application/octet-stream', 'max:10240'],
             'delete_model_glb' => ['nullable', 'boolean'],
             'delete_model_usdz' => ['nullable', 'boolean'],
-        ]);
+        ], self::CHOICE_MESSAGES);
 
         $validated['slug'] = $validated['slug'] ?? Str::slug($validated['name']);
         $validated['is_active'] = $request->boolean('is_active');
@@ -412,9 +513,11 @@ class ProductController extends Controller
         $colours = collect($request->input('colours', []))
             ->map(fn ($c) => [
                 'name' => trim((string) ($c['name'] ?? '')),
-                'hex' => trim((string) ($c['hex'] ?? '')) ?: '#000000',
+                // Whatever the admin picked, and nothing when they picked nothing:
+                // the rules above have already refused a colour without a swatch.
+                'hex' => trim((string) ($c['hex'] ?? '')),
             ])
-            ->filter(fn ($c) => $c['name'] !== '')
+            ->filter(fn ($c) => $c['name'] !== '' && $c['hex'] !== '')
             ->unique('name')
             ->values()
             ->all();
@@ -422,6 +525,26 @@ class ProductController extends Controller
             $productAttributes['Colours'] = $colours;
         } else {
             unset($productAttributes['Colours']);
+        }
+
+        // Textures sit beside the colours, but as bare names: there is no swatch
+        // to carry, so the list is plain strings. "Matte" and "matte" are one
+        // texture told twice - stored as two they would open two rows in the shop
+        // filter rail - so the de-duplication ignores case. values() keeps it a
+        // JSON array; a gap in the keys would encode it as an object instead.
+        $textures = collect($request->input('textures', []))
+            ->map(fn ($t) => trim((string) $t))
+            ->filter(fn (string $t) => $t !== '')
+            ->unique(fn (string $t) => mb_strtolower($t))
+            ->values()
+            ->all();
+        if ($textures) {
+            $productAttributes['Textures'] = $textures;
+        } else {
+            // Removing every row posts no textures at all, so without this the
+            // previous list would simply survive and the admin could never
+            // empty it.
+            unset($productAttributes['Textures']);
         }
 
         $validated['attributes'] = ! empty($productAttributes) ? $productAttributes : null;
@@ -434,6 +557,7 @@ class ProductController extends Controller
             $validated['delete_images'],
             $validated['product_attributes'],
             $validated['colours'],
+            $validated['textures'],
             $validated['variants'],
             $validated['model_glb'],
             $validated['model_usdz'],
@@ -464,6 +588,7 @@ class ProductController extends Controller
         }
 
         $product->update($validated);
+        $this->syncShelves($product, $request);
 
         if (is_array($variantsData)) {
             $this->syncVariants($product, $variantsData);
@@ -583,11 +708,22 @@ class ProductController extends Controller
     private function variantRules(Request $request, ?Product $product = null): array
     {
         $rules = [
+<<<<<<< HEAD
             'variants' => ['nullable', 'array', 'max:100'],
             'variants.*.name' => ['nullable', 'string', 'max:100', new NoHtml],
             'variants.*.measurements' => ['nullable', 'string', 'max:160', new NoHtml],
             'variants.*.colour' => ['nullable', 'string', 'max:60', new NoHtml],
             'variants.*.colour_hex' => self::HEX_RULES,
+=======
+            // A product ships in at least one size: the storefront has no
+            // one-size-fits-all fallback, so a product without one offers the
+            // customer no size to choose and no row to price.
+            'variants' => ['bail', 'required', 'array', 'max:100', $this->atLeastOneSize($product)],
+            'variants.*.name' => ['nullable', 'string', 'max:100', new NoHtml],
+            'variants.*.measurements' => ['nullable', 'string', 'max:160', new NoHtml],
+            'variants.*.colour' => ['nullable', 'string', 'max:60', new NoHtml],
+            'variants.*.colour_hex' => ['nullable', ...self::HEX_RULES],
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
             // product_variants.sku is UNIQUE. Without this a duplicate reached
             // MySQL and blew up with a 500 instead of a field error.
             'variants.*.sku' => [...self::SKU_RULES, 'nullable', 'distinct:ignore_case', $this->uniqueVariantSku($request)],
@@ -701,6 +837,43 @@ class ProductController extends Controller
     }
 
     /**
+<<<<<<< HEAD
+=======
+     * A product has to keep at least one size. Rows the admin blanked out or
+     * flagged for deletion do not count, so emptying the table on the edit screen
+     * is refused the same way as never filling it in on create.
+     *
+     * `id` and `delete` count for something only while editing - create() has no
+     * rule for either and strips both, so a `delete` flag posted there belongs to
+     * no row the writer will ever see and a row carrying one is simply a new
+     * size. While editing, a row with an id counts even with a blank name:
+     * syncVariants() leaves the size's stored name in place rather than drop it.
+     */
+    private function atLeastOneSize(?Product $product): Closure
+    {
+        return function (string $attribute, mixed $value, Closure $fail) use ($product): void {
+            $kept = collect(is_array($value) ? $value : [])
+                ->filter(function ($row) use ($product) {
+                    if (! is_array($row)) {
+                        return false;
+                    }
+
+                    if ($product && filter_var($row['delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                        return false;
+                    }
+
+                    return trim((string) ($row['name'] ?? '')) !== ''
+                        || ($product && ! empty($row['id']));
+                });
+
+            if ($kept->isEmpty()) {
+                $fail(self::CHOICE_MESSAGES['variants.required']);
+            }
+        };
+    }
+
+    /**
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
      * A size's MRP is the struck-through price, so it may not sit below what the
      * customer actually pays.
      *
@@ -822,6 +995,42 @@ class ProductController extends Controller
 
         return redirect()->route('admin.products.index')
             ->with('success', 'Product deleted successfully.');
+    }
+
+    /**
+     * Put the product on every shelf the form ticked, and take it off the rest.
+     *
+     * The primary category is always included: it is the category the product
+     * is filed under, and a listing that omitted it would contradict the
+     * breadcrumb. Product::booted() adds it too, for the write paths that never
+     * reach this form - this is belt and braces, and it keeps the sync here a
+     * complete statement of the membership rather than a partial one.
+     *
+     * Absent input means "no extra shelves", which is what an unticked set of
+     * checkboxes posts - so clearing them all really does clear them.
+     */
+    private function syncShelves(Product $product, Request $request): void
+    {
+        $ids = collect($request->input('extra_category_ids', []))
+            ->map(fn ($id) => (int) $id)
+            ->push((int) $product->category_id)
+            ->filter()
+            ->unique()
+            ->all();
+
+        // ONE sync, because there is now one pivot. Two syncs against
+        // `category_product` would fight: the second would detach everything the
+        // first had just attached, so ticking a built-in listing would silently
+        // clear the product's shelves.
+        //
+        // Absent input means "none ticked", which is what an untouched set of
+        // checkboxes posts - so clearing them all really does clear them.
+        $ids = array_values(array_unique(array_merge(
+            $ids,
+            collect($request->input('collection_ids', []))->map(fn ($id) => (int) $id)->filter()->all(),
+        )));
+
+        $product->categories()->sync($ids);
     }
 
     public function toggleStatus(Product $product): RedirectResponse
@@ -986,6 +1195,12 @@ class ProductController extends Controller
                 'sku' => $blankToNull($record['sku'] ?? null),
                 'slug' => $blankToNull($record['slug'] ?? null),
                 'price' => $blankToNull($record['price'] ?? null),
+                // products.mrp is NOT NULL with no default and was never part of
+                // this payload, so the first valid row failed its insert and the
+                // whole import answered 500. Optional in the file: a row that
+                // does not state one is simply not on sale, so the MRP is the
+                // price - the same thing the product form stores in that case.
+                'mrp' => $blankToNull($record['mrp'] ?? null),
                 'sale_price' => $blankToNull($record['sale_price'] ?? null),
                 'cost_price' => $blankToNull($record['cost_price'] ?? null),
                 'stock_quantity' => $blankToNull($record['stock_quantity'] ?? null),
@@ -1001,6 +1216,7 @@ class ProductController extends Controller
                 'sku' => [...self::SKU_RULES, 'required'],
                 'slug' => self::SLUG_RULES,
                 'price' => V::money(),
+                'mrp' => [...V::money(required: false), 'gte:price'],
                 'sale_price' => V::money(required: false),
                 'cost_price' => V::money(required: false),
                 'stock_quantity' => ['nullable', 'integer', 'min:0', 'max:1000000'],
@@ -1044,6 +1260,14 @@ class ProductController extends Controller
                 'sku' => $sku,
                 'slug' => $candidate['slug'] ?? Str::slug($name),
                 'price' => (float) $price,
+                'mrp' => (float) ($candidate['mrp'] ?? $price),
+                // sale_price, meta_title and meta_description are not columns on
+                // products and are not in $fillable, so these three are dropped
+                // on the floor by mass assignment. Left in place rather than
+                // silently removed: the CSV template still offers the headings,
+                // and pruning them here is a separate decision about the
+                // template. They do no harm - unlike the missing mrp above,
+                // which is the field that actually broke the import.
                 'sale_price' => $candidate['sale_price'] !== null ? (float) $candidate['sale_price'] : null,
                 'cost_price' => $candidate['cost_price'] !== null ? (float) $candidate['cost_price'] : null,
                 'stock_quantity' => (int) ($candidate['stock_quantity'] ?? 0),

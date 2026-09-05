@@ -47,7 +47,7 @@
             ],
         ];
     @endphp
-    <script type="application/ld+json">{!! json_encode($kkSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
+    <script type="application/ld+json">{!! json_encode($kkSchema, JSON_HEX_TAG | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
 @endpush
     <x-slot name="title">{{ $siteSettings['site_name'] ?? 'Karmaa Kulture' }} - {{ $siteSettings['site_tagline'] ?? 'Premium tailored essentials' }}</x-slot>
 
@@ -251,13 +251,11 @@
                 font-family: var(--kk-display);
                 letter-spacing: 0.01em;
             }
-            .kk-syw-tab.is-active { background: var(--kk-brown-dark); color: var(--kk-cream); }
-            .kk-syw-tab.is-active small { color: var(--kk-tan); opacity: 1; }
-            /* Per-tab active background: 1) brown (default) 2) teal 3) green */
-            .kk-syw-tab.is-active--price { background: #14B8A6; }
-            .kk-syw-tab.is-active--shade { background: #2B4A2A; }
-            .kk-syw-tab.is-active--price small,
-            .kk-syw-tab.is-active--shade small { color: var(--kk-cream); opacity: 0.85; }
+            /* One active colour for the whole row - the Shade green. Size, Price and
+               Shade each used to light up a different colour (brown, teal, green),
+               so the pill changed hue as you moved along a single set of tabs. */
+            .kk-syw-tab.is-active { background: #2B4A2A; color: var(--kk-cream); }
+            .kk-syw-tab.is-active small { color: var(--kk-cream); opacity: 0.85; }
             .kk-syw-tab:hover:not(.is-active) { color: var(--kk-brown); }
 
             /* Stage + panel.
@@ -417,27 +415,24 @@
                 transition: color .3s;
             }
             .kk-rail-cell:hover .kk-rail-label { color: var(--kk-tan-dark); }
-            .kk-rail-count {
-                font-size: clamp(8px, calc(var(--kk-rail-cell) * 0.067), 10px);
-                letter-spacing: 0.18em;
-                text-transform: uppercase;
-                color: var(--kk-text-muted);
-                font-weight: 500;
-                line-height: 1.3;
-                margin-top: -2px;
-                overflow-wrap: anywhere;
-            }
 
             @media (max-width: 1024px) {
                 .kk-syw-heading { font-size: 36px; }
+                /* The pills give up their fixed 170px here rather than at 767px.
+                   A fourth tab took the row past the width it is given: between
+                   768px and 1023px the container hands this section 736px, and
+                   four desktop-sized pills ask for roughly 785px, so the longest
+                   eyebrow ("Perfectly Portioned") broke onto a second line and
+                   pushed its own title a line below the other three. Sharing the
+                   row out equally puts every eyebrow back on one line. */
+                .kk-syw-tab { padding: 10px 16px; min-width: 0; flex: 1 1 0; }
+                .kk-syw-tab small { font-size: 8px; letter-spacing: 0.22em; }
+                .kk-syw-tab span { font-size: 14px; }
             }
             @media (max-width: 767px) {
                 .kk-shop-your-way { padding: 16px 0 20px; }
                 .kk-syw-heading { font-size: 28px; }
                 .kk-syw-tabs { padding: 4px; gap: 2px; margin-top: 24px; max-width: 100%; }
-                .kk-syw-tab { padding: 10px 16px; min-width: 0; flex: 1 1 0; }
-                .kk-syw-tab small { font-size: 8px; letter-spacing: 0.22em; }
-                .kk-syw-tab span { font-size: 14px; }
                 .kk-syw-stage { margin-top: 36px; }
                 .kk-rail-wrap { --kk-rail-pad: 12px; }
             }
@@ -477,16 +472,64 @@
             /* About Us - video-led, minimal copy */
             .kk-about { background: var(--kk-cream); padding: 40px 0; text-align: center; }
             .kk-about p.intro { max-width: 480px; margin: 14px auto 0; color: var(--kk-text-muted); font-size: 15px; line-height: 1.65; }
-            /* Three reel-style (9:16) videos, Instagram-reels grid */
+            /* Reel-style (9:16) clips on one line that pans by itself.
+               The strip wrapped before, so a fourth clip dropped onto a second
+               row and the section read as a block of tiles rather than a strip
+               of reels. It is one line now however many are saved: the track
+               overflows and slides between its two ends.
+
+               Panned, not looped by duplication. A seamless marquee needs the
+               clips laid down twice, and every one of them is a playing
+               <video> - browsers cap concurrent hardware decoders, and past the
+               cap clips silently stop painting, which is the blank tile
+               x-media exists to prevent. So each reel is on the page once and
+               the track slides the exact distance it overflows: 100cqw is the
+               strip's own width, 100% the track's, and min() pins it still
+               when everything already fits.
+
+               287px is what a reel measured in the old grid (900px, three
+               tracks, two 20px gaps), so three of them still land where they
+               always did. */
             .kk-about-reels {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 20px;
+                --kk-reel-gap: 20px;
+                --kk-reel-lead: 40px;   /* clear space wanted above the reels */
+                --kk-reel-shadow: 60px; /* room their drop shadow needs below */
+                container-type: inline-size;
+                position: relative;
                 width: 100%;
-                max-width: 900px;
-                margin: 40px auto 0;
+                /* The clip would otherwise cut the reels' shadow off flush at
+                   their own edges. The padding gives it somewhere to fall and
+                   the margins take that space back off the section, so the
+                   heading above and the button below sit where they did. */
+                padding: 30px 0 var(--kk-reel-shadow);
+                margin: calc(var(--kk-reel-lead) - 30px) auto calc(-1 * var(--kk-reel-shadow));
+                /* That padding is shadow room, not a target: without this it
+                   would lie over the top of the button underneath and swallow
+                   the click. The track takes the pointer back for itself, and
+                   :hover still reaches this element through it. */
+                pointer-events: none;
+                overflow: hidden;
+                /* Clips fade in and out at the ends instead of being cut off. */
+                -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 5%, #000 95%, transparent 100%);
+                mask-image: linear-gradient(90deg, transparent 0, #000 5%, #000 95%, transparent 100%);
+            }
+            .kk-about-reels__track {
+                pointer-events: auto;
+                display: flex;
+                gap: var(--kk-reel-gap);
+                width: max-content;
+                /* Centred while the reels fit; ignored once they overflow. */
+                margin: 0 auto;
+                will-change: transform;
+            }
+            /* Nothing moves on its own; the strip is scrolled by hand instead. */
+            @media (prefers-reduced-motion: reduce) {
+                .kk-about-reels { overflow-x: auto; }
+                .kk-about-reels__track { animation: none; }
             }
             .kk-about-reel {
+                flex: 0 0 auto;
+                width: 287px;
                 position: relative;
                 aspect-ratio: 9 / 16;
                 border-radius: 14px;
@@ -508,8 +551,10 @@
             .kk-about-cta { margin-top: 36px; }
             @media (max-width: 640px) {
                 .kk-about { padding: 28px 0; }
-                .kk-about-reels { margin-top: 28px; gap: 10px; }
-                .kk-about-reel { border-radius: 8px; }
+                .kk-about-reels { --kk-reel-lead: 28px; --kk-reel-gap: 10px; }
+                /* Three across the phone, as before, rather than one 287px reel
+                   filling the screen with the next only half in view. */
+                .kk-about-reel { width: 30vw; border-radius: 8px; }
             }
 
             /* Qualities (dark) - video-background cards */
@@ -817,49 +862,78 @@
                      x-data="kkHero({{ $heroCount }})"
                      x-init="start()"
                      @mouseenter="stop()" @mouseleave="start()"
+                     {{-- Focus pauses it as well as hover. Someone tabbing through the
+                          slides with the keyboard is reading, and a carousel that
+                          advances out from under them is the reason carousels have a
+                          reputation. --}}
+                     @focusin="stop()" @focusout="start()"
+                     {{-- The arrows work anywhere in the carousel, which is what makes
+                          the dots and the prev/next buttons reachable as a group rather
+                          than only one at a time. --}}
+                     @keydown.arrow-left.prevent="prev()" @keydown.arrow-right.prevent="next()"
+                     {{-- Passive, because these listeners never preventDefault: the page
+                          must keep scrolling vertically while a horizontal swipe is being
+                          measured. --}}
+                     @touchstart.passive="touchStart($event)" @touchend.passive="touchEnd($event)"
+                     tabindex="0"
                      role="region" aria-roledescription="carousel" aria-label="Highlights"
                  @endif>
             @if($heroCount)
                 <div class="kk-hero-viewport">
                     @foreach($heroBanners as $i => $banner)
                         @php
-                            // A banner may carry a video, an image or both; the image
-                            // doubles as the poster frame when a video is present.
-                            $hasOverlayText = $banner->title || $banner->subtitle || $banner->button_text;
+                            // A banner may carry a video, an image or both, and may
+                            // answer differently per breakpoint: the desktop hero is a
+                            // wide strip, while a phone gives the slide a 3:2 box that a
+                            // 3.85:1 strip cropped into it keeps only two fifths of.
+                            //
+                            // Which file each screen ends up with - including every
+                            // fallback - is decided once, on the model, so the website
+                            // and the API cannot reach different conclusions about what
+                            // a phone should be sent.
+                            $kkDesktop = $banner->frameFor('desktop');
+                            $kkMobile = $banner->frameFor('mobile');
 
-                            // ...and it may answer that question differently per
-                            // breakpoint. The desktop hero is a wide strip; a phone
-                            // gives the slide a 3:2 box, and that strip cropped into
-                            // it keeps only two fifths of its width. A banner may
-                            // therefore carry its own mobile image, its own mobile
-                            // clip, or neither - and neither is the ordinary case,
-                            // which renders exactly as it always has, one media
-                            // element with a plain src.
-                            $mobileOverride = $banner->has_mobile_media;
-                            $desktopIsVideo = $banner->has_video;
-                            $mobileIsVideo = $mobileOverride ? $banner->has_mobile_video : $desktopIsVideo;
+                            // The ordinary case: nothing phone-specific, so both screens
+                            // resolve to the same file and the slide draws exactly one
+                            // element with a plain `src` - which is what the browser's
+                            // preload scanner can act on before any script has run.
+                            $kkOneFile = $kkDesktop && $kkMobile
+                                && $kkDesktop['kind'] === $kkMobile['kind']
+                                && $kkDesktop['src'] === $kkMobile['src'];
 
-                            // Both flags now only decide which file the frame gets and
-                            // whether it needs a poster. Neither decides the slide's
-                            // height any more: a clip that sized its own slide is what
-                            // made the carousel lurch as it advanced.
-                            $heroFrames = [[
-                                'device' => 'desktop',
-                                'isVideo' => $desktopIsVideo,
-                                'src' => $desktopIsVideo ? $banner->video : $banner->image,
-                                'poster' => $desktopIsVideo && $banner->image_url ? $banner->image : null,
-                            ]];
+                            // Two stills: <picture> chooses between them natively. The
+                            // browser fetches exactly one and finds it in the markup
+                            // rather than waiting for a script, which matters because
+                            // this is the page's largest paint.
+                            $kkPicture = ! $kkOneFile && $kkDesktop && $kkMobile
+                                && $kkDesktop['kind'] === 'image' && $kkMobile['kind'] === 'image';
 
-                            if ($mobileOverride) {
-                                $heroFrames[] = [
-                                    'device' => 'mobile',
-                                    'isVideo' => $mobileIsVideo,
-                                    // mobile_image falls back to the desktop still, which is
-                                    // what a video-only override wants for its poster anyway.
-                                    'src' => $mobileIsVideo ? $banner->mobile_video : $banner->mobile_image,
-                                    'poster' => $mobileIsVideo && $banner->mobile_image_url ? $banner->mobile_image : null,
-                                ];
+                            // Anything involving a clip. `media` on a <source> inside
+                            // <video> is not honoured by browsers and a display:none
+                            // frame is still fetched, so those two frames are drawn with
+                            // no `src` and the script below hands one over.
+                            $kkFrames = [];
+                            if (! $kkOneFile && ! $kkPicture) {
+                                if ($kkDesktop) {
+                                    $kkFrames[] = ['device' => 'desktop'] + $kkDesktop;
+                                }
+                                if ($kkMobile) {
+                                    $kkFrames[] = ['device' => 'mobile'] + $kkMobile;
+                                }
                             }
+
+                            // Empty is a real answer: an admin who marked the banner
+                            // decorative gets alt="" and aria-hidden rather than the
+                            // title read out over artwork that does not say it.
+                            $kkAlt = $banner->alt;
+                            [$kkDeskW, $kkDeskH] = \App\Models\Banner::HERO_DESKTOP_SIZE;
+
+                            // The caption is drawn only when the admin filled one in, so
+                            // a plain image banner stays a plain image banner. The button
+                            // additionally needs somewhere to go: a CTA that is not a link
+                            // is a painted rectangle.
+                            $kkHasCaption = $banner->title || $banner->subtitle || ($banner->button_text && $banner->link);
                         @endphp
                         <div class="kk-hero-slide"
                              @if($heroCount > 1)
@@ -893,34 +967,40 @@
                                  and artwork at that size fills the box with nothing lost.
                                  Contain here just left the banner floating small in the
                                  middle of a blurred field. --}}
-                            @foreach($heroFrames as $frame)
-                                {{-- One frame per breakpoint, and only one of them is ever
-                                     drawn. Where a banner has mobile media the source is
-                                     handed over by the script below the carousel rather than
-                                     written into `src` here, so the hidden frame is never
-                                     fetched: a phone should not pull down a 15 MB desktop
-                                     clip on its way to the phone-sized one. A banner without
-                                     mobile media renders a single frame with a plain `src`,
-                                     which the preload scanner still finds. --}}
-                                <div class="kk-media kk-media--dark kk-hero-media{{ $mobileOverride ? ' kk-hero-media--'.$frame['device'] : '' }}">
-                                    @if($frame['isVideo'])
-                                        <video @if($mobileOverride)
-                                                   data-kk-for="{{ $frame['device'] }}" data-kk-src="{{ $frame['src'] }}"
-                                                   @if($frame['poster']) data-kk-poster="{{ $frame['poster'] }}" @endif
-                                               @else
-                                                   src="{{ $frame['src'] }}"
-                                                   @if($frame['poster']) poster="{{ $frame['poster'] }}" @endif
-                                               @endif
+                            @if($kkOneFile || $kkPicture)
+                                {{-- One frame. Either both screens want the same file, or
+                                     they want two stills and <picture> chooses between
+                                     them. Both ways the source is in the markup, and
+                                     nothing waits for JavaScript to supply it. --}}
+                                <div class="kk-media kk-media--dark kk-hero-media">
+                                    @if($kkDesktop['kind'] === 'video')
+                                        <video src="{{ $kkDesktop['src'] }}"
+                                               @if($kkDesktop['poster']) poster="{{ $kkDesktop['poster'] }}" @endif
                                                autoplay muted loop playsinline preload="{{ $i === 0 ? 'auto' : 'metadata' }}"
-                                               aria-label="{{ $banner->title ?: $heroName }} hero video"></video>
+                                               aria-label="{{ $kkAlt ?: $heroName }} hero video"></video>
                                     @else
-                                        <img alt="{{ $banner->title ?: $heroName }}"
-                                             @if($mobileOverride)
-                                                 data-kk-for="{{ $frame['device'] }}" data-kk-src="{{ $frame['src'] }}"
-                                             @else
-                                                 src="{{ $frame['src'] }}"
-                                             @endif
-                                             @if($i === 0) fetchpriority="high" @else loading="lazy" @endif>
+                                        <picture>
+                                            {{-- Narrow screens first: a <source> wins on the
+                                                 first match, so the phone artwork has to be
+                                                 offered before the desktop one. WebP goes
+                                                 ahead of each original where the upload
+                                                 produced one, and is simply left out where
+                                                 it did not. --}}
+                                            @if($kkPicture && $kkMobile['webp'])
+                                                <source media="(max-width: 767px)" type="image/webp" srcset="{{ $kkMobile['webp'] }}">
+                                            @endif
+                                            @if($kkPicture)
+                                                <source media="(max-width: 767px)" srcset="{{ $kkMobile['src'] }}">
+                                            @endif
+                                            @if($kkDesktop['webp'])
+                                                <source type="image/webp" srcset="{{ $kkDesktop['webp'] }}">
+                                            @endif
+                                            <img src="{{ $kkDesktop['src'] }}"
+                                                 width="{{ $kkDeskW }}" height="{{ $kkDeskH }}"
+                                                 @if($kkAlt === '') alt="" aria-hidden="true" @else alt="{{ $kkAlt }}" @endif
+                                                 @if($i === 0) fetchpriority="high" @else loading="lazy" @endif
+                                                 decoding="async">
+                                        </picture>
                                     @endif
                                     <span class="kk-media__fallback" aria-hidden="true">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -930,12 +1010,41 @@
                                         </svg>
                                     </span>
                                 </div>
-                            @endforeach
+                            @else
+                                @foreach($kkFrames as $frame)
+                                    {{-- A clip on at least one screen. Both frames are drawn
+                                         and only one is displayed; the source is handed over
+                                         by the script below the carousel, so the hidden one
+                                         is never fetched - a phone should not pull down a
+                                         15 MB desktop clip on its way to the phone-sized
+                                         one. --}}
+                                    <div class="kk-media kk-media--dark kk-hero-media kk-hero-media--{{ $frame['device'] }}">
+                                        @if($frame['kind'] === 'video')
+                                            <video data-kk-for="{{ $frame['device'] }}" data-kk-src="{{ $frame['src'] }}"
+                                                   @if($frame['poster']) data-kk-poster="{{ $frame['poster'] }}" @endif
+                                                   autoplay muted loop playsinline preload="{{ $i === 0 ? 'auto' : 'metadata' }}"
+                                                   aria-label="{{ $kkAlt ?: $heroName }} hero video"></video>
+                                        @else
+                                            <img data-kk-for="{{ $frame['device'] }}" data-kk-src="{{ $frame['src'] }}"
+                                                 @if($kkAlt === '') alt="" aria-hidden="true" @else alt="{{ $kkAlt }}" @endif
+                                                 @if($i === 0) fetchpriority="high" @else loading="lazy" @endif
+                                                 decoding="async">
+                                        @endif
+                                        <span class="kk-media__fallback" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                                <rect x="3" y="4" width="18" height="16" rx="2"/>
+                                                <circle cx="8.5" cy="9.5" r="1.5"/>
+                                                <path d="M21 15l-5-5L5 20"/>
+                                            </svg>
+                                        </span>
+                                    </div>
+                                @endforeach
+                            @endif
 
                             {{-- Heading, subtitle and button were editable in the admin
                                  and stored, but no template ever printed them, and the
                                  Overlay Style selector fed an accessor nothing called. --}}
-                            @if($hasOverlayText)
+                            @if($kkHasCaption)
                                 <div class="kk-hero-overlay {{ $banner->overlay_css }}"></div>
                                 <div class="kk-hero-caption kk-hero-caption--{{ $banner->overlay_style ?: 'left-dark' }}">
                                     @if($banner->title)
@@ -973,7 +1082,7 @@
                     </div>
                 @endif
 
-                @if($heroBanners->contains(fn ($b) => $b->has_mobile_media))
+                @if($heroBanners->contains(fn ($b) => $b->frameFor('desktop') && $b->frameFor('mobile') && $b->frameFor('desktop')['src'] !== $b->frameFor('mobile')['src'] && ($b->frameFor('desktop')['kind'] === 'video' || $b->frameFor('mobile')['kind'] === 'video')))
                     {{-- Hands each banner that has mobile media of its own the one
                          source this viewport will actually show. Inline and in the
                          markup on purpose: it runs the moment the slides are parsed,
@@ -1158,9 +1267,35 @@
                     return {
                         current: 0,
                         timer: null,
+                        touchX: null,
+                        touchY: null,
                         go(i) { this.current = (i + count) % count; },
                         next() { this.go(this.current + 1); },
                         prev() { this.go(this.current - 1); },
+                        touchStart(e) {
+                            var t = e.changedTouches[0];
+                            this.touchX = t.clientX;
+                            this.touchY = t.clientY;
+                            // A finger on the slide means the visitor is looking at this
+                            // one; auto-advance resumes when they let go.
+                            this.stop();
+                        },
+                        touchEnd(e) {
+                            var t = e.changedTouches[0];
+                            var dx = t.clientX - this.touchX;
+                            var dy = t.clientY - this.touchY;
+                            this.touchX = null;
+
+                            // Both tests matter. 40px filters out the sideways drift of a
+                            // tap, and requiring the horizontal travel to beat the
+                            // vertical stops a scroll down the page from being read as a
+                            // swipe - which on a full-bleed hero is most of them.
+                            if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+                                dx < 0 ? this.next() : this.prev();
+                            }
+
+                            this.start();
+                        },
                         start() {
                             // Auto-advance is a decorative motion, so visitors who have
                             // asked their OS for less of it get a static first slide.
@@ -1430,17 +1565,16 @@
             $aboutLink  = ($aboutSection->button_link ?? null);
             $aboutLink  = ($aboutLink && $aboutLink !== '#') ? $aboutLink : route('about');
             $aboutButton = ($aboutSection->button_text ?? null) ?: 'Our Story';
-            // Three reel-style videos, each admin-configurable (Site Settings).
-            // Falls back to numbered default paths so the section works pre-config.
-            $aboutVideoKeys     = ['about_us_video_url', 'about_us_video_url_2', 'about_us_video_url_3'];
-            $aboutVideoDefaults = ['videos/karmaa-about.mp4', 'videos/karmaa-about-2.mp4', 'videos/karmaa-about-3.mp4'];
-            $aboutVideos = [];
-            foreach ($aboutVideoKeys as $ai => $ak) {
-                $val = \App\Models\Setting::get($ak, '');
-                $aboutVideos[] = $val
-                    ? (str_starts_with($val, 'http') ? $val : asset_v($val))
-                    : asset_v($aboutVideoDefaults[$ai]);
-            }
+            // The reel strip, in the order the admin set (Homepage > About Reels).
+            //
+            // This was three fixed settings keys - about_us_video_url, _2, _3 -
+            // so the strip could only ever be three clips long and a fourth had
+            // nowhere to go. Rows carry no such limit: one reel or eight, and one
+            // can be taken out of the middle without shuffling files between
+            // slots. The migration that created the table carried the three
+            // configured clips (and the bundled defaults, where a slot had never
+            // been touched) across, so the strip renders as it did before.
+            $aboutReels = \App\Models\AboutReel::active()->ordered()->get();
         @endphp
         @if($aboutVisible)
         <section class="kk-about">
@@ -1449,14 +1583,97 @@
                 <h2 class="kk-section-title kk-section-title--lg" style="margin-top:8px;">{{ $aboutTitle }}</h2>
                 <p class="intro">{{ is_string($aboutText) ? $aboutText : '' }}</p>
 
-                <div class="kk-about-reels">
-                    @foreach($aboutVideos as $aboutVideo)
-                        {{-- Admin-set clips of any ratio, so they are shown whole: a
-                             landscape capture used to be cropped to a ribbon of its
-                             middle by the 9/16 reel. --}}
-                        <x-media class="kk-about-reel" :src="$aboutVideo" video dark />
-                    @endforeach
+                {{-- Hidden entirely once the last reel is deleted or hidden, rather
+                     than leaving an empty grid where the strip used to be. --}}
+                @if($aboutReels->isNotEmpty())
+                {{-- The strip runs one way and never turns back: kkAboutReels
+                     slides the track and moves each reel to the end of the line
+                     as it leaves the left edge, so the sequence repeats forever
+                     without the clips being laid down twice. --}}
+                <div class="kk-about-reels" x-data="kkAboutReels()"
+                     style="--kk-reel-count: {{ $aboutReels->count() }};">
+                    <div class="kk-about-reels__track" x-ref="track"
+                         @mouseenter="paused = true" @mouseleave="paused = false"
+                         @focusin="paused = true" @focusout="paused = false">
+                        @foreach($aboutReels as $aboutReel)
+                            {{-- Admin-set clips of any ratio, so they are shown whole: a
+                                 landscape capture used to be cropped to a ribbon of its
+                                 middle by the 9/16 reel.
+
+                                 The poster is what a reel synced from Instagram brings
+                                 with it. Without one the card is a dark rectangle until
+                                 the clip decodes its first frame, which on a phone is
+                                 most of the time anyone spends looking at this strip.
+                                 An uploaded clip has none and renders exactly as before. --}}
+                            <x-media class="kk-about-reel" :src="$aboutReel->url"
+                                     :poster="$aboutReel->poster_url" video dark />
+                        @endforeach
+                    </div>
                 </div>
+                <script>
+                    /* One way, forever. The track slides left at a steady pace and
+                       the reel that has just left the edge is moved to the end of
+                       the line, so the sequence carries on with no seam and no
+                       turn-around - and without the strip being laid down twice,
+                       which would double the number of playing <video> elements
+                       and cost the clips their decoders.
+
+                       That recycling only holds while there is more strip than
+                       screen: once the leading reel is taken off the front, what
+                       is left has to still reach the right-hand edge. Where it
+                       does not - a wide screen, or only two or three reels - the
+                       shortfall is covered by cloning the reels back on, as few
+                       as will do. A strip that already fits stands still. */
+                    function kkAboutReels() {
+                        return {
+                            paused: false,
+                            init() {
+                                // Decorative motion, so anyone who has asked their
+                                // OS for less of it gets a strip that just sits.
+                                if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+                                const strip = this.$el;
+                                const track = this.$refs.track;
+                                const reels = Array.from(track.children);
+                                const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
+                                const lead = () => track.firstElementChild.getBoundingClientRect().width + gap;
+
+                                if (track.scrollWidth <= strip.clientWidth) return;
+
+                                for (let i = 0; track.scrollWidth < strip.clientWidth + lead() && i < reels.length * 6; i++) {
+                                    track.appendChild(reels[i % reels.length].cloneNode(true));
+                                }
+
+                                let x = 0;
+                                let last = null;
+
+                                const step = (now) => {
+                                    // Clamped: a backgrounded tab hands back one huge
+                                    // delta, which would jump the strip on return.
+                                    const dt = last === null ? 0 : Math.min((now - last) / 1000, 0.05);
+                                    last = now;
+
+                                    if (!this.paused) {
+                                        x -= 45 * dt;
+
+                                        const first = lead();
+                                        if (-x >= first) {
+                                            x += first;
+                                            track.appendChild(track.firstElementChild);
+                                        }
+
+                                        track.style.transform = 'translateX(' + x.toFixed(2) + 'px)';
+                                    }
+
+                                    requestAnimationFrame(step);
+                                };
+
+                                requestAnimationFrame(step);
+                            },
+                        };
+                    }
+                </script>
+                @endif
 
                 <div class="kk-about-cta">
                     {{-- Button Link is admin-entered and often points at a lookbook or a
@@ -1475,20 +1692,25 @@
              SHOP IT YOUR WAY - Rail of hangers per tab
              ============================================ --}}
         @php
-            // Filter items come from admin (ShopFilterItem model). Normalise each
-            // group into the {label, shade, count, q} shape the markup expects.
+            // Hangers are derived from the live catalogue by ShopFilterCatalogue,
+            // with the values an admin has hidden already taken out. Nothing is
+            // typed into a filter table any more, so a hanger can no longer be a
+            // dead end: every label on a rail is one some active product actually
+            // carries, and the last product carrying it takes it off the rail.
+            // Normalise each group into the {label, shade, q} shape the markup
+            // expects.
             $shopFilters = $shopFilters ?? collect();
             $kkTabs = [
-                'size'  => ['eyebrow' => 'Find Your Fit',       'title' => 'Size',  'items' => []],
-                'price' => ['eyebrow' => 'Perfectly Portioned', 'title' => 'Price', 'items' => []],
-                'shade' => ['eyebrow' => 'The Dye Lab',         'title' => 'Shade', 'items' => []],
+                'size'    => ['eyebrow' => 'Find Your Fit',       'title' => 'Size',    'items' => []],
+                'price'   => ['eyebrow' => 'Perfectly Portioned', 'title' => 'Price',   'items' => []],
+                'shade'   => ['eyebrow' => 'The Dye Lab',         'title' => 'Shade',   'items' => []],
+                'texture' => ['eyebrow' => 'The Touch Test',      'title' => 'Texture', 'items' => []],
             ];
             foreach ($kkTabs as $key => $_) {
                 foreach (($shopFilters[$key] ?? collect()) as $row) {
                     $kkTabs[$key]['items'][] = [
                         'label' => $row->label,
                         'shade' => $row->shade_hex ?: '#8c5c34',
-                        'count' => $row->sub_label ?: '',
                         'q'     => $row->query_string ?: '',
                     ];
                 }
@@ -1510,12 +1732,12 @@
             <div class="container mx-auto px-4 text-center">
                 <span class="kk-eyebrow">Curate The Edit</span>
                 <h2 class="kk-syw-heading">Shop It Your <em>Way</em></h2>
-                <p class="kk-syw-sub">Pick a size off the rail - every cut is tailored for a flattering drape.</p>
+                <p class="kk-syw-sub">Take any hanger off the rail and the shop opens on everything that matches it.</p>
 
                 <div class="kk-syw-tabs">
                     @foreach($kkTabs as $tabKey => $tabCfg)
                         <button class="kk-syw-tab"
-                                :class="tab==='{{ $tabKey }}' ? 'is-active is-active--{{ $tabKey }}' : ''"
+                                :class="tab==='{{ $tabKey }}' ? 'is-active' : ''"
                                 @click="tab='{{ $tabKey }}'">
                             <small>{{ $tabCfg['eyebrow'] }}</small>
                             <span>{{ $tabCfg['title'] }}</span>
@@ -1588,12 +1810,6 @@
                                                     </svg>
                                                 </div>
                                                 <div class="kk-rail-label">{{ $item['label'] }}</div>
-                                                {{-- Printed as authored. The admin sub-label field already
-                                                     carries the noun (its placeholder is "120 Styles"), so
-                                                     appending one here read "120 Styles Styles". --}}
-                                                @if($item['count'] !== '')
-                                                    <div class="kk-rail-count">{{ $item['count'] }}</div>
-                                                @endif
                                             </{{ $item['q'] !== '' ? 'a' : 'div' }}>
                                         @endforeach
                                     </div>
@@ -1695,7 +1911,17 @@
                 <h2>{{ $newsletterTitle }}</h2>
                 <p>{{ $newsletterText }}</p>
 
-                <form @submit.prevent="submit()" novalidate class="kk-newsletter-form" x-show="!done">
+                {{-- data-no-validate: this form reports for itself, in the centred
+                     line below it. Without the opt-out the shared inline validator
+                     in app.js ALSO judged the box on blur and printed its own note -
+                     the same sentence twice, once centred under the pill and once
+                     left-aligned against the section's edge, where it read as a
+                     complaint about something else on the page entirely.
+
+                     `novalidate` alone does not stop it: the submit handler treats
+                     that as "this form validates itself" and stands down, but the
+                     blur handler only checks data-no-validate. --}}
+                <form @submit.prevent="submit()" novalidate data-no-validate class="kk-newsletter-form" x-show="!done">
                     <label for="kk-newsletter-email" class="sr-only">Email address</label>
                     <input id="kk-newsletter-email" type="email" x-model="email" required maxlength="255"
                            placeholder="Your email address" autocomplete="email">

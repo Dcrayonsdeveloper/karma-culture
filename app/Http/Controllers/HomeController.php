@@ -9,7 +9,7 @@ use App\Models\HomepageSection;
 use App\Models\Product;
 use App\Models\Quality;
 use App\Models\Setting;
-use App\Models\ShopFilterItem;
+use App\Support\ShopFilterCatalogue;
 use Illuminate\View\View;
 
 class HomeController extends Controller
@@ -20,7 +20,7 @@ class HomeController extends Controller
         $featuredProducts = Product::query()
             ->where('is_active', true)
             ->where('is_featured', true)
-            ->with(['category', 'brand', 'primaryImage'])
+            ->with(['category', 'brand', 'images'])
             ->inStockFirst()
             ->orderBy('created_at', 'desc')
             ->take(10)
@@ -29,7 +29,7 @@ class HomeController extends Controller
         // New arrivals
         $newArrivals = Product::query()
             ->where('is_active', true)
-            ->with(['category', 'brand', 'primaryImage'])
+            ->with(['category', 'brand', 'images'])
             ->inStockFirst()
             ->orderBy('created_at', 'desc')
             ->take(10)
@@ -38,7 +38,7 @@ class HomeController extends Controller
         // Bestsellers
         $bestsellers = Product::query()
             ->where('is_active', true)
-            ->with(['category', 'brand', 'primaryImage'])
+            ->with(['category', 'brand', 'images'])
             ->inStockFirst()
             ->orderBy('sales_count', 'desc')
             ->take(10)
@@ -49,7 +49,7 @@ class HomeController extends Controller
         // Falls back to recent sellers so the row is never empty on a quiet week.
         $trending = Product::query()
             ->where('is_active', true)
-            ->with(['category', 'brand', 'primaryImage'])
+            ->with(['category', 'brand', 'images'])
             ->withCount(['views as recent_views' => fn ($q) => $q->where('product_views.created_at', '>=', now()->subDays(30))])
             ->having('recent_views', '>', 0)
             ->inStockFirst()
@@ -60,7 +60,7 @@ class HomeController extends Controller
         if ($trending->count() < 4) {
             $trending = Product::query()
                 ->where('is_active', true)
-                ->with(['category', 'brand', 'primaryImage'])
+                ->with(['category', 'brand', 'images'])
                 ->inStockFirst()
                 ->orderByDesc('sales_count')
                 ->orderByDesc('created_at')
@@ -72,7 +72,7 @@ class HomeController extends Controller
         $deals = Product::query()
             ->where('is_active', true)
             ->whereColumn('price', '<', 'mrp')
-            ->with(['category', 'brand', 'primaryImage'])
+            ->with(['category', 'brand', 'images'])
             ->inStockFirst()
             ->orderByRaw('(mrp - price) / mrp DESC')
             ->take(10)
@@ -87,12 +87,21 @@ class HomeController extends Controller
             ->take(8)
             ->get();
 
-        // Banners
+        // Banners. `visible` is the model's one definition of what a shopper
+        // should be seeing right now - switched on, started, not yet ended - and
+        // the API reads the same scope, so a scheduled campaign cannot go live
+        // on the website an hour before it goes live in the app.
+        //
+        // A banner carrying no artwork at all is dropped here rather than in the
+        // view: the slide count decides how many dots the carousel draws, so a
+        // banner filtered out downstream would leave a dot pointing at nothing.
         $banners = Banner::query()
-            ->where('is_active', true)
+            ->visible()
             ->where('position', 'hero')
             ->orderBy('priority')
-            ->get();
+            ->get()
+            ->filter(fn (Banner $banner) => $banner->has_media)
+            ->values();
 
         // Homepage sections. Inactive rows are loaded too, not filtered out: the
         // home page markup is hand-built rather than generated from this table,
@@ -107,15 +116,14 @@ class HomeController extends Controller
             ->withCount('products')
             ->first();
 
-        // Shop It Your Way filter items grouped by type (size|price|shade).
-        // Every active hanger is hung, whether or not the listing behind it
-        // has anything on it today. Hiding the empty ones took the whole
-        // Shade tab off the live storefront - six hangers, all naming colours
-        // the catalogue does not carry - and a rail the admin curated
-        // disappearing without being edited is worse than a rail that opens
-        // an empty listing. The count still shows against every row in
-        // Homepage > Shop Filters, which is where a dead hanger gets fixed.
-        $shopFilters = ShopFilterItem::active()->ordered()->get()->groupBy('type');
+        // Shop It Your Way rails, worked out from the catalogue rather than
+        // from a list an admin retyped: Size off the variants, Shade and
+        // Texture off each product's own lists, Price off the live spread. A
+        // hanger can no longer be a dead end, because a value only exists here
+        // while a product carries it - which is what the old screen printed a
+        // "0 - hidden" badge to warn about. Values the admin has hidden on
+        // Homepage > Shop Filters are already taken out.
+        $shopFilters = collect(ShopFilterCatalogue::groups());
 
         // Our Qualities cards
         $qualities = Quality::active()->ordered()->get();

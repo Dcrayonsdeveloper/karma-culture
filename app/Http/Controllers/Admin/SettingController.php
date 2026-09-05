@@ -10,16 +10,43 @@ use App\Support\PopupSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class SettingController extends Controller
 {
+    /**
+     * The keys this screen owns, and the ONE key each field really writes.
+     *
+     * The contact three are the reason this list exists. This screen used to
+     * save site_email / site_phone / site_address, which nothing on the
+     * storefront reads - the footer, the contact page and the WhatsApp button
+     * all read contact_email / contact_phone / contact_address, which are
+     * written by Online Store -> Site Settings. So filling this form in changed
+     * nothing a customer could see, and the two screens disagreed in silence.
+     */
+    private const GENERAL_KEYS = [
+        'site_name' => 'site_name',
+        'site_tagline' => 'site_tagline',
+        'site_email' => 'contact_email',
+        'site_phone' => 'contact_phone',
+        'site_address' => 'contact_address',
+        'timezone' => 'timezone',
+        'date_format' => 'date_format',
+        'currency' => 'currency',
+        'currency_symbol' => 'currency_symbol',
+        'currency_position' => 'currency_position',
+    ];
+
     public function general(): View
     {
-        $settings = Setting::whereIn('group', ['general', 'store'])->pluck('value', 'key');
+        // By key, not by group. site_name is written by the other settings
+        // screen under group "homepage", so a group query came back without it
+        // and the field rendered empty next to a storefront that was already
+        // showing the name - which reads as "the setting is not saved".
+        $settings = collect(self::GENERAL_KEYS)
+            ->map(fn ($key) => Setting::get($key, ''))
+            ->all();
 
         return view('admin.settings.general', compact('settings'));
     }
@@ -32,71 +59,37 @@ class SettingController extends Controller
             'site_email' => 'required|email',
             'site_phone' => 'nullable|string|max:20',
             'site_address' => 'nullable|string|max:500',
-            'timezone' => 'required|string',
-            'date_format' => 'required|string',
-            'currency' => 'required|string|size:3',
-            'currency_symbol' => 'required|string|max:5',
-            'currency_position' => 'required|in:before,after',
+            // Nullable, not required: the Regional Settings card is gone from
+            // this form, so these keys no longer arrive with a save. Absent
+            // means "leave what is stored" - the loop below only writes the
+            // fields that were actually submitted.
+            'timezone' => 'nullable|string',
+            'date_format' => 'nullable|string',
+            'currency' => 'nullable|string|size:3',
+            'currency_symbol' => 'nullable|string|max:5',
+            'currency_position' => 'nullable|in:before,after',
         ]);
 
-        foreach ($validated as $key => $value) {
+        foreach ($validated as $field => $value) {
+            // The field name is the form's; the setting key is the site's.
+            $key = self::GENERAL_KEYS[$field] ?? $field;
+
             Setting::updateOrCreate(
                 ['key' => $key],
                 ['value' => $value, 'group' => 'general']
             );
             Cache::forget("setting.{$key}");
         }
+
         Cache::forget('currency_config');
 
+        // The footer, the header and the assistant all read these through
+        // Setting::get(), which caches per key for an hour, and the group
+        // caches are keyed separately again.
+        Cache::forget('settings.group.general');
+        Cache::forget('settings.group.homepage');
+
         return back()->with('success', 'General settings updated successfully.');
-    }
-
-    public function payment(): View
-    {
-        $settings = Setting::where('group', 'payment')->pluck('value', 'key');
-
-        return view('admin.settings.payment', compact('settings'));
-    }
-
-    public function updatePayment(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
-            'payu_merchant_key'   => 'nullable|string|max:255',
-            'payu_merchant_salt'  => 'nullable|string|max:255',
-            'payu_mode'           => 'nullable|in:test,live',
-            'cod_instructions'    => 'nullable|string|max:1000',
-        ]);
-
-        // Boolean toggles - use request->boolean() so unchecked checkboxes save '0'
-        foreach (['payu_enabled', 'cod_enabled'] as $key) {
-            Setting::updateOrCreate(
-                ['key' => $key],
-                ['value' => $request->boolean($key) ? '1' : '0', 'group' => 'payment']
-            );
-            // Setting::get() caches each key for an hour; without this forget
-            // the storefront kept offering stale payment methods after saving.
-            Cache::forget("setting.{$key}");
-        }
-
-        // Credential / text fields
-        foreach ($validated as $key => $value) {
-            // The salt field is deliberately rendered empty, so a blank submit
-            // means "unchanged". Without this, opening the page and pressing
-            // Save wiped the salt - and checkout drops online payment entirely
-            // once it is empty.
-            if ($key === 'payu_merchant_salt' && ! $request->filled('payu_merchant_salt')) {
-                continue;
-            }
-
-            Setting::updateOrCreate(
-                ['key' => $key],
-                ['value' => $value ?? '', 'group' => 'payment']
-            );
-            Cache::forget("setting.{$key}");
-        }
-        Cache::forget('settings.group.payment');
-
-        return back()->with('success', 'Payment settings updated successfully.');
     }
 
     public function shipping(): View
@@ -205,6 +198,7 @@ class SettingController extends Controller
         return back()->with('success', 'Tax settings updated successfully.');
     }
 
+<<<<<<< HEAD
     public function email(): View
     {
         $settings = Setting::where('group', 'email')->pluck('value', 'key');
@@ -366,6 +360,8 @@ class SettingController extends Controller
         return (string) (Setting::get('site_name') ?: config('app.name'));
     }
 
+=======
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
     public function seo(): View
     {
         $settings = Setting::where('group', 'seo')->pluck('value', 'key');
@@ -441,55 +437,6 @@ class SettingController extends Controller
         }
 
         return back()->with('success', 'SEO settings updated successfully.');
-    }
-
-    public function integrations(): View
-    {
-        $settings = Setting::where('group', 'integrations')->pluck('value', 'key');
-
-        return view('admin.settings.integrations', compact('settings'));
-    }
-
-    public function updateIntegrations(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
-            // Razorpay Webhook
-            'razorpay_webhook_secret'            => 'nullable|string|max:255',
-
-            // WhatsApp Business API (Meta)
-            'whatsapp_phone_number_id'           => ['nullable', 'string', 'max:30', 'regex:/^[0-9]*$/'],
-            'whatsapp_verify_token'              => 'nullable|string|max:255',
-            'whatsapp_page_access_token'         => 'nullable|string|max:500',
-            'whatsapp_app_secret'                => 'nullable|string|max:255',
-
-            // SMS Gateway
-            'sms_provider'                       => 'nullable|in:msg91,twilio,none',
-            'sms_api_key'                        => 'nullable|string|max:255',
-            'sms_sender_id'                      => ['nullable', 'string', 'max:20', 'regex:/^[A-Za-z0-9_-]*$/'],
-            'sms_dlt_template_id'                => ['nullable', 'string', 'max:50', 'regex:/^[0-9]*$/'],
-
-            // AI Chatbot
-            'anthropic_api_key'                  => ['nullable', 'string', 'max:500', 'regex:/^(sk-ant-[A-Za-z0-9\-_]*)?$/'],
-            'anthropic_model'                    => 'nullable|in:claude-haiku-4-5,claude-sonnet-5,claude-opus-5',
-            'ai_provider'                        => 'nullable|in:anthropic,gemini',
-            // Google issues more than one key format (AIza... and AQ....), so accept
-            // any plausible token rather than rejecting a valid key on its prefix.
-            'gemini_api_key'                     => ['nullable', 'string', 'max:500', 'regex:/^[A-Za-z0-9._\-]*$/'],
-            'gemini_model'                       => 'nullable|in:gemini-3.6-flash,gemini-3.5-flash,gemini-3.1-flash-lite',
-            'chatbot_brand_voice'                => 'nullable|string|max:2000',
-            'chatbot_extra_instructions'         => 'nullable|string|max:4000',
-        ]);
-
-        foreach ($validated as $key => $value) {
-            Setting::updateOrCreate(
-                ['key' => $key],
-                ['value' => $value ?? '', 'group' => 'integrations']
-            );
-            Cache::forget("setting.{$key}");
-        }
-        Cache::forget('settings.group.integrations');
-
-        return back()->with('success', 'Integration settings updated successfully.');
     }
 
     /**

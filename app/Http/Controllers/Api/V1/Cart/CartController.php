@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
+use App\Rules\ValidationRules as V;
+use App\Support\ProductOptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -15,7 +17,10 @@ class CartController extends Controller
     public function index(Request $request): JsonResponse
     {
         $cart = $this->getOrCreateCart($request);
-        $cart->load('items.product:id,name,slug,price,mrp,images,stock_quantity');
+        // images is a relation, so it cannot ride in the column list - the query
+        // asked products for an "images" column and this 500'd for any cart that
+        // had something in it.
+        $cart->load(['items.product:id,name,slug,price,mrp,stock_quantity', 'items.product.images']);
 
         return response()->json([
             'data' => $cart,
@@ -41,6 +46,7 @@ class CartController extends Controller
             // raise.
             'product_id' => ['required', 'integer', Rule::exists('products', 'id')->whereNull('deleted_at')->where('is_active', true)],
             'quantity' => 'required|integer|min:1|max:100',
+<<<<<<< HEAD
             // Deliberately NOT exists:product_variants,id. That rule proves the
             // variant row exists, never that it belongs to THIS product, so an
             // id borrowed from another product sailed through it and the stock
@@ -72,10 +78,32 @@ class CartController extends Controller
             // the phone is concerned, so they are told the same thing, and the
             // ownership guard below already owns that wording.
             'variant_id.min' => 'That option is no longer available for this product.',
+=======
+            // Scoped to the submitted product, for the same reason size and
+            // colour are checked against the product below.
+            // `exists:product_variants,id` on its own accepted ANY variant id,
+            // including one belonging to a different product - and both
+            // checkout paths follow cart_items.variant_id unscoped, so stock
+            // was checked and decremented against the foreign variant and the
+            // order line was priced from it. A cheap product's variant could be
+            // attached to an expensive one and bought at the cheap price.
+            'variant_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('product_variants', 'id')
+                    ->where('product_id', $request->input('product_id')),
+            ],
+            // Charset and length only - whether these are OPTIONS THIS PRODUCT
+            // ACTUALLY OFFERS is checked below, once the product is loaded.
+            'size' => V::text(required: false, max: 50),
+            'colour' => V::text(required: false, max: 60),
+            'texture' => V::text(required: false, max: 60),
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
         ]);
 
         $cart = $this->getOrCreateCart($request);
 
+<<<<<<< HEAD
         // find(), not findOrFail(): the rule above already proved this id names
         // a sellable product, so a miss here can only be a race with an admin
         // withdrawing it mid-request - which deserves the same field message as
@@ -124,6 +152,54 @@ class CartController extends Controller
         $existingItem = $cart->items()
             ->where('product_id', $product->id)
             ->where('variant_id', $variantId)
+=======
+        $size = $validated['size'] ?? null;
+        $colour = $validated['colour'] ?? null;
+        $texture = $validated['texture'] ?? null;
+
+        // These three are free-text POST fields that get written to the cart
+        // line, carried onto order_items and printed on the invoice. Bounding
+        // the charset is not enough - "Size: XXXL" for a product sold only in
+        // S/M, or any string at all, was accepted and shipped. They are held to
+        // the same lists the product page renders, through the same helper the
+        // web cart validates against, so the two doors cannot disagree.
+        $options = ProductOptions::for($product);
+
+        $checks = [
+            'size' => [$size, $options->sizes, fn (string $v) => $options->offersSize($v)],
+            'colour' => [$colour, $options->colourNames(), fn (string $v) => $options->offersColour($v)],
+            'texture' => [$texture, $options->textures, fn (string $v) => $options->offersTexture($v)],
+        ];
+
+        foreach ($checks as $field => [$chosen, $offered, $accepts]) {
+            if ($chosen === null || $accepts($chosen)) {
+                continue;
+            }
+
+            return response()->json([
+                'message' => $offered->isEmpty()
+                    ? 'This product is not sold by '.$field.'.'
+                    : 'That '.$field.' is not available for this product.',
+            ], 422);
+        }
+
+        if ($product->stock_quantity < $validated['quantity']) {
+            return response()->json([
+                'message' => 'Insufficient stock available',
+            ], 422);
+        }
+
+        // Same product + variant + size + colour + texture = the same line. The
+        // lookup matched on product and variant alone, so a second texture of a
+        // size already in the cart found that row, failed to merge into it and
+        // hit the cart_items_line_texture_unique index as a 1062.
+        $existingItem = $cart->items()
+            ->where('product_id', $product->id)
+            ->where('variant_id', $validated['variant_id'] ?? null)
+            ->where('size', $size)
+            ->where('colour', $colour)
+            ->where('texture', $texture)
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
             ->first();
 
         // Two faults met on this line. The guard weighed only the INCOMING
@@ -150,7 +226,14 @@ class CartController extends Controller
         } else {
             $cart->items()->create([
                 'product_id' => $product->id,
+<<<<<<< HEAD
                 'variant_id' => $variantId,
+=======
+                'variant_id' => $validated['variant_id'] ?? null,
+                'size' => $size,
+                'colour' => $colour,
+                'texture' => $texture,
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
                 'quantity' => $validated['quantity'],
                 'price' => $product->price,
             ]);

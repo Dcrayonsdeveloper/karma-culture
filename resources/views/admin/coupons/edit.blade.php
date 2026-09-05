@@ -10,7 +10,7 @@
             <h1 style="font-size: 1.125rem; font-weight: 600; color: #303030;">{{ $coupon->code }}</h1>
             {{-- Same source as the index badge, so opening a coupon cannot
                  report a different status to the row you clicked. --}}
-            <span class="badge {{ $coupon->statusBadgeClass() }}">{{ $coupon->statusLabel() }}</span>
+            <x-admin.coupon-status :coupon="$coupon" />
         </div>
     </div>
 

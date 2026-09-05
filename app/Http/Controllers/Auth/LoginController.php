@@ -25,8 +25,38 @@ class LoginController extends Controller
      */
     private const CREDENTIALS_FAILED = 'The provided credentials do not match our records.';
 
-    public function showLoginForm(): View
+    /**
+     * Said when the password was right but the account has been switched off.
+     *
+     * Distinct from CREDENTIALS_FAILED on purpose: the credentials WERE correct,
+     * and telling the customer "wrong password" would send them round the reset
+     * flow forever. Nothing is disclosed that the correct password did not
+     * already prove.
+     */
+    private const ACCOUNT_DISABLED = 'This account has been deactivated. Please contact support.';
+
+    /**
+     * ?next= brings a customer back to the page they were sent here from.
+     *
+     * The cart and wishlist buttons are asynchronous, so the `auth` middleware
+     * never sees a page request to record - it sees a POST from a script, and
+     * an intended URL of /cart/add would send the customer to a route that
+     * does not answer GET. The button therefore names the page it was pressed
+     * on, and it lands in the same session key the middleware uses.
+     *
+     * Only a root-relative path is accepted, and safeIntendedUrl() checks the
+     * value again on the way out - an open redirect off the login page is the
+     * exact shape a credential phishing chain needs, so it is refused at both
+     * ends rather than either.
+     */
+    public function showLoginForm(Request $request): View
     {
+        $next = $request->query('next');
+
+        if (is_string($next) && str_starts_with($next, '/') && ! str_starts_with(str_replace('\\', '/', $next), '//')) {
+            $request->session()->put('url.intended', $next);
+        }
+
         return view('auth.login');
     }
 
@@ -106,6 +136,27 @@ class LoginController extends Controller
         $guestSessionId = $request->session()->getId();
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
+            // Admin > Customers has an activate/deactivate toggle that writes
+            // users.is_active, and the mobile API login honours it - this one
+            // did not, so a deactivated customer was shut out of the app and
+            // still signed in on the website. Reject before the session is
+            // regenerated and before the guest cart is merged into the account.
+            if (! Auth::user()->is_active) {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                if ($request->wantsJson()) {
+                    return response()->json([
+                        'message' => self::ACCOUNT_DISABLED,
+                        'errors' => ['email' => [self::ACCOUNT_DISABLED]],
+                    ], 403);
+                }
+
+                return back()->withErrors(['email' => self::ACCOUNT_DISABLED])
+                    ->onlyInput('email');
+            }
+
             $request->session()->regenerate();
 
             // Merge guest cart into user cart
@@ -150,15 +201,19 @@ class LoginController extends Controller
         );
 
         // Move guest items into user cart. A cart line is identified by product
-        // + variant + size + colour everywhere else; matching on only the first
-        // two collapsed "Blue / M" and "Red / L" of the same product into one
-        // line and silently lost the guest's selection.
+        // + variant + size + colour + texture everywhere else; matching on only
+        // the first two collapsed "Blue / M" and "Red / L" of the same product
+        // into one line and silently lost the guest's selection. Leaving texture
+        // out is worse still: the no-match branch below MOVES the guest row into
+        // the user cart, so a texture the user already holds in that size and
+        // colour breaks cart_items_line_texture_unique and 500s the sign-in.
         foreach ($guestCart->items as $item) {
             $existing = $userCart->items()
                 ->where('product_id', $item->product_id)
                 ->where('variant_id', $item->variant_id)
                 ->where('size', $item->size)
                 ->where('colour', $item->colour)
+                ->where('texture', $item->texture)
                 ->first();
 
             if ($existing) {
@@ -178,11 +233,49 @@ class LoginController extends Controller
 
     public function logout(Request $request): RedirectResponse
     {
-        Auth::logout();
+        // Named rather than left to the default guard, so it reads the same way
+        // as the line below it and cannot drift if the default ever changes.
+        Auth::guard('web')->logout();
 
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        $this->endSessionKeeping($request, 'admin');
 
         return redirect('/');
     }
+
+    /**
+     * Sign this guard out without taking the other one with it.
+     *
+     * One session cookie carries both guards: config/auth.php gives `admin` and
+     * `web` the same users provider, and Laravel keeps each guard's login state
+     * under its own `login_<guard>_<hash>` key in the one session. Throwing the
+     * whole session away therefore signed out whoever was working in the other
+     * tab as well - a shopper logging out took the admin panel down with them,
+     * notification polling and all, and an admin logging out emptied a
+     * shopper's session mid-checkout.
+     *
+     * Everything else still goes. This is invalidate() - flush plus a new
+     * session id, so nothing the departing side left behind can be read by
+     * whoever uses the browser next - with only the other guard's own login
+     * keys carried across into the fresh session.
+     */
+    private function endSessionKeeping(Request $request, string $guard): void
+    {
+        $prefix = 'login_'.$guard.'_';
+
+        $keep = [];
+        foreach ($request->session()->all() as $key => $value) {
+            if (str_starts_with($key, $prefix)) {
+                $keep[$key] = $value;
+            }
+        }
+
+        $request->session()->invalidate();
+
+        foreach ($keep as $key => $value) {
+            $request->session()->put($key, $value);
+        }
+
+        $request->session()->regenerateToken();
+    }
+
 }

@@ -39,7 +39,7 @@ class FlashSaleController extends Controller
 
         // slug is needed: the product card links to the category and brand, and
         // route binding resolves them by slug.
-        $products = $filters->results(24, ['category:id,name,slug', 'brand:id,name,slug', 'primaryImage']);
+        $products = $filters->results(24, ['category:id,name,slug', 'brand:id,name,slug', 'images']);
 
         $products->getCollection()->each(function (Product $product) use ($saleRows) {
             if ($row = $saleRows->get($product->id)) {

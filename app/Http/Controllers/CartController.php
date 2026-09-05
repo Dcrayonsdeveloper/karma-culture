@@ -9,12 +9,16 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Rules\ValidationRules as V;
 use App\Support\OfferClaims;
+use App\Support\ProductOptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+<<<<<<< HEAD
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+=======
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -28,8 +32,15 @@ class CartController extends Controller
         // or activated afterwards never reached a cart that was already sitting
         // there. Re-evaluate on view - unless the customer removed the coupon
         // themselves, which must not spring back.
-        if ($cart->items()->exists() && ! session('coupon_dismissed', false)) {
-            $cart->recalculate();
+        //
+        // The dismissal now suppresses the auto-apply pass rather than the whole
+        // recalculation. It used to skip recalculate() outright, which also
+        // skipped the delivery charge, the tax and the subtotal: a shopper who
+        // had once removed a coupon saw this page quote whatever was last
+        // written to the cart row, so a shipping setting changed afterwards
+        // never reached them and the summary and the checkout disagreed.
+        if ($cart->items()->exists()) {
+            $cart->recalculate(skipAutoApply: session('coupon_dismissed', false));
         }
 
         // An offer claimed from the exit popup, honoured now that we know who
@@ -38,7 +49,10 @@ class CartController extends Controller
         // incumbent rather than a coupon that is about to appear underneath it.
         $claimedOffer = OfferClaims::applyTo($cart, request()->user());
 
-        $cart->load(['items.product.primaryImage', 'items.variant']);
+        // images, not primaryImage: primary_image_url reads the whole set so it
+        // can fall back past a video, and eager-loading only the primary row made
+        // that a query per line.
+        $cart->load(['items.product.images', 'items.variant']);
 
         // "You May Also Like" - products related to the cart's items (else popular).
         $recommended = $this->recommendedForCart($cart);
@@ -53,7 +67,7 @@ class CartController extends Controller
     private function recommendedForCart(Cart $cart): Collection
     {
         $productIds = $cart->items->pluck('product_id')->filter()->unique()->all();
-        $with = ['category', 'brand', 'primaryImage', 'images'];
+        $with = ['category', 'brand', 'images'];
 
         $query = Product::where('is_active', true)->with($with)->whereHas('images');
         if (! empty($productIds)) {
@@ -87,7 +101,10 @@ class CartController extends Controller
     public function data(): JsonResponse
     {
         $cart = $this->getOrCreateCart();
-        $cart->load(['items.product.primaryImage', 'items.variant']);
+        // images, not primaryImage: primary_image_url reads the whole set so it
+        // can fall back past a video, and eager-loading only the primary row made
+        // that a query per line.
+        $cart->load(['items.product.images', 'items.variant']);
 
         $items = $cart->items->map(function ($item) {
             return [
@@ -96,21 +113,43 @@ class CartController extends Controller
                 'variant_id' => $item->variant_id,
                 'size' => $item->size,
                 'colour' => $item->colour,
+                'texture' => $item->texture,
                 'quantity' => $item->quantity,
                 'price' => (float) $item->price,
                 'product_name' => $item->product->name ?? '',
                 'variant_name' => $item->variant->name ?? null,
-                'image' => $item->product->primaryImage->first()?->url,
+                // Every other field here guards against the product having been
+                // deleted out from under the cart line; image was the one that did
+                // not, so a cart holding a since-deleted product 500d the whole
+                // endpoint. primary_image_url is also what the rest of the app
+                // sends: it resolves the path, fingerprints it, skips a video and
+                // falls back to the placeholder instead of answering null when the
+                // product has gallery images but no main one.
+                'image' => $item->product?->primary_image_url,
                 'slug' => $item->product->slug ?? '',
+                // Sent for the same reason /cart/recommendations sends it: without
+                // it the drawer had to build '/product/' + item.slug by hand.
+                'url' => $item->product ? route('product.show', $item->product) : null,
             ];
         });
 
         return response()->json([
             'items' => $items,
             'cart_count' => $cart->items->sum('quantity'),
-            'subtotal' => (float) $cart->subtotal,
-            'discount' => (float) $cart->discount,
-            'total' => (float) $cart->total,
+            // cart_-prefixed like every other cart endpoint. This one answered with
+            // bare subtotal/discount/total, so the endpoint whose whole job is to
+            // report cart state was the one that spelled it differently.
+            'cart_subtotal' => (float) $cart->subtotal,
+            'cart_discount' => (float) $cart->discount,
+            // Delivery and tax travel with the rest of the money. The cart page
+            // works its own subtotal out from the line rows so quantity changes
+            // feel instant, but it must not work the DELIVERY charge out too:
+            // that is ShippingCharge's job, and a second implementation of the
+            // threshold rule in JavaScript is exactly how a shopper ends up
+            // shown one total and billed another. Sent, not recomputed.
+            'cart_shipping' => (float) $cart->shipping,
+            'cart_tax' => (float) $cart->tax,
+            'cart_total' => (float) $cart->total,
         ]);
     }
 
@@ -140,6 +179,7 @@ class CartController extends Controller
             // ACTUALLY OFFERS is checked below, once the product is loaded.
             'size' => V::text(required: false, max: 50),
             'colour' => V::text(required: false, max: 60),
+            'texture' => V::text(required: false, max: 60),
             'quantity' => V::quantity(max: 99),
         ], [
             // Without this the scoped rule answers a withdrawn product with
@@ -178,6 +218,7 @@ class CartController extends Controller
         $variantId = $validated['variant_id'] ?? null;
         $size = $validated['size'] ?? null;
         $colour = $validated['colour'] ?? null;
+        $texture = $validated['texture'] ?? null;
 
         // exists:product_variants,id proves the variant exists, not that it
         // belongs to THIS product. A mismatched pair used to make find()
@@ -192,19 +233,25 @@ class CartController extends Controller
             return $this->failed($request, 'That option is no longer available for this product.', 'variant_id');
         }
 
-        // size and colour are free-text POST fields that get written to the
-        // cart line, carried onto order_items and printed on the invoice.
+        // size, colour and texture are free-text POST fields that get written to
+        // the cart line, carried onto order_items and printed on the invoice.
         // Bounding the charset is not enough - "Size: XXXL" for a product sold
         // only in S/M, or any string at all, was accepted and shipped. They are
         // held to the same list the product page renders.
-        $options = $this->offeredOptions($product);
+        $options = ProductOptions::for($product);
 
-        foreach (['size' => $size, 'colour' => $colour] as $field => $chosen) {
-            if ($chosen === null || $this->offers($options[$field], $chosen)) {
+        $checks = [
+            'size' => [$size, $options->sizes, fn (string $v) => $options->offersSize($v)],
+            'colour' => [$colour, $options->colourNames(), fn (string $v) => $options->offersColour($v)],
+            'texture' => [$texture, $options->textures, fn (string $v) => $options->offersTexture($v)],
+        ];
+
+        foreach ($checks as $field => [$chosen, $offered, $accepts]) {
+            if ($chosen === null || $accepts($chosen)) {
                 continue;
             }
 
-            $error = $options[$field]->isEmpty()
+            $error = $offered->isEmpty()
                 ? 'This product is not sold by '.$field.'.'
                 : 'That '.$field.' is not available for this product.';
 
@@ -235,12 +282,17 @@ class CartController extends Controller
 
         $cart = $this->getOrCreateCart();
 
-        // Check if item already in cart (same product + variant + size + colour = same line)
+        // Check if item already in cart (same product + variant + size + colour
+        // + texture = same line). texture belongs in the lookup as much as the
+        // other four: without it a second texture of a size and colour already
+        // in the cart finds that row, fails to merge into it and hits
+        // cart_items_line_texture_unique as a 1062 instead.
         $existingItem = $cart->items()
             ->where('product_id', $validated['product_id'])
             ->where('variant_id', $variantId)
             ->where('size', $size)
             ->where('colour', $colour)
+            ->where('texture', $texture)
             ->first();
 
         if ($existingItem) {
@@ -273,6 +325,7 @@ class CartController extends Controller
                 'variant_id' => $variantId,
                 'size' => $size,
                 'colour' => $colour,
+                'texture' => $texture,
                 'quantity' => $validated['quantity'],
                 'price' => $price,
             ]);
@@ -285,66 +338,15 @@ class CartController extends Controller
                 'success' => true,
                 'message' => 'Product added to cart',
                 'cart_count' => $cart->items->sum('quantity'),
-                'cart_total' => $cart->total,
+                // Cast, like the other four. total is a decimal column, so without
+                // this it left as the string "1499.00" while every sibling sent a
+                // number - and a consumer comparing cart_total > 500 got string
+                // semantics from this one endpoint alone.
+                'cart_total' => (float) $cart->total,
             ]);
         }
 
         return back()->with('success', 'Product added to cart.');
-    }
-
-    /**
-     * The sizes and colours a product actually offers.
-     *
-     * Deliberately the same derivation products/show.blade.php uses to render
-     * the size buttons and colour swatches, including both fallbacks, so the
-     * server accepts exactly what the page can offer and nothing else:
-     *  - sizes come from the active "Sizes & pricing" variant rows, falling
-     *    back to a free-text Size attribute on older products;
-     *  - colours come from the product-level Colours attribute, falling back to
-     *    the Colour recorded on the variant rows.
-     *
-     * @return array{size: Collection<int, string>, colour: Collection<int, string>}
-     */
-    private function offeredOptions(Product $product): array
-    {
-        $rows = $product->variants()->where('is_active', true)->get();
-
-        $sizes = $rows->pluck('name')->map(fn ($n) => trim((string) $n))->filter()->unique()->values();
-
-        if ($sizes->isEmpty()) {
-            $sizes = collect($product->attributes ?? [])
-                ->filter(fn ($v, $k) => Str::contains(Str::lower($k), 'size'))
-                ->flatMap(fn ($v) => is_array($v) ? $v : preg_split('/[,\/|]+|\s{2,}/', (string) $v))
-                ->map(fn ($v) => trim((string) $v))
-                ->filter()
-                ->unique()
-                ->values();
-        }
-
-        $colours = collect(data_get($product->attributes, 'Colours', []))
-            ->map(fn ($c) => trim((string) (is_array($c) ? ($c['name'] ?? '') : $c)))
-            ->filter();
-
-        if ($colours->isEmpty()) {
-            $colours = $rows
-                ->map(fn ($v) => trim((string) data_get($v->attributes, 'Colour', '')))
-                ->filter();
-        }
-
-        return ['size' => $sizes, 'colour' => $colours->unique()->values()];
-    }
-
-    /**
-     * Case- and spacing-insensitive membership, so a value that made the round
-     * trip through the page is never rejected over its casing.
-     *
-     * @param  Collection<int, string>  $offered
-     */
-    private function offers(Collection $offered, string $chosen): bool
-    {
-        $needle = Str::lower(trim($chosen));
-
-        return $offered->contains(fn ($option) => Str::lower(trim((string) $option)) === $needle);
     }
 
     public function update(Request $request, CartItem $cartItem): JsonResponse|RedirectResponse
@@ -400,6 +402,11 @@ class CartController extends Controller
                 'cart_count' => $cart->items->sum('quantity'),
                 'cart_subtotal' => (float) $cart->subtotal,
                 'cart_discount' => (float) $cart->discount,
+                // Changing a quantity is what carries a basket over or back under
+                // the free-delivery minimum, so this is the response that has to
+                // report the new charge.
+                'cart_shipping' => (float) $cart->shipping,
+                'cart_tax' => (float) $cart->tax,
                 'cart_total' => (float) $cart->total,
                 'coupon' => $cart->coupon ? $this->formatCouponData($cart->coupon, $cart) : null,
             ]);
@@ -432,6 +439,8 @@ class CartController extends Controller
                 'cart_count' => $cart->items->sum('quantity'),
                 'cart_subtotal' => (float) $cart->subtotal,
                 'cart_discount' => (float) $cart->discount,
+                'cart_shipping' => (float) $cart->shipping,
+                'cart_tax' => (float) $cart->tax,
                 'cart_total' => (float) $cart->total,
                 'coupon' => $cart->coupon ? $this->formatCouponData($cart->coupon, $cart) : null,
             ]);
@@ -551,6 +560,11 @@ class CartController extends Controller
                 'success' => true,
                 'message' => 'Coupon applied successfully',
                 'cart_discount' => (float) $cart->discount,
+                // A discount can drop a basket back under the free-delivery
+                // minimum, and a free_shipping coupon waives the charge outright -
+                // both change this figure, so it is sent with the discount.
+                'cart_shipping' => (float) $cart->shipping,
+                'cart_tax' => (float) $cart->tax,
                 'cart_total' => (float) $cart->total,
                 'coupon' => $this->formatCouponData($coupon, $cart),
             ]);
@@ -580,6 +594,8 @@ class CartController extends Controller
                 'message' => 'Coupon removed',
                 'cart_subtotal' => (float) $cart->subtotal,
                 'cart_discount' => (float) $cart->discount,
+                'cart_shipping' => (float) $cart->shipping,
+                'cart_tax' => (float) $cart->tax,
                 'cart_total' => (float) $cart->total,
                 'coupon' => $cart->coupon ? $this->formatCouponData($cart->coupon, $cart) : null,
             ]);
@@ -689,7 +705,7 @@ class CartController extends Controller
             ->whereNotIn('id', $productIds)
             ->whereIn('category_id', $categoryIds)
             ->whereHas('images')
-            ->with('primaryImage')
+            ->with('images')
             // Filtered, not merely sorted: every tile in the drawer is a bare
             // "Add to Cart" with no room for an Out of Stock badge, so a sold-out
             // one is a button that can only ever return an error toast. The cart
@@ -728,7 +744,17 @@ class CartController extends Controller
 
         // Remove orphaned items whose product was deleted - otherwise the cart
         // page crashes on route('product.show', null) / null property reads.
-        $cart->items()->whereDoesntHave('product')->delete();
+        //
+        // Recalculate when that actually removed something. The stored subtotal
+        // and total were worked out with those lines still in them, and nothing
+        // else recomputes them, so the cart went on reporting the old money
+        // beside an empty basket: /cart/data answered items: [], cart_count: 0
+        // and cart_total: 500 in the same breath, and checkout reads the same
+        // stored total. delete() returns the row count, so the common path -
+        // nothing orphaned - costs one query and no recalculation.
+        if ($cart->items()->whereDoesntHave('product')->delete() > 0) {
+            $cart->recalculate();
+        }
 
         return $cart;
     }

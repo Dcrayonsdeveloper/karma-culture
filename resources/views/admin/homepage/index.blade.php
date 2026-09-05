@@ -56,7 +56,19 @@
             </div>
             <div>
                 <div style="font-size: 13px; font-weight: 600; color: #303030;">Shop Filters</div>
-                <div style="font-size: 12px; color: #616161;">Size, Price, Shade</div>
+                <div style="font-size: 12px; color: #616161;">Size, Price, Shade, Texture &mdash; from your products</div>
+            </div>
+        </a>
+
+        <a href="{{ route('admin.homepage.about-reels') }}" class="card" style="padding: 1rem; display: flex; align-items: center; gap: 0.75rem; text-decoration: none; transition: box-shadow 0.15s;">
+            <div style="width: 2.5rem; height: 2.5rem; background: #f0f0f0; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center;">
+                <svg style="width: 1.25rem; height: 1.25rem; color: #616161;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16v12H4zM10 9.5l5 2.5-5 2.5z"/>
+                </svg>
+            </div>
+            <div>
+                <div style="font-size: 13px; font-weight: 600; color: #303030;">About Us Reels</div>
+                <div style="font-size: 12px; color: #616161;">{{ \App\Models\AboutReel::active()->count() }} on the home page</div>
             </div>
         </a>
 
@@ -72,20 +84,11 @@
             </div>
         </a>
 
-        {{-- The Navigation editor had a route and a full page but nothing anywhere
-             linked to it, so the header and footer menus were only reachable by
-             typing the URL. --}}
-        <a href="{{ route('admin.homepage.navigation') }}" class="card" style="padding: 1rem; display: flex; align-items: center; gap: 0.75rem; text-decoration: none; transition: box-shadow 0.15s;">
-            <div style="width: 2.5rem; height: 2.5rem; background: #f0f0f0; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center;">
-                <svg style="width: 1.25rem; height: 1.25rem; color: #616161;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h10"/>
-                </svg>
-            </div>
-            <div>
-                <div style="font-size: 13px; font-weight: 600; color: #303030;">Navigation</div>
-                <div style="font-size: 12px; color: #616161;">Header &amp; footer menus</div>
-            </div>
-        </a>
+        {{-- Navigation (header & footer menus) is deliberately not tiled here:
+             it is site-wide chrome rather than a home page block, and the store
+             owner asked for it off this screen. The route and its editor are
+             untouched - admin/homepage/navigation still works if linked again
+             from somewhere that fits it better. --}}
     </div>
 
     {{-- This panel used to be headed "Section Order" and showed a big numbered

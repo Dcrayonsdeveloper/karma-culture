@@ -118,7 +118,7 @@
                             <input type="text" name="button_link" id="section-button-link" value="{{ old('button_link', $section->button_link) }}" maxlength="255"
                                    pattern="(https?://|mailto:|tel:)\S+|/(?!/)\S*|#\S*"
                                    title="Enter a path such as /products, or a full https:// address."
-                                   class="form-input" placeholder="e.g. /products, /categories/boys">
+                                   class="form-input" placeholder="e.g. /products, /category/boys">
                         </div>
                     @endif
 

@@ -213,7 +213,22 @@ class CheckoutController extends Controller
         $stockField = null;
 
         try {
+<<<<<<< HEAD
             $order = DB::transaction(function () use ($cart, $shippingAddress, $billingAddress, $validated, $request, &$stockField) {
+=======
+            $order = DB::transaction(function () use ($cart, $shippingAddress, $billingAddress, $validated, $request) {
+                // Recompute the money from the live product rows, the way web
+                // checkout does. The order LINES below are re-read from the
+                // products, but subtotal and discount were taken from the cart
+                // as last stored - so an order placed after a flash sale
+                // started or ended carried a total that did not match the sum
+                // of its own items. skipAutoApply: an order is not the place to
+                // attach a coupon the customer was never shown.
+                $cart->recalculate(skipAutoApply: true);
+                $cart->refresh();
+                $cart->load(['items.product', 'items.variant', 'coupon']);
+
+>>>>>>> e3a8ce0550d8732347a02aa9589f2867ee5b491f
                 // Lock coupon row to prevent concurrent over-redemption
                 $lockedCoupon = null;
                 if ($cart->coupon_id) {
@@ -269,9 +284,13 @@ class CheckoutController extends Controller
                     'payment_status' => 'pending',
                     'subtotal' => $cart->subtotal,
                     'discount' => $cart->discount,
-                    'shipping_cost' => 0,
-                    'tax' => 0,
-                    'total' => $cart->subtotal - $cart->discount,
+                    // Were both hardcoded to 0, with the total ignoring them, so
+                    // an order placed from the app was billed neither delivery
+                    // nor tax while the same basket on the website was billed
+                    // both. Same fields, same formula as web checkout.
+                    'shipping_cost' => $cart->shipping,
+                    'tax' => $cart->tax,
+                    'total' => $cart->subtotal - $cart->discount + $cart->shipping + $cart->tax,
                     'coupon_id' => $cart->coupon_id,
                     'shipping_address_id' => $shippingAddress->id,
                     'billing_address_id' => $billingAddress->id,
@@ -312,6 +331,13 @@ class CheckoutController extends Controller
                         'product_name' => $item->product->name,
                         'sku' => $item->product->sku ?? '',
                         'variant_name' => $item->variant?->attributeValues->pluck('value')->join(' / '),
+                        // The choices the shopper made on the line itself. They
+                        // were never copied across, so an API-placed order for
+                        // Matte in M/Black reached the warehouse as a bare
+                        // product name and nobody could tell what to pack.
+                        'size' => $item->size,
+                        'colour' => $item->colour,
+                        'texture' => $item->texture,
                         'quantity' => $item->quantity,
                         'mrp' => $item->product->mrp ?? $currentPrice,
                         'price' => $currentPrice,
@@ -364,6 +390,11 @@ class CheckoutController extends Controller
 
             throw $e;
         }
+
+        // Same attribution the web checkout records, and outside the transaction
+        // for the same reason - see the comment there. The abandoned-cart record
+        // is found by cart_id, which outlives the cart being emptied above.
+        app(\App\Services\AbandonedCartService::class)->markRecoveredFromCheckout($cart, $order);
 
         // COD has no gateway to wait on, so placement is confirmation. Prepaid
         // orders stay pending until their payment callback lands.

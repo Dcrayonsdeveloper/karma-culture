@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\ShippingCharge;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -47,6 +48,19 @@ class Cart extends Model
     public function items(): HasMany
     {
         return $this->hasMany(CartItem::class);
+    }
+
+    /**
+     * Every time this cart has been abandoned.
+     *
+     * More than one row is normal, and is the reason that state does not live
+     * on this table: checkout empties a cart without deleting it, so the same
+     * row is refilled for the customer's next basket and can be abandoned
+     * again. See the abandoned_carts migration for the full reasoning.
+     */
+    public function abandonedCarts(): HasMany
+    {
+        return $this->hasMany(AbandonedCart::class);
     }
 
     /**
@@ -118,18 +132,33 @@ class Cart extends Model
             $this->coupon_id = null;
         }
 
-        $tax = $this->items->sum(function ($item) {
-            return $item->product->is_taxable
-                ? ($item->total * $item->product->tax_rate / 100)
-                : 0;
-        });
+        // Settings -> Tax -> Enable Taxes. The sum below has always been
+        // computed and stored, but nothing read the switch, so turning taxes
+        // OFF would not have stopped them once anything started charging them.
+        $tax = (bool) Setting::get('tax_enabled', false)
+            ? $this->items->sum(function ($item) {
+                return $item->product->is_taxable
+                    ? ($item->total * $item->product->tax_rate / 100)
+                    : 0;
+            })
+            : 0;
+
+        // Delivery, from Settings -> Shipping. `shipping` was only ever read
+        // here and never written, so it sat at the column default of 0 and the
+        // total below could not include a charge however the admin configured
+        // one. Set on the cart itself so every reader - the drawer, the cart
+        // page, checkout and the order - agrees without each recomputing it.
+        $this->setAttribute('subtotal', $subtotal);
+        $this->setAttribute('discount', $discount);
+        $shipping = ShippingCharge::for($this);
 
         $this->update([
             'coupon_id' => $this->coupon_id,
             'subtotal' => $subtotal,
             'discount' => $discount,
             'tax' => $tax,
-            'total' => $subtotal - $discount + $tax + $this->shipping,
+            'shipping' => $shipping,
+            'total' => $subtotal - $discount + $tax + $shipping,
         ]);
     }
 

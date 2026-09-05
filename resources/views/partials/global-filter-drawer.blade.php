@@ -46,10 +46,11 @@
                 });
                 if (!res.ok) throw new Error(res.status);
                 this.$refs.body.innerHTML = await res.text();
-                /* The panel is full of Alpine - a collapse per section, the
-                   debounced auto-submit on the radios. Alpine only walks markup
-                   it inserted itself, so injected HTML has to be initialised by
-                   hand or every section renders open, inert and uncollapsible. */
+                /* The panel carries Alpine of its own: the debounced
+                   auto-submit on the category and rating radios. Alpine only
+                   walks markup it inserted itself, so injected HTML has to be
+                   initialised by hand or those radios never submit. The
+                   sections fold without any of this - they are <details>. */
                 window.Alpine.initTree(this.$refs.body);
                 this.loaded = true;
             } catch (e) {

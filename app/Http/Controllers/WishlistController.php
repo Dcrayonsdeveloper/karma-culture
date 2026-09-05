@@ -13,8 +13,9 @@ class WishlistController extends Controller
 {
     public function index(): View
     {
-        // Wishlist is stored client-side (localStorage) so it works for guests.
-        // The page fetches the favourited products via the wishlist-items endpoint.
+        // The wishlist is stored client-side, in the kk_wishlist cookie, so it
+        // works for a guest. The page holds ids only; it fetches the product data
+        // for them from /wishlist/items.
         return view('wishlist.index');
     }
 
@@ -32,7 +33,7 @@ class WishlistController extends Controller
 
         $products = Product::whereIn('id', $ids)
             ->where('is_active', true)
-            ->with(['primaryImage', 'category'])
+            ->with(['images', 'category'])
             ->inStockFirst()
             ->get()
             ->map(fn ($p) => [

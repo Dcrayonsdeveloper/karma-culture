@@ -66,7 +66,7 @@ class BrandFilterTest extends TestCase
 
     public function test_shop_sidebar_offers_a_brand_filter(): void
     {
-        $this->get('/shop')
+        $this->get('/products')
             ->assertOk()
             ->assertSee('name="brand[]" value="fk-premium"', false);
     }
@@ -77,7 +77,7 @@ class BrandFilterTest extends TestCase
      */
     public function test_brands_with_no_products_are_not_offered(): void
     {
-        $this->get('/shop')->assertDontSee('name="brand[]" value="nike"', false);
+        $this->get('/products')->assertDontSee('name="brand[]" value="nike"', false);
         $this->get('/category/girls-dresses')->assertDontSee('name="brand[]" value="nike"', false);
     }
 
@@ -99,7 +99,7 @@ class BrandFilterTest extends TestCase
 
     public function test_shop_brand_filter_narrows_the_products(): void
     {
-        $this->get('/shop?brand[]=fk-organics')
+        $this->get('/products?brand[]=fk-organics')
             ->assertOk()
             ->assertSee('Cotton Frock')
             ->assertDontSee('Party Frock')
@@ -109,7 +109,7 @@ class BrandFilterTest extends TestCase
     /** Ticking two boxes widens the result rather than returning nothing. */
     public function test_selecting_two_brands_returns_both(): void
     {
-        $this->get('/shop?brand[]=fk-premium&brand[]=fk-organics')
+        $this->get('/products?brand[]=fk-premium&brand[]=fk-organics')
             ->assertOk()
             ->assertSee('Party Frock')
             ->assertSee('Cotton Frock');
@@ -117,7 +117,7 @@ class BrandFilterTest extends TestCase
 
     public function test_an_unknown_brand_slug_returns_nothing_rather_than_everything(): void
     {
-        $this->get('/shop?brand[]=no-such-brand')
+        $this->get('/products?brand[]=no-such-brand')
             ->assertOk()
             ->assertDontSee('Party Frock')
             ->assertDontSee('Cotton Frock');
@@ -135,7 +135,7 @@ class BrandFilterTest extends TestCase
      */
     public function test_a_scalar_brand_parameter_does_not_error(): void
     {
-        $this->get('/shop?brand=fk-premium')
+        $this->get('/products?brand=fk-premium')
             ->assertOk()
             ->assertSee('Party Frock')
             ->assertDontSee('Cotton Frock');

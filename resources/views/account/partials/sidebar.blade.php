@@ -79,6 +79,17 @@
                 Notifications
             </a>
 
+            {{-- The preferences screen had no link anywhere in the view tree, so the
+                 only way to reach it was to type the URL. It belongs beside the
+                 notifications list it governs. --}}
+            <a href="{{ route('account.notification-preferences') }}"
+               class="flex items-center gap-2.5 px-3 py-2 rounded-lg shrink-0 whitespace-nowrap min-h-10 lg:min-h-0 text-[13px] font-medium {{ request()->routeIs('account.notification-preferences') ? 'bg-primary-50 text-primary-600' : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900' }} transition-colors">
+                <svg class="w-4.5 h-4.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+                </svg>
+                Notification Preferences
+            </a>
+
             <form action="{{ route('logout') }}" method="POST" class="shrink-0 lg:mt-1">
                 @csrf
                 <button type="submit" class="flex items-center gap-2.5 px-3 py-2 rounded-lg w-full text-left shrink-0 whitespace-nowrap min-h-10 lg:min-h-0 text-[13px] font-medium text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900 transition-colors">

@@ -61,6 +61,21 @@ class Product extends Model
         'published_at',
     ];
 
+    /**
+     * Never serialise what the shop paid.
+     *
+     * Several endpoints hand back whole Product models rather than a chosen
+     * shape - /api/v1/products, /api/v1/recommendations/* and the home rails
+     * among them - and all of those are public and unauthenticated, so the
+     * purchase cost of every product in the catalogue was readable by anyone
+     * who asked. $hidden only affects toArray()/toJson(); the admin forms,
+     * the Excel export and the margin reports all read $product->cost_price
+     * directly and are unaffected.
+     */
+    protected $hidden = [
+        'cost_price',
+    ];
+
     protected function casts(): array
     {
         return [
@@ -98,6 +113,18 @@ class Product extends Model
 
         static::saved($forgetColours);
         static::deleted($forgetColours);
+
+        // The primary category is always one of the shelves the product sits on.
+        // Enforced here rather than in the admin controller alone, because a
+        // product created by an import, a seeder, a console command or the API
+        // would otherwise carry an empty pivot and vanish from every listing.
+        // syncWithoutDetaching, so it never clears the extra shelves the admin
+        // picked - the product form owns that list and sets it explicitly.
+        static::saved(function ($product) {
+            if ($product->category_id) {
+                $product->categories()->syncWithoutDetaching([$product->category_id]);
+            }
+        });
         static::creating(function ($product) {
             if (empty($product->uuid)) {
                 $product->uuid = (string) Str::uuid();
@@ -136,6 +163,63 @@ class Product extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    /**
+     * Every category this product is listed under, the primary one included.
+     *
+     * category() is what the product IS - breadcrumb, canonical URL, coupon
+     * scoping, reports. This is where it is SHOWN, which is a longer list: a
+     * unisex shirt belongs on the men's and the women's shelf at once.
+     */
+    public function categories(): BelongsToMany
+    {
+        // withSystem: this is the membership pivot, and a product ticked into
+        // "Bestsellers" is stored here exactly like one shelved under "Kurtas".
+        // Leaving the global scope on would hide those rows from sync(), which
+        // then never detaches them - unticking a system row would silently do
+        // nothing.
+        return $this->belongsToMany(Category::class, 'category_product')
+            ->withoutGlobalScope('kk_real_categories');
+    }
+
+    /**
+     * The hand-picked collections this product has been ticked into.
+     *
+     * Unrelated to categories: a category is what the product is, a collection
+     * is a shelf someone assembled. A product can be in several or none, and
+     * being in one says nothing about what it is.
+     */
+    public function collections(): BelongsToMany
+    {
+        // Kept as a name for "the built-in listings this product was ticked
+        // into" now that collections are rows in `categories`. Same pivot as
+        // categories(), narrowed to the system rows.
+        return $this->belongsToMany(Category::class, 'category_product')
+            ->withoutGlobalScope('kk_real_categories')
+            ->where('categories.is_system', true);
+    }
+
+    /**
+     * Products displayed under any of these categories.
+     *
+     * A subquery rather than a join: joining the pivot returns one row per
+     * matching category, so a product on two of the categories being asked
+     * about would come back twice and paginate as two cards.
+     *
+     * An empty list means "nothing matched", not "no filter" - a slug that
+     * resolves to no category must return an empty page rather than the whole
+     * shop, which is what the whereIn on category_id did.
+     *
+     * @param  array<int, int>  $categoryIds
+     */
+    public function scopeInAnyCategory($query, array $categoryIds)
+    {
+        return $query->whereIn('products.id', function ($sub) use ($categoryIds) {
+            $sub->select('product_id')
+                ->from('category_product')
+                ->whereIn('category_id', $categoryIds ?: [0]);
+        });
     }
 
     public function images(): HasMany

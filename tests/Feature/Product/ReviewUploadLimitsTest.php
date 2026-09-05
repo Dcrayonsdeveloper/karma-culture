@@ -52,7 +52,7 @@ class ReviewUploadLimitsTest extends TestCase
 
     public function test_upload_inputs_are_wired_to_the_client_side_guard(): void
     {
-        $response = $this->get('/products/'.$this->product->slug);
+        $response = $this->get('/product/'.$this->product->slug);
 
         $response->assertStatus(200);
         $response->assertSee('kkReviewForm(', false);
@@ -64,7 +64,7 @@ class ReviewUploadLimitsTest extends TestCase
 
     public function test_advertised_size_limit_never_exceeds_the_php_upload_cap(): void
     {
-        $response = $this->get('/products/'.$this->product->slug);
+        $response = $this->get('/product/'.$this->product->slug);
 
         $uploadCap = $this->iniBytes(ini_get('upload_max_filesize'));
         $imageCap = $uploadCap > 0 ? min(5 * 1024 * 1024, $uploadCap) : 5 * 1024 * 1024;

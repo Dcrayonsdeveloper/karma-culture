@@ -82,6 +82,29 @@ class CheckoutController extends Controller
             return redirect()->route('cart.index')->with('error', 'Your cart is empty.');
         }
 
+        // Bring the stored totals up to date before quoting them.
+        //
+        // This screen rendered $cart->shipping, $cart->tax and $cart->subtotal
+        // straight off the row, and nothing here refreshed them - so a cart
+        // built before delivery charging was switched on carried shipping = 0
+        // and the summary said FREE however the shipping settings were filled
+        // in. Any settings change after the customer last touched their cart
+        // had the same effect: prices, tax and delivery all quoted from
+        // whenever the cart was last written.
+        //
+        // The cart page has always done this on load; this is the same rule on
+        // the last screen that quotes a total.
+        //
+        // skipAutoApply follows the same dismissal the cart page honours. With
+        // auto-apply on unconditionally, a coupon the shopper had removed was
+        // put back the moment they reached this page: the cart quoted one Total
+        // Amount, the checkout quoted a smaller one, and because a discount
+        // moves the basket against the free-delivery minimum the two screens
+        // could disagree about the delivery charge as well. process() already
+        // passes skipAutoApply: true for the same reason.
+        $cart->recalculate(skipAutoApply: session('coupon_dismissed', false));
+        $cart->refresh()->load(['items.product', 'items.variant', 'coupon']);
+
         $user = request()->user();
 
         // Both checkout routes are auth-gated, so this is the point at which a
@@ -189,10 +212,23 @@ class CheckoutController extends Controller
             ? $request->user()->addresses()->find($validated['address_id'])
             : null;
 
+        // The contact number belongs to the ORDER, not to the account or to the
+        // address book: it is the number the shop and the delivery partner ring
+        // about this delivery. The box is outside the new-address form now and
+        // is always submitted, so a saved-address order carries the number the
+        // customer gave at checkout rather than whatever that address happened
+        // to be saved with. Stored as the canonical ten digits so the
+        // order-tracking lookup and the Shiprocket handoff all see one shape.
+        //
+        // The fallback covers a POST that carries no phone at all - the page
+        // always sends one, so that is only an old form or an API-shaped
+        // request, and the address's own number is the best answer there.
+        $orderPhone = IndianMobile::normalize($validated['phone'] ?? null);
+
         $addressSnapshot = $savedAddress ? [
             'name'           => trim($savedAddress->first_name . ' ' . $savedAddress->last_name),
             'email'          => $validated['email'],
-            'phone'          => $savedAddress->phone,
+            'phone'          => $orderPhone ?: $savedAddress->phone,
             'address_line_1' => $savedAddress->address_line_1,
             'address_line_2' => $savedAddress->address_line_2,
             'city'           => $savedAddress->city,
@@ -202,10 +238,7 @@ class CheckoutController extends Controller
         ] : [
             'name'           => $validated['full_name'],
             'email'          => $validated['email'],
-            // Store the canonical ten digits, not the decorated input, so the
-            // order-tracking lookup and the SMS/Shiprocket handoff all see one
-            // shape. IndianMobile has already proved it normalises.
-            'phone'          => IndianMobile::normalize($validated['phone'] ?? null),
+            'phone'          => $orderPhone,
             'address_line_1' => $validated['address_line_1'],
             'address_line_2' => $validated['address_line_2'] ?? null,
             'city'           => $validated['city'],
@@ -216,6 +249,26 @@ class CheckoutController extends Controller
 
         try {
             $order = DB::transaction(function () use ($cart, $addressSnapshot, $savedAddress, $validated, $request) {
+                // Take the cart row itself before anything else, so two
+                // submissions of the SAME cart run one after the other instead
+                // of side by side.
+                //
+                // The product/variant locks further down stop the shop
+                // overselling, but they do not stop a double-submit - a
+                // slow connection, an impatient second click, a browser
+                // retrying the POST - from producing TWO orders for one
+                // basket and deducting the stock twice. The cart is loaded
+                // outside this transaction, so without this lock the second
+                // request happily rebuilt an order from a basket the first had
+                // already emptied.
+                $locked = \App\Models\Cart::whereKey($cart->getKey())->lockForUpdate()->first();
+
+                if (! $locked || $locked->items()->count() === 0) {
+                    throw new \App\Exceptions\InsufficientStockException(
+                        'This order has already been placed. Please check My Orders before trying again.'
+                    );
+                }
+
                 // Recompute the money from the live product rows before any of
                 // it is copied onto the order. Nothing here has ever been read
                 // from the request, but the cart's stored subtotal/discount are
@@ -230,6 +283,15 @@ class CheckoutController extends Controller
                 $cart->recalculate(skipAutoApply: true);
                 $cart->refresh();
                 $cart->load(['items.product', 'items.variant', 'coupon']);
+
+                // Re-check after the reload: recalculate() prunes lines whose
+                // product has since been deactivated or deleted, and an order
+                // with no lines is not an order.
+                if ($cart->items->isEmpty()) {
+                    throw new \App\Exceptions\InsufficientStockException(
+                        'Your cart is no longer available. Please add the items again.'
+                    );
+                }
 
                 // Re-validate stock inside the transaction with row locks.
                 foreach ($cart->items as $item) {
@@ -253,9 +315,15 @@ class CheckoutController extends Controller
                     'payment_status'           => 'pending',
                     'subtotal'                 => $cart->subtotal,
                     'discount'                 => $cart->discount,
-                    'shipping_cost'            => 0,
-                    'tax'                      => 0,
-                    'total'                    => $cart->subtotal - $cart->discount,
+                    // Was hardcoded to 0 with the total ignoring it, so a
+                    // configured delivery charge was shown at checkout (once the
+                    // view stopped saying FREE) and then not billed.
+                    'shipping_cost'            => $cart->shipping,
+                    // Hardcoded to 0 with the total ignoring it, so tax was
+                    // worked out on the cart, shown to nobody and billed to
+                    // nobody - the same shape the shipping charge was in.
+                    'tax'                      => $cart->tax,
+                    'total'                    => $cart->subtotal - $cart->discount + $cart->shipping + $cart->tax,
                     'coupon_id'                => $cart->coupon_id,
                     'shipping_address_id'      => $savedAddress?->id,
                     'billing_address_id'       => $savedAddress?->id,
@@ -267,11 +335,13 @@ class CheckoutController extends Controller
                     'source'                   => 'web',
                     'metadata'                 => [
                         'guest_email'     => $validated['email'],
-                        // phone is required_without:address_id, so it is absent
-                        // from $validated whenever a saved address is chosen -
-                        // reading it directly 500'd every saved-address order.
-                        // Fall back to the phone on the address snapshot.
-                        'guest_phone'     => $validated['phone'] ?? $addressSnapshot['phone'] ?? null,
+                        // The same number the snapshot carries, in the same
+                        // canonical shape - reading the raw request value here
+                        // meant this copy and the one the admin, the invoice and
+                        // Shiprocket all read could disagree about the same
+                        // order (and, before the snapshot was consulted at all,
+                        // 500'd every saved-address order).
+                        'guest_phone'     => $addressSnapshot['phone'] ?? null,
                         'guest_checkout'  => ! auth()->check(),
                         'payment_pending' => true,
                         'payment_method'  => $validated['payment_method'],
@@ -300,6 +370,7 @@ class CheckoutController extends Controller
                         'variant_name' => $item->variant?->attributeValues->pluck('value')->join(' / '),
                         'size'         => $item->size,
                         'colour'       => $item->colour,
+                        'texture'      => $item->texture,
                         'quantity'     => $item->quantity,
                         'mrp'          => $item->product->mrp ?? $currentPrice,
                         'price'        => $currentPrice,
@@ -362,6 +433,17 @@ class CheckoutController extends Controller
         } catch (\App\Exceptions\InsufficientStockException $e) {
             return redirect()->route('cart.index')->with('error', $e->getMessage());
         }
+
+        // Link this order to the abandoned-cart record the basket came from, if
+        // there is one. This is the ONLY exact attribution available: `orders`
+        // carries no cart_id and no session_id, so nothing else ever ties the
+        // two together.
+        //
+        // Deliberately AFTER the transaction. Inside it, a deadlock on this
+        // write would poison the transaction and cost the customer their order
+        // for the sake of a reporting row. The record is found by cart_id, which
+        // survives the cart being emptied above, so nothing is lost by waiting.
+        app(\App\Services\AbandonedCartService::class)->markRecoveredFromCheckout($cart, $order);
 
         // Let a guest view this order's confirmation later (session ownership).
         $recent = session('guest_order_ids', []);

@@ -61,8 +61,17 @@ class SearchController extends Controller
         $matching = function () use ($query) {
             $products = Product::query()->where('is_active', true);
 
-            // Full-text search using Scout if configured, otherwise basic search
-            if (config('scout.driver')) {
+            // Full-text search through Scout, but only when Scout is actually
+            // backed by an index.
+            //
+            // `config('scout.driver')` is never empty: Scout's own default is
+            // the `collection` driver, and this app ships no config/scout.php
+            // and sets no SCOUT_DRIVER, so the branch below was always taken and
+            // the SQL search underneath it was dead code. The collection driver
+            // does not use an index at all - it loads EVERY product row into PHP
+            // and filters them in memory, and this closure is re-invoked once per
+            // facet, so a single search read the whole products table seven times.
+            if (self::searchIsIndexed()) {
                 return $products->whereIn('products.id', Product::search($query)->keys());
             }
 
@@ -84,7 +93,7 @@ class SearchController extends Controller
 
         // ProductFilters::sort() sinks sold-out results to the back for us.
         $products = $filters
-            ->sort($filters->query()->with(['category', 'brand', 'primaryImage']))
+            ->sort($filters->query()->with(['category', 'brand', 'images']))
             ->paginate(24)
             ->withQueryString();
 
@@ -114,6 +123,18 @@ class SearchController extends Controller
                 ],
             ]),
         ]);
+    }
+
+    /**
+     * Whether Scout is backed by something that can actually answer a search
+     * without reading the whole table.
+     *
+     * `collection` (Scout's default) and `null` both filter in PHP over every
+     * row, which is worse than the SQL search this controller already has.
+     */
+    private static function searchIsIndexed(): bool
+    {
+        return ! in_array(config('scout.driver'), [null, '', 'collection', 'null'], true);
     }
 
     /**
@@ -224,7 +245,7 @@ class SearchController extends Controller
         $products = Product::query()
             ->where('is_active', true)
             ->where(fn ($w) => $this->matchTerms($w, 'name', $query))
-            ->with(['category', 'primaryImage'])
+            ->with(['category', 'images'])
             ->inStockFirst()
             ->orderBy('sales_count', 'desc')
             ->take(5)

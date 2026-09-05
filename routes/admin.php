@@ -1,13 +1,16 @@
 <?php
 
+use App\Http\Controllers\Admin\AbandonedCartController;
 use App\Http\Controllers\Admin\AttributeController;
 use App\Http\Controllers\Admin\AttributeValueController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\Auth\LoginController;
 use App\Http\Controllers\Admin\BannerController;
+use App\Http\Controllers\Admin\BannerPreviewController;
 use App\Http\Controllers\Admin\BlogPostController;
 use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\ChatbotAnalyticsController;
 use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\CurrencyController;
 use App\Http\Controllers\Admin\CustomerController;
@@ -26,6 +29,7 @@ use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PageController;
 use App\Http\Controllers\Admin\ProductAplusImageController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\ProductImportController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ReturnController;
@@ -49,7 +53,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')->name('admin.')->group(function () {
     // Guest routes
-    Route::middleware(['guest:admin', 'throttle:10,1'])->group(function () {
+    Route::middleware(['guest:admin', 'throttle:10,1,admin-login'])->group(function () {
         Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
         Route::post('/login', [LoginController::class, 'login']);
     });
@@ -67,7 +71,20 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Notifications
         Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications');
+        // What has arrived since a given moment - the sub-collection the admin
+        // shell polls every ten seconds so the bell no longer needs a page load
+        // to change. Declared before /notifications/{notification}/read only for
+        // readability; the two patterns cannot collide.
+        //
+        // Throttled because this is the one admin route a browser calls on its
+        // own. The limiter is defined in AppServiceProvider, which is where the
+        // reasoning about its key and its ceiling lives.
+        Route::get('/notifications/updates', [NotificationController::class, 'updates'])
+            ->middleware('throttle:admin-notification-poll')
+            ->name('notifications.updates');
         Route::get('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
+        // POST because it mutates, which also puts it in front of LogAdminActions.
+        Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
 
         // AJAX search endpoints (used by multiple features)
         Route::get('/search/products', [SearchController::class, 'products'])->name('search.products');
@@ -99,9 +116,38 @@ Route::prefix('admin')->name('admin.')->group(function () {
             });
 
             // Chat analytics
-            Route::get('chatbot/analytics', [App\Http\Controllers\Admin\ChatbotAnalyticsController::class, 'index'])->name('chatbot.analytics');
-            Route::get('chatbot/leads', [App\Http\Controllers\Admin\ChatbotAnalyticsController::class, 'leads'])->name('chatbot.leads');
-            Route::get('chatbot/conversations/{conversation}', [App\Http\Controllers\Admin\ChatbotAnalyticsController::class, 'show'])->name('chatbot.conversation');
+            Route::get('chatbot/analytics', [ChatbotAnalyticsController::class, 'index'])->name('chatbot.analytics');
+            Route::get('chatbot/leads', [ChatbotAnalyticsController::class, 'leads'])->name('chatbot.leads');
+            Route::get('chatbot/conversations/{conversation}', [ChatbotAnalyticsController::class, 'show'])->name('chatbot.conversation');
+            Route::put('chatbot/conversations/{conversation}/lead-status', [ChatbotAnalyticsController::class, 'updateLeadStatus'])->name('chatbot.lead-status');
+        });
+
+        // Abandoned carts
+        //
+        // Its own section rather than a corner of `orders`: the screen exposes
+        // customer email and phone and can send mail on the store's behalf, so
+        // it has to be grantable to a recovery desk without also handing over
+        // every order, and withheld from warehouse staff who hold `orders` for
+        // fulfilment. Admins are unaffected either way - isAdmin() short-circuits
+        // every section check.
+        Route::middleware('admin.section:abandoned_carts')->group(function () {
+            Route::prefix('abandoned-carts')->name('abandoned-carts.')->group(function () {
+                // Literal paths before {abandonedCart}, and the wildcard pinned
+                // to digits. Declaring them the other way round is how
+                // /cart/remove-coupon got swallowed once already.
+                Route::get('/', [AbandonedCartController::class, 'index'])->name('index');
+                Route::get('/export', [AbandonedCartController::class, 'export'])->name('export');
+                Route::get('/settings', [AbandonedCartController::class, 'settings'])->name('settings');
+                Route::put('/settings', [AbandonedCartController::class, 'updateSettings'])->name('settings.update');
+                Route::post('/scan', [AbandonedCartController::class, 'scan'])->name('scan');
+                Route::post('/bulk-action', [AbandonedCartController::class, 'bulkAction'])->name('bulk-action');
+
+                Route::get('/{abandonedCart}', [AbandonedCartController::class, 'show'])->whereNumber('abandonedCart')->name('show');
+                Route::post('/{abandonedCart}/remind', [AbandonedCartController::class, 'remind'])->whereNumber('abandonedCart')->name('remind');
+                Route::post('/{abandonedCart}/contacted', [AbandonedCartController::class, 'markContacted'])->whereNumber('abandonedCart')->name('contacted');
+                Route::post('/{abandonedCart}/recovered', [AbandonedCartController::class, 'markRecovered'])->whereNumber('abandonedCart')->name('recovered');
+                Route::post('/{abandonedCart}/archive', [AbandonedCartController::class, 'archive'])->whereNumber('abandonedCart')->name('archive');
+            });
         });
 
         // Catalog
@@ -112,7 +158,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::resource('products', ProductController::class);
             Route::put('/products/{product}/toggle-status', [ProductController::class, 'toggleStatus'])->name('products.toggle-status');
             Route::put('/products/{product}/toggle-featured', [ProductController::class, 'toggleFeatured'])->name('products.toggle-featured');
-            Route::post('/products/{product}/duplicate', [ProductController::class, 'duplicate'])->name('products.duplicate');
             Route::post('/products/{product}/images/reorder', [ProductController::class, 'reorderImages'])->name('products.images.reorder');
             // A+ Content (Amazon-style banner images)
             Route::post('/products/{product}/aplus', [ProductAplusImageController::class, 'store'])->name('products.aplus.store');
@@ -121,17 +166,25 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('/products/aplus/{aplusImage}', [ProductAplusImageController::class, 'destroy'])->name('products.aplus.destroy');
             Route::post('/products/bulk-action', [ProductController::class, 'bulkAction'])->name('products.bulk-action');
 
+            // Product Import from External Sources (House of Rare)
+            Route::prefix('products/import-external')->name('products.import-external.')->group(function () {
+                Route::get('/', [ProductImportController::class, 'index'])->name('index');
+                Route::get('/fetch', [ProductImportController::class, 'fetchProducts'])->name('fetch');
+                Route::post('/import', [ProductImportController::class, 'importProducts'])->name('import');
+                Route::post('/create-categories', [ProductImportController::class, 'createCategories'])->name('create-categories');
+            });
+
             // Categories
             Route::resource('categories', CategoryController::class);
             Route::put('/categories/{category}/toggle-status', [CategoryController::class, 'toggleStatus'])->name('categories.toggle-status');
             Route::post('/categories/reorder', [CategoryController::class, 'reorder'])->name('categories.reorder');
 
             // Brands
-            Route::resource('brands', BrandController::class);
+            Route::resource('brands', BrandController::class)->except(['show']);
 
             // Attributes
-            Route::resource('attributes', AttributeController::class);
-            Route::resource('attributes.values', AttributeValueController::class)->shallow();
+            Route::resource('attributes', AttributeController::class)->except(['show']);
+            Route::resource('attributes.values', AttributeValueController::class)->shallow()->except(['index', 'show']);
 
             // Inventory
             Route::prefix('inventory')->name('inventory.')->group(function () {
@@ -158,15 +211,28 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Staff (admin-only)
         Route::middleware('admin.section:staff')->group(function () {
-            Route::resource('staff', StaffController::class);
+            Route::resource('staff', StaffController::class)->except(['show']);
         });
 
         // Marketing
         Route::middleware('admin.section:marketing')->group(function () {
-            Route::resource('coupons', CouponController::class);
-            Route::resource('flash-sales', FlashSaleController::class);
-            Route::resource('banners', BannerController::class);
+            Route::resource('coupons', CouponController::class)->except(['show']);
+            Route::resource('flash-sales', FlashSaleController::class)->except(['show']);
+            // Declared ahead of the resource, so `reorder` is not swallowed by
+            // `banners/{banner}` as a banner id.
             Route::post('/banners/reorder', [BannerController::class, 'reorder'])->name('banners.reorder');
+            // Its own read-only controller: the preview screen resolves both
+            // breakpoints up front so the template does not re-run frameFor()
+            // and its disk lookups on every use.
+            Route::get('/banners/{banner}/preview', BannerPreviewController::class)->name('banners.preview');
+            // The Active switch has its own route rather than going through
+            // update(): that form posts the whole record, so a row-level toggle
+            // sent through it would blank every field the button does not carry.
+            Route::put('/banners/{banner}/toggle', [BannerController::class, 'toggle'])->name('banners.toggle');
+            // withTrashed, because the row this acts on is by definition one the
+            // default binding refuses to find.
+            Route::put('/banners/{banner}/restore', [BannerController::class, 'restore'])->withTrashed()->name('banners.restore');
+            Route::resource('banners', BannerController::class)->except(['show']);
 
             // Newsletter
             Route::prefix('newsletter')->name('newsletter.')->group(function () {
@@ -180,10 +246,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Content
         Route::middleware('admin.section:content')->group(function () {
-            Route::resource('pages', PageController::class);
+            Route::resource('pages', PageController::class)->except(['show']);
             Route::put('/pages/{page}/toggle-status', [PageController::class, 'toggleStatus'])->name('pages.toggle-status');
 
-            Route::resource('blog-posts', BlogPostController::class);
+            Route::resource('blog-posts', BlogPostController::class)->except(['show']);
             Route::put('/blog-posts/{blogPost}/toggle-status', [BlogPostController::class, 'toggleStatus'])->name('blog-posts.toggle-status');
 
             Route::prefix('reviews')->name('reviews.')->group(function () {
@@ -244,18 +310,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/general', [SettingController::class, 'general'])->name('general');
                 Route::put('/general', [SettingController::class, 'updateGeneral'])->name('general.update');
 
-                Route::get('/payment', [SettingController::class, 'payment'])->name('payment');
-                Route::put('/payment', [SettingController::class, 'updatePayment'])->name('payment.update');
-
                 Route::get('/shipping', [SettingController::class, 'shipping'])->name('shipping');
                 Route::put('/shipping', [SettingController::class, 'updateShipping'])->name('shipping.update');
 
                 Route::get('/tax', [SettingController::class, 'tax'])->name('tax');
                 Route::put('/tax', [SettingController::class, 'updateTax'])->name('tax.update');
-
-                Route::get('/email', [SettingController::class, 'email'])->name('email');
-                Route::put('/email', [SettingController::class, 'updateEmail'])->name('email.update');
-                Route::post('/email/test', [SettingController::class, 'testEmail'])->name('email.test');
 
                 Route::get('/seo', [SettingController::class, 'seo'])->name('seo');
                 Route::put('/seo', [SettingController::class, 'updateSeo'])->name('seo.update');
@@ -265,9 +324,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
                 Route::get('/popups', [SettingController::class, 'popups'])->name('popups');
                 Route::put('/popups', [SettingController::class, 'updatePopups'])->name('popups.update');
-
-                Route::get('/integrations', [SettingController::class, 'integrations'])->name('integrations');
-                Route::put('/integrations', [SettingController::class, 'updateIntegrations'])->name('integrations.update');
 
                 // Tax Rates
                 Route::resource('tax-rates', TaxRateController::class)->except(['show']);
@@ -318,13 +374,32 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::put('/sections/{section}', [HomepageController::class, 'updateSection'])->name('sections.update');
                 Route::put('/sections/{section}/toggle', [HomepageController::class, 'toggleSection'])->name('sections.toggle');
 
-                // Shop It Your Way filter items
+                // Shop It Your Way filters. The values themselves are derived from
+                // the catalogue and have no rows of their own, so the only thing
+                // there is to create or delete here is an EXCLUSION - the record
+                // that an admin does not want one of them offered.
                 Route::get('/shop-filters', [HomepageController::class, 'shopFilters'])->name('shop-filters');
-                Route::post('/shop-filters', [HomepageController::class, 'storeShopFilter'])->name('shop-filters.store');
-                Route::put('/shop-filters/{shopFilter}', [HomepageController::class, 'updateShopFilter'])->name('shop-filters.update');
-                Route::put('/shop-filters/{shopFilter}/toggle', [HomepageController::class, 'toggleShopFilter'])->name('shop-filters.toggle');
-                Route::put('/shop-filters/{shopFilter}/move', [HomepageController::class, 'moveShopFilter'])->name('shop-filters.move');
-                Route::delete('/shop-filters/{shopFilter}', [HomepageController::class, 'deleteShopFilter'])->name('shop-filters.destroy');
+                Route::post('/shop-filter-exclusions', [HomepageController::class, 'storeShopFilterExclusion'])->name('shop-filter-exclusions.store');
+                Route::delete('/shop-filter-exclusions/{exclusion}', [HomepageController::class, 'destroyShopFilterExclusion'])->name('shop-filter-exclusions.destroy');
+
+                // About Us reels - the clip strip under "Crafted to Last"
+                Route::get('/about-reels', [HomepageController::class, 'aboutReels'])->name('about-reels');
+                Route::post('/about-reels', [HomepageController::class, 'storeAboutReel'])->name('about-reels.store');
+
+                // Instagram, BEFORE the {aboutReel} wildcard and with that
+                // wildcard pinned to digits. Declared the other way round,
+                // PUT /about-reels/instagram matches {aboutReel} first, tries to
+                // bind an AboutReel with the id "instagram" and 404s - the same
+                // ordering bug that once ate /cart/remove-coupon.
+                Route::put('/about-reels/instagram', [HomepageController::class, 'updateInstagram'])->name('about-reels.instagram');
+                Route::post('/about-reels/instagram/sync', [HomepageController::class, 'syncInstagram'])->name('about-reels.instagram.sync');
+                Route::post('/about-reels/instagram/refresh-token', [HomepageController::class, 'refreshInstagramToken'])->name('about-reels.instagram.refresh');
+                Route::delete('/about-reels/instagram', [HomepageController::class, 'disconnectInstagram'])->name('about-reels.instagram.disconnect');
+
+                Route::put('/about-reels/{aboutReel}', [HomepageController::class, 'updateAboutReel'])->whereNumber('aboutReel')->name('about-reels.update');
+                Route::put('/about-reels/{aboutReel}/toggle', [HomepageController::class, 'toggleAboutReel'])->whereNumber('aboutReel')->name('about-reels.toggle');
+                Route::put('/about-reels/{aboutReel}/move', [HomepageController::class, 'moveAboutReel'])->whereNumber('aboutReel')->name('about-reels.move');
+                Route::delete('/about-reels/{aboutReel}', [HomepageController::class, 'deleteAboutReel'])->whereNumber('aboutReel')->name('about-reels.destroy');
 
                 // Our Qualities cards
                 Route::get('/qualities', [HomepageController::class, 'qualities'])->name('qualities');

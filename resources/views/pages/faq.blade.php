@@ -35,12 +35,25 @@
             </div>
 
             <!-- FAQ Accordion -->
-            <div x-data="{ open: null }" class="space-y-3">
+            {{-- The Help Center's search box submits ?q= here. Nothing read it, so
+                 a shopper who typed "refund" landed on the whole unfiltered list and
+                 had to hunt anyway. The questions are static markup, so the filter is
+                 client-side: it keeps /faq a single indexable URL and needs no
+                 controller change. --}}
+            <div x-data="faqAccordion()" x-init="applyQuery()" class="space-y-3">
+
+                <div x-show="query" x-cloak class="flex items-center justify-between gap-3 bg-white border border-neutral-100 rounded-xl px-5 py-3 mb-1">
+                    <p class="text-[13px] text-neutral-600">
+                        Showing questions matching "<span class="font-medium text-neutral-900" x-text="query"></span>"
+                        <span x-show="matches === 0" class="text-neutral-500">- nothing matched.</span>
+                    </p>
+                    <button type="button" @click="showAll()" class="text-[13px] font-medium text-[#2D1810] underline shrink-0">Show all</button>
+                </div>
 
                 <!-- Section: Ordering -->
-                <p class="text-xs font-semibold text-[#2D1810] uppercase tracking-wider pt-2 pb-1">Ordering</p>
+                <p data-faq-section class="text-xs font-semibold text-[#2D1810] uppercase tracking-wider pt-2 pb-1">Ordering</p>
 
-                <div class="bg-white border border-neutral-100 rounded-xl overflow-hidden">
+                <div data-faq class="bg-white border border-neutral-100 rounded-xl overflow-hidden">
                     <button @click="open = open === 1 ? null : 1"
                             class="w-full px-5 py-3.5 flex items-center justify-between text-left gap-3 hover:bg-neutral-50/50 transition-colors">
                         <span class="text-sm font-medium text-neutral-900">How do I place an order?</span>
@@ -55,7 +68,7 @@
                     </div>
                 </div>
 
-                <div class="bg-white border border-neutral-100 rounded-xl overflow-hidden">
+                <div data-faq class="bg-white border border-neutral-100 rounded-xl overflow-hidden">
                     <button @click="open = open === 2 ? null : 2"
                             class="w-full px-5 py-3.5 flex items-center justify-between text-left gap-3 hover:bg-neutral-50/50 transition-colors">
                         <span class="text-sm font-medium text-neutral-900">What payment methods do you accept?</span>
@@ -70,7 +83,7 @@
                     </div>
                 </div>
 
-                <div class="bg-white border border-neutral-100 rounded-xl overflow-hidden">
+                <div data-faq class="bg-white border border-neutral-100 rounded-xl overflow-hidden">
                     <button @click="open = open === 3 ? null : 3"
                             class="w-full px-5 py-3.5 flex items-center justify-between text-left gap-3 hover:bg-neutral-50/50 transition-colors">
                         <span class="text-sm font-medium text-neutral-900">How can I track my order?</span>
@@ -86,9 +99,9 @@
                 </div>
 
                 <!-- Section: Shipping -->
-                <p class="text-xs font-semibold text-[#2D1810] uppercase tracking-wider pt-4 pb-1">Shipping</p>
+                <p data-faq-section class="text-xs font-semibold text-[#2D1810] uppercase tracking-wider pt-4 pb-1">Shipping</p>
 
-                <div class="bg-white border border-neutral-100 rounded-xl overflow-hidden">
+                <div data-faq class="bg-white border border-neutral-100 rounded-xl overflow-hidden">
                     <button @click="open = open === 4 ? null : 4"
                             class="w-full px-5 py-3.5 flex items-center justify-between text-left gap-3 hover:bg-neutral-50/50 transition-colors">
                         <span class="text-sm font-medium text-neutral-900">How long does shipping take?</span>
@@ -103,7 +116,7 @@
                     </div>
                 </div>
 
-                <div class="bg-white border border-neutral-100 rounded-xl overflow-hidden">
+                <div data-faq class="bg-white border border-neutral-100 rounded-xl overflow-hidden">
                     <button @click="open = open === 5 ? null : 5"
                             class="w-full px-5 py-3.5 flex items-center justify-between text-left gap-3 hover:bg-neutral-50/50 transition-colors">
                         <span class="text-sm font-medium text-neutral-900">Do you ship internationally?</span>
@@ -119,9 +132,9 @@
                 </div>
 
                 <!-- Section: Returns & Refunds -->
-                <p class="text-xs font-semibold text-[#2D1810] uppercase tracking-wider pt-4 pb-1">Returns & Refunds</p>
+                <p data-faq-section class="text-xs font-semibold text-[#2D1810] uppercase tracking-wider pt-4 pb-1">Returns & Refunds</p>
 
-                <div class="bg-white border border-neutral-100 rounded-xl overflow-hidden">
+                <div data-faq class="bg-white border border-neutral-100 rounded-xl overflow-hidden">
                     <button @click="open = open === 6 ? null : 6"
                             class="w-full px-5 py-3.5 flex items-center justify-between text-left gap-3 hover:bg-neutral-50/50 transition-colors">
                         <span class="text-sm font-medium text-neutral-900">What is your return policy?</span>
@@ -136,7 +149,7 @@
                     </div>
                 </div>
 
-                <div class="bg-white border border-neutral-100 rounded-xl overflow-hidden">
+                <div data-faq class="bg-white border border-neutral-100 rounded-xl overflow-hidden">
                     <button @click="open = open === 7 ? null : 7"
                             class="w-full px-5 py-3.5 flex items-center justify-between text-left gap-3 hover:bg-neutral-50/50 transition-colors">
                         <span class="text-sm font-medium text-neutral-900">How do I request a refund?</span>
@@ -152,9 +165,9 @@
                 </div>
 
                 <!-- Section: Account -->
-                <p class="text-xs font-semibold text-[#2D1810] uppercase tracking-wider pt-4 pb-1">Account</p>
+                <p data-faq-section class="text-xs font-semibold text-[#2D1810] uppercase tracking-wider pt-4 pb-1">Account</p>
 
-                <div class="bg-white border border-neutral-100 rounded-xl overflow-hidden">
+                <div data-faq class="bg-white border border-neutral-100 rounded-xl overflow-hidden">
                     <button @click="open = open === 8 ? null : 8"
                             class="w-full px-5 py-3.5 flex items-center justify-between text-left gap-3 hover:bg-neutral-50/50 transition-colors">
                         <span class="text-sm font-medium text-neutral-900">How do I create an account?</span>
@@ -186,5 +199,64 @@
             </div>
         </div>
     </div>
+
+    <script>
+        function faqAccordion() {
+            return {
+                open: null,
+                query: '',
+                matches: 0,
+
+                applyQuery() {
+                    const q = (new URLSearchParams(window.location.search).get('q') || '').trim();
+                    if (! q) return;
+
+                    this.query = q;
+                    const needle = q.toLowerCase();
+                    const items = this.$el.querySelectorAll('[data-faq]');
+                    let first = null;
+
+                    items.forEach((el) => {
+                        const hit = el.textContent.toLowerCase().includes(needle);
+                        el.hidden = ! hit;
+                        if (hit) {
+                            this.matches++;
+                            if (first === null) first = el;
+                        }
+                    });
+
+                    // A heading with nothing left under it is noise.
+                    this.$el.querySelectorAll('[data-faq-section]').forEach((heading) => {
+                        let el = heading.nextElementSibling, kept = false;
+                        while (el && ! el.hasAttribute('data-faq-section')) {
+                            if (el.hasAttribute('data-faq') && ! el.hidden) { kept = true; break; }
+                            el = el.nextElementSibling;
+                        }
+                        heading.hidden = ! kept;
+                    });
+
+                    // Nothing matched: show everything rather than an empty page.
+                    if (this.matches === 0) {
+                        this.reveal();
+                        return;
+                    }
+
+                    // One hit is almost certainly the answer - open it.
+                    if (this.matches === 1 && first) first.querySelector('button')?.click();
+                },
+
+                reveal() {
+                    this.$el.querySelectorAll('[data-faq], [data-faq-section]')
+                        .forEach((el) => { el.hidden = false; });
+                },
+
+                showAll() {
+                    this.reveal();
+                    this.query = '';
+                    this.matches = 0;
+                },
+            };
+        }
+    </script>
 </x-layouts.app>
 

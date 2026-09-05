@@ -86,7 +86,7 @@ class ReviewBylineAndBackfillTest extends TestCase
     {
         $this->review();
 
-        $this->get('/products/'.$this->product->slug)
+        $this->get('/product/'.$this->product->slug)
             ->assertOk()
             ->assertSee('Priya Raghavan')
             ->assertDontSee('Anonymous');
@@ -102,7 +102,7 @@ class ReviewBylineAndBackfillTest extends TestCase
 
         $this->review(['user_id' => $user->id, 'guest_name' => null]);
 
-        $this->get('/products/'.$this->product->slug)
+        $this->get('/product/'.$this->product->slug)
             ->assertOk()
             ->assertSee('Devika Menon')
             ->assertDontSee('Anonymous');
@@ -126,7 +126,7 @@ class ReviewBylineAndBackfillTest extends TestCase
             'guest_name' => 'Aamir Melani',
         ]);
 
-        $this->get('/products/'.$this->product->slug)
+        $this->get('/product/'.$this->product->slug)
             ->assertOk()
             ->assertSee('Aamir Melani')
             ->assertDontSee('Sandeep');
@@ -136,7 +136,7 @@ class ReviewBylineAndBackfillTest extends TestCase
     {
         $this->review(['is_verified_purchase' => false]);
 
-        $this->get('/products/'.$this->product->slug)
+        $this->get('/product/'.$this->product->slug)
             ->assertOk()
             ->assertSee('Priya Raghavan')
             ->assertDontSee('Verified Buyer');
@@ -146,7 +146,7 @@ class ReviewBylineAndBackfillTest extends TestCase
     {
         $this->review(['is_verified_purchase' => true]);
 
-        $this->get('/products/'.$this->product->slug)
+        $this->get('/product/'.$this->product->slug)
             ->assertOk()
             ->assertSee('Verified Buyer');
     }

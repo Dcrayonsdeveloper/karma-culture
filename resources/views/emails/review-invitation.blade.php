@@ -13,7 +13,12 @@ We hope you are enjoying your recent purchase! We would love to hear your though
 | Item | |
 |:-----|------:|
 @foreach ($order->items as $item)
-| {{ $item->product_name }}@if($item->variant_name) ({{ $item->variant_name }})@endif | [Write a Review]({{ url('/products/' . ($item->product ? $item->product->slug : $item->product_id)) }}) |
+{{-- route() rather than a hand-built path: this link used to be assembled as
+     /products/<slug>, which is the plural path that now redirects, and when the
+     product had since been deleted it fell back to /products/<id> - an id where
+     the route wants a slug, so the customer was emailed a link to a 404. There
+     is nothing to review if the product is gone, so it is no longer a link. --}}
+| {{ $item->product_name }}@if($item->variant_name) ({{ $item->variant_name }})@endif | @if($item->product)[Write a Review]({{ route('product.show', $item->product) }})@else—@endif |
 @endforeach
 @endcomponent
 

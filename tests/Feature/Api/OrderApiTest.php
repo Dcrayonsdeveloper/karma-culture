@@ -74,6 +74,34 @@ class OrderApiTest extends TestCase
             'paid_amount' => 700,
             'source' => 'api',
         ]);
+
+        // An order with a line on it. Without this the order list and show tests
+        // never loaded items.product, and the eager-load defect that made both
+        // endpoints 500 for anyone who had actually ordered something went
+        // unnoticed - the only orders under test were empty ones.
+        \App\Models\OrderItem::create([
+            'order_id' => $this->order->id,
+            'product_id' => $this->product->id,
+            'product_name' => $this->product->name,
+            'sku' => $this->product->sku,
+            'mrp' => $this->product->mrp,
+            'price' => $this->product->price,
+            'quantity' => 2,
+            'total' => $this->product->price * 2,
+        ]);
+    }
+
+    public function test_an_order_with_items_can_be_listed_and_read(): void
+    {
+        $h = ['Authorization' => 'Bearer '.$this->token];
+
+        $this->withHeaders($h)->getJson('/api/v1/orders')
+            ->assertOk()
+            ->assertJsonPath('data.0.items.0.product.id', $this->product->id);
+
+        $this->withHeaders($h)->getJson('/api/v1/orders/'.$this->order->id)
+            ->assertOk()
+            ->assertJsonPath('data.items.0.product.id', $this->product->id);
     }
 
     public function test_order_listing(): void

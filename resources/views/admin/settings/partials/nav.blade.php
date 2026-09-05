@@ -4,10 +4,6 @@
             'label' => 'General',
             'route' => 'admin.settings.general',
         ],
-        'payment' => [
-            'label' => 'Payment',
-            'route' => 'admin.settings.payment',
-        ],
         'shipping' => [
             'label' => 'Shipping',
             'route' => 'admin.settings.shipping',
@@ -15,10 +11,6 @@
         'tax' => [
             'label' => 'Tax',
             'route' => 'admin.settings.tax',
-        ],
-        'email' => [
-            'label' => 'Email',
-            'route' => 'admin.settings.email',
         ],
         'seo' => [
             'label' => 'SEO',
@@ -31,10 +23,6 @@
         'popups' => [
             'label' => 'Popups',
             'route' => 'admin.settings.popups',
-        ],
-        'integrations' => [
-            'label' => 'Integrations',
-            'route' => 'admin.settings.integrations',
         ],
     ];
 @endphp
@@ -67,7 +55,7 @@
                                       overflow-x is set, and that is what drew the
                                       stray scrollbar. */
     scrollbar-width: none;         /* the strip scrolls by wheel/touch; a visible
-                                      bar under nine tabs just looks broken */
+                                      bar under the tabs just looks broken */
     -ms-overflow-style: none;
     box-shadow: inset 0 -1px 0 #e3e3e3;
 }
@@ -117,8 +105,8 @@
 
 @push('scripts')
 <script>
-    /* Nine tabs do not fit a phone. Bring the current one into view so the
-       strip does not open showing "General" when you are on Integrations. */
+    /* Six tabs do not fit a narrow phone. Bring the current one into view so the
+       strip does not open showing "General" when you are on Popups. */
     document.querySelectorAll('.settings-tabs__scroll').forEach(function (strip) {
         var active = strip.querySelector('.is-active');
         if (!active) return;

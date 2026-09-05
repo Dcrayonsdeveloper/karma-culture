@@ -20,8 +20,16 @@
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                             <div>
                                 <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Name <span style="color: #d72c0d;">*</span></label>
+                                {{-- Letters and spaces only, mirroring V::name(lettersOnly: true).
+                                     The pattern is echoed from namePattern() rather than typed out:
+                                     it carries the invisible-character clauses TrimStrings strips
+                                     server-side, so a name pasted out of Word is not refused over a
+                                     character nobody can see. data-kk-chars stops the keystroke. --}}
                                 <input type="text" name="name" value="{{ old('name') }}" required
                                        minlength="2" maxlength="255"
+                                       pattern="{{ \App\Rules\ValidationRules::namePattern(lettersOnly: true) }}"
+                                       data-kk-chars="letters"
+                                       title="Letters and spaces only - no digits or punctuation."
                                        class="form-input" style="width: 100%;" placeholder="e.g. Main Street Store">
                                 <x-field-error field="name" />
                             </div>
@@ -71,7 +79,7 @@
                                 {{-- pattern is the client-side half of email:strict: the browser's own
                                      type="email" check accepts "store@gmail" with no TLD. --}}
                                 <input type="email" name="email" value="{{ old('email') }}"
-                                       maxlength="255" autocomplete="email" pattern=".+@.+\..+"
+                                       maxlength="200" autocomplete="email" pattern=".+@.+\..+"
                                        title="Enter a full email address, like store@example.com"
                                        class="form-input" style="width: 100%;" placeholder="store@example.com">
                                 <x-field-error field="email" />

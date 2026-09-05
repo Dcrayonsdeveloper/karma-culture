@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\FlashSale;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Support\ProductFilters;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -71,7 +72,10 @@ class ListingFiltersTest extends TestCase
             'rating' => 4,
             'status' => 'approved',
             'is_active' => true,
-            'attributes' => ['Colours' => [['name' => 'Black', 'hex' => '#000000']]],
+            'attributes' => [
+                'Colours' => [['name' => 'Black', 'hex' => '#000000']],
+                'Textures' => ['Matte'],
+            ],
         ]);
 
         ProductVariant::create([
@@ -90,7 +94,7 @@ class ListingFiltersTest extends TestCase
     public static function listingPages(): array
     {
         return [
-            'shop' => ['/shop'],
+            'shop' => ['/products'],
             'category' => ['/category/men'],
             'sub-category' => ['/category/shirts'],
             'search' => ['/search?q=shirt'],
@@ -107,13 +111,14 @@ class ListingFiltersTest extends TestCase
     {
         $response = $this->get($url)->assertOk();
 
-        foreach (['Size', 'Colour', 'Price Range', 'Rating', 'Availability', 'In Stock Only'] as $section) {
+        foreach (['Size', 'Colour', 'Texture', 'Price Range', 'Rating', 'Availability', 'In Stock Only'] as $section) {
             $response->assertSee($section, false);
         }
 
         // The controls themselves, not just the headings.
         $response->assertSee('name="size[]" value="M"', false)
             ->assertSee('name="colour[]" value="Black"', false)
+            ->assertSee('name="texture[]" value="Matte"', false)
             ->assertSee('name="min_price"', false)
             ->assertSee('name="max_price"', false)
             ->assertSee('name="in_stock"', false);
@@ -139,8 +144,96 @@ class ListingFiltersTest extends TestCase
     /** And the same filter set at a real value keeps what matches. */
     public function test_a_price_filter_keeps_the_products_inside_the_bound(): void
     {
-        $response = $this->get('/shop?max_price=1000')->assertOk();
+        $response = $this->get('/products?max_price=1000')->assertOk();
 
+        $this->assertSame(
+            ['Oxford Shirt'],
+            $response->viewData('products')->pluck('name')->all()
+        );
+    }
+
+    /**
+     * The two price boxes filled in the wrong order are named as a mistake, not
+     * quietly repaired.
+     *
+     * Min 1000 with Max 0 asks for `price >= 1000 AND price <= 0`, a range
+     * nothing can be in, so the shop answered "0 products found" and said
+     * nothing about why. Swapping the pair was tried and is worse: it hands back
+     * results for ₹0-₹1,000, an answer to a question nobody asked. The numbers
+     * stay as typed and the sidebar says which one to fix.
+     */
+    public function test_a_backwards_price_range_is_reported_not_swapped(): void
+    {
+        $response = $this->get('/products?min_price=1000&max_price=0')->assertOk();
+
+        $values = $response->viewData('filterPanel')['values'];
+
+        $this->assertSame(1000.0, $values['min_price'], 'the typed minimum was not kept');
+        $this->assertSame(0.0, $values['max_price'], 'the typed maximum was not kept');
+        $this->assertSame(ProductFilters::PRICE_ORDER_ERROR, $values['price_error']);
+
+        $response->assertSee(self::renderedPriceError(), false);
+    }
+
+    /**
+     * The message as the sidebar renders it, closing tag and all.
+     *
+     * The bare string is on every listing whatever the filters say - the Alpine
+     * handler that repeats the check as the shopper types carries the same
+     * wording - so asserting on it alone can neither prove it was rendered nor
+     * prove it was not.
+     */
+    private static function renderedPriceError(): string
+    {
+        return '>'.ProductFilters::PRICE_ORDER_ERROR.'</p>';
+    }
+
+    /**
+     * The message reaches the page without JS, and the boxes still hold the
+     * numbers the shopper typed so they can correct the one they meant.
+     */
+    public function test_a_backwards_price_range_keeps_the_boxes_as_typed(): void
+    {
+        $this->get('/products?min_price=1000&max_price=0')
+            ->assertOk()
+            ->assertSee('name="min_price" value="1000"', false)
+            ->assertSee('name="max_price" value="0"', false);
+    }
+
+    /**
+     * A hanger an admin typed backwards is the same range arriving under a name
+     * the form never uses, so it is reported at the same place rather than in
+     * the two boxes.
+     */
+    public function test_a_backwards_hanger_price_range_is_reported(): void
+    {
+        $response = $this->get('/products?price_min=2000&price_max=1000')->assertOk();
+
+        $this->assertSame(
+            ProductFilters::PRICE_ORDER_ERROR,
+            $response->viewData('filterPanel')['values']['price_error']
+        );
+    }
+
+    /** A range the right way round says nothing, and filters as it always did. */
+    public function test_a_valid_price_range_reports_nothing(): void
+    {
+        $response = $this->get('/products?min_price=0&max_price=1000')->assertOk();
+
+        $this->assertNull($response->viewData('filterPanel')['values']['price_error']);
+        $this->assertSame(
+            ['Oxford Shirt'],
+            $response->viewData('products')->pluck('name')->all()
+        );
+        $response->assertDontSee(self::renderedPriceError(), false);
+    }
+
+    /** An exact-price range is a real filter, not a mistake, so it stands. */
+    public function test_an_equal_price_range_is_left_alone(): void
+    {
+        $response = $this->get('/products?min_price=799&max_price=799')->assertOk();
+
+        $this->assertNull($response->viewData('filterPanel')['values']['price_error']);
         $this->assertSame(
             ['Oxford Shirt'],
             $response->viewData('products')->pluck('name')->all()
@@ -151,14 +244,14 @@ class ListingFiltersTest extends TestCase
     public function test_deals_hides_the_redundant_on_sale_box(): void
     {
         $this->get('/deals')->assertOk()->assertDontSee('name="on_sale"', false);
-        $this->get('/shop')->assertOk()->assertSee('name="on_sale"', false);
+        $this->get('/products')->assertOk()->assertSee('name="on_sale"', false);
     }
 
     /** The brand page has no Brand facet, because there is only ever one. */
     public function test_brand_page_hides_the_redundant_brand_facet(): void
     {
         $this->get('/brands/biba')->assertOk()->assertDontSee('name="brand[]"', false);
-        $this->get('/shop')->assertOk()->assertSee('name="brand[]" value="biba"', false);
+        $this->get('/products')->assertOk()->assertSee('name="brand[]" value="biba"', false);
     }
 
     /** Search carries the phrase through a filter submit, or the results reset. */
@@ -180,7 +273,7 @@ class ListingFiltersTest extends TestCase
      */
     public function test_sorting_stays_on_the_page_it_was_chosen_from(): void
     {
-        foreach (['/shop', '/deals', '/bestsellers'] as $url) {
+        foreach (['/products', '/deals', '/bestsellers'] as $url) {
             $this->get($url)
                 ->assertOk()
                 ->assertSee('action="'.url($url).'"', false);
@@ -190,7 +283,7 @@ class ListingFiltersTest extends TestCase
     /** An applied filter is shown as a chip the shopper can click off again. */
     public function test_an_applied_filter_shows_as_a_removable_chip(): void
     {
-        $this->get('/shop?colour[]=Black')
+        $this->get('/products?colour[]=Black')
             ->assertOk()
             ->assertSee('Active Filters')
             ->assertSee('Clear all');
@@ -205,7 +298,7 @@ class ListingFiltersTest extends TestCase
      */
     public function test_rating_rows_say_they_are_a_floor_and_can_be_cleared(): void
     {
-        $response = $this->get('/shop')->assertOk();
+        $response = $this->get('/products')->assertOk();
 
         $response->assertSee('name="rating" value="5"', false)
             ->assertSee('name="rating" value="1"', false)
@@ -223,9 +316,9 @@ class ListingFiltersTest extends TestCase
     public function test_the_rating_filter_keeps_everything_at_or_above_the_chosen_star(): void
     {
         // Both fixture products are rated 4.
-        $this->assertSame(2, $this->get('/shop?rating=4')->assertOk()->viewData('products')->total());
-        $this->assertSame(2, $this->get('/shop?rating=1')->assertOk()->viewData('products')->total());
-        $this->assertSame(0, $this->get('/shop?rating=5')->assertOk()->viewData('products')->total());
+        $this->assertSame(2, $this->get('/products?rating=4')->assertOk()->viewData('products')->total());
+        $this->assertSame(2, $this->get('/products?rating=1')->assertOk()->viewData('products')->total());
+        $this->assertSame(0, $this->get('/products?rating=5')->assertOk()->viewData('products')->total());
     }
 
     /**
@@ -239,7 +332,7 @@ class ListingFiltersTest extends TestCase
 
         // Asserted on the control, not the word: "Best Rating" is also an
         // option in the sort dropdown and would match either way.
-        $this->get('/shop')->assertOk()->assertDontSee('name="rating"', false);
+        $this->get('/products')->assertOk()->assertDontSee('name="rating"', false);
     }
 
     /**
@@ -259,19 +352,19 @@ class ListingFiltersTest extends TestCase
     }
 
     /**
-     * A "Shop It Your Way" hanger links to /shop?shade=Indigo, and the shop
+     * A "Shop It Your Way" hanger links to /products?shade=Indigo, and the listing
      * merges `shade` into `colour` before the panel is built. The chip stripped
      * only `colour`, so the URL it handed back still said `shade=` and the next
      * request re-derived the very filter the shopper had just removed.
      */
     public function test_a_hanger_filter_can_be_taken_off_again(): void
     {
-        $this->get('/shop?shade=Black')
+        $this->get('/products?shade=Black')
             ->assertOk()
             ->assertSee('Active Filters')
             ->assertDontSee('shade=Black', false);
 
-        $this->get('/shop?price_min=100&price_max=2000')
+        $this->get('/products?price_min=100&price_max=2000')
             ->assertOk()
             ->assertSee('Active Filters')
             ->assertDontSee('price_min=100', false);
@@ -289,7 +382,7 @@ class ListingFiltersTest extends TestCase
             ->assertDontSee('Active Filters');
 
         // On the shop, which does own it, the same parameter is a real filter.
-        $this->get('/shop?category=men')
+        $this->get('/products?category=men')
             ->assertOk()
             ->assertSee('Active Filters');
     }
@@ -297,12 +390,12 @@ class ListingFiltersTest extends TestCase
     /**
      * The Filters button in the header reaches every page, including the ones
      * with no listing behind them - before this, a shopper away from a listing
-     * had no filter control anywhere, and /shop was not linked from the header,
+     * had no filter control anywhere, and the listing was not linked from the header,
      * the mobile drawer or the footer.
      */
     public function test_every_page_carries_the_header_filters_button(): void
     {
-        foreach (['/shop', '/wishlist', '/brands'] as $url) {
+        foreach (['/products', '/wishlist', '/brands'] as $url) {
             $this->get($url)->assertOk()->assertSee('open-global-filters', false);
         }
 
@@ -313,7 +406,7 @@ class ListingFiltersTest extends TestCase
         // attribute: the drawer's querySelector mentions that attribute by name,
         // so the literal string is on every page whether a sidebar is there or
         // not. `mobileOpen` belongs to the sidebar alone.
-        $this->get('/shop')->assertOk()
+        $this->get('/products')->assertOk()
             ->assertSee('data-kk-filter-sidebar', false)
             ->assertSee('mobileOpen', false);
         $this->get('/wishlist')->assertOk()->assertDontSee('mobileOpen', false);
@@ -341,7 +434,7 @@ class ListingFiltersTest extends TestCase
             ->assertDontSee('You are browsing this collection', false);
     }
 
-    /** And /shop is reachable from the navigation rather than only by accident. */
+    /** And /products is reachable from the navigation rather than only by accident. */
     public function test_the_shop_is_linked_from_the_navigation(): void
     {
         $this->get('/wishlist')->assertOk()->assertSee('href="'.route('shop').'"', false);
@@ -350,7 +443,7 @@ class ListingFiltersTest extends TestCase
     /** The drawer fetches the panel on first open rather than on every page load. */
     public function test_the_filter_panel_endpoint_returns_a_usable_form(): void
     {
-        $this->get('/shop/filters')
+        $this->get('/products/filters')
             ->assertOk()
             ->assertSee('action="'.route('shop').'"', false)
             ->assertSee('name="size[]" value="M"', false)
@@ -358,7 +451,7 @@ class ListingFiltersTest extends TestCase
 
         // Filters already in the URL are reflected, so opening the drawer after
         // arriving from a hanger shows that hanger's picks ticked.
-        $this->get('/shop/filters?shade=Black')
+        $this->get('/products/filters?shade=Black')
             ->assertOk()
             ->assertSee('name="colour[]" value="Black"', false);
     }

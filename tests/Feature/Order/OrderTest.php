@@ -110,6 +110,32 @@ class OrderTest extends TestCase
         $response->assertStatus(200);
     }
 
+    /**
+     * The progress timeline used to live only on the Track page, so a customer
+     * landing on their order had to click through to find out where the parcel
+     * was. It is rendered on the detail page itself now.
+     */
+    public function test_order_detail_page_shows_the_tracking_timeline(): void
+    {
+        $response = $this->actingAs($this->user)
+            ->get('/account/orders/' . $this->order->id);
+
+        $response->assertStatus(200);
+
+        foreach (['Ordered', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'] as $step) {
+            $response->assertSee($step, false);
+        }
+    }
+
+    public function test_track_page_still_renders_the_shared_timeline(): void
+    {
+        $response = $this->actingAs($this->user)
+            ->get('/account/orders/' . $this->order->id . '/track');
+
+        $response->assertStatus(200);
+        $response->assertSee('Out for Delivery', false);
+    }
+
     public function test_user_cannot_view_another_users_order(): void
     {
         $otherUser = User::factory()->create(['role' => 'customer']);

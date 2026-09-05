@@ -61,7 +61,11 @@ class OrderController extends Controller
 
         $order->load(['items.product', 'statusHistory', 'coupon', 'deliveryPartner.user']);
 
-        return view('account.orders.show', compact('order'));
+        // The detail page draws the same progress timeline as the Track page, so
+        // the customer can see where the parcel is on the page they land on.
+        $trackingSteps = $order->getTrackingSteps();
+
+        return view('account.orders.show', compact('order', 'trackingSteps'));
     }
 
     public function cancel(Request $request, Order $order): RedirectResponse
@@ -74,7 +78,11 @@ class OrderController extends Controller
             return back()->with('error', 'This order cannot be cancelled.');
         }
 
-        $order->update(['status' => 'cancelled']);
+        // Through updateStatus(), not a bare update: that is what writes the
+        // status history, stamps cancelled_at, settles the payment status and
+        // fires OrderStatusChanged. A customer cancelling their own order used
+        // to do none of those.
+        $order->updateStatus('cancelled', null, 'Cancelled by the customer');
 
         // Add to status history
         $order->statusHistory()->create([
@@ -128,8 +136,21 @@ class OrderController extends Controller
                 continue;
             }
 
+            // This lookup has to mirror cart_items_line_texture_unique, which
+            // identifies a line by product + variant + size + colour + texture.
+            // Keyed on product and variant alone it matched more lines than the
+            // index calls equal, so reordering an order that held the same
+            // product in two sizes - or the same size and colour in Matte and
+            // Glossy - folded the second line into the first and gave the
+            // customer one double-quantity line instead of two. The create()
+            // below then wrote none of the three back, so the reordered line
+            // landed in the cart sizeless and colourless, no longer describing
+            // what had actually been bought.
             $existing = $cart->items()->where('product_id', $item->product_id)
                 ->where('variant_id', $item->variant_id)
+                ->where('size', $item->size)
+                ->where('colour', $item->colour)
+                ->where('texture', $item->texture)
                 ->first();
 
             if ($existing) {
@@ -138,6 +159,9 @@ class OrderController extends Controller
                 $cart->items()->create([
                     'product_id' => $item->product_id,
                     'variant_id' => $item->variant_id,
+                    'size' => $item->size,
+                    'colour' => $item->colour,
+                    'texture' => $item->texture,
                     'quantity' => $item->quantity,
                     'price' => $item->product->price,
                     'total' => $item->product->price * $item->quantity,

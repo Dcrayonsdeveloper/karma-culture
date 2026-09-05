@@ -2,9 +2,11 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\SignupEmailVerification;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Concerns\VerifiesSignupEmails;
 use Tests\TestCase;
 
 /**
@@ -16,11 +18,21 @@ use Tests\TestCase;
  */
 class RegistrationFormTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, VerifiesSignupEmails;
 
+    /**
+     * A payload the server would accept, INCLUDING the proof of the address.
+     *
+     * Signup now refuses any address that has not been verified, so a payload
+     * valid in every other respect is no longer a valid payload. The proof is
+     * minted here against whatever email the caller ends up with, so that the
+     * tests below go on asking the questions they were written to ask instead
+     * of all failing together on the same new gate. What that gate does on its
+     * own is tested in SignupEmailVerificationTest.
+     */
     private function validPayload(array $overrides = []): array
     {
-        return array_merge([
+        $payload = array_merge([
             '_register' => '1',
             'full_name' => 'Asha Menon',
             'email' => 'asha@example.test',
@@ -29,6 +41,16 @@ class RegistrationFormTest extends TestCase
             'password_confirmation' => 'Password123!',
             'terms' => '1',
         ], $overrides);
+
+        if (is_string($payload['email']) && $payload['email'] !== '') {
+            $normalized = SignupEmailVerification::normalizeEmail($payload['email']);
+
+            if ($normalized !== null && ! SignupEmailVerification::where('email', $normalized)->exists()) {
+                $this->verifiedSignupEmail($payload['email']);
+            }
+        }
+
+        return $payload;
     }
 
     public function test_a_complete_signup_creates_the_account(): void
@@ -152,6 +174,12 @@ class RegistrationFormTest extends TestCase
      */
     public function test_the_header_modal_json_signup_still_works(): void
     {
+        // The modal is a second, equally real signup form posting to the same
+        // endpoint, so it is held to the same condition and carries the same
+        // Validate Email step - see the kkSignupVerification block in
+        // resources/views/partials/header.blade.php.
+        $this->verifiedSignupEmail('modal@example.test');
+
         $response = $this->postJson('/register', [
             'full_name' => 'Modal User',
             'email' => 'modal@example.test',
@@ -273,15 +301,97 @@ class RegistrationFormTest extends TestCase
             'The mobile field should cap itself at ten digits as it is typed.');
     }
 
+    /**
+     * The 30 is a hard stop in the browser, not a message after the fact.
+     *
+     * These boxes used to carry maxlength="100" deliberately, so a 31st
+     * character was reported rather than swallowed. The field is now capped at
+     * the number the server actually enforces: the box stops taking letters at
+     * 30 instead of letting a longer name be typed out in full, submitted, and
+     * handed straight back. All four places the signup name renders have to
+     * agree, or a shopper meets a different rule depending on which one the
+     * page happened to show them.
+     */
+    public function test_the_signup_name_field_stops_at_thirty_characters(): void
+    {
+        $html = $this->get('/login?mode=register')->assertStatus(200)->getContent();
+
+        preg_match('/<input[^>]*name="full_name"[^>]*>/', $html, $m);
+        $this->assertNotEmpty($m, 'The full name field is missing from the register form.');
+        $this->assertStringContainsString('maxlength="30"', $m[0],
+            'The signup name box must stop at 30 characters, the same limit '
+            .'RegisterController::NAME_LIMIT holds.');
+
+        // The storefront carries two more signup boxes - the header's login
+        // modal and the layout's own - and neither is on /login, which renders
+        // through the guest layout. A cap on this form alone would leave a
+        // shopper who signs up from the header still able to type 40.
+        $storefront = $this->get('/')->assertStatus(200)->getContent();
+
+        preg_match('/<input[^>]*id="kk-auth-name"[^>]*>/s', $storefront, $header);
+        $this->assertNotEmpty($header, 'The header login modal has no name field.');
+        $this->assertStringContainsString('maxlength="30"', $header[0],
+            'The header modal name box must be capped at 30 too.');
+
+        preg_match('/<input[^>]*x-model="name"[^>]*>/s', $storefront, $layout);
+        $this->assertNotEmpty($layout, 'The layout auth modal has no name field.');
+        $this->assertStringContainsString('maxlength="30"', $layout[0],
+            'The layout auth modal name box must be capped at 30 too.');
+    }
+
+    /**
+     * The signup form's password boxes must not sit in a scope of their own.
+     *
+     * `x-ref` registers on the CLOSEST x-data root and `$refs` only walks up, so
+     * an `x-data="{ show: false }"` on the wrapper put x-ref="password" out of
+     * kkRegisterForm's reach. messageFor('password') then read '' whatever had
+     * been typed and answered "Please choose a password." for every password in
+     * the world - and because onSubmit() refuses to post while any field carries
+     * a message, Create Account did nothing at all on this form. The eye toggles
+     * are held on the component instead.
+     */
+    public function test_the_signup_password_boxes_are_in_the_forms_own_scope(): void
+    {
+        $html = $this->get('/login?mode=register')->assertStatus(200)->getContent();
+
+        // The register panel only - the sign-in form above it has its own box
+        // and no refs to lose.
+        $panel = substr($html, (int) strpos($html, 'kkRegisterForm'));
+
+        foreach (['reg_password', 'password_confirmation'] as $id) {
+            preg_match('/<div class="relative"[^>]*>(?:(?!<\/div>).)*?id="'.$id.'"/s', $panel, $m);
+            $this->assertNotEmpty($m, "The {$id} field is missing from the register form.");
+            $this->assertStringNotContainsString(
+                'x-data=',
+                explode('>', $m[0])[0],
+                "The wrapper around {$id} declares its own Alpine scope, which puts x-ref beyond "
+                .'the reach of kkRegisterForm and breaks the password check for every signup.'
+            );
+        }
+
+        $this->assertStringContainsString('x-ref="password"', $panel);
+        $this->assertStringContainsString('x-ref="password_confirmation"', $panel);
+    }
+
     public function test_the_confirm_password_field_can_be_revealed_like_the_password_field(): void
     {
         $html = $this->get('/login?mode=register')->assertStatus(200)->getContent();
 
         preg_match('/<input[^>]*id="password_confirmation"[^>]*>/', $html, $m);
         $this->assertNotEmpty($m, 'The confirm password field is missing from the register form.');
-        $this->assertStringContainsString(':type="show ? \'text\' : \'password\'"', $m[0],
+        // `showConfirm`, not `show`: the flag moved onto kkRegisterForm when the
+        // per-wrapper x-data was removed - see
+        // test_the_signup_password_boxes_are_in_the_forms_own_scope for why. It
+        // is still a flag of its own, which is what this test is about.
+        $this->assertStringContainsString(':type="showConfirm ? \'text\' : \'password\'"', $m[0],
             'Confirm Password needs the same eye toggle as Password: a typo in a box you '
             .'cannot read is the whole reason the field exists.');
+
+        preg_match('/<input[^>]*id="reg_password"[^>]*>/', $html, $p);
+        $this->assertNotEmpty($p, 'The password field is missing from the register form.');
+        $this->assertStringContainsString(':type="showPassword ? \'text\' : \'password\'"', $p[0],
+            'The two boxes must not share one flag: revealing the password you can already '
+            .'see is not what the second box is for.');
     }
 
     /**

@@ -64,6 +64,12 @@
                         </span>
                     </div>
 
+                    {{-- Order Tracking Card. The same timeline the Track page draws,
+                         shown here so the customer sees where the parcel is on the
+                         page they land on. The estimated-delivery strip is left off:
+                         this page already prints the expected date in the sidebar. --}}
+                    @include('account.orders.partials.tracking-timeline', ['showEta' => false])
+
                     {{-- Delivered Confirmation Banner --}}
                     @if($order->status === 'delivered')
                         <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-4 flex items-start gap-3">
@@ -126,6 +132,9 @@
                                                 <p class="text-[13px] font-semibold text-neutral-900">{{ $item->product_name }}</p>
                                                 @if($item->variant_name)
                                                     <p class="text-[12px] text-neutral-600 mt-0.5">{{ $item->variant_name }}</p>
+                                                @endif
+                                                @if($item->size || $item->colour || $item->texture)
+                                                    <p class="text-[12px] text-neutral-600 mt-0.5">{{ collect([$item->size ? 'Size: ' . $item->size : null, $item->colour ? 'Colour: ' . $item->colour : null, $item->texture ? 'Texture: ' . $item->texture : null])->filter()->join(' · ') }}</p>
                                                 @endif
                                                 @if($item->sku)
                                                     <p class="text-[11px] text-neutral-600 mt-0.5">SKU: {{ $item->sku }}</p>
@@ -250,7 +259,7 @@
                                 <dl class="space-y-2.5">
                                     <div class="flex justify-between text-[13px]">
                                         <dt class="text-neutral-600">Order Date</dt>
-                                        <dd class="font-medium text-neutral-700">{{ $order->created_at->format('d M Y') }}</dd>
+                                        <dd class="font-medium text-neutral-700">{{ format_date($order->created_at) }}</dd>
                                     </div>
                                     <div class="flex justify-between text-[13px]">
                                         <dt class="text-neutral-600">Payment</dt>
@@ -278,19 +287,19 @@
                                     @if($order->packed_at)
                                         <div class="flex justify-between text-[13px]">
                                             <dt class="text-neutral-600">Packed</dt>
-                                            <dd class="font-medium text-neutral-700">{{ $order->packed_at->format('d M Y') }}</dd>
+                                            <dd class="font-medium text-neutral-700">{{ format_date($order->packed_at) }}</dd>
                                         </div>
                                     @endif
                                     @if($order->shipped_at)
                                         <div class="flex justify-between text-[13px]">
                                             <dt class="text-neutral-600">Shipped</dt>
-                                            <dd class="font-medium text-neutral-700">{{ $order->shipped_at->format('d M Y') }}</dd>
+                                            <dd class="font-medium text-neutral-700">{{ format_date($order->shipped_at) }}</dd>
                                         </div>
                                     @endif
                                     @if($order->delivered_at)
                                         <div class="flex justify-between text-[13px]">
                                             <dt class="text-neutral-600">Delivered</dt>
-                                            <dd class="font-medium text-neutral-700">{{ $order->delivered_at->format('d M Y') }}</dd>
+                                            <dd class="font-medium text-neutral-700">{{ format_date($order->delivered_at) }}</dd>
                                         </div>
                                     @endif
                                     @if($order->expected_delivery_date && !$order->delivered_at && !in_array($order->status, ['cancelled', 'returned']))
@@ -375,18 +384,12 @@
                                 </div>
                             @endif
 
-                            <!-- Actions -->
+                            {{-- Actions. No Track Order button: this page now draws the
+                                 tracking timeline itself, so the button only sent the
+                                 customer to a second copy of what they were looking at.
+                                 The Track page stays reachable from the orders list and
+                                 from the shipped email. --}}
                             <div class="bg-white rounded-xl border border-neutral-100 p-4 space-y-2.5">
-                                @if(!in_array($order->status, ['cancelled', 'returned']))
-                                    <a href="{{ route('account.orders.track', $order) }}"
-                                       class="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-primary-600 text-white text-[13px] font-semibold rounded-lg hover:bg-primary-700 transition-colors">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
-                                        </svg>
-                                        Track Order
-                                    </a>
-                                @endif
-
                                 <a href="{{ route('account.orders.invoice', $order) }}" target="_blank"
                                    class="flex items-center justify-center gap-2 w-full px-4 py-2.5 border border-neutral-200 text-neutral-700 text-[13px] font-medium rounded-lg hover:bg-neutral-50 hover:border-neutral-300 transition-all">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

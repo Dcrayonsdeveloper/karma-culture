@@ -12,7 +12,10 @@ class ReviewController extends Controller
     public function index(Request $request): JsonResponse
     {
         $reviews = $request->user()->reviews()
-            ->with('product:id,name,slug,images')
+            // Same defect as the wishlist list had: images is a relation, so it
+            // cannot ride in the column list. This 500'd as soon as the caller had
+            // written one review.
+            ->with(['product:id,name,slug', 'product.images'])
             ->latest()
             ->paginate(15);
 
@@ -25,7 +28,11 @@ class ReviewController extends Controller
             'product_id' => 'required|exists:products,id',
             'rating' => 'required|integer|min:1|max:5',
             'title' => 'nullable|string|max:255',
-            'comment' => 'nullable|string|max:2000',
+            // Same fix update() already carries: the column is content, and comment
+            // is neither a column nor in Review::$fillable, so create() dropped it
+            // without a word and every review posted through this endpoint was
+            // saved with an empty body.
+            'content' => 'nullable|string|max:2000',
         ]);
 
         $exists = Review::where('user_id', $request->user()->id)
@@ -46,8 +53,14 @@ class ReviewController extends Controller
         ], 201);
     }
 
-    public function show(Review $review): JsonResponse
+    public function show(Request $request, Review $review): JsonResponse
     {
+        // index() lists only the caller's own reviews, and update()/destroy()
+        // both check ownership. show() did not, so any signed-in customer could
+        // walk the id and read anybody's review - including one still pending
+        // moderation, and the reviewer's contact details with it.
+        abort_if($review->user_id !== $request->user()->id, 403);
+
         return response()->json([
             'data' => $review->load('product:id,name,slug'),
         ]);

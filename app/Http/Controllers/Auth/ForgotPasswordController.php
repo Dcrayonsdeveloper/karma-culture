@@ -65,11 +65,30 @@ class ForgotPasswordController extends Controller
         $key = 'password-reset-address:'.sha1(Str::lower(trim($validated['email'])));
 
         if (! RateLimiter::tooManyAttempts($key, self::PER_ADDRESS_LIMIT)) {
-            RateLimiter::hit($key, self::PER_ADDRESS_WINDOW);
-
             try {
-                Password::sendResetLink(['email' => $validated['email']]);
+                $status = Password::sendResetLink(['email' => $validated['email']]);
+
+                // Charge the bucket only when the broker actually did something.
+                //
+                // The broker keeps its own 60-second throttle (config/auth.php),
+                // and returns RESET_THROTTLED without sending anything. Counting
+                // those spent the quota on mail that was never sent: the form has
+                // no submit guard, so three submissions inside a minute — an
+                // impatient customer whose first email had not arrived yet — used
+                // up all three attempts while only the first one posted a letter,
+                // and then bought a full fifteen minutes of silence, each attempt
+                // still cheerfully answering "check your inbox".
+                //
+                // INVALID_USER is still charged on purpose: that is the bucket
+                // that stops someone enumerating addresses by sheer volume.
+                if ($status !== Password::RESET_THROTTLED) {
+                    RateLimiter::hit($key, self::PER_ADDRESS_WINDOW);
+                }
             } catch (\Throwable $e) {
+                // A transport failure still costs an attempt, so a broken mail
+                // server cannot be used as an unlimited probe.
+                RateLimiter::hit($key, self::PER_ADDRESS_WINDOW);
+
                 // A mail transport failure must not become the difference
                 // between "known address" and "unknown address" - an error
                 // page for one and a success banner for the other is the same

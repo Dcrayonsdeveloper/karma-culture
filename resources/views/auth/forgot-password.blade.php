@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    @include('partials.scroll-top-on-reload')
     <title>Reset Password - {{ config('app.name') }}</title>
 
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -18,7 +20,10 @@
             to   { opacity: 1; transform: translateY(0); }
         }
         @media (max-width: 1023px) {
-            body { background: linear-gradient(180deg, #ffffff 0%, #fdf5ff 50%, #fae6ff 100%); }
+            /* Teal, matching the login page. On a phone the carousel is hidden
+               and this wash is the only colour on screen, so a purple one made
+               the two halves of the same flow look like two different shops. */
+            body { background: linear-gradient(180deg, #ffffff 0%, #f0f7f8 50%, #d9ecee 100%); }
         }
         /* 100vh on a phone is the tallest viewport (browser bar hidden), and this
            page never scrolls the document, so the bar never collapses: the last
@@ -44,19 +49,23 @@
 
             <div class="w-full max-w-md mx-auto my-auto form-enter">
                 <!-- Logo -->
-                <div class="mb-6">
+                <div class="mb-6 flex justify-center">
                     <a href="{{ url('/') }}" class="inline-block">
-                        <img src="{{ asset_v('images/karmaa-kulture-logo.png') }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-16 lg:h-20 object-contain">
+                        {{-- Honour the logo the admin uploaded, exactly as the login
+                             page does. This page hardcoded the bundled file, so a shop
+                             that had set its own logo showed one mark on /login and a
+                             different one here. --}}
+                        @php $siteLogo = \App\Models\Setting::get('site_logo', ''); @endphp
+                        @if($siteLogo)
+                            <img src="{{ asset_v('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-16 lg:h-20 object-contain">
+                        @else
+                            <img src="{{ asset_v('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-16 lg:h-20 object-contain">
+                        @endif
                     </a>
                 </div>
 
                 <!-- Header -->
                 <div class="mb-5">
-                    <div class="w-12 h-12 bg-[#6F9CA2]/10 rounded-xl flex items-center justify-center mb-4">
-                        <svg class="w-6 h-6 text-[#6F9CA2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"/>
-                        </svg>
-                    </div>
                     <h1 class="text-2xl font-bold text-neutral-900 mb-1">Forgot your password?</h1>
                     <p class="text-neutral-600 text-sm">No worries, we'll send you reset instructions.</p>
                 </div>
@@ -121,40 +130,108 @@
             </div>
         </div>
 
-        <!-- RIGHT SIDE - Visual -->
-        <div class="hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center"
-             style="background: linear-gradient(135deg, #3b0044 0%, #890098 40%, #c83ae5 100%);">
+        <!-- ==========================================
+             RIGHT SIDE - Image Carousel
 
-            <!-- Decorative Elements -->
-            <div class="absolute inset-0 overflow-hidden">
-                <div class="absolute -top-32 -right-32 w-96 h-96 bg-white/5 rounded-full"></div>
-                <div class="absolute -bottom-48 -left-24 w-[500px] h-[500px] bg-white/5 rounded-full"></div>
-                <div class="absolute top-1/4 left-1/4 w-2 h-2 bg-white/20 rounded-full"></div>
-                <div class="absolute top-1/3 right-1/3 w-3 h-3 bg-white/10 rounded-full"></div>
-                <div class="absolute bottom-1/4 left-1/3 w-2 h-2 bg-white/15 rounded-full"></div>
-                <div class="absolute top-2/3 right-1/4 w-4 h-4 bg-white/10 rounded-full"></div>
-                <div class="absolute inset-0 opacity-[0.03]" style="background-image: radial-gradient(circle, white 1px, transparent 1px); background-size: 40px 40px;"></div>
-            </div>
+             The same three slides the login page runs. This panel used to be a
+             lone purple gradient reading "Secure Recovery", which shared no
+             colour with the rest of the shop - so following "Forgot password?"
+             off the login page threw the customer onto what looked like another
+             site entirely, mid-way through the one flow where they are already
+             wondering whether an email is genuine.
+             ========================================== -->
+        <div class="hidden lg:block lg:w-1/2 relative overflow-hidden"
+             x-data="{
+                current: 0,
+                slides: [
+                    {
+                        bg: 'linear-gradient(135deg, #1A3133 0%, #2A494D 40%, #4A7A80 100%)',
+                        tagline: 'Style That Speaks',
+                        subtitle: 'Discover outfits that let you express yourself with comfort and confidence',
+                        icon: 'sparkles'
+                    },
+                    {
+                        bg: 'linear-gradient(135deg, #2A494D 0%, #3A6166 40%, #6F9CA2 100%)',
+                        tagline: 'Premium Fashion Collection',
+                        subtitle: 'Explore our curated range of trendy and comfortable clothing for every occasion',
+                        icon: 'gem'
+                    },
+                    {
+                        bg: 'linear-gradient(135deg, #1A3133 0%, #3A6166 40%, #5B878D 100%)',
+                        tagline: 'Fashion for Every Adventure',
+                        subtitle: 'From work to weekend, dress in style with our vibrant collection',
+                        icon: 'palette'
+                    }
+                ],
+                total: 3
+             }"
+             x-init="setInterval(() => current = (current + 1) % total, 5000)">
 
-            <!-- Content -->
-            <div class="relative z-10 text-center px-12 xl:px-20 max-w-lg">
-                <div class="mb-8 flex justify-center">
-                    <div class="w-20 h-20 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/20">
-                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/>
-                        </svg>
+            <!-- Slides -->
+            <template x-for="(slide, index) in slides" :key="index">
+                <div x-show="current === index"
+                     x-transition:enter="transition ease-out duration-1000"
+                     x-transition:enter-start="opacity-0 scale-105"
+                     x-transition:enter-end="opacity-100 scale-100"
+                     x-transition:leave="transition ease-in duration-700"
+                     x-transition:leave-start="opacity-100 scale-100"
+                     x-transition:leave-end="opacity-0 scale-95"
+                     class="absolute inset-0 flex items-center justify-center"
+                     :style="'background: ' + slide.bg">
+
+                    <!-- Decorative Elements -->
+                    <div class="absolute inset-0 overflow-hidden">
+                        <div class="absolute -top-32 -right-32 w-96 h-96 bg-white/5 rounded-full"></div>
+                        <div class="absolute -bottom-48 -left-24 w-[500px] h-[500px] bg-white/5 rounded-full"></div>
+                        <div class="absolute top-1/4 left-1/4 w-2 h-2 bg-white/20 rounded-full"></div>
+                        <div class="absolute top-1/3 right-1/3 w-3 h-3 bg-white/10 rounded-full"></div>
+                        <div class="absolute bottom-1/4 left-1/3 w-2 h-2 bg-white/15 rounded-full"></div>
+                        <div class="absolute top-2/3 right-1/4 w-4 h-4 bg-white/10 rounded-full"></div>
+                        <div class="absolute inset-0 opacity-[0.03]" style="background-image: radial-gradient(circle, white 1px, transparent 1px); background-size: 40px 40px;"></div>
+                    </div>
+
+                    <!-- Slide Content -->
+                    <div class="relative z-10 text-center px-12 xl:px-20 max-w-lg">
+                        <div class="mb-8 flex justify-center">
+                            <div class="w-20 h-20 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/20">
+                                <template x-if="slide.icon === 'sparkles'">
+                                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"/>
+                                    </svg>
+                                </template>
+                                <template x-if="slide.icon === 'gem'">
+                                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 2L2 7l10 15L22 7l-10-5zM2 7h20M12 22V7M7 4.5L12 7l5-2.5"/>
+                                    </svg>
+                                </template>
+                                <template x-if="slide.icon === 'palette'">
+                                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.098 19.902a3.75 3.75 0 005.304 0l6.401-6.402M6.75 21A3.75 3.75 0 013 17.25V4.125C3 3.504 3.504 3 4.125 3h5.25c.621 0 1.125.504 1.125 1.125v4.072M6.75 21a3.75 3.75 0 003.75-3.75V8.197M6.75 21h13.125c.621 0 1.125-.504 1.125-1.125v-5.25c0-.621-.504-1.125-1.125-1.125h-4.072M10.5 8.197l2.88-2.88c.438-.439 1.15-.439 1.59 0l3.712 3.713c.44.44.44 1.152 0 1.59l-2.879 2.88M6.75 17.25h.008v.008H6.75v-.008z"/>
+                                    </svg>
+                                </template>
+                            </div>
+                        </div>
+                        <h2 class="text-4xl xl:text-5xl font-bold text-white mb-4 leading-tight" x-text="slide.tagline"></h2>
+                        <p class="text-base xl:text-lg leading-relaxed" style="color: rgba(255,255,255,0.6);" x-text="slide.subtitle"></p>
+                        <div class="mt-8 flex justify-center">
+                            <div class="w-16 h-0.5 bg-white/30 rounded-full"></div>
+                        </div>
                     </div>
                 </div>
-                <h2 class="text-4xl xl:text-5xl font-bold text-white mb-4 leading-tight">Secure Recovery</h2>
-                <p class="text-[#6F9CA2]/40 text-base xl:text-lg leading-relaxed">We'll help you get back into your account safely and securely</p>
-                <div class="mt-8 flex justify-center">
-                    <div class="w-16 h-0.5 bg-white/30 rounded-full"></div>
-                </div>
+            </template>
+
+            <!-- Slide indicators -->
+            <div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-3 z-20">
+                <template x-for="(slide, index) in slides" :key="'dot-' + index">
+                    <button @click="current = index"
+                            :class="current === index ? 'bg-white w-8' : 'bg-white/40 w-2.5 hover:bg-white/60'"
+                            class="h-2.5 rounded-full transition-all duration-500"></button>
+                </template>
             </div>
 
             <!-- Bottom brand text -->
             <div class="absolute bottom-10 right-10 z-20">
-                <p class="text-white/40 text-xs tracking-widest uppercase">{{ config('app.name') }}</p>
+                <p class="text-xs tracking-widest uppercase" style="color: rgba(255,255,255,0.7);">{{ config('app.name') }}</p>
             </div>
         </div>
 
