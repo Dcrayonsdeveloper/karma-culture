@@ -660,18 +660,38 @@
                 .kk-sizeguide__size.is-selected { background: #2d1810; color: #efe2cb; border-color: #2d1810; }
                 .kk-sizeguide__size.is-unavailable { color: #a08e76; text-decoration: line-through; cursor: not-allowed; opacity: .55; }
 
-                /* A texture chip is a size chip that carries a crop of the fabric.
-                   Same border, same radius, same selected state - only the left
-                   padding gives way to the swatch, so the two rows of chips on
-                   this page still read as one control and not two designs.
-                   The swatch is square and clipped: the uploads are photographs
-                   of cloth at whatever ratio the camera gave them. */
-                .kk-texture-chip { display: inline-flex; align-items: center; gap: 7px; padding-left: 5px; }
-                .kk-texture-chip__swatch { width: 22px; height: 22px; border-radius: 4px; object-fit: cover; display: block; flex: 0 0 auto; background: #efe2cb; }
-                /* The selected chip goes dark, and a swatch sitting directly on
-                   it loses its edge - the ring is what keeps the fabric readable
-                   as a separate thing from the button under it. */
-                .kk-texture-chip.is-selected .kk-texture-chip__swatch { box-shadow: 0 0 0 1px rgba(239, 226, 203, .55); }
+                /* A texture is the fabric, not a word in a box.
+
+                   The swatch IS the control here. A bordered chip with the name
+                   beside it made the shopper read five near-identical labels to
+                   find the one they wanted, when the whole point of a photograph
+                   of cloth is that it is recognised at a glance. Which one is
+                   picked is named in the heading above, the way size and colour
+                   already are, so nothing is lost by taking the word off the tile.
+
+                   The crop is square and clipped because the uploads are
+                   photographs of cloth at whatever ratio the camera gave them. */
+                .kk-texture-swatch {
+                    position: relative; width: 58px; height: 58px; padding: 0; flex: 0 0 auto;
+                    border: 1px solid #dcc9ab; border-radius: 3px; background: #efe2cb;
+                    overflow: hidden; cursor: pointer; font-family: inherit;
+                    transition: border-color .15s ease, box-shadow .15s ease;
+                }
+                .kk-texture-swatch img { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: cover; display: block; }
+                .kk-texture-swatch:hover { border-color: #2d1810; }
+                /* A ring rather than a thicker border, so picking a tile does not
+                   nudge the rest of the row along by a pixel. */
+                .kk-texture-swatch.is-selected { border-color: #2d1810; box-shadow: 0 0 0 2px #2d1810; }
+                .kk-texture-swatch:focus-visible { outline: 2px solid #2d1810; outline-offset: 2px; }
+                /* The name sits UNDER the picture rather than beside it: it is the
+                   button's accessible name, so a screen reader still announces
+                   "Cotton", and it is what shows if the image 404s - a tile with a
+                   dead image is otherwise an unlabelled square nobody can use. */
+                .kk-texture-swatch__name {
+                    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+                    text-align: center; padding: 2px; font-size: 10px; font-weight: 600; line-height: 1.15;
+                    color: #2d1810; letter-spacing: .01em;
+                }
                 /* Mobile: wrap all sizes onto multiple rows (no hidden horizontal
                    scroll) and enlarge tap targets for easy tapping.
 
@@ -685,6 +705,9 @@
                 @media (max-width: 640px) {
                     .kk-sizeguide__row { flex-wrap: wrap; overflow-x: visible; gap: 8px; }
                     .kk-sizeguide__size { flex: 0 0 auto; min-width: 44px; text-align: center; padding: 11px 12px; font-size: 13px; }
+                    /* Six tiles and their gaps have to clear a 360px phone, so the
+                       row wraps rather than scrolling out of sight. */
+                    .kk-texture-swatch { width: 52px; height: 52px; }
                 }
                 </style>
                 @php
@@ -839,20 +862,31 @@
                     <div class="kk-sizeguide__row">
                         @foreach($kkTextures as $kkT)
                             @php $kkSwatch = $kkTextureSwatches[mb_strtolower($kkT)] ?? null; @endphp
-                            <button type="button" class="kk-sizeguide__size{{ $kkSwatch ? ' kk-texture-chip' : '' }}"
-                                    :class="selectedTexture === '{{ $kkT }}' ? 'is-selected' : ''"
-                                    @click="selectedTexture = '{{ $kkT }}'">
-                                @if($kkSwatch)
-                                    {{-- aria-hidden and empty alt: the button's own text
-                                         already names the texture, and a screen reader
-                                         reading "Cotton Cotton" is the cost of decorating
-                                         a label with a picture of itself. --}}
+                            @if($kkSwatch)
+                                <button type="button" class="kk-texture-swatch"
+                                        :class="selectedTexture === '{{ $kkT }}' ? 'is-selected' : ''"
+                                        :aria-pressed="selectedTexture === '{{ $kkT }}'"
+                                        @click="selectedTexture = '{{ $kkT }}'"
+                                        title="{{ $kkT }}">
+                                    {{-- The name is underneath, not removed: it names the
+                                         button for a screen reader, and it is what a shopper
+                                         sees if the swatch fails to load. aria-hidden and an
+                                         empty alt on the image, because a screen reader
+                                         reading "Cotton Cotton" is the cost of decorating a
+                                         label with a picture of itself. --}}
+                                    <span class="kk-texture-swatch__name">{{ $kkT }}</span>
                                     <img src="{{ $kkSwatch }}" alt="" aria-hidden="true"
-                                         class="kk-texture-chip__swatch" loading="lazy" decoding="async"
-                                         onerror="this.remove()">
-                                @endif
-                                <span>{{ $kkT }}</span>
-                            </button>
+                                         loading="lazy" decoding="async" onerror="this.remove()">
+                                </button>
+                            @else
+                                {{-- No swatch uploaded yet: the plain chip keeps the texture
+                                     pickable, so the row is never half-built while the
+                                     library is still being filled in. --}}
+                                <button type="button" class="kk-sizeguide__size"
+                                        :class="selectedTexture === '{{ $kkT }}' ? 'is-selected' : ''"
+                                        :aria-pressed="selectedTexture === '{{ $kkT }}'"
+                                        @click="selectedTexture = '{{ $kkT }}'">{{ $kkT }}</button>
+                            @endif
                         @endforeach
                     </div>
                 </section>
