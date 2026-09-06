@@ -26,7 +26,7 @@
         </div>
     </div>
 
-    <!-- Category Header: mobile orange gradient / desktop banner image -->
+    <!-- Category Header -->
     <style>
         /* min-height, not height: a category name that wraps on a narrow
            phone used to push the product count below the frame, where
@@ -38,24 +38,24 @@
             .cat-banner { min-height: 224px; }
             .cat-banner-inner { padding: 0 1rem; min-height: 224px; }
         }
-        /* The banner art is 1440px wide, so cover sliced the children off its
-           right edge on every screen narrower than that. It is contained now.
-           If the file ever goes missing, the orange gradient underneath is a
-           finished design on its own - it is exactly what mobile shows - so the
-           frame degrades to that rather than to the site-wide broken plate. */
-        .cat-banner .kk-media.is-broken .kk-media__fallback { display: none; }
     </style>
-    <div class="relative overflow-hidden cat-banner" style="background: linear-gradient(135deg, #F8931D 0%, #E07E0A 100%);">
-        {{-- The art that used to sit here was ForeverKids branding, inherited
-             from the codebase this shop was forked from: a cartoon of children
-             on an adult fashion banner. The file stopped being tracked in git
-             ("stop tracking media in git; deploy.sh ships it instead"), and
-             deploy.sh has not been able to find this app since the move to AWS,
-             so it was never shipped - every category page asked for an image
-             that 404d. Removed rather than restored, because restoring it would
-             put another brand's mark on this one. The gradient and the heading
-             carry the banner on their own. --}}
-        <div class="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent"></div>
+    {{-- The shop's orange, flat, and the same on every category.
+
+         It is deliberately the exact value the All Products header uses
+         (bg-[#F8931D]) rather than a near-match, so opening a category does not
+         look like landing on a different site. Every category gets this one
+         colour: a per-category tint would make the banner a decoration that
+         changes meaninglessly from page to page.
+
+         Two things had made it look otherwise. It used to stack an orange base
+         under a left-to-right black scrim, which was there to keep white text
+         readable over banner art - and that art is gone (it was ForeverKids
+         branding, inherited from the codebase this shop was forked from: a
+         cartoon of children on an adult fashion banner, removed rather than
+         restored because restoring it would put another brand's mark on this
+         one). With nothing left to darken, the scrim only shaded the left half
+         and gave the banner the brown-to-orange look. --}}
+    <div class="relative overflow-hidden cat-banner" style="background: #F8931D;">
         <div class="relative container mx-auto h-full flex flex-col justify-center cat-banner-inner">
             <h1 class="text-2xl md:text-3xl font-bold text-white mb-1">{{ $category->name }}</h1>
             @if($category->description)
