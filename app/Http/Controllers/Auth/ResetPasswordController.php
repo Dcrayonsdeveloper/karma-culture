@@ -52,7 +52,7 @@ class ResetPasswordController extends Controller
             'email.required' => 'Please enter your email address.',
             'email.email' => 'Enter a valid email address, like you@example.com.',
             'password.required' => 'Please choose a new password.',
-            'password.confirmed' => 'The two passwords do not match.',
+            'password.confirmed' => V::confirmedMessage($request->input('password'), $request->input('password_confirmation')),
             'password.max' => 'Your password must be 255 characters or fewer.',
             // Word for word what the box already said while the password was
             // being typed (_passwordError in app.js), so the same complaint

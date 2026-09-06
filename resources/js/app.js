@@ -1055,6 +1055,31 @@ const _passwordError = (v) => {
     return '';
 };
 
+// The confirmation box, judged against the box it repeats.
+//
+// "The two passwords do not match" is the whole story right up until the moment
+// it is not, and the case it cannot explain is the one that actually traps
+// people. Both boxes carry an eye toggle, and revealing a password turns the
+// input into type="text" - which is the point at which Gboard and the iOS
+// keyboard start autocapitalising and autocorrecting it, and an accepted
+// suggestion arrives with a space after it. What is then on screen is two
+// identical lines and a message saying they differ, with nothing to fix because
+// the difference is a character that draws as nothing.
+//
+// So the space is named. It is never removed: the password that is posted has
+// to be the password that was typed, and quietly trimming it here would store
+// one thing and leave the customer signing in later with another. trim() covers
+// the non-breaking space a phone keyboard can produce as well as the plain one.
+const _PASSWORD_MISMATCH = 'The two passwords do not match.';
+const _PASSWORD_MISMATCH_SPACE = 'The two passwords are the same apart from a space at the start or the end of one of them. Remove it and they will match.';
+
+const _confirmError = (confirm, password) => {
+    const a = confirm || '';
+    const b = password || '';
+    if (a === b) return '';
+    return a.trim() === b.trim() ? _PASSWORD_MISMATCH_SPACE : _PASSWORD_MISMATCH;
+};
+
 // Problems that are already true no matter what is typed next: the value is
 // past its limit, or carries a character the field never accepts. Those are
 // worth saying on the keystroke that causes them, rather than making the
@@ -1588,7 +1613,7 @@ Alpine.data('kkRegisterForm', (serverErrors = {}, provedEmail = '', routes = {})
                 // adding "they do not match" is just noise. It is also what the
                 // server does - `confirmed` passes when both sides are null.
                 if (!pw && !value) return '';
-                return value === pw ? '' : 'The two passwords do not match.';
+                return _confirmError(value, pw);
             }
             case 'terms':
                 return this.$refs.terms && this.$refs.terms.checked
@@ -2779,7 +2804,7 @@ Alpine.start();
             const pw = partner ? (partner.value || '') : '';
 
             if (value !== '') {
-                message = value === pw ? '' : 'The two passwords do not match.';
+                message = _confirmError(value, pw);
             } else {
                 // Empty. While the customer is still typing that is unfinished
                 // rather than wrong, so nothing is said. On the way into a

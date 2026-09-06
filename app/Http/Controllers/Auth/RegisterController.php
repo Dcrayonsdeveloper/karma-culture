@@ -137,7 +137,7 @@ class RegisterController extends Controller
             'phone.required' => 'Please enter your mobile number.',
             'phone.max' => 'That phone number is too long.',
             'password.required' => 'Please choose a password.',
-            'password.confirmed' => 'The two passwords do not match.',
+            'password.confirmed' => V::confirmedMessage($request->input('password'), $request->input('password_confirmation')),
             'password.max' => 'Your password must be 255 characters or fewer.',
             // Password::defaults() reports each unmet requirement separately;
             // V::passwordMessages() replaces the framework wording with the

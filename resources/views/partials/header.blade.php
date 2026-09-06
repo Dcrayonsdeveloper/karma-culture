@@ -585,6 +585,7 @@
                                class="kk-loginmodal__field kk-loginmodal__field--haseye"
                                :class="fieldErrors.password && 'has-error'"
                                x-model="form.password"
+                               autocapitalize="off" autocorrect="off" spellcheck="false"
                                @input="checkPassword()"
                                :placeholder="mode === 'login' ? 'Enter your password' : 'Min 10 characters'"
                                :autocomplete="mode === 'login' ? 'current-password' : 'new-password'">
@@ -610,6 +611,7 @@
                                class="kk-loginmodal__field kk-loginmodal__field--haseye"
                                :class="fieldErrors.password_confirmation && 'has-error'"
                                x-model="form.password_confirmation" placeholder="Repeat your password"
+                               autocapitalize="off" autocorrect="off" spellcheck="false"
                                @input="checkPassword()"
                                autocomplete="new-password">
                         <button type="button" class="kk-loginmodal__eye" @click="showConfirm = !showConfirm"
@@ -751,6 +753,30 @@
                 return '';
             },
             /**
+             * The confirmation, judged against the box it repeats. Mirrors
+             * _confirmError() in app.js, wording included.
+             *
+             * Both boxes carry an eye, and a revealed password is a type="text"
+             * input - which is where Gboard and the iOS keyboard start
+             * capitalising and autocorrecting, and where an accepted suggestion
+             * arrives with a space after it. A space at the end of a password
+             * draws as nothing, so the two boxes read identically and still
+             * refuse to match. The attributes on the inputs stop the keyboard
+             * doing it; this names it for a value that got in some other way.
+             *
+             * Never trimmed. The password that is posted has to be the password
+             * that was typed, or the account is made with one string and signed
+             * into with another.
+             */
+            confirmError(confirm, password) {
+                const a = confirm || '';
+                const b = password || '';
+                if (a === b) return '';
+                return a.trim() === b.trim()
+                    ? 'The two passwords are the same apart from a space at the start or the end of one of them. Remove it and they will match.'
+                    : 'The two passwords do not match.';
+            },
+            /**
              * The signup password, judged on the keystroke rather than on the
              * submit. Four requirements reported one at a time only work if
              * they are reported while the password is being invented; told
@@ -771,9 +797,7 @@
                     // An empty box is unfinished, not wrong: nothing has been
                     // typed into it to be judged yet.
                     password: pw ? this.passwordError(pw) : '',
-                    password_confirmation: (confirm && pw && confirm !== pw)
-                        ? 'The two passwords do not match.'
-                        : '',
+                    password_confirmation: (confirm && pw) ? this.confirmError(confirm, pw) : '',
                 };
             },
             /**
@@ -842,8 +866,9 @@
                 if (signup) {
                     if (!this.form.password_confirmation) {
                         e.password_confirmation = 'Please confirm your password.';
-                    } else if (this.form.password && this.form.password !== this.form.password_confirmation) {
-                        e.password_confirmation = 'The two passwords do not match.';
+                    } else if (this.form.password) {
+                        const mismatch = this.confirmError(this.form.password_confirmation, this.form.password);
+                        if (mismatch) e.password_confirmation = mismatch;
                     }
                 }
 

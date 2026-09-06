@@ -116,6 +116,7 @@
                                  short came back as a reloaded page. --}}
                             <input :type="show ? 'text' : 'password'" name="password" id="password" required
                                    autocomplete="new-password" minlength="10" maxlength="255"
+                                   autocapitalize="off" autocorrect="off" spellcheck="false"
                                    class="w-full pl-12 pr-12 py-3 bg-neutral-50 border border-neutral-200 rounded-xl text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all"
                                    placeholder="Min 10 characters">
                             <button type="button" @click="show = !show" class="absolute inset-y-0 right-0 pl-3 pr-4 flex items-center text-neutral-600 hover:text-neutral-600 transition-colors">
@@ -145,6 +146,7 @@
                             </div>
                             <input type="password" name="password_confirmation" id="password_confirmation" required
                                    autocomplete="new-password" maxlength="255"
+                                   autocapitalize="off" autocorrect="off" spellcheck="false"
                                    class="w-full pl-12 pr-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all"
                                    placeholder="Repeat new password">
                         </div>

@@ -395,6 +395,58 @@ final class ValidationRules
     }
 
     /**
+     * The whitespace JavaScript's String.prototype.trim() strips, which is
+     * every Unicode space and not the five ASCII characters PHP's trim() knows.
+     * The check below has a mirror in resources/js/app.js, and two halves of
+     * one check that disagreed about which spaces count would answer the same
+     * pair of passwords differently.
+     */
+    private const EDGE_SPACE = '/^[\s\x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}]+|[\s\x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}]+$/u';
+
+    /**
+     * The sentence a failed `confirmed` produces, for the $messages argument of
+     * the form that minted the password.
+     *
+     * "The two passwords do not match." is right until the difference is one
+     * the customer cannot see, and then it is a dead end. Every customer-facing
+     * password box carries an eye toggle, revealing one turns the input into
+     * type="text", and a text input is what a phone keyboard feels free to
+     * rewrite - Gboard and the iOS keyboard capitalise its first letter and add
+     * a space of their own after an accepted suggestion. A space at the end of
+     * a password draws as nothing at all, so the two boxes read identically on
+     * screen and still refuse to match, and there is nothing on the page to act
+     * on. That is the state this exists to explain.
+     *
+     * The inputs now carry autocapitalize/autocorrect/spellcheck off, which is
+     * what stops it happening at all; this covers a value that arrived some
+     * other way - a paste, a password manager, or a browser still running a
+     * cached copy of the old script.
+     *
+     * The space is only ever named, never removed. The password that is hashed
+     * has to be the password that was typed, or the account is created with one
+     * string and signed into with another - so this decides a sentence and
+     * touches neither field.
+     *
+     * Mirrors _confirmError() in resources/js/app.js, wording included.
+     */
+    public static function confirmedMessage(mixed $password, mixed $confirmation): string
+    {
+        if (is_string($password) && is_string($confirmation) && $password !== $confirmation) {
+            $a = preg_replace(self::EDGE_SPACE, '', $password);
+            $b = preg_replace(self::EDGE_SPACE, '', $confirmation);
+
+            // preg_replace returns null on a subject that is not valid UTF-8,
+            // and a password is allowed to be any bytes at all - so a null is
+            // "these two are not comparable that way", not a match.
+            if ($a !== null && $b !== null && $a === $b) {
+                return 'The two passwords are the same apart from a space at the start or the end of one of them. Remove it and they will match.';
+            }
+        }
+
+        return 'The two passwords do not match.';
+    }
+
+    /**
      * An uploaded video - MP4, WebM or MOV, up to $maxKb.
      *
      * The same rules were written out by hand in five places and had already

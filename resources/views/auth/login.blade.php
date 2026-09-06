@@ -152,7 +152,7 @@
                                          to sign in - refusing its password here would lock the
                                          customer out of the one screen they could change it from. --}}
                                     <input :type="show ? 'text' : 'password'" name="password" id="login_password" required
-                                           autocomplete="current-password"
+                                           autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false"
                                            class="w-full pl-12 pr-12 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all @error('password') border-red-300 bg-red-50 @enderror"
                                            placeholder="Enter your password">
                                     <button type="button" @click="show = !show" class="absolute inset-y-0 right-0 pl-3 pr-4 flex items-center text-neutral-600 hover:text-neutral-600 transition-colors">
@@ -444,8 +444,21 @@
                                              below. Without the opt-out the site-wide password module
                                              in app.js would print the same sentence a second time,
                                              under the same field. --}}
+                                        {{-- autocapitalize/autocorrect/spellcheck off, and on a password box that
+                                             is the opposite of decoration. The eye toggle above swaps this
+                                             input to type="text", and a text input is the one thing a phone
+                                             keyboard feels free to rewrite: Gboard and the iOS keyboard
+                                             capitalise its first letter and add a space of their own after an
+                                             accepted suggestion. The character that lands is invisible, so the
+                                             two boxes read identically on screen and refuse to match, and the
+                                             shopper is left staring at two lines that look the same under a
+                                             message saying they differ. This is the fix for that - the
+                                             sentence in app.js that names a stray space is only the safety
+                                             net. type="password" was never affected, which is exactly why the
+                                             problem arrives with the eye. --}}
                                         <input :type="showPassword ? 'text' : 'password'" name="password" id="reg_password"
                                                required autocomplete="new-password" minlength="10" maxlength="255"
+                                               autocapitalize="off" autocorrect="off" spellcheck="false"
                                                data-kk-password="off"
                                                x-ref="password" @blur="blur('password')" @input="input('password')"
                                                class="w-full px-4 pr-11 py-2.5 bg-neutral-50 border border-neutral-400 rounded-xl text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#3A6166]/40 focus:border-[#3A6166] transition-all"
@@ -478,6 +491,7 @@
                                     <div class="relative">
                                         <input :type="showConfirm ? 'text' : 'password'" name="password_confirmation" id="password_confirmation"
                                                required autocomplete="new-password" maxlength="255"
+                                               autocapitalize="off" autocorrect="off" spellcheck="false"
                                                data-kk-password="off"
                                                x-ref="password_confirmation"
                                                @blur="blur('password_confirmation')" @input="input('password_confirmation')"

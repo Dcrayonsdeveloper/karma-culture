@@ -107,7 +107,7 @@ class ProfileController extends Controller
         ], [
             'current_password.required' => 'Please enter your current password.',
             'current_password.current_password' => 'That is not your current password.',
-            'password.confirmed' => 'The two passwords do not match.',
+            'password.confirmed' => V::confirmedMessage($request->input('password'), $request->input('password_confirmation')),
             'password.different' => 'Your new password must be different from your current one.',
             // The same sentences the box says while the password is being typed.
             ...V::passwordMessages(),
