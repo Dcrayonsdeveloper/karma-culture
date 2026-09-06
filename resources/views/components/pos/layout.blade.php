@@ -65,7 +65,10 @@
         }
         .pos-scroll::-webkit-scrollbar { width: 4px; }
         .pos-scroll::-webkit-scrollbar-track { background: transparent; }
-        .pos-scroll::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+        /* border/background-clip reset off the site-wide thumb in app.css, which
+           insets itself with a 2px transparent border - fine in its own 10px
+           gutter, nothing left to see in this 4px one. */
+        .pos-scroll::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; border: 0; background-clip: border-box; }
 
         /* Animations */
         @keyframes pos-shake {

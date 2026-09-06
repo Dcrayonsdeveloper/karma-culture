@@ -406,6 +406,12 @@ body:not(.layout-admin) a.text-white {
     --kk-text:         #2d1810;
     --kk-text-muted:   #7a6555;
     --kk-display: 'Playfair Display', 'Fredoka', Georgia, serif;
+
+    /* Scrollbar thumb: --kk-brown at low alpha rather than a flat colour, so
+       one value reads correctly on cream, on white and on the tan panels
+       without a per-surface variant. */
+    --kk-scroll-thumb:       rgba(74, 45, 26, 0.30);
+    --kk-scroll-thumb-hover: rgba(74, 45, 26, 0.55);
 }
 
 .kk-btn-brown {
@@ -1281,6 +1287,70 @@ a:focus-visible,
    Scrollbar Styles (subtle)
    ======================================== */
 
+/* The site's own scrollbar, everywhere one appears.
+
+   The browser's default is grey-on-white system chrome, and against a cream
+   panel it is the one part of the page that belongs to the operating system
+   rather than to the shop - the CATEGORIES menu, which scrolls a long list of
+   subcategories over cream, is where it shows worst.
+
+   Applied to the root and to every element, not offered as a utility class: a
+   scrollbar appears wherever content outgrows its box, and a rule that has to
+   be remembered per element is a rule that gets forgotten - which is how the
+   menu ended up with a system bar in the first place while two themed utility
+   classes already existed further down.
+
+   The bare `::-webkit-scrollbar` selectors below carry no specificity at all,
+   so every opt-in class that follows still wins: .scrollbar-dark keeps the
+   admin sidebar's light-on-dark thumb, .scrollbar-hide and .scrollbar-none
+   keep hiding the bar on rows that are meant to be swiped. */
+:root {
+    scrollbar-width: thin;
+    scrollbar-color: var(--kk-scroll-thumb) transparent;
+}
+
+/* Same engine split as the block below, and for the same reason: Chromium
+   drops every webkit rule the moment the standard properties are set to
+   anything but auto, so they are handed back inside @supports. */
+@supports selector(::-webkit-scrollbar) {
+    :root {
+        scrollbar-width: auto;
+        scrollbar-color: auto;
+    }
+
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    /* The transparent border plus background-clip is what insets the thumb
+       inside its gutter: a 10px bar with a 6px pill in the middle of it,
+       instead of a bar-width slab running edge to edge. */
+    ::-webkit-scrollbar-thumb {
+        background-color: var(--kk-scroll-thumb);
+        border: 2px solid transparent;
+        background-clip: content-box;
+        border-radius: 999px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background-color: var(--kk-scroll-thumb-hover);
+    }
+
+    /* No stepper arrows, and no painted square where two bars meet. */
+    ::-webkit-scrollbar-button {
+        display: none;
+    }
+
+    ::-webkit-scrollbar-corner {
+        background: transparent;
+    }
+}
+
 /* Chromium 121+ ignores every ::-webkit-scrollbar rule as soon as the standard
    `scrollbar-width`/`scrollbar-color` properties are set to anything but `auto`,
    and its own `thin` scrollbar is ~11px with a painted track. That is why the
@@ -1290,7 +1360,7 @@ a:focus-visible,
    block that only those engines match. */
 .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: var(--color-neutral-300) transparent;
+    scrollbar-color: var(--kk-scroll-thumb) transparent;
 }
 
 .scrollbar-dark {
@@ -1316,13 +1386,27 @@ a:focus-visible,
         background: transparent;
     }
 
+    /* The narrow variant: same palette as the site-wide bar above, kept at 6px
+       and square-ended because it runs inside a card rather than down a page.
+
+       border/background-clip are reset, not omitted. The site-wide thumb insets
+       itself with a 2px transparent border on each side, which is right in a
+       10px gutter and leaves 2px of visible thumb in a 6px one - these rules
+       set a colour, so without the reset they would inherit that border from
+       the universal rule and paint a hairline. */
+    .scrollbar-thin::-webkit-scrollbar-thumb,
+    .scrollbar-dark::-webkit-scrollbar-thumb {
+        border: 0;
+        background-clip: border-box;
+    }
+
     .scrollbar-thin::-webkit-scrollbar-thumb {
-        background-color: var(--color-neutral-300);
+        background-color: var(--kk-scroll-thumb);
         border-radius: 3px;
     }
 
     .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-        background-color: var(--color-neutral-400);
+        background-color: var(--kk-scroll-thumb-hover);
     }
 
     .scrollbar-dark::-webkit-scrollbar-thumb {
@@ -2245,7 +2329,7 @@ body.kk-modal-open main {
 }
 
 /* On a dark card the cream default flashes before the fill paints. */
-.kk-media--dark { background: var(--kk-brown-darker); }
+/* .kk-media--dark { background: var(--kk-brown-darker); } */
 .kk-media--dark .kk-media__fill { filter: blur(24px) saturate(1.1) brightness(0.7); }
 
 /* Broken or missing media. A 404 leaves a bare coloured rectangle - the card
