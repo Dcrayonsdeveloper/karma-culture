@@ -81,6 +81,18 @@ class User extends Authenticatable implements MustVerifyEmail
         return "{$this->first_name} {$this->last_name}";
     }
 
+    /**
+     * The admin reports and their CSV/Excel exports print `$customer->name`,
+     * a field the abandoned Customer model supplied and this one never has -
+     * so every one of them read null. Aliased to full_name rather than
+     * renaming the callers, because `name` is the shape both the report views
+     * and ReportExportService already expect.
+     */
+    public function getNameAttribute(): string
+    {
+        return trim($this->full_name) ?: (string) $this->email;
+    }
+
     // Relationships
     public function addresses(): HasMany
     {

@@ -156,6 +156,20 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // Products (export/import before resource to avoid route conflict)
             Route::get('/products/export', [ProductController::class, 'export'])->name('products.export');
             Route::post('/products/import', [ProductController::class, 'import'])->name('products.import');
+
+            // Product Import from External Sources (House of Rare).
+            //
+            // Above the resource for the same reason the two lines before it
+            // are: registered after it, GET products/import-external matched
+            // products/{product} first, so the screen answered 404 and the
+            // importer was unreachable from the admin.
+            Route::prefix('products/import-external')->name('products.import-external.')->group(function () {
+                Route::get('/', [ProductImportController::class, 'index'])->name('index');
+                Route::get('/fetch', [ProductImportController::class, 'fetchProducts'])->name('fetch');
+                Route::post('/import', [ProductImportController::class, 'importProducts'])->name('import');
+                Route::post('/create-categories', [ProductImportController::class, 'createCategories'])->name('create-categories');
+            });
+
             Route::resource('products', ProductController::class);
             Route::put('/products/{product}/toggle-status', [ProductController::class, 'toggleStatus'])->name('products.toggle-status');
             Route::put('/products/{product}/toggle-featured', [ProductController::class, 'toggleFeatured'])->name('products.toggle-featured');
@@ -166,14 +180,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::patch('/products/aplus/{aplusImage}', [ProductAplusImageController::class, 'update'])->name('products.aplus.update');
             Route::delete('/products/aplus/{aplusImage}', [ProductAplusImageController::class, 'destroy'])->name('products.aplus.destroy');
             Route::post('/products/bulk-action', [ProductController::class, 'bulkAction'])->name('products.bulk-action');
-
-            // Product Import from External Sources (House of Rare)
-            Route::prefix('products/import-external')->name('products.import-external.')->group(function () {
-                Route::get('/', [ProductImportController::class, 'index'])->name('index');
-                Route::get('/fetch', [ProductImportController::class, 'fetchProducts'])->name('fetch');
-                Route::post('/import', [ProductImportController::class, 'importProducts'])->name('import');
-                Route::post('/create-categories', [ProductImportController::class, 'createCategories'])->name('create-categories');
-            });
 
             // Categories
             Route::resource('categories', CategoryController::class);
@@ -259,6 +265,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
             Route::resource('blog-posts', BlogPostController::class)->except(['show']);
             Route::put('/blog-posts/{blogPost}/toggle-status', [BlogPostController::class, 'toggleStatus'])->name('blog-posts.toggle-status');
+            Route::post('/blog-posts/import', [BlogPostController::class, 'import'])->name('blog-posts.import');
+            Route::get('/blog-posts/template/download', [BlogPostController::class, 'downloadTemplate'])->name('blog-posts.template');
 
             Route::prefix('reviews')->name('reviews.')->group(function () {
                 Route::get('/', [ReviewController::class, 'index'])->name('index');

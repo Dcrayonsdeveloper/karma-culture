@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Services\ReportExportService;
 use App\Models\Cart;
 use App\Models\CartItem;
-use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductView;
@@ -369,13 +368,28 @@ class ReportController extends Controller
         return view('admin.reports.products', compact('products', 'stats', 'categoryBreakdown', 'range'));
     }
 
+    /**
+     * Every customer figure on this screen used to come off the Customer
+     * model, which reads the `customers` table - a table nothing writes to and
+     * that holds zero rows. So the whole report (totals, growth, lifetime
+     * value, top customers) quietly rendered zero, and both exports produced a
+     * file with nothing but a header line. Shoppers are users carrying the
+     * customer role, which is what the admin Customers screen has always
+     * listed; this reads the same set, so the report and that screen can no
+     * longer disagree.
+     */
+    private function customerQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return User::where('role', 'customer');
+    }
+
     public function customers(Request $request): View
     {
         $range = $this->range($request);
         [$startDate, $endDate] = [$range->start, $range->end];
 
         // New vs returning
-        $newCustomers = Customer::whereBetween('created_at', [$startDate, $endDate])->count();
+        $newCustomers = $this->customerQuery()->whereBetween('created_at', [$startDate, $endDate])->count();
         $returningCustomers = Order::countsAsSale()
             ->whereBetween('orders.created_at', [$startDate, $endDate])
             ->select('user_id')
@@ -386,7 +400,7 @@ class ReportController extends Controller
         // Top customers
         $spentInPeriod = fn ($query) => $query->countsAsSale()->whereBetween('orders.created_at', [$startDate, $endDate]);
 
-        $topCustomers = Customer::withCount(['orders as order_count' => $spentInPeriod])
+        $topCustomers = $this->customerQuery()->withCount(['orders as order_count' => $spentInPeriod])
             ->withSum(['orders as total_spent' => $spentInPeriod], 'total')
             ->orderByDesc('total_spent')
             ->take(10)
@@ -394,16 +408,16 @@ class ReportController extends Controller
 
         // Customer stats
         $stats = [
-            'total_customers' => Customer::count(),
+            'total_customers' => $this->customerQuery()->count(),
             'new_customers' => $newCustomers,
             'returning_customers' => $returningCustomers,
-            'average_lifetime_value' => Customer::withSum(['orders' => fn ($q) => $q->countsAsSale()], 'total')
+            'average_lifetime_value' => $this->customerQuery()->withSum(['orders' => fn ($q) => $q->countsAsSale()], 'total')
                 ->get()
                 ->avg('orders_sum_total') ?? 0,
         ];
 
         // Customer growth
-        $growth = Customer::whereBetween('created_at', [$startDate, $endDate])
+        $growth = $this->customerQuery()->whereBetween('created_at', [$startDate, $endDate])
             ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
             ->groupBy('date')
             ->orderBy('date')
@@ -454,7 +468,7 @@ class ReportController extends Controller
 
                 case 'customers':
                     fputcsv($handle, ['Name', 'Email', 'Orders', 'Total Spent', 'Joined']);
-                    Customer::withCount(['orders' => fn ($q) => $q->countsAsSale()])
+                    $this->customerQuery()->withCount(['orders' => fn ($q) => $q->countsAsSale()])
                         ->withSum(['orders' => fn ($q) => $q->countsAsSale()], 'total')
                         ->each(function ($customer) use ($handle) {
                             fputcsv($handle, [
@@ -501,7 +515,7 @@ class ReportController extends Controller
 
             case 'customers':
                 $headers = ['Name', 'Email', 'Orders', 'Total Spent', 'Joined'];
-                $rows = Customer::withCount(['orders' => fn ($q) => $q->countsAsSale()])
+                $rows = $this->customerQuery()->withCount(['orders' => fn ($q) => $q->countsAsSale()])
                     ->withSum(['orders' => fn ($q) => $q->countsAsSale()], 'total')
                     ->get()
                     ->map(fn ($c) => [$c->name, $c->email, $c->orders_count, $c->orders_sum_total ?? 0, $c->created_at->format('Y-m-d')]);

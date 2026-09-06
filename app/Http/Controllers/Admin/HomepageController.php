@@ -13,6 +13,7 @@ use App\Models\ShopFilterExclusion;
 use App\Rules\ValidationRules as V;
 use App\Support\BannerMedia;
 use App\Support\ShopFilterCatalogue;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -109,6 +110,7 @@ class HomepageController extends Controller
     {
         $settings = [
             'site_logo' => Setting::get('site_logo', ''),
+            'site_favicon' => Setting::get('site_favicon', ''),
             'site_name' => Setting::get('site_name', 'Karmaa Kulture'),
             'site_tagline' => Setting::get('site_tagline', 'Unlock Your Natural Beauty'),
             'site_description' => Setting::get('site_description', ''),
@@ -157,10 +159,47 @@ class HomepageController extends Controller
             'whatsapp_number' => V::mobile(required: false),
             'contact_address' => V::addressLine(required: false, max: 500),
             'site_logo' => V::image(required: false, maxKb: 2048, allowGif: false),
+            'site_favicon' => V::image(required: false, maxKb: 1024, allowGif: false),
         ];
 
-        foreach (['facebook', 'instagram', 'twitter', 'linkedin', 'youtube', 'tiktok', 'pinterest'] as $network) {
-            $rules["social_{$network}"] = V::url(required: false, max: 255);
+        // Each field has to point at its own network. V::url() alone accepted
+        // any well-formed address, and production ended up with
+        // https://www.youtube.com/ saved into facebook, instagram, twitter AND
+        // linkedin - four icons in the header and footer, all opening YouTube's
+        // front page, and the same wrong address repeated four times in the
+        // site's sameAs structured data. A URL that is valid but points at the
+        // wrong service is the failure worth catching here, because nothing
+        // downstream can tell it from a correct one.
+        $socialHosts = [
+            'facebook' => ['facebook.com', 'fb.com', 'fb.me'],
+            'instagram' => ['instagram.com', 'instagr.am'],
+            'twitter' => ['twitter.com', 'x.com'],
+            'linkedin' => ['linkedin.com', 'lnkd.in'],
+            'youtube' => ['youtube.com', 'youtu.be'],
+            'tiktok' => ['tiktok.com'],
+            'pinterest' => ['pinterest.com', 'pin.it'],
+        ];
+
+        foreach ($socialHosts as $network => $hosts) {
+            $rules["social_{$network}"] = [
+                ...V::url(required: false, max: 255),
+                function (string $attribute, mixed $value, Closure $fail) use ($hosts, $network) {
+                    if (blank($value)) {
+                        return;
+                    }
+
+                    $host = strtolower((string) parse_url((string) $value, PHP_URL_HOST));
+                    $host = preg_replace('/^www\./', '', $host);
+
+                    foreach ($hosts as $allowed) {
+                        if ($host === $allowed || str_ends_with($host, '.'.$allowed)) {
+                            return;
+                        }
+                    }
+
+                    $fail("The {$network} link must point at ".$hosts[0].'.');
+                },
+            ];
         }
 
         // The three about_us_video_* slots used to be validated and stored here.
@@ -196,6 +235,16 @@ class HomepageController extends Controller
 
             if ($previousLogo && $previousLogo !== $path && ! str_starts_with($previousLogo, 'http')) {
                 Storage::disk('public')->delete($previousLogo);
+            }
+        }
+
+        if ($request->hasFile('site_favicon')) {
+            $previousFavicon = Setting::get('site_favicon', '');
+            $path = $request->file('site_favicon')->store('branding', 'public');
+            Setting::set('site_favicon', $path, 'string', 'homepage');
+
+            if ($previousFavicon && $previousFavicon !== $path && ! str_starts_with($previousFavicon, 'http')) {
+                Storage::disk('public')->delete($previousFavicon);
             }
         }
 
@@ -873,7 +922,16 @@ class HomepageController extends Controller
 
         // Rows filed under a location no page renders, surfaced so they can be
         // moved or removed rather than sitting invisible forever.
+        //
+        // toBase() first: groupBy() on an Eloquent collection hands back another
+        // Eloquent collection, whose except() is written for model keys and
+        // calls getKey() on every entry. The entries here are the grouped
+        // sub-collections, not models, so it threw BadMethodCallException and
+        // this whole screen answered 500 - leaving header and footer navigation
+        // with no way to edit it. A plain collection excludes by key, which is
+        // what the location strings are.
         $orphanMenus = $byLocation
+            ->toBase()
             ->except(self::NAV_LOCATIONS)
             ->flatten();
 
