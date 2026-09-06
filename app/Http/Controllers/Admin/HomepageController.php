@@ -730,6 +730,10 @@ class HomepageController extends Controller
         }
 
         Cache::forget('settings.group.instagram');
+        // The strip on the home page is served from a cached reel list. Saving
+        // here has to reach it, or a changed reel count sits behind that window
+        // and reads as a setting that does nothing.
+        $instagram->forgetLiveReels();
 
         if (! $instagram->configured()) {
             return back()->with('success', 'Settings saved. Add an access token to connect an Instagram account.');

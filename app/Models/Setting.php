@@ -170,6 +170,23 @@ class Setting extends Model
         });
     }
 
+    /**
+     * Is there a row for this key at all, blank value included?
+     *
+     * get() cannot answer this: it deliberately folds a blank value into the
+     * default it was handed, so a setting an admin has emptied on purpose reads
+     * back identically to one that was never written. Callers that fall back to
+     * a value from config need the difference - a cleared row is a decision, and
+     * an environment default must not quietly undo it.
+     *
+     * Reads the same whole-table cache every other setting read goes through,
+     * so it costs no extra query.
+     */
+    public static function isSet(string $key): bool
+    {
+        return array_key_exists($key, static::all_());
+    }
+
     public static function set(string $key, $value, string $type = 'string', string $group = 'general'): self
     {
         $setting = static::updateOrCreate(

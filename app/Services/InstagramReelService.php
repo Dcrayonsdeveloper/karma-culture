@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AboutReel;
 use App\Models\Setting;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -26,13 +27,19 @@ use Illuminate\Support\Facades\Storage;
  *    anywhere to explain it. Every clip is therefore downloaded once, at sync
  *    time, and served from this site afterwards.
  *
- * The API used is "Instagram API with Instagram Login" (graph.instagram.com),
- * not the Facebook-Login one, because it needs only a Professional Instagram
- * account - no Facebook Page, no Business Manager. See doc/instagram-reels.md.
+ * BOTH Instagram APIs are spoken here, because a token only works against the
+ * one that issued it - see account() for how they are told apart and why the
+ * Facebook-Login one needs two extra calls to find the account at all.
+ *
+ * See doc/instagram-reels.md.
  */
 class InstagramReelService
 {
-    private const BASE_URL = 'https://graph.instagram.com';
+    /** "Instagram API with Instagram Login": the account itself is /me. */
+    private const IG_LOGIN_BASE = 'https://graph.instagram.com';
+
+    /** "Instagram API with Facebook Login": /me is a Facebook user, not the account. */
+    private const FB_LOGIN_BASE = 'https://graph.facebook.com/v21.0';
 
     /** Matches the 64MB ceiling the manual reel upload already enforces. */
     private const MAX_VIDEO_BYTES = 65536 * 1024;
@@ -48,11 +55,56 @@ class InstagramReelService
     public const SYNCED_AT_KEY = 'instagram_reels_synced_at';
     public const TOKEN_EXPIRES_KEY = 'instagram_token_expires_at';
 
+    /**
+     * How long a batch of freshly signed CDN links is served to visitors.
+     *
+     * Twenty minutes against a signature that runs for a day and a half, so a
+     * link is never handed out anywhere near the point where it stops working -
+     * and Instagram is asked three times an hour however busy the site is.
+     */
+    private const LIVE_TTL = 1200;
+
+    /** A failure is remembered briefly, so an outage is not re-tried per visitor. */
+    private const LIVE_FAILURE_TTL = 300;
+
+    /** A visitor is waiting on this call, so it gets far less rope than a sync. */
+    private const LIVE_TIMEOUT = 8;
+
+    /** Reels to draw the random handful from. Mixed feed, so ask for plenty. */
+    private const LIVE_POOL = 50;
+
+    private const LIVE_CACHE_PREFIX = 'instagram.live_reels.';
+
+    private const ACCOUNT_CACHE_PREFIX = 'instagram.account.';
+
+    /** Which Page a token can reach does not change hour to hour. */
+    private const ACCOUNT_TTL = 43200;
+
+    /**
+     * The token to talk to Instagram with.
+     *
+     * The admin screen is the source of truth, and INSTAGRAM_ACCESS_TOKEN in
+     * the environment is the fallback - which is what lets a deploy arrive
+     * already connected instead of waiting for somebody to open a form and
+     * paste a credential into it.
+     *
+     * The row is asked about with isSet() rather than read with get(), because
+     * get() folds a blank value into its default and the two mean opposite
+     * things here: no row at all is "nobody has configured this, use the
+     * environment", while a row that exists and is empty is Disconnect having
+     * been pressed - a decision the environment must not quietly reverse.
+     */
     public function token(): ?string
     {
-        $token = trim((string) Setting::get(self::TOKEN_KEY, ''));
+        if (Setting::isSet(self::TOKEN_KEY)) {
+            $saved = trim((string) Setting::get(self::TOKEN_KEY, ''));
 
-        return $token === '' ? null : $token;
+            return $saved === '' ? null : $saved;
+        }
+
+        $fromEnv = trim((string) config('services.instagram.access_token'));
+
+        return $fromEnv === '' ? null : $fromEnv;
     }
 
     public function configured(): bool
@@ -104,23 +156,157 @@ class InstagramReelService
         }
 
         try {
-            $response = Http::timeout(20)->get(self::BASE_URL.'/me', [
-                'fields' => 'id,username',
-                'access_token' => $this->token(),
-            ]);
-        } catch (\Throwable $e) {
-            return ['ok' => false, 'error' => 'Could not reach Instagram: '.$e->getMessage()];
+            $account = $this->account();
+
+            // The Facebook path already learned the handle on its way to the
+            // account; the Instagram-Login one has to ask for it.
+            $username = $account['username'] ?? (string) $this->call(
+                $account['base'].'/'.$account['node'],
+                ['fields' => 'id,username', 'access_token' => $this->token()],
+                20,
+            )->json('username', '');
+        } catch (\RuntimeException $e) {
+            return ['ok' => false, 'error' => $e->getMessage()];
         }
 
-        if ($response->failed()) {
-            return ['ok' => false, 'error' => $this->readableApiError($response)];
-        }
-
-        $username = (string) $response->json('username', '');
         Setting::set(self::USERNAME_KEY, $username, 'string', 'instagram');
         Cache::forget('settings.group.instagram');
 
         return ['ok' => true, 'username' => $username];
+    }
+
+    /**
+     * What the About Us strip on the home page shows.
+     *
+     * Instagram first, so the strip stays current on its own: nobody uploads a
+     * clip, nobody remembers to press Sync, and the account's newest work is on
+     * the home page within twenty minutes of being posted.
+     *
+     * Stored rows are the fallback rather than the default. They are what the
+     * strip shows before a token is configured, and what it drops back to while
+     * Instagram is unreachable - so the section never empties out because a
+     * third party is having a bad morning. A store that would rather curate the
+     * strip by hand still can: disconnect Instagram and the uploaded clips are
+     * all that is left to show.
+     *
+     * @return Collection<int,AboutReel>
+     */
+    public function stripReels(): Collection
+    {
+        $live = $this->randomReels();
+
+        return $live->isNotEmpty() ? $live : AboutReel::active()->ordered()->get();
+    }
+
+    /**
+     * Drop the cached reel list, so the next visitor's strip is fetched afresh.
+     *
+     * The cache key is derived from the token, so a token CHANGE invalidates
+     * itself and needs none of this. What needs it is everything else: a reel
+     * posted a minute ago, a reel deleted on Instagram, an admin who wants to
+     * see the effect of what they just did rather than wait out the window.
+     */
+    public function forgetLiveReels(): void
+    {
+        $token = $this->token();
+
+        if ($token !== null) {
+            Cache::forget(self::LIVE_CACHE_PREFIX.substr(sha1($token), 0, 16));
+        }
+    }
+
+    /**
+     * A different handful of the account's reels each time the page is opened.
+     *
+     * @return Collection<int,AboutReel>
+     */
+    public function randomReels(?int $count = null): Collection
+    {
+        $reels = $this->liveReels();
+
+        if ($reels === []) {
+            return collect();
+        }
+
+        // Shuffled HERE, not before the cache is written. What is cached is the
+        // account's reel list, so each visitor draws their own handful out of
+        // it; shuffling on the way in would instead fix one order for twenty
+        // minutes and show every visitor in that window the same strip.
+        shuffle($reels);
+
+        return collect(array_slice($reels, 0, $count ?? $this->limit()))
+            ->map(fn (array $item) => $this->asReel($item));
+    }
+
+    /**
+     * The account's reels, linked straight to Instagram's CDN.
+     *
+     * This hot-links where sync() downloads, and the two are not in conflict.
+     * What makes a STORED media_url useless is that its signature expires
+     * within days with nothing to say why; this list is re-signed every time
+     * the cache is refilled, so no link is ever served anywhere near the point
+     * where it stops working. Nothing is kept that outlives its own validity.
+     *
+     * Only the fields the strip renders are kept, because the rest of an item
+     * is a long caption and a timestamp that would sit in the cache unread.
+     *
+     * @return array<int,array{id:string,media_url:string,thumbnail_url:string,permalink:?string}>
+     */
+    private function liveReels(): array
+    {
+        if (! $this->configured()) {
+            return [];
+        }
+
+        $key = self::LIVE_CACHE_PREFIX.substr(sha1((string) $this->token()), 0, 16);
+        $cached = Cache::get($key);
+
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        try {
+            $reels = array_map(fn (array $item) => [
+                'id' => (string) $item['id'],
+                'media_url' => (string) $item['media_url'],
+                'thumbnail_url' => (string) ($item['thumbnail_url'] ?? ''),
+                'permalink' => $item['permalink'] ?? null,
+            ], $this->onlyReels($this->fetchMedia(self::LIVE_POOL, self::LIVE_TIMEOUT)));
+        } catch (\RuntimeException $e) {
+            // Somebody is waiting on this render. Remembering the failure for a
+            // few minutes keeps an Instagram outage from putting an API call,
+            // and its timeout, in front of every single page view.
+            Log::warning('Instagram reels unavailable for the About Us strip', ['error' => $e->getMessage()]);
+            Cache::put($key, [], self::LIVE_FAILURE_TTL);
+
+            return [];
+        }
+
+        Cache::put($key, $reels, self::LIVE_TTL);
+
+        return $reels;
+    }
+
+    /**
+     * One API item as an AboutReel the strip can render. Never saved.
+     *
+     * The strip's markup already speaks AboutReel - ->url and ->poster_url -
+     * and both accessors pass an absolute URL straight through, so a live reel
+     * drops into the same <x-media> as a stored one with nothing in the view to
+     * tell them apart.
+     *
+     * @param  array{id:string,media_url:string,thumbnail_url:string,permalink:?string}  $item
+     */
+    private function asReel(array $item): AboutReel
+    {
+        return AboutReel::make([
+            'video_path' => $item['media_url'],
+            'poster_path' => $item['thumbnail_url'],
+            'permalink' => $item['permalink'],
+            'instagram_media_id' => $item['id'],
+            'position' => 0,
+            'is_active' => true,
+        ]);
     }
 
     /**
@@ -142,7 +328,7 @@ class InstagramReelService
         }
 
         try {
-            $media = $this->fetchMedia();
+            $media = $this->fetchMedia(min(50, $this->limit() * 4));
         } catch (\RuntimeException $e) {
             return ['ok' => false, 'error' => $e->getMessage()] + $empty;
         }
@@ -227,8 +413,17 @@ class InstagramReelService
             return ['ok' => false, 'error' => 'No Instagram access token is saved yet.'];
         }
 
+        // ig_refresh_token is an Instagram-Login endpoint and there is no
+        // Facebook equivalent to fall back to: a Business or system-user token
+        // is reissued in Meta's own settings, not from here. Saying so beats
+        // relaying "Cannot parse access token", which reads like the saved
+        // token is broken when it is working perfectly well.
+        if ($this->usesFacebookLogin((string) $this->token())) {
+            return ['ok' => false, 'error' => 'This is a Facebook-Login token, which is not refreshed from here. System-user tokens are managed in Meta Business settings - reissue it there and paste the new one in above.'];
+        }
+
         try {
-            $response = Http::timeout(20)->get(self::BASE_URL.'/refresh_access_token', [
+            $response = Http::timeout(20)->get(self::IG_LOGIN_BASE.'/refresh_access_token', [
                 'grant_type' => 'ig_refresh_token',
                 'access_token' => $this->token(),
             ]);
@@ -279,20 +474,138 @@ class InstagramReelService
     /**
      * The account's recent media, newest first.
      *
-     * Asks for more than the limit because the feed is mixed: photos and
+     * Callers ask for more than they need because the feed is mixed: photos and
      * carousels come back in the same list and are filtered out afterwards, so
      * asking for exactly N would often yield fewer than N reels.
      *
      * @return array<int,array<string,mixed>>
      */
-    private function fetchMedia(): array
+    private function fetchMedia(int $limit, int $timeout = 30): array
+    {
+        $account = $this->account();
+
+        $response = $this->call($account['base'].'/'.$account['node'].'/media', [
+            'fields' => 'id,media_type,media_product_type,media_url,thumbnail_url,permalink,timestamp',
+            'limit' => $limit,
+            'access_token' => $this->token(),
+        ], $timeout);
+
+        return $response->json('data', []) ?: [];
+    }
+
+    /**
+     * Which API this token speaks, and the node its media hangs off.
+     *
+     * There are two Instagram APIs and a token works against exactly one.
+     *
+     * - "Instagram API with Instagram Login" issues IGAA... tokens that
+     *   graph.instagram.com answers for directly, and there /me IS the creator
+     *   account.
+     * - "Instagram API with Facebook Login" - what Business Manager and system
+     *   users hand out - issues EAA... tokens. graph.instagram.com rejects
+     *   those flatly ("Cannot parse access token"), and /me is no use either:
+     *   it is the Facebook user, while the reels hang off the Instagram account
+     *   linked to one of that user's Pages.
+     *
+     * The prefix is what separates them, and it is dependable - every Facebook
+     * Graph token begins EAA - so the flavour costs no round trip. Only the
+     * Facebook one needs discovering, and that answer is cached: it is two more
+     * calls, and which Page a token can reach does not change hour to hour.
+     *
+     * @return array{base:string,node:string,username:?string}
+     *
+     * @throws \RuntimeException
+     */
+    private function account(): array
+    {
+        $token = $this->token();
+
+        if ($token === null) {
+            throw new \RuntimeException('Add an Instagram access token first.');
+        }
+
+        if (! $this->usesFacebookLogin($token)) {
+            return ['base' => self::IG_LOGIN_BASE, 'node' => 'me', 'username' => null];
+        }
+
+        // Keyed by the token, so pasting a new one resolves against the new
+        // account at once rather than serving the old account's reels for
+        // another twelve hours.
+        $key = self::ACCOUNT_CACHE_PREFIX.substr(sha1($token), 0, 16);
+        $cached = Cache::get($key);
+
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        $account = $this->discoverLinkedAccount($token);
+        Cache::put($key, $account, self::ACCOUNT_TTL);
+
+        return $account;
+    }
+
+    private function usesFacebookLogin(string $token): bool
+    {
+        return str_starts_with($token, 'EAA');
+    }
+
+    /**
+     * The Instagram account behind a Facebook token.
+     *
+     * Two steps, and the second is not the redundant one it looks like: asking
+     * /me/accounts to expand instagram_business_account inline comes back with
+     * the Pages and WITHOUT that field - silently, no error - for a system-user
+     * token, which reads exactly like "no Instagram account is linked here".
+     * Fetching the Page node on its own returns it. So the edge is used only to
+     * list the Pages, and each Page is then asked about itself.
+     *
+     * @return array{base:string,node:string,username:?string}
+     *
+     * @throws \RuntimeException
+     */
+    private function discoverLinkedAccount(string $token): array
+    {
+        $pages = $this->call(self::FB_LOGIN_BASE.'/me/accounts', [
+            'fields' => 'id,name',
+            'limit' => 50,
+            'access_token' => $token,
+        ], 20)->json('data', []) ?: [];
+
+        foreach ($pages as $page) {
+            if (empty($page['id'])) {
+                continue;
+            }
+
+            $linked = $this->call(self::FB_LOGIN_BASE.'/'.$page['id'], [
+                'fields' => 'instagram_business_account{id,username}',
+                'access_token' => $token,
+            ], 20)->json('instagram_business_account');
+
+            if (! empty($linked['id'])) {
+                return [
+                    'base' => self::FB_LOGIN_BASE,
+                    'node' => (string) $linked['id'],
+                    'username' => $linked['username'] ?? null,
+                ];
+            }
+        }
+
+        throw new \RuntimeException($pages === []
+            ? 'This Facebook token cannot see any Pages. It needs the pages_show_list permission, and the Instagram account has to be linked to a Page the token can reach.'
+            : 'No Instagram account is linked to any Page this token can reach. Link the professional Instagram account to the Page in Meta Business settings, then connect again.');
+    }
+
+    /**
+     * One Graph call, with its failures turned into something an admin can act on.
+     *
+     * @param  array<string,mixed>  $query
+     *
+     * @throws \RuntimeException
+     */
+    private function call(string $url, array $query, int $timeout): \Illuminate\Http\Client\Response
     {
         try {
-            $response = Http::timeout(30)->get(self::BASE_URL.'/me/media', [
-                'fields' => 'id,media_type,media_product_type,media_url,thumbnail_url,permalink,timestamp',
-                'limit' => min(50, $this->limit() * 4),
-                'access_token' => $this->token(),
-            ]);
+            $response = Http::timeout($timeout)->get($url, $query);
         } catch (\Throwable $e) {
             throw new \RuntimeException('Could not reach Instagram: '.$e->getMessage());
         }
@@ -301,7 +614,7 @@ class InstagramReelService
             throw new \RuntimeException($this->readableApiError($response));
         }
 
-        return $response->json('data', []) ?: [];
+        return $response;
     }
 
     /**

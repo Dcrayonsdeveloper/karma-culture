@@ -10,12 +10,13 @@ use App\Models\Product;
 use App\Models\Quality;
 use App\Models\Setting;
 use App\Services\InstagramFeedService;
+use App\Services\InstagramReelService;
 use App\Support\ShopFilterCatalogue;
 use Illuminate\View\View;
 
 class HomeController extends Controller
 {
-    public function index(InstagramFeedService $instagramService): View
+    public function index(InstagramFeedService $instagramService, InstagramReelService $reelService): View
     {
         // Featured products
         $featuredProducts = Product::query()
@@ -140,6 +141,16 @@ class HomeController extends Controller
         // Instagram feed posts
         $instagramPosts = $instagramService->getPosts(6);
 
+        // The About Us strip: a fresh random handful of the account's reels,
+        // falling back to the uploaded clips when Instagram has nothing to give.
+        //
+        // Resolved here rather than in the view, which is where the strip used
+        // to query for itself. That was fine while it was one database read;
+        // this one can go out to Instagram, and an HTTP call reached from
+        // inside a Blade template is a page that hangs for reasons nothing in
+        // the controller can explain.
+        $aboutReels = $reelService->stripReels();
+
         return view('home', compact(
             'featuredProducts',
             'newArrivals',
@@ -153,7 +164,8 @@ class HomeController extends Controller
             'flashSale',
             'shopFilters',
             'qualities',
-            'instagramPosts'
+            'instagramPosts',
+            'aboutReels'
         ));
     }
 }

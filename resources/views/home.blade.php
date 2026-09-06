@@ -1666,16 +1666,20 @@
             $aboutLink  = ($aboutSection->button_link ?? null);
             $aboutLink  = ($aboutLink && $aboutLink !== '#') ? $aboutLink : route('about');
             $aboutButton = ($aboutSection->button_text ?? null) ?: 'Our Story';
-            // The reel strip, in the order the admin set (Homepage > About Reels).
+            // The reel strip: a random handful of the account's Instagram reels,
+            // handed down by HomeController.
             //
-            // This was three fixed settings keys - about_us_video_url, _2, _3 -
-            // so the strip could only ever be three clips long and a fourth had
-            // nowhere to go. Rows carry no such limit: one reel or eight, and one
-            // can be taken out of the middle without shuffling files between
-            // slots. The migration that created the table carried the three
-            // configured clips (and the bundled defaults, where a slot had never
-            // been touched) across, so the strip renders as it did before.
-            $aboutReels = \App\Models\AboutReel::active()->ordered()->get();
+            // It used to read the rows here, and before that it was three fixed
+            // settings keys - about_us_video_url, _2, _3 - so the strip could
+            // only ever be three clips long and a fourth had nowhere to go. Now
+            // it is whatever has been posted to Instagram, reshuffled on every
+            // visit, with the uploaded clips kept as the fallback for when no
+            // account is connected. See InstagramReelService::stripReels().
+            //
+            // The ?? is for a render that did not come through the controller -
+            // an error page, a partial rendered in isolation - so the section
+            // degrades to the stored clips instead of throwing on the @if below.
+            $aboutReels = $aboutReels ?? \App\Models\AboutReel::active()->ordered()->get();
         @endphp
         @if($aboutVisible)
         <section class="kk-about">

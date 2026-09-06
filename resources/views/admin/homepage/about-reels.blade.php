@@ -17,11 +17,15 @@
         </a>
     </div>
 
-    {{-- The strip was three fixed slots until now, which is worth saying once
-         here: the count is no longer part of the design. --}}
+    {{-- Worth stating up front, because it changes what everything below this
+         screen is FOR: while Instagram is connected the strip is not a list
+         anybody curates here. It is a random handful of the account's reels,
+         drawn again on every visit. The upload list is the fallback. --}}
     <p style="font-size: 12px; color: #616161; margin: 0 0 1rem 0;">
-        The clip strip in the "Crafted to Last" section on the home page. Add as many as you like, delete the ones you do not want,
-        and set the order with the arrows. Clips play muted and on loop, so they are for showing cloth and cut &mdash; not for sound.
+        The clip strip in the "Crafted to Last" section on the home page. With Instagram connected it shows a random handful of the
+        account's reels, reshuffled on every visit, so it keeps itself current without anybody uploading anything.
+        The clips below are the fallback &mdash; what the strip shows before an account is connected, and what it drops back to if
+        Instagram is unreachable. Clips play muted and on loop, so they are for showing cloth and cut &mdash; not for sound.
         MP4, WebM or MOV, up to 64MB each. Portrait clips suit the strip best; a landscape one is shown whole rather than cropped.
     </p>
 
@@ -50,6 +54,8 @@
                     fetched from a handle alone &mdash; it needs an access token from Instagram itself. The steps are in
                     <code style="font-size: 11px;">doc/instagram-reels.md</code>: switch the account to Professional, create a Meta app,
                     add the "Instagram API with Instagram Login" product, and generate a long-lived token. About ten minutes, once.
+                    A token from Meta Business or a system user works too &mdash; paste it in the same box, and the linked
+                    Instagram account is found through the Facebook Page it belongs to.
                 </p>
             @endunless
 
@@ -67,10 +73,11 @@
                         @if($ig['token_expires_at'])
                             Expires {{ $ig['token_expires_at']->format('M d, Y') }}
                             ({{ $ig['token_expires_at']->isPast() ? 'already expired - paste a new one' : $ig['token_expires_at']->diffForHumans() }}).
-                            Instagram tokens last 60 days; refresh before then and it never has to be reissued.
+                            An Instagram-Login token lasts 60 days and "Refresh token" below buys another 60, so it need never be reissued.
                         @else
-                            Instagram tokens last 60 days and can be refreshed from here before they run out.
+                            An Instagram-Login token lasts 60 days and can be refreshed from here before it runs out.
                         @endif
+                        A Meta Business or system-user token is reissued in Meta's own settings instead, not from here.
                     </p>
                 </div>
 
@@ -79,7 +86,8 @@
                     <input type="number" name="reel_limit" id="ig-limit" min="1" max="20" value="{{ old('reel_limit', $ig['limit']) }}"
                            class="form-input" style="max-width: 8rem;">
                     <p style="font-size: 11px; color: #616161; margin-top: 0.25rem;">
-                        The most recent reels from the account. Photos, carousels and stories are ignored &mdash; only reels.
+                        How many tiles the strip holds. They are picked at random from the account's recent reels, so a visitor
+                        rarely sees the same strip twice. Photos, carousels and stories are ignored &mdash; only reels.
                     </p>
                 </div>
 
@@ -101,22 +109,28 @@
                     </form>
 
                     <form action="{{ route('admin.homepage.about-reels.instagram.disconnect') }}" method="POST"
-                          onsubmit="return confirm('Disconnect Instagram? The synced reels will be removed from the strip. Clips you uploaded yourself are kept.')">
+                          onsubmit="return confirm('Disconnect Instagram? The home page strip stops showing reels from the account and falls back to the clips uploaded below. The copies synced onto this server are deleted; clips you uploaded yourself are kept.')">
                         @csrf @method('DELETE')
                         <button type="submit" class="btn btn-danger btn-sm" style="font-size: 12px;">Disconnect</button>
                     </form>
 
                     <span style="font-size: 11px; color: #616161;">
-                        {{ $ig['synced_count'] }} reel(s) from Instagram &middot;
+                        Strip is live from Instagram &middot;
+                        {{ $ig['synced_count'] }} reel(s) copied here as a fallback &middot;
                         {{ $ig['last_synced_at'] ? 'last synced '.$ig['last_synced_at']->diffForHumans() : 'never synced' }}
                     </span>
                 </div>
 
-                {{-- Said plainly because it is the difference between the strip
-                     staying current and quietly going stale: nothing on this
-                     server runs on a timer. --}}
+                {{-- The old note here said new reels never appear on their own,
+                     which was true while the strip was rows on this server and
+                     nothing ran on a timer. The live strip is the opposite, and
+                     leaving that note up would have admins pressing Sync for an
+                     effect it no longer has. --}}
                 <p style="font-size: 11px; color: #999; margin: 0.75rem 0 0 0;">
-                    Syncing happens when you press the button. This server runs no scheduler, so new reels do not appear on their own.
+                    The strip picks up new reels on its own, within about twenty minutes of posting.
+                    "Sync reels now" is a separate job: it copies the reels onto this server so the section still has something to
+                    show if Instagram goes down. It also refreshes the live strip straight away, which is the quick way to see a
+                    brand-new reel without waiting.
                 </p>
             @endif
         </div>

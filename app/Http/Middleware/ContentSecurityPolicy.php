@@ -38,6 +38,21 @@ class ContentSecurityPolicy
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.bunny.net https://connect.facebook.net",
             "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
             "img-src 'self' data: blob: https:",
+            // The About Us strip plays Instagram's own reels, linked straight
+            // to their CDN rather than copied here, because the link is signed
+            // and re-signed rather than stored - see InstagramReelService.
+            //
+            // There is no media-src here at all today, so <video> falls through
+            // to default-src 'self' and every one of those clips is blocked.
+            // That costs nothing yet only because this middleware is not
+            // registered; whoever turns it on would find the strip blank with
+            // nothing but a console entry to say why.
+            //
+            // The wildcards are not laziness: the host is a per-POP name picked
+            // at request time (instagram.fdel77-1.fna.fbcdn.net today, some
+            // other POP tomorrow) and the video URL redirects to a second host
+            // again, so no fixed list of origins would hold.
+            "media-src 'self' blob: data: https://*.fbcdn.net https://*.cdninstagram.com",
             "font-src 'self' https://fonts.bunny.net",
             "connect-src 'self' https://www.facebook.com",
             "frame-ancestors 'none'",
