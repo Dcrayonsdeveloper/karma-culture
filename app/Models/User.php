@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Notifications\ResetPasswordNotification;
+use App\Support\NameCase;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -75,7 +77,50 @@ class User extends Authenticatable implements MustVerifyEmail
         $this->notify(new ResetPasswordNotification($token));
     }
 
+    /**
+     * Names are stored folded to lower case and shown with the capitals put
+     * back - see {@see NameCase} for which characters earn a capital after them
+     * and what the trade costs.
+     *
+     * Both halves live on the model rather than in the controllers because
+     * there are six doors into this column - the signup form, the API's
+     * register endpoint, the customer's own profile page, Admin > Customers,
+     * Admin > Staff and the `admin:credentials` command - and a rule enforced
+     * at five of them is not a rule. Anything that writes through Eloquent gets
+     * it; a raw DB::table() update would not, and there are none.
+     *
+     * A mass-assigned create() runs the mutator, so User::create(['first_name'
+     * => 'Priyanshu']) stores "priyanshu" and reads back "Priyanshu". Query
+     * builders do NOT run either half, which is why the admin search filters
+     * still work: MySQL's utf8mb4_unicode_ci compares case-insensitively, so
+     * `where('first_name', 'like', '%Priya%')` finds the lower-cased row.
+     */
+    protected function firstName(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value): ?string => NameCase::display($value),
+            set: fn (?string $value): ?string => NameCase::store($value),
+        );
+    }
+
+    protected function lastName(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value): ?string => NameCase::display($value),
+            set: fn (?string $value): ?string => NameCase::store($value),
+        );
+    }
+
     // Accessors
+
+    /**
+     * Reads through the two accessors above, so it is already display-cased.
+     *
+     * Still not trimmed, deliberately: an account with no last name has always
+     * produced a trailing space here, and Review::authorName() and
+     * AbandonedCart both test filled(trim(...)) against exactly that. Trimming
+     * it here would be a second change riding along with this one.
+     */
     public function getFullNameAttribute(): string
     {
         return "{$this->first_name} {$this->last_name}";

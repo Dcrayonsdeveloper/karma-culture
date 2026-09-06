@@ -38,10 +38,15 @@ class RegistrationTest extends TestCase
         ]);
 
         $response->assertRedirect(route('login'));
+
+        // Lower case in the column, capitals on the screen - see NameCase and
+        // the round trip covered in NameCasingTest. Spelled out here because
+        // the connection collation is case-insensitive and would have matched
+        // 'Test' against 'test' without ever saying which one was stored.
         $this->assertDatabaseHas('users', [
             'email' => 'test@example.com',
-            'first_name' => 'Test',
-            'last_name' => 'User',
+            'first_name' => 'test',
+            'last_name' => 'user',
         ]);
 
         // The address was proved before the row existed, so the account starts
