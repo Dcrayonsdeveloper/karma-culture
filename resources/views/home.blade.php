@@ -112,12 +112,28 @@
                artwork at that size fills the box with nothing cropped at all;
                anything else is centre-cropped to it - see .kk-hero-media in the
                hero's own stylesheet further down the page. */
+            /* The three states below were briefly written into app.css as the
+               literals 16/9 and 3/4. Those are the right shapes - they are what
+               Banner's constants reduce to - but hardcoding them cut the link
+               between the size the admin screen tells people to upload and the
+               box the storefront actually draws, so changing one would silently
+               stop matching the other. Same three states, numbers back off the
+               constants.
+
+               A phone keeps the DESKTOP ratio unless the banner carries its own
+               mobile artwork: a desktop-only banner squeezed into the portrait
+               box lost its sides to the crop, and it had nothing else to show
+               there. Only a banner with a phone file gets the phone shape. */
             .kk-hero-slide {
-                position: relative; width: 100%; overflow: hidden;
                 aspect-ratio: {{ \App\Models\Banner::HERO_DESKTOP_SIZE[0] }} / {{ \App\Models\Banner::HERO_DESKTOP_SIZE[1] }};
             }
             @media (max-width: 767px) {
-                .kk-hero-slide { aspect-ratio: {{ \App\Models\Banner::HERO_MOBILE_SIZE[0] }} / {{ \App\Models\Banner::HERO_MOBILE_SIZE[1] }}; }
+                .kk-hero-slide {
+                    aspect-ratio: {{ \App\Models\Banner::HERO_DESKTOP_SIZE[0] }} / {{ \App\Models\Banner::HERO_DESKTOP_SIZE[1] }};
+                }
+                .kk-hero-slide.has-mobile-media {
+                    aspect-ratio: {{ \App\Models\Banner::HERO_MOBILE_SIZE[0] }} / {{ \App\Models\Banner::HERO_MOBILE_SIZE[1] }};
+                }
             }
 
             /* Tile cards (Category / Aesthetics / Occasions) */
@@ -134,10 +150,10 @@
             /* Above the media, which the frame lifts to z-index 1. */
             .kk-tile-overlay { position: absolute; inset: 0; z-index: 2; background: linear-gradient(to top, rgba(45,24,16,.72) 0%, rgba(45,24,16,.15) 45%, transparent 70%); }
             .kk-tile-label { position: absolute; left: 0; right: 0; bottom: 18px; z-index: 2; text-align: center; }
-            .kk-tile-label .pill { display: inline-block; background: var(--kk-brown-dark); color: var(--kk-cream); padding: 8px 22px; border-radius: 999px; font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase; font-weight: 600; }
-            .kk-tile-label .kk-tile-pill-lg { padding: 12px 36px; font-size: 13px; letter-spacing: 0.32em; }
+            .kk-tile-label .pill { display: inline-block; background: var(--kk-brown-dark); color: var(--kk-cream); padding: 6px 18px; border-radius: 999px; font-size: 9px; letter-spacing: 0.28em; text-transform: uppercase; font-weight: 600; }
+            .kk-tile-label .kk-tile-pill-lg { padding: 10px 29px; font-size: 10px; letter-spacing: 0.32em; }
             .kk-tile-banner { aspect-ratio: 16/9; }
-            .kk-tile-gender { aspect-ratio: 3/4; }
+            .kk-tile-gender { aspect-ratio: 4/5; }
             @media (min-width: 768px) { .kk-tile-gender { aspect-ratio: 4/5; } }
 
             /* ===== Category grid - uniform equal-size cards (Men's) ===== */
@@ -156,7 +172,12 @@
             .kk-catgrid .kk-tile {
                 flex: 0 0 calc((100% - 3 * 18px) / 4); /* 4 cards per view on desktop */
                 scroll-snap-align: start;
-                aspect-ratio: 4 / 5;
+                /* 2:3 portrait, which is the shape a garment photograph arrives
+                   in. Scoped to the category rails on purpose: .kk-tile is also
+                   the banner and gender tiles, and those keep their own ratios.
+                   The picture is contained inside this box by .kk-media, never
+                   cropped or stretched to fill it - see kk-media__fill. */
+                aspect-ratio: 2 / 3;
                 border-radius: 12px;
                 box-shadow: 0 2px 8px rgba(45, 24, 16, 0.08);
                 transition: transform .35s cubic-bezier(.2,.7,.2,1), box-shadow .35s ease;
@@ -709,6 +730,34 @@
             .kk-newsletter-form button { background: var(--kk-brown-dark); color: var(--kk-cream); padding: 10px 24px; border-radius: 999px; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 700; border: none; cursor: pointer; }
             .kk-newsletter-form button:hover { background: var(--kk-brown); }
 
+            /* Instagram Feed - Jikra style horizontal scroll */
+            .kk-instagram { padding: 48px 0; background: #faf9f7; }
+            .kk-instagram__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; padding: 0 16px; }
+            .kk-instagram__title { display: flex; align-items: center; gap: 12px; }
+            .kk-instagram__title svg { width: 32px; height: 32px; color: #E1306C; }
+            .kk-instagram__title h2 { font-family: var(--kk-display); font-size: 20px; color: var(--kk-text); margin: 0; }
+            .kk-instagram__title span { font-size: 14px; color: var(--kk-text-muted); font-weight: 500; }
+            .kk-instagram__viewall { font-size: 13px; color: var(--kk-text); text-decoration: none; display: flex; align-items: center; gap: 4px; }
+            .kk-instagram__viewall:hover { color: #E1306C; }
+            .kk-instagram__viewall svg { width: 16px; height: 16px; }
+            .kk-instagram__scroll { display: flex; gap: 12px; overflow-x: auto; padding: 0 16px 16px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+            .kk-instagram__scroll::-webkit-scrollbar { display: none; }
+            .kk-instagram__item { position: relative; flex-shrink: 0; width: 180px; aspect-ratio: 9/16; overflow: hidden; border-radius: 12px; background: var(--kk-cream-light); scroll-snap-align: start; }
+            .kk-instagram__item img,
+            .kk-instagram__item video { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.4s ease; }
+            .kk-instagram__item:hover img,
+            .kk-instagram__item:hover video { transform: scale(1.05); }
+            .kk-instagram__play { position: absolute; bottom: 12px; left: 12px; width: 36px; height: 36px; background: rgba(255,255,255,0.95); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+            .kk-instagram__play svg { width: 14px; height: 14px; color: #1f1109; margin-left: 2px; }
+            .kk-instagram__caption { position: absolute; bottom: 0; left: 0; right: 0; padding: 40px 12px 12px; background: linear-gradient(to top, rgba(0,0,0,0.7), transparent); color: #fff; font-size: 11px; line-height: 1.4; }
+            .kk-instagram__follow { display: inline-flex; align-items: center; gap: 8px; margin: 24px auto 0; padding: 12px 28px; background: linear-gradient(135deg, #833AB4, #E1306C, #F77737); color: #fff; border-radius: 999px; font-size: 13px; font-weight: 600; text-decoration: none; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+            .kk-instagram__follow:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(225,48,108,0.35); }
+            .kk-instagram__follow svg { width: 18px; height: 18px; }
+            @media (max-width: 768px) {
+                .kk-instagram__item { width: 150px; }
+                .kk-instagram__header h2 { font-size: 18px; }
+            }
+
             /* Section header (title + view all) shared */
             .kk-section-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 28px; gap: 16px; }
             .kk-section-header .left { display: flex; flex-direction: column; gap: 6px; }
@@ -935,7 +984,7 @@
                             // is a painted rectangle.
                             $kkHasCaption = $banner->title || $banner->subtitle || ($banner->button_text && $banner->link);
                         @endphp
-                        <div class="kk-hero-slide"
+                        <div class="kk-hero-slide{{ $banner->has_mobile_media ? ' has-mobile-media' : '' }}"
                              @if($heroCount > 1)
                                  x-show="current === {{ $i }}"
                                  x-transition:enter="kk-fade-enter" x-transition:enter-start="kk-fade-start"
@@ -976,7 +1025,7 @@
                                     @if($kkDesktop['kind'] === 'video')
                                         <video src="{{ $kkDesktop['src'] }}"
                                                @if($kkDesktop['poster']) poster="{{ $kkDesktop['poster'] }}" @endif
-                                               autoplay muted loop playsinline preload="{{ $i === 0 ? 'auto' : 'metadata' }}"
+                                               autoplay muted loop playsinline preload="metadata"
                                                aria-label="{{ $kkAlt ?: $heroName }} hero video"></video>
                                     @else
                                         <picture>
@@ -1022,7 +1071,7 @@
                                         @if($frame['kind'] === 'video')
                                             <video data-kk-for="{{ $frame['device'] }}" data-kk-src="{{ $frame['src'] }}"
                                                    @if($frame['poster']) data-kk-poster="{{ $frame['poster'] }}" @endif
-                                                   autoplay muted loop playsinline preload="{{ $i === 0 ? 'auto' : 'metadata' }}"
+                                                   autoplay muted loop playsinline preload="metadata"
                                                    aria-label="{{ $kkAlt ?: $heroName }} hero video"></video>
                                         @else
                                             <img data-kk-for="{{ $frame['device'] }}" data-kk-src="{{ $frame['src'] }}"
@@ -1343,6 +1392,15 @@
 
             $mensTints   = ['#7a6347', '#5a4a3c', '#3a2a1f', '#8a6f52'];
             $womensTints = ['#947254', '#7a6347', '#6e5238', '#5a4a3c', '#8a6f52', '#3a2a1f', '#4a3320'];
+
+            // Every tile on both rails resolved in one go - two queries for the
+            // lot, rather than a lookup per card. A category the resolver has
+            // nothing for is simply missing from the map, which is the signal
+            // to fall back to its own artwork. See CategoryCardImage for the
+            // order of preference.
+            $kkCatImages = \App\Support\CategoryCardImage::forCategories(
+                $mensKids->concat($womensKids)
+            );
         @endphp
 
         @if($mensKids->count())
@@ -1364,10 +1422,17 @@
                         <a href="{{ route('category.show', $child) }}" class="kk-tile kk-media">
                             {{-- Media well: the subject is contained so a poster or a wide
                                  shot keeps its edges, and the blurred copy behind it fills
-                                 the 4/5 tile. A file that 404s no longer leaves a flat
+                                 the 2/3 tile. A file that 404s no longer leaves a flat
                                  rectangle with the name pill floating over nothing - the
                                  runtime marks the frame .is-broken and it gets the same
                                  designed wash as a subcategory with no picture at all. --}}
+                            @php
+                                // The best product's own photograph, or the category's
+                                // uploaded artwork where the catalogue offers nothing.
+                                // Neither one falls through to the wash below.
+                                $tileImage = ($kkCatImages[$child->id] ?? null)?->display_url
+                                    ?: ($child->image_url ? asset_v('storage/'.$child->image_url) : null);
+                            @endphp
                             @if($child->video_url)
                                 @php $tileVideo = str_starts_with($child->video_url, 'http') ? $child->video_url : asset_v($child->video_url); @endphp
                                 {{-- No blurred copy behind a tile video: these rails run up
@@ -1376,8 +1441,10 @@
                                      point clips stop painting - the blank tile this frame
                                      exists to prevent. The dark frame carries the margin. --}}
                                 <video src="{{ $tileVideo }}" autoplay muted loop playsinline preload="metadata"></video>
-                            @elseif($child->image_url)
-                                @php $tileImage = asset_v('storage/' . $child->image_url); @endphp
+                            @elseif($tileImage)
+                                {{-- Chosen fresh on every render, so promoting a
+                                     different product changes the tile without anyone
+                                     editing the homepage. --}}
                                 <img class="kk-media__fill" src="{{ $tileImage }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
                                 <img src="{{ $tileImage }}" alt="{{ $child->name }}" loading="lazy">
                             @else
@@ -1421,8 +1488,10 @@
                                      point clips stop painting - the blank tile this frame
                                      exists to prevent. The dark frame carries the margin. --}}
                                 <video src="{{ $tileVideo }}" autoplay muted loop playsinline preload="metadata"></video>
-                            @elseif($child->image_url)
-                                @php $tileImage = asset_v('storage/' . $child->image_url); @endphp
+                            @elseif($tileImage)
+                                {{-- Chosen fresh on every render, so promoting a
+                                     different product changes the tile without anyone
+                                     editing the homepage. --}}
                                 <img class="kk-media__fill" src="{{ $tileImage }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
                                 <img src="{{ $tileImage }}" alt="{{ $child->name }}" loading="lazy">
                             @else
@@ -1877,6 +1946,92 @@
                     @endif
                 </div>
                 @endif
+            </div>
+        </section>
+        @endif
+
+        {{-- ============================================
+             INSTAGRAM FEED
+             Shows recent posts from the Karmaa Kulture Instagram account.
+             Only renders if posts are available (token configured and API returns data).
+             Styled like Jikra - horizontal scroll with portrait 9:16 cards.
+             ============================================ --}}
+        @if(!empty($instagramPosts))
+        @php
+            // The account these posts actually came from, so both links in this
+            // section name it. They were two separate hardcoded handles before,
+            // which would have gone on pointing at a fixed account after the
+            // credentials were changed - silently, and only on the two links a
+            // shopper is most likely to click. The literal is the fallback for
+            // an install with no feed configured.
+            $kkIgHandle = $instagramHandle ?? 'karmaakulture';
+        @endphp
+        <section class="kk-instagram">
+            <div class="container mx-auto">
+                <div class="kk-instagram__header">
+                    <div class="kk-instagram__title">
+                        {{-- Instagram gradient icon --}}
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <defs>
+                                <linearGradient id="ig-gradient" x1="0%" y1="100%" x2="100%" y2="0%">
+                                    <stop offset="0%" style="stop-color:#FFDC80"/>
+                                    <stop offset="25%" style="stop-color:#F77737"/>
+                                    <stop offset="50%" style="stop-color:#E1306C"/>
+                                    <stop offset="75%" style="stop-color:#C13584"/>
+                                    <stop offset="100%" style="stop-color:#833AB4"/>
+                                </linearGradient>
+                            </defs>
+                            <rect x="2" y="2" width="20" height="20" rx="5" stroke="url(#ig-gradient)" stroke-width="2" fill="none"/>
+                            <circle cx="12" cy="12" r="4" stroke="url(#ig-gradient)" stroke-width="2" fill="none"/>
+                            <circle cx="17.5" cy="6.5" r="1.5" fill="url(#ig-gradient)"/>
+                        </svg>
+                        <div>
+                            <h2>Follow Us on Instagram</h2>
+                            <span>@karmaakulture</span>
+                        </div>
+                    </div>
+                    <a href="https://instagram.com/{{ $kkIgHandle }}" target="_blank" rel="noopener noreferrer" class="kk-instagram__viewall">
+                        View All
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </a>
+                </div>
+                <div class="kk-instagram__scroll">
+                    @foreach($instagramPosts as $post)
+                    <a href="{{ $post['link'] }}" target="_blank" rel="noopener noreferrer" class="kk-instagram__item">
+                        @if(!empty($post['is_video']) && !empty($post['video']))
+                            {{-- A Reel plays here rather than being a still with a
+                                 play badge painted over it. Muted and inline so a
+                                 phone will autoplay it at all; the poster is the
+                                 post's own thumbnail, so the frame is never blank
+                                 while the clip loads. preload="none" keeps six
+                                 videos off the page's initial weight. --}}
+                            <video src="{{ $post['video'] }}"
+                                   @if($post['image']) poster="{{ $post['image'] }}" @endif
+                                   autoplay muted loop playsinline preload="none"
+                                   aria-label="{{ Str::limit($post['caption'], 50) ?: 'Instagram video' }}"></video>
+                        @else
+                            <img src="{{ $post['image'] }}" alt="{{ Str::limit($post['caption'], 50) ?: 'Instagram post' }}" loading="lazy">
+                        @endif
+                        {{-- Only on posts that are actually video. It used to sit on
+                             every tile "for video feel", which promised a clip on
+                             stills that had none. --}}
+                        @if(!empty($post['is_video']))
+                        <span class="kk-instagram__play">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                        </span>
+                        @endif
+                        @if($post['caption'])
+                        <span class="kk-instagram__caption">{{ Str::limit($post['caption'], 60) }}</span>
+                        @endif
+                    </a>
+                    @endforeach
+                </div>
+                <div style="text-align: center;">
+                    <a href="https://instagram.com/{{ $kkIgHandle }}" target="_blank" rel="noopener noreferrer" class="kk-instagram__follow">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                        Follow {{ '@'.$kkIgHandle }}
+                    </a>
+                </div>
             </div>
         </section>
         @endif
