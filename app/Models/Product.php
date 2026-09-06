@@ -17,6 +17,27 @@ class Product extends Model
 {
     use HasSlug, Searchable, SoftDeletes, TracksWarehouseStock;
 
+    /**
+     * The shape every product photo is drawn at, as [width, height] in pixels.
+     *
+     * 3:4 portrait, because clothing is photographed upright and a listing grid
+     * reads as a row only when every tile is the same shape. The storefront
+     * fills that box and crops what will not fit - a listing card, a home rail,
+     * the wishlist and the product page's own gallery all do - so this is not
+     * merely a suggestion: anything uploaded at other proportions loses its
+     * edges. A 3:2 landscape flat-lay gives up 44% of its width.
+     *
+     * The admin upload screens print it for exactly that reason, the way
+     * Banner::HERO_DESKTOP_SIZE is printed on the banner screens: the advice
+     * and the layout are the same fact, so they must come from the same place
+     * and cannot drift apart.
+     *
+     * Nothing is lost for good even when a photo is cropped - the product
+     * page's zoom is object-fit: contain, so the whole file is always one
+     * click away.
+     */
+    const IMAGE_SIZE = [1200, 1600];
+
     protected $fillable = [
         'uuid',
         'seller_id',
@@ -174,7 +195,13 @@ class Product extends Model
      */
     public function categories(): BelongsToMany
     {
-        return $this->belongsToMany(Category::class, 'category_product');
+        // withSystem: this is the membership pivot, and a product ticked into
+        // "Bestsellers" is stored here exactly like one shelved under "Kurtas".
+        // Leaving the global scope on would hide those rows from sync(), which
+        // then never detaches them - unticking a system row would silently do
+        // nothing.
+        return $this->belongsToMany(Category::class, 'category_product')
+            ->withoutGlobalScope('kk_real_categories');
     }
 
     /**
@@ -186,7 +213,12 @@ class Product extends Model
      */
     public function collections(): BelongsToMany
     {
-        return $this->belongsToMany(ProductCollection::class, 'collection_product', 'product_id', 'collection_id');
+        // Kept as a name for "the built-in listings this product was ticked
+        // into" now that collections are rows in `categories`. Same pivot as
+        // categories(), narrowed to the system rows.
+        return $this->belongsToMany(Category::class, 'category_product')
+            ->withoutGlobalScope('kk_real_categories')
+            ->where('categories.is_system', true);
     }
 
     /**

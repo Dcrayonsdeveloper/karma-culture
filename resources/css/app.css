@@ -428,18 +428,20 @@ body:not(.layout-admin) a.text-white {
 }
 .kk-product__media {
     position: relative;
-    aspect-ratio: 4/5;
+    aspect-ratio: 3/4;
     overflow: hidden;
     background: var(--kk-cream-dark);
 }
-/* The subject is contained so an off-ratio upload is shown whole instead of
-   having its edges cropped away; the blurred .kk-media__fill copy behind it
-   fills what contain leaves over, so it keeps its own cover + over-scale and
-   is excluded here. The :not() also lifts this above the older
-   object-fit: cover copy of the rule still inlined in home.blade.php. */
+/* CURRENTLY UNUSED. Nothing renders `class="kk-product"` any more: the only
+   markup that did is partials/kk-product-card.blade.php, which no view includes
+   and no controller supplies through $filterPanel['card']. Every live tile is
+   <x-product-card> instead. Kept, not deleted, because it is a complete card
+   skeleton somebody may revive - but moved to 3:4 with its twin in
+   home.blade.php so a revival does not bring back the old square.
+   If you are chasing a tile that will not change shape, it is not this rule. */
 .kk-product__media img:not(.kk-media__fill) {
     width: 100%; height: 100%;
-    object-fit: contain;
+    object-fit: cover;
     display: block;
     transition: transform .5s;
 }
@@ -483,15 +485,73 @@ body:not(.layout-admin) a.text-white {
    Quick add — the round cart button on a product card, and the popup
    it opens.
 
-   The button is deliberately icon-only and circular: it sits directly
-   above the full-width "View Product" bar, and a second lettered bar
-   there read as two competing primary actions rather than one CTA with
-   a shortcut beside it.
+   The button is deliberately icon-only and circular: it shares a line
+   with the "View Product" bar, and a second lettered bar there read as
+   two competing primary actions rather than one CTA with a shortcut
+   beside it.
    =================================================================== */
 .kk-quickadd-row {
     display: flex;
     justify-content: flex-end;
     margin-bottom: 8px;
+}
+
+/* The card's action strip: the CTA and the add-to-cart shortcut on one
+   line, rather than the shortcut stacked above the bar.
+
+   The CTA takes the room that is left and the button squares itself off
+   against whatever height the bar ends up - `aspect-ratio` with a
+   stretched height, so it stays a circle if the bar's padding or font
+   size ever changes rather than turning into an oval that has to be
+   re-measured by hand.
+
+   The width/height overrides need the two-class selector to beat
+   `.kk-quickadd`'s own 40px, which still applies anywhere the button is
+   used outside this strip. */
+.kk-card-actions {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+}
+.kk-card-actions__cta {
+    flex: 1 1 auto;
+    /* Without this the anchor refuses to shrink below its text and pushes
+       the button off the card on a two-column phone grid. */
+    min-width: 0;
+    white-space: nowrap;
+}
+.kk-card-actions .kk-quickadd-row {
+    flex: 0 0 auto;
+    margin-bottom: 0;
+}
+.kk-card-actions .kk-quickadd {
+    width: auto;
+    height: auto;
+    align-self: stretch;
+    aspect-ratio: 1 / 1;
+}
+
+/* Two cards to a row on a 360px phone leaves the CTA 78px, and "View
+   Product" at 12px semibold needs about 85 - so the label was being
+   clipped by its own box. Measured, not guessed: at 390px it fits with
+   room to spare, and only the narrowest common phones need this.
+
+   The label keeps its words. Shrinking the shortcut and the gap hands
+   the bar 14px back and dropping to 11px costs the text about 7, which
+   clears it - and that is better than truncating "View Product" to
+   "View", which reads like a different action. */
+@media (max-width: 380px) {
+    .kk-card-actions { gap: 6px; }
+    .kk-card-actions__cta { font-size: 11px; letter-spacing: -0.01em; }
+    /* Both axes and no stretch: width alone, against a height still
+       filling the 42px bar, would have made an oval. */
+    .kk-card-actions .kk-quickadd {
+        aspect-ratio: auto;
+        align-self: center;
+        width: 34px;
+        height: 34px;
+    }
+    .kk-card-actions .kk-quickadd svg { width: 16px; height: 16px; }
 }
 .kk-quickadd {
     width: 32px; height: 32px;
@@ -2201,6 +2261,11 @@ body.kk-modal-open main {
 .kk-media.is-broken .kk-media__fill { display: none; }
 .kk-media.is-broken > img,
 .kk-media.is-broken > video { display: none; }
+/* An <img> offered through <picture> is a grandchild, so the rule above cannot
+   see it and a 404'd banner painted the browser's own broken-image glyph on top
+   of the designed missing-media surface. Hiding the wrapper hides the image
+   whatever the sources resolved to. */
+.kk-media.is-broken > picture { display: none; }
 
 /* Fallback mark shown in place of media that failed to load. */
 .kk-media__fallback {
@@ -2247,6 +2312,42 @@ body.kk-modal-open main {
 @media (prefers-reduced-motion: reduce) {
     .kk-media--zoom > .kk-media__fill { transform: scale(1.2) !important; }
 }
+
+/* Opt-in crop, for frames whose SHAPE is the point.
+   --------------------------------------------------------------------------
+   The default above contains the subject, which is right for media that
+   arrives in whatever shape a supplier sent. A product listing is the other
+   case: the grid is read as a column of matching portraits, and a contained
+   shot gives every tile a different size of blurred margin, so the row stops
+   looking like a row. These frames fill the box and crop the excess.
+
+   Cropping here loses nothing permanently - the product page's zoom is
+   `object-fit: contain` (products/show.blade.php), so the whole photo is one
+   click away from every cropped frame on the site.
+
+   Deliberately NOT applied to the assistant's product tiles (chat/index and
+   components/chatbot-widget): the bot recommends whatever the catalogue holds,
+   including size charts and flat-lays, and a 3:4 crop of those cuts the product
+   out of its own tile. Those frames keep contain and their blurred backdrop.
+   So "every product tile" below means every tile in a LISTING, not literally
+   every product image on the site.
+
+   Specificity, the same trap the hero records at home.blade.php:1165 - the
+   rule this overrides is (0,2,1), so a plain `.kk-media--cover > img` at
+   (0,1,1) would lose outright and silently do nothing. Repeating .kk-media
+   brings this to (0,3,1), so it wins on specificity rather than on document
+   order - which matters because home.blade.php and products/show.blade.php
+   both carry inline <style> blocks that render AFTER this file. */
+.kk-media.kk-media--cover > img:not(.kk-media__fill),
+.kk-media.kk-media--cover > video:not(.kk-media__fill) {
+    object-fit: cover;
+}
+
+/* The component renders no .kk-media__fill inside a covered frame, so there is
+   normally nothing to hide. This is for the hand-written frames that still
+   carry one: an opaque subject covers it completely, so painting it only costs
+   a second full-size decode of the same file. */
+.kk-media--cover > .kk-media__fill { display: none; }
 
 /* Small wells (line-item thumbs, search suggestions, avatars-sized frames).
    A 24px blur across a 64px box averages the whole picture to one flat colour,
@@ -2797,12 +2898,19 @@ html.kk-sel-locked body {
     position: relative;
     width: 100%;
     overflow: hidden;
-    /* aspect-ratio is deliberately not set here. All three states - desktop,
-       phone, and phone-with-its-own-artwork - are written in home.blade.php,
-       where they can be read off Banner::HERO_DESKTOP_SIZE and
-       HERO_MOBILE_SIZE. Those constants are also what the admin upload screen
-       recommends, and a shape hardcoded here could drift away from it without
-       anything noticing. */
+    aspect-ratio: 16 / 9;
+}
+
+/* Mobile: Keep 16:9 by default (same desktop banner scales down) */
+@media (max-width: 767px) {
+    .kk-hero-slide {
+        aspect-ratio: 16 / 9;
+    }
+    
+    /* When banner has mobile-specific media, use 3:4 portrait */
+    .kk-hero-slide.has-mobile-media {
+        aspect-ratio: 3 / 4;
+    }
 }
 
 /* Hero media container - fills the slide */

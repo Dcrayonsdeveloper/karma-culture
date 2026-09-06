@@ -12,13 +12,13 @@
 @endphp
 
 <div class="kk-product">
-    {{-- The media well shows the upload whole (contain) over a blurred copy of
-         itself, so a portrait or square photo is not cropped to the 4:5 tile.
-         The placeholder is wired through data-fallback rather than onerror so
-         a URL that 404s lands on it once and then degrades to .is-broken
-         instead of leaving an empty tile. --}}
+    {{-- 3:4 portrait, filled and cropped, the same frame the listing grid draws
+         so a home-page card and a shop card are the same card. The placeholder
+         is wired through data-fallback rather than onerror so a URL that 404s
+         lands on it once and then degrades to .is-broken instead of leaving an
+         empty tile. --}}
     <a href="{{ route('product.show', $product) }}" class="kk-product__media block">
-        <x-media :src="$img" :alt="$product->name" :fallback="$placeholder" class="h-full">
+        <x-media :src="$img" :alt="$product->name" :fallback="$placeholder" cover class="h-full">
             @if($tag)<span class="kk-product__tag">{{ Str::upper($tag) }}</span>@endif
             @if($hasDiscount && $discount > 0)
                 <span class="kk-product__discount">{{ $discount }}% OFF</span>

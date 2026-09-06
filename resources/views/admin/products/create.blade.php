@@ -56,11 +56,12 @@
 
                         <!-- Main image upload -->
                         <div class="flex items-start gap-4 mb-4">
-                            {{-- Contained: a cropped preview shows the admin something other
-                                 than the file they picked, which is how off-ratio shots got
-                                 published without anyone noticing their edges were gone. --}}
-                            <div x-show="mainPreview" x-transition class="kk-media relative w-28 h-28 rounded-lg overflow-hidden shrink-0" style="border: 2px solid #005bd3;">
-                                <img class="kk-media__fill" :src="mainPreview" alt="" aria-hidden="true">
+                            {{-- The preview crops, because the storefront crops. Showing the
+                                 whole file in a square well was the friendlier picture and the
+                                 wrong one: it told the admin their off-ratio shot was fine and
+                                 the shop then cut its edges off, which is not discoverable from
+                                 this screen at all. Same 3:4 box, same cover. --}}
+                            <div x-show="mainPreview" x-transition class="kk-media kk-media--cover relative w-28 aspect-[3/4] rounded-lg overflow-hidden shrink-0" style="border: 2px solid #005bd3;">
                                 <img :src="mainPreview" alt="Main image preview">
                                 <button type="button" @click="removeMainImage()"
                                         class="absolute top-1 right-1 z-10 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-sm">
@@ -101,6 +102,10 @@
                                    x-ref="galleryInput" style="display: none;" @change="handleGalleryFiles($event.target.files)">
                             <p class="text-xs font-medium" style="color: #005bd3;">Add gallery images</p>
                             <p class="text-[11px]" style="color: #616161;">Up to 10 images, 2MB each</p>
+                            {{-- Printed from the constant the storefront lays out with, so
+                                 the advice and the crop cannot drift apart. --}}
+                            @php $kkImgSize = \App\Models\Product::IMAGE_SIZE; @endphp
+                            <p class="text-[11px] mt-1" style="color: #616161;">Recommended {{ $kkImgSize[0] }} &times; {{ $kkImgSize[1] }} px (3:4 portrait). Images are cropped to fill this shape on the storefront, so keep the product away from the edges.</p>
                         </div>
                         <div x-show="galleryPreviews.length > 0" x-transition class="mt-3">
                             <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">

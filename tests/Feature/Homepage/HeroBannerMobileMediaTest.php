@@ -154,7 +154,12 @@ class HeroBannerMobileMediaTest extends TestCase
      *
      * A video slide used to opt out of the slide's box and take its height from
      * its own file, so the carousel lurched from a 370px strip to a 1008px clip
-     * as it advanced. No slide may size itself any more - whatever it carries.
+     * as it advanced. No slide reads its own FILE for a height any more.
+     *
+     * The box is still chosen per slide, but from a class this page sets and a
+     * ratio app.css holds - two values, 16:9 and 3:4, both known in advance.
+     * That is what separates it from the escape hatches below: a slide can be
+     * one of two known shapes, never whatever shape the upload happened to be.
      */
     public function test_no_slide_sizes_itself_from_its_own_media(): void
     {
@@ -172,17 +177,54 @@ class HeroBannerMobileMediaTest extends TestCase
         $this->assertStringContainsString('<div class="kk-hero-slide"', $this->heroMarkup());
     }
 
-    public function test_the_slide_box_matches_the_size_the_admin_screen_recommends(): void
+    /**
+     * The slide box is chosen per banner, by a class, not by one ratio for the
+     * whole hero.
+     *
+     * The ratios themselves live in app.css now (16:9, and 3:4 on phones for a
+     * slide carrying `has-mobile-media`), so this page's job is only to say
+     * which banners qualify. A banner with its own phone artwork gets the
+     * portrait box on a phone and its own still to fill it; one without keeps
+     * the wide box and is sent the desktop file, so neither is ever cropped.
+     */
+    public function test_a_banner_with_phone_artwork_is_marked_for_the_portrait_box(): void
+    {
+        $this->hero(['mobile_image_url' => 'banners/mobile/phone.jpg']);
+
+        $this->assertStringContainsString('kk-hero-slide has-mobile-media', $this->heroMarkup());
+    }
+
+    public function test_a_banner_without_phone_artwork_keeps_the_wide_box(): void
     {
         $this->hero();
 
-        // The stylesheet, not the markup, is what this one is about.
-        $html = $this->get('/')->getContent();
-        [$deskW, $deskH] = Banner::HERO_DESKTOP_SIZE;
-        [$mobW, $mobH] = Banner::HERO_MOBILE_SIZE;
+        $markup = $this->heroMarkup();
 
-        $this->assertStringContainsString("aspect-ratio: {$deskW} / {$deskH}", $html);
-        $this->assertStringContainsString("aspect-ratio: {$mobW} / {$mobH}", $html);
+        $this->assertStringNotContainsString('has-mobile-media', $markup);
+        $this->assertStringContainsString('<div class="kk-hero-slide"', $markup);
+    }
+
+    /**
+     * And the choice really is per slide: a hero holding one of each marks only
+     * the one that earns it. This is the half a single-banner test cannot see,
+     * and the reason the box is a class rather than a value computed once for
+     * the carousel.
+     */
+    public function test_a_mixed_hero_marks_only_the_slides_that_have_phone_artwork(): void
+    {
+        $this->hero(['mobile_image_url' => 'banners/mobile/phone.jpg']);
+        Banner::create([
+            'name' => 'Second',
+            'position' => 'hero',
+            'image_url' => 'banners/desktop-two.jpg',
+            'priority' => 2,
+            'is_active' => true,
+        ]);
+
+        $markup = $this->heroMarkup();
+
+        $this->assertSame(1, substr_count($markup, 'has-mobile-media'));
+        $this->assertStringContainsString('<div class="kk-hero-slide"', $markup);
     }
 
     /**

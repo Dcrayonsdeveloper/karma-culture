@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
-use App\Models\ProductCollection;
+use App\Models\Category;
 use App\Support\ProductFilters;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -18,7 +18,7 @@ class DealsController extends Controller
         // "Introductory Offer" collection and they are what this page lists,
         // discount or not. With nothing ticked it keeps finding the reductions
         // by itself.
-        $picked = ProductCollection::pickedProductIds('deals');
+        $picked = Category::pickedProductIds('deals');
 
         $filters = ProductFilters::for(
             $request,

@@ -35,6 +35,17 @@ class InstagramFeedService
 
     public function __construct()
     {
+        // Cast rather than lean on config()'s default: that default only applies
+        // when the KEY IS ABSENT, and config/services.php defines this one - so
+        // an unset INSTAGRAM_ACCESS_TOKEN resolves to null, not to the '' passed
+        // here, and assigning null to a string property is a TypeError that took
+        // the whole home page down wherever the token was not configured. The
+        // cast makes null land on '', which is what "no feed" already means
+        // below. (Kept from the fix on main; the rewrite around it is new.)
+        //
+        // No env() anywhere in here either: config/services.php reads those
+        // variables, and env() outside config returns null under config:cache -
+        // on a production box that has the value perfectly well set.
         $this->accessToken = (string) config('services.instagram.access_token', '');
         $this->configuredUserId = config('services.instagram.user_id') ?: null;
         $this->version = (string) config('services.instagram.graph_version', 'v21.0');

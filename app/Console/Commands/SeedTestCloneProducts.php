@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\ProductCollection;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use App\Models\ShopFilterItem;
@@ -107,27 +106,24 @@ class SeedTestCloneProducts extends Command
             return self::FAILURE;
         }
 
-        $collections = ProductCollection::query()
+        // Every built-in listing is a system row now that collections and
+        // categories are one table, so there is no hand-made kind to gather
+        // separately any more - the split below is the whole set.
+        //
+        // has()/doesntHave() ask about shownProducts, the category_product
+        // pivot, NOT products() - that one is products.category_id, which a
+        // system row never holds because no product IS a Bestseller.
+        $systemPicked = Category::system()
             ->where('is_active', true)
-            ->where('is_system', false)
-            ->get(['id', 'name']);
-
-        // The three system collections split by what is already ticked into
-        // them, because the same action means opposite things in the two cases
-        // - see the class docblock.
-        $systemPicked = ProductCollection::query()
-            ->where('is_active', true)
-            ->where('is_system', true)
-            ->has('products')
+            ->has('shownProducts')
             ->get(['id', 'name', 'handle']);
 
-        $systemEmpty = ProductCollection::query()
+        $systemEmpty = Category::system()
             ->where('is_active', true)
-            ->where('is_system', true)
-            ->doesntHave('products')
+            ->doesntHave('shownProducts')
             ->get(['id', 'name', 'handle']);
 
-        $collections = $collections->concat($systemPicked);
+        $collections = $systemPicked;
 
         $shades = $this->shades();
         $sizes = $this->sizes();

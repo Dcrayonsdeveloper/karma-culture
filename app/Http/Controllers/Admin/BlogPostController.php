@@ -253,4 +253,172 @@ class BlogPostController extends Controller
 
         return redirect()->route('admin.blog-posts.index')->with('success', 'Blog post deleted.');
     }
+
+    /**
+     * Download a CSV template for blog post imports.
+     */
+    public function downloadTemplate(): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="blog-posts-template.csv"',
+        ];
+
+        $columns = ['title', 'slug', 'excerpt', 'content', 'category', 'tags', 'meta_title', 'meta_description', 'is_published'];
+
+        return response()->stream(function () use ($columns) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, $columns);
+            // Sample row
+            fputcsv($handle, [
+                'Your Blog Post Title',
+                'your-blog-post-slug',
+                'A brief excerpt describing your blog post...',
+                '<h2>Introduction</h2><p>Your blog content here with HTML formatting...</p>',
+                'Style Guide',
+                'fashion, style, tips',
+                'SEO Meta Title | Your Brand',
+                'SEO meta description for search engines, keep under 160 characters.',
+                '1',
+            ]);
+            fclose($handle);
+        }, 200, $headers);
+    }
+
+    /**
+     * Import blog posts from a CSV file.
+     */
+    public function import(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'csv_file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
+        ]);
+
+        $file = $request->file('csv_file');
+        $handle = fopen($file->getRealPath(), 'r');
+
+        if (! $handle) {
+            return back()->with('error', 'Could not read the uploaded file.');
+        }
+
+        // Read header row
+        $headers = fgetcsv($handle);
+        if (! $headers) {
+            fclose($handle);
+            return back()->with('error', 'The CSV file appears to be empty.');
+        }
+
+        // Normalize headers (trim whitespace, lowercase)
+        $headers = array_map(fn ($h) => strtolower(trim($h)), $headers);
+
+        // Required columns
+        $requiredColumns = ['title'];
+        foreach ($requiredColumns as $col) {
+            if (! in_array($col, $headers)) {
+                fclose($handle);
+                return back()->with('error', "Missing required column: {$col}");
+            }
+        }
+
+        $imported = 0;
+        $skipped = 0;
+        $errors = [];
+        $rowNum = 1;
+
+        while (($row = fgetcsv($handle)) !== false) {
+            $rowNum++;
+
+            // Skip empty rows
+            if (empty(array_filter($row))) {
+                continue;
+            }
+
+            // Map row to associative array
+            $data = [];
+            foreach ($headers as $i => $header) {
+                $data[$header] = $row[$i] ?? null;
+            }
+
+            // Skip if no title
+            if (empty(trim($data['title'] ?? ''))) {
+                $skipped++;
+                $errors[] = "Row {$rowNum}: Missing title, skipped.";
+                continue;
+            }
+
+            $title = trim($data['title']);
+            $slug = ! empty($data['slug']) ? Str::slug($data['slug']) : Str::slug($title);
+
+            // Check for duplicate slug
+            if (BlogPost::where('slug', $slug)->exists()) {
+                $skipped++;
+                $errors[] = "Row {$rowNum}: Slug '{$slug}' already exists, skipped.";
+                continue;
+            }
+
+            // Process tags
+            $tags = null;
+            if (! empty($data['tags'])) {
+                $tags = array_slice(
+                    array_values(array_filter(array_map('trim', explode(',', $data['tags'])))),
+                    0,
+                    25
+                );
+                if (empty($tags)) {
+                    $tags = null;
+                }
+            }
+
+            // Process SEO data
+            $seoData = null;
+            $seo = array_filter([
+                'meta_title' => $data['meta_title'] ?? null,
+                'meta_description' => $data['meta_description'] ?? null,
+            ], fn ($v) => $v !== null && $v !== '');
+            if (! empty($seo)) {
+                $seoData = $seo;
+            }
+
+            // Determine publish status
+            $isPublished = false;
+            if (isset($data['is_published'])) {
+                $isPublished = in_array(strtolower(trim($data['is_published'])), ['1', 'true', 'yes', 'published']);
+            }
+
+            // Sanitize content
+            $content = safe_html($data['content'] ?? null, self::CONTENT_TAGS) ?: null;
+
+            try {
+                BlogPost::create([
+                    'title' => $title,
+                    'slug' => $slug,
+                    'excerpt' => $data['excerpt'] ?? null,
+                    'content' => $content,
+                    'category' => $data['category'] ?? null,
+                    'tags' => $tags,
+                    'seo_data' => $seoData,
+                    'is_published' => $isPublished,
+                    'published_at' => $isPublished ? now() : null,
+                    'author_id' => auth('admin')->id(),
+                ]);
+                $imported++;
+            } catch (\Exception $e) {
+                $skipped++;
+                $errors[] = "Row {$rowNum}: " . Str::limit($e->getMessage(), 100);
+            }
+        }
+
+        fclose($handle);
+
+        $message = "Imported {$imported} blog post(s).";
+        if ($skipped > 0) {
+            $message .= " Skipped {$skipped} row(s).";
+        }
+
+        if (! empty($errors) && count($errors) <= 5) {
+            $message .= ' ' . implode(' ', $errors);
+        }
+
+        return back()->with($imported > 0 ? 'success' : 'warning', $message);
+    }
 }

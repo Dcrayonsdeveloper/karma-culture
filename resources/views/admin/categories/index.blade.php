@@ -13,6 +13,68 @@
         </div>
     </x-slot>
 
+    {{-- The built-in listings.
+
+         These are rows in the same table as the collections below, but they are
+         a different kind of thing: a destination with a hand-picked list, not
+         something a product IS. Kept in their own card so nobody files a
+         product under "Bestsellers" the way they would under "Kurtas" - and
+         because they cannot be renamed into the tree, given a parent, or
+         deleted. Tick products into them on the product form. --}}
+    @if(!empty($systemRows) && $systemRows->isNotEmpty())
+    <div class="card" style="margin-bottom: 1.25rem;">
+        <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;">
+            <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Built-in listings</h2>
+            <p style="font-size: 12px; color: #616161; margin: 0.25rem 0 0 0;">
+                The pages the site already has. Each one works itself out &mdash; newest first, best selling, discounted,
+                everything &mdash; until you tick products into it on the product form, and then it shows exactly those.
+                Untick them all and it goes back to working itself out.
+            </p>
+        </div>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th style="text-align: left; padding-left: 1rem;">Listing</th>
+                        <th style="text-align: left;">Page</th>
+                        <th style="text-align: right;">Hand-picked</th>
+                        <th style="text-align: left; padding-right: 1rem;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($systemRows as $systemRow)
+                        @php
+                            $kkSystemPage = match($systemRow->handle) {
+                                'shop_all' => route('shop'),
+                                'new_in' => route('new-arrivals'),
+                                'bestsellers' => route('bestsellers'),
+                                'deals' => route('deals'),
+                                default => route('collection.show', $systemRow->slug),
+                            };
+                        @endphp
+                        <tr>
+                            <td style="padding: 0.625rem 0.75rem 0.625rem 1rem;">
+                                <span style="font-size: 13px; font-weight: 500; color: #303030;">{{ $systemRow->name }}</span>
+                            </td>
+                            <td>
+                                <a href="{{ $kkSystemPage }}" target="_blank" rel="noopener" style="font-size: 13px;">{{ $kkSystemPage }}</a>
+                            </td>
+                            <td style="text-align: right;">
+                                <span style="font-size: 13px; color: {{ $systemRow->shown_products_count > 0 ? '#303030' : '#999' }};">
+                                    {{ $systemRow->shown_products_count > 0 ? $systemRow->shown_products_count.' picked' : 'works itself out' }}
+                                </span>
+                            </td>
+                            <td style="padding-right: 1rem;">
+                                <span class="badge {{ $systemRow->is_active ? 'badge-success' : 'badge-neutral' }}">{{ $systemRow->is_active ? 'Live' : 'Hidden' }}</span>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
+
     {{-- Collections card --}}
     <div class="card">
         {{-- Tab filters --}}

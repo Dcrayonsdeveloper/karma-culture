@@ -102,39 +102,12 @@
             /* The slide's box: one ratio per breakpoint, the same for every
                slide in the carousel, and never the media's own.
 
-               A video-led slide used to opt out of this and take its height
-               from the file, so the hero stood 370px tall on the strip the
-               store ships with and 1008px on the clip beside it, lurching
-               between the two every six seconds - while an image slide, pinned
-               to the strip ratio, showed its picture small in the middle of a
-               blurred field. Both shapes now come from Banner's constants,
-               which is also what the admin screen recommends uploading, so
-               artwork at that size fills the box with nothing cropped at all;
-               anything else is centre-cropped to it - see .kk-hero-media in the
-               hero's own stylesheet further down the page. */
-            /* The three states below were briefly written into app.css as the
-               literals 16/9 and 3/4. Those are the right shapes - they are what
-               Banner's constants reduce to - but hardcoding them cut the link
-               between the size the admin screen tells people to upload and the
-               box the storefront actually draws, so changing one would silently
-               stop matching the other. Same three states, numbers back off the
-               constants.
-
-               A phone keeps the DESKTOP ratio unless the banner carries its own
-               mobile artwork: a desktop-only banner squeezed into the portrait
-               box lost its sides to the crop, and it had nothing else to show
-               there. Only a banner with a phone file gets the phone shape. */
-            .kk-hero-slide {
-                aspect-ratio: {{ \App\Models\Banner::HERO_DESKTOP_SIZE[0] }} / {{ \App\Models\Banner::HERO_DESKTOP_SIZE[1] }};
-            }
-            @media (max-width: 767px) {
-                .kk-hero-slide {
-                    aspect-ratio: {{ \App\Models\Banner::HERO_DESKTOP_SIZE[0] }} / {{ \App\Models\Banner::HERO_DESKTOP_SIZE[1] }};
-                }
-                .kk-hero-slide.has-mobile-media {
-                    aspect-ratio: {{ \App\Models\Banner::HERO_MOBILE_SIZE[0] }} / {{ \App\Models\Banner::HERO_MOBILE_SIZE[1] }};
-                }
-            }
+               The slide's box now lives in app.css, keyed off a `has-mobile-media`
+               class this page puts on each slide: 16:9 for a banner that has only
+               desktop artwork, 3:4 on phones for one that carries its own. Each
+               slide is therefore drawn at the proportions of the file inside it,
+               which is what stops the banner arriving on a phone with its ends
+               cropped off - see .kk-hero-media further down for the fit. */
 
             /* Tile cards (Category / Aesthetics / Occasions) */
             .kk-tile { position: relative; display: block; overflow: hidden; border-radius: 4px; color: var(--kk-cream); text-decoration: none; background: var(--kk-cream-dark); aspect-ratio: 4/5; }
@@ -469,11 +442,22 @@
             @media (max-width: 1024px) { .kk-product-grid { grid-template-columns: repeat(3, 1fr); } }
             @media (max-width: 640px)  { .kk-product-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
             .kk-product { background: var(--kk-cream-lighter); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; }
-            .kk-product__media { position: relative; aspect-ratio: 4/5; overflow: hidden; background: var(--kk-cream-dark); }
-            .kk-product__media img { width: 100%; height: 100%; object-fit: contain; display: block; transition: transform .5s; }
-            /* The backdrop is the one layer that still covers - filling the frame
-               around a contained shot is the whole point of it. */
-            .kk-product__media img.kk-media__fill { object-fit: cover; }
+            /* CURRENTLY UNUSED, like its twin in app.css - no view renders
+               `class="kk-product"`; the home rails below use the product-card
+               component instead. Kept in step with that twin at 3:4 all the
+               same, because two copies of one selector that disagree is how the
+               home page ends up drawing a different card from the shop the
+               moment either is revived. (.kk-product-grid, just above, IS live.)
+
+               Do not name a component in angle brackets anywhere in this file,
+               not even in a comment like this one. Blade's component compiler
+               runs over the raw text, so an x-something tag inside a style
+               block or a CSS comment still opens a component that never closes,
+               and the page then dies with "unexpected end of file, expecting
+               endif". artisan view:cache does NOT catch it - the broken PHP is
+               written out happily and only fails when the view is included. */
+            .kk-product__media { position: relative; aspect-ratio: 3/4; overflow: hidden; background: var(--kk-cream-dark); }
+            .kk-product__media img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s; }
             .kk-product:hover .kk-product__media img:not(.kk-media__fill) { transform: scale(1.03); }
             .kk-product__tag { position: absolute; top: 9px; left: 9px; background: var(--kk-brown-dark); color: var(--kk-cream); padding: 3px 8px; border-radius: 999px; font-size: 8px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; }
             .kk-product__discount { position: absolute; top: 9px; right: 9px; background: var(--kk-tan-dark); color: var(--kk-cream); padding: 3px 8px; border-radius: 999px; font-size: 9px; font-weight: 700; letter-spacing: 0.04em; }
@@ -940,6 +924,13 @@
                             // fallback - is decided once, on the model, so the website
                             // and the API cannot reach different conclusions about what
                             // a phone should be sent.
+                            // Straight from the model, per banner. The slide carries a
+                            // `has-mobile-media` class and app.css sizes it from that,
+                            // so each slide's box already matches the file this returns
+                            // - a banner with phone artwork gets a 3:4 box and its own
+                            // still, one without gets the 16:9 box and the desktop file.
+                            // Nothing to suppress, and frameFor stays the single answer
+                            // the API reads too.
                             $kkDesktop = $banner->frameFor('desktop');
                             $kkMobile = $banner->frameFor('mobile');
 
@@ -986,6 +977,16 @@
                         @endphp
                         <div class="kk-hero-slide{{ $banner->has_mobile_media ? ' has-mobile-media' : '' }}"
                              @if($heroCount > 1)
+                                 {{-- x-show is applied by Alpine, which arrives as a
+                                      deferred module - so until it boots, every slide is
+                                      in flow and the hero paints at N times its height
+                                      before collapsing to one. On a 1920px screen with
+                                      three banners that is a ~1000px jump on the page's
+                                      largest element, on every single load. x-cloak is
+                                      already `display: none !important` in app.css and
+                                      Alpine removes it on init, so the first slide paints
+                                      alone and x-show takes over from there. --}}
+                                 @if($i > 0) x-cloak @endif
                                  x-show="current === {{ $i }}"
                                  x-transition:enter="kk-fade-enter" x-transition:enter-start="kk-fade-start"
                                  :aria-hidden="current !== {{ $i }}"
@@ -1184,12 +1185,20 @@
         <style>
             /* Full-bleed hero - span the entire viewport width regardless of
                any parent container, and clip any margin baked into the video. */
+            /* --kk-vw is the viewport width WITHOUT the scrollbar, published by
+               the layout (components/layouts/app.blade.php) for exactly this.
+               100vw includes the scrollbar, so on any desktop with a classic
+               one the hero was ~15px wider than the page and html's
+               overflow-x: clip shaved half of that off each edge - the banner
+               really was cropped, by 7.5px a side, on every Windows desktop.
+               The product page already reads this property; the hero, which the
+               layout's own comment names first, never did. */
             .kk-hero {
                 position: relative;
-                width: 100vw;
-                max-width: 100vw;
-                margin-left: calc(50% - 50vw);
-                margin-right: calc(50% - 50vw);
+                width: var(--kk-vw, 100vw);
+                max-width: var(--kk-vw, 100vw);
+                margin-left: calc(50% - var(--kk-vw, 100vw) / 2);
+                margin-right: calc(50% - var(--kk-vw, 100vw) / 2);
                 overflow: hidden;
             }
             .kk-hero-viewport { position: relative; }
@@ -1233,6 +1242,29 @@
                 object-position: center;
             }
 
+            /* An image banner puts its <img> inside a <picture>, so it is a
+               GRANDCHILD of the frame and the `>` above never reached it - and
+               neither did app.css's own `.kk-media > img`. The picture had no
+               rule at all: an inline box, with the img falling back to
+               preflight's `max-width: 100%; height: auto`, which on a replaced
+               element resolves to the file's intrinsic size. A 1426x370 banner
+               therefore painted at 1426x370 in the top-left corner of the slide
+               and left the rest of the box bare - 494px of empty brown down the
+               right of a 1920px screen, and on a phone a 101px strip at the top
+               of a 260px box. It only looked right between 768px and 1426px,
+               where the box and the file happen to be the same shape.
+
+               `position: absolute` blockifies the picture, so no `display` is
+               declared here: app.css's `.kk-media.is-broken > picture` is
+               (0,2,1) and must stay able to hide it. */
+            .kk-media.kk-hero-media > picture { position: absolute; inset: 0; z-index: 1; }
+            .kk-media.kk-hero-media > picture > img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                object-position: center;
+            }
+
             /* Only one breakpoint's frame is drawn, and only banners carrying media
                of their own for phones have two to choose between. */
             .kk-hero-media--mobile { display: none; }
@@ -1264,8 +1296,23 @@
             .kk-hero-caption--right-dark .kk-hero-btn { align-self: flex-end; }
             .kk-hero-caption--center-vignette .kk-hero-btn,
             .kk-hero-caption--full-dark .kk-hero-btn { align-self: center; }
+            /* The caption sits inside a slide with `overflow: hidden`, and it is
+               centred, so anything taller than the box is clipped at BOTH ends -
+               the top of the heading as well as the bottom of the button. Packing
+               from the top means a caption that outgrows a short hero loses only
+               its tail, which is the half a shopper can do without.
+
+               No size clamping beyond that: the 16:9 box is 219px tall on a 390px
+               phone, which is room enough for the heading this was written for. */
+            @media (max-width: 767px) {
+                .kk-hero-caption {
+                    justify-content: flex-start;
+                    padding-top: 10px;
+                    overflow: hidden;
+                }
+            }
             @media (max-width: 640px) {
-                .kk-hero-caption { padding: 0 6vw; gap: 8px; }
+                .kk-hero-caption { padding: 10px 6vw 0; gap: 8px; }
                 .kk-hero-sub { display: none; }
             }
 
@@ -1667,8 +1714,15 @@
                         @foreach($aboutReels as $aboutReel)
                             {{-- Admin-set clips of any ratio, so they are shown whole: a
                                  landscape capture used to be cropped to a ribbon of its
-                                 middle by the 9/16 reel. --}}
-                            <x-media class="kk-about-reel" :src="$aboutReel->url" video dark />
+                                 middle by the 9/16 reel.
+
+                                 The poster is what a reel synced from Instagram brings
+                                 with it. Without one the card is a dark rectangle until
+                                 the clip decodes its first frame, which on a phone is
+                                 most of the time anyone spends looking at this strip.
+                                 An uploaded clip has none and renders exactly as before. --}}
+                            <x-media class="kk-about-reel" :src="$aboutReel->url"
+                                     :poster="$aboutReel->poster_url" video dark />
                         @endforeach
                     </div>
                 </div>
