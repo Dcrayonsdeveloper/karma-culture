@@ -518,14 +518,18 @@
          it. Everything except the two price boxes auto-submits, which hid the
          problem on desktop and made the drawer apply exactly one filter per
          open on a phone. --}}
+    {{-- The pair is deliberately not full-height blocks. py-2 with 13px text
+         lands the row at ~34px: smaller than the 40px it was, and still inside
+         the range a thumb hits reliably - going further would buy a few pixels
+         of white space and cost the shopper the tap. --}}
     <div class="flex gap-2 pt-4 {{ ($kkStickyActions ?? false) ? 'sticky bottom-0 -mx-4 px-4 pb-4 bg-white border-t border-neutral-200' : '' }}">
-        <button type="submit" class="flex-1 py-2.5 bg-[#F8931D] hover:bg-[#E07E0A] text-white text-sm font-semibold rounded-lg transition-colors">
+        <button type="submit" class="flex-1 py-2 bg-[#F8931D] hover:bg-[#E07E0A] text-white text-[13px] font-semibold rounded-lg transition-colors">
             Apply
         </button>
         {{-- Reset returns to THIS listing with nothing ticked. It used to send the
              shop back to the home page, which reads as "your filters were so bad we
              threw you out of the shop". --}}
-        <a href="{{ $filterPanel['reset'] }}" class="flex-1 py-2.5 text-center text-sm font-medium text-neutral-600 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
+        <a href="{{ $filterPanel['reset'] }}" class="flex-1 py-2 text-center text-[13px] font-medium text-neutral-600 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
             Reset
         </a>
     </div>
