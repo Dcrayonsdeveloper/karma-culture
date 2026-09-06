@@ -67,6 +67,16 @@ class ProductVariant extends Model
             $name = trim((string) end($parts));
         }
 
+        // "3XL / BLACK" is one Shopify variant title, not one size. The
+        // imported catalogue stores 7,868 of them, and taking the whole string
+        // as a size gave the Shop It Your Way rail 1,713 distinct "sizes" -
+        // every size crossed with every colour, each drawing its own hanger.
+        // That one mistake was 1,720 inline SVGs and 2.6 MB of the homepage's
+        // 4.35 MB. The size is the part in front; the colour has its own rail.
+        if (str_contains($name, ' / ')) {
+            $name = trim(explode(' / ', $name)[0]);
+        }
+
         return $name;
     }
 
@@ -77,8 +87,16 @@ class ProductVariant extends Model
     {
         return $query->where(function ($q) use ($sizes) {
             foreach ($sizes as $size) {
+                $escaped = addcslashes($size, '%_\\');
+
                 $q->orWhere('name', $size)
-                    ->orWhere('name', 'like', '% - '.$size);
+                    ->orWhere('name', 'like', '% - '.$escaped)
+                    // The "SIZE / COLOUR" rows sizeLabel() now reduces to their
+                    // size. Without these two the rail would offer a size and
+                    // then open a listing with nothing in it, because no
+                    // variant is named the bare label any more.
+                    ->orWhere('name', 'like', $escaped.' / %')
+                    ->orWhere('name', 'like', '% - '.$escaped.' / %');
             }
         });
     }

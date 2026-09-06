@@ -64,8 +64,19 @@ class BannerMedia
      */
     public const MAX_IMAGE_KB = 12288;
 
-    /** And a clip, unchanged - it was never the thing being refused. */
-    public const MAX_VIDEO_KB = 65536;
+    /**
+     * A hero clip.
+     *
+     * This was 64 MB, and a 64 MB ceiling is how an 18.6 MB file came to be the
+     * home page's hero: nothing refused it, so nothing questioned it. That one
+     * file is 78% of the page's weight, and it autoplays, so a phone on mobile
+     * data pays for all of it before the shop is usable.
+     *
+     * 8 MB is still generous - a ten-second 1080p loop encoded for the web lands
+     * nearer 2 MB. It is a ceiling meant to be noticed rather than met: an
+     * upload that trips it wants re-encoding, not a bigger limit.
+     */
+    public const MAX_VIDEO_KB = 8192;
 
     /**
      * The pixel ceiling, a decompression-bomb guard rather than a design rule.
