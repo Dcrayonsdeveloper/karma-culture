@@ -1,33 +1,32 @@
 {{--
-    A product card with the sale's own terms attached: the discount badge, the
-    sale price, and how many units are left at it. The pivot row is set on each
-    product by FlashSaleController.
+    The same product card every other listing draws, handed the sale's terms:
+    the discounted price it should lead with and how many units are left at it.
+
+    It used to wrap the card in a div, stamp a second discount badge over the
+    photo and hang the sale price and stock line underneath as loose text, so a
+    sale tile looked nothing like a tile on the shop or home page. The card
+    renders both itself now.
+
+    The pivot row is attached to each product by FlashSaleController, so the
+    figures are read from it directly rather than through
+    Product::flashSalePrice(), which re-queries the sale once per card.
 --}}
 @php
-    $kkSalePrice = $isLive ? $product->flashSalePrice() : null;
-    $kkLimit = $product->pivot?->stock_limit;
-    $kkSold = (int) ($product->pivot->sold_count ?? 0);
+    $kkPivot = $product->pivot ?? null;
+    $kkOnSale = ($isLive ?? false) && $kkPivot?->sale_price !== null;
+
+    $kkLimit = $kkPivot?->stock_limit;
+    $kkSold = (int) ($kkPivot->sold_count ?? 0);
+    // Null means an unlimited allocation - there is no count to promise.
     $kkLeft = $kkLimit !== null ? max(0, (int) $kkLimit - $kkSold) : null;
+
+    // A limit that has been reached ends the discount for later buyers, the
+    // same rule Product::flashSalePrice() applies when the order is placed.
+    // The card still says so, so a sold-out tile explains itself instead of
+    // quietly showing the normal price.
+    $kkSalePrice = ($kkOnSale && $kkLeft !== 0) ? (float) $kkPivot->sale_price : null;
 @endphp
 
-<div class="relative">
-    @if($kkSalePrice)
-        <span class="absolute top-2 left-2 z-10 text-[10px] font-bold px-2 py-1 rounded-full text-white" style="background:#8C5C34;">
-            {{ (int) round((1 - $kkSalePrice / max(0.01, (float) $product->price)) * 100) }}% OFF
-        </span>
-    @endif
-
-    <x-product-card :product="$product" />
-
-    @if($kkSalePrice)
-        <p class="text-xs mt-1" style="color:#8C5C34;">
-            <strong>@price($kkSalePrice)</strong>
-            <span class="text-neutral-500 line-through ml-1">@price($product->price)</span>
-        </p>
-        @if($kkLeft !== null)
-            <p class="text-[11px] text-neutral-600 mt-0.5">
-                {{ $kkLeft > 0 ? $kkLeft . ' left at this price' : 'Sale price sold out' }}
-            </p>
-        @endif
-    @endif
-</div>
+<x-product-card :product="$product"
+                :sale-price="$kkSalePrice"
+                :units-left="$kkOnSale ? $kkLeft : null" />

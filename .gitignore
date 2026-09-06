@@ -69,6 +69,10 @@ Thumbs.db
 *.csr
 
 # Generic secret/credential file patterns
+# `env` (no dot) and acc.txt are scratch files holding live AWS keys - the
+# `.env.*` rules above do not cover either name.
+/env
+/acc.txt
 secrets.*
 credentials.*
 *.secrets.json

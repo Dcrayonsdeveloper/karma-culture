@@ -1845,6 +1845,9 @@
                     $kkTabs[$key]['items'][] = [
                         'label' => $row->label,
                         'shade' => $row->shade_hex ?: '#8c5c34',
+                        // Textures wear the swatch uploaded against them in the
+                        // Textures library; everything else keeps the flat shade.
+                        'image' => $row->image_url,
                         'q'     => $row->query_string ?: '',
                     ];
                 }
@@ -1926,8 +1929,28 @@
                                                  @if($item['q'] !== '') href="{{ route('shop') }}?{{ $item['q'] }}" @endif
                                                  class="kk-rail-cell @if($item['q'] !== '') kk-rail-cell--link @endif"
                                                  style="--d: {{ $i * 80 }}ms;">
+                                                @php
+                                                    // One pattern per shirt, so two rails on the page
+                                                    // cannot collide on the id.
+                                                    $kkFillId = 'kk-swatch-'.$tabKey.'-'.$i;
+                                                @endphp
                                                 <div class="kk-shirt-hanger" style="color: {{ $item['shade'] }};">
                                                     <svg viewBox="0 0 100 170" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                                        @if($item['image'])
+                                                            {{-- The swatch is painted through the shirt's own path, so
+                                                                 the fabric is cut to the garment rather than sitting
+                                                                 behind it as a square. `slice` crops the photo to the
+                                                                 body box instead of letterboxing it, whatever shape it
+                                                                 was uploaded at. --}}
+                                                            <defs>
+                                                                <pattern id="{{ $kkFillId }}" patternUnits="userSpaceOnUse" x="0" y="0" width="100" height="170">
+                                                                    <rect x="0" y="0" width="100" height="170" fill="currentColor"/>
+                                                                    <image href="{{ $item['image'] }}" xlink:href="{{ $item['image'] }}"
+                                                                           x="4" y="48" width="92" height="118"
+                                                                           preserveAspectRatio="xMidYMid slice"/>
+                                                                </pattern>
+                                                            </defs>
+                                                        @endif
                                                         {{-- Hook --}}
                                                         <path d="M50 4 Q52 4 52 10 C52 14 47 15 47 20 Q49 24 52 24"
                                                               stroke="#3a2a1f" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1937,7 +1960,7 @@
                                                         <line x1="17" y1="51" x2="83" y2="51" stroke="#3a2a1f" stroke-width="2" stroke-linecap="round"/>
                                                         {{-- T-shirt body --}}
                                                         <path d="M30 52 L15 60 L6 78 L20 90 L25 82 L25 156 Q25 162 31 162 L69 162 Q75 162 75 156 L75 82 L80 90 L94 78 L85 60 L70 52 L65 54 Q50 64 35 54 Z"
-                                                              fill="currentColor" stroke="rgba(0,0,0,0.10)" stroke-width="1"/>
+                                                              fill="{{ $item['image'] ? 'url(#'.$kkFillId.')' : 'currentColor' }}" stroke="rgba(0,0,0,0.10)" stroke-width="1"/>
                                                         {{-- Neckline shadow --}}
                                                         <path d="M38 55 Q50 63 62 55"
                                                               fill="none" stroke="rgba(0,0,0,0.18)" stroke-width="1.2" stroke-linecap="round"/>

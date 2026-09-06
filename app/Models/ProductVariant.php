@@ -62,10 +62,19 @@ class ProductVariant extends Model
     {
         $name = trim((string) $name);
 
-        if (str_contains($name, ' - ')) {
+        // Newer rows fuse size and colour as "SIZE / COLOUR" - the size is the
+        // part before the slash ("M / Black" -> "M", "M-40 / Beige" -> "M-40").
+        if (str_contains($name, ' / ')) {
+            $name = trim((string) explode(' / ', $name)[0]);
+        } elseif (str_contains($name, ' - ')) {
+            // Older rows carry the whole variant name with the size last.
             $parts = explode(' - ', $name);
             $name = trim((string) end($parts));
         }
+
+        // A numeric spec suffix ("M-40", "XS-36", "3XL-48") is the same size as
+        // its letter code - keep the code, drop the measurement.
+        $name = trim((string) preg_replace('/-\s*\d+$/', '', $name));
 
         return $name;
     }
@@ -77,8 +86,14 @@ class ProductVariant extends Model
     {
         return $query->where(function ($q) use ($sizes) {
             foreach ($sizes as $size) {
-                $q->orWhere('name', $size)
-                    ->orWhere('name', 'like', '% - '.$size);
+                // Escape LIKE wildcards in the size before building patterns, so
+                // a size never smuggles a % or _ into the match.
+                $like = addcslashes((string) $size, '%_\\');
+
+                $q->orWhere('name', $size)                    // "M"
+                    ->orWhere('name', 'like', $like.' / %')   // "M / Black"
+                    ->orWhere('name', 'like', $like.'-%')     // "M-40", "M-40 / Black"
+                    ->orWhere('name', 'like', '% - '.$like);  // "Kurti - Indigo - M" (older)
             }
         });
     }

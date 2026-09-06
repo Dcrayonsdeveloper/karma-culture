@@ -352,7 +352,7 @@
                     <div class="card p-5" x-data="kkSizes()">
                         <div class="flex items-center justify-between mb-1">
                             <h2 class="text-[13px] font-semibold form-label-required" style="color: #303030;">Sizes &amp; pricing</h2>
-                            <button type="button" @click="add()" class="btn btn-secondary" style="font-size:12px; padding:4px 10px;">+ Add size</button>
+                            @include('admin.products.partials.preset-picker', ['type' => 'size'])
                         </div>
                         <p class="text-xs mb-4" style="color: #616161;">Every product needs at least one size. Each row is one size a customer can buy, with its own price and stock. Measurements are optional and let the assistant advise on fit. Leave SKU blank and one is generated. Colours are set separately below.</p>
 
@@ -364,7 +364,7 @@
                             </div>
                         @endif
 
-                        <p class="text-xs" style="color:#616161; padding:10px 0;" x-show="visibleCount() === 0" x-cloak>At least one size is required - click &ldquo;Add size&rdquo;.</p>
+                        <p class="text-xs" style="color:#616161; padding:10px 0;" x-show="visibleCount() === 0" x-cloak>At least one size is required - click &ldquo;Pick from library&rdquo; to add one.</p>
 
                         <div style="overflow-x:auto;" x-show="visibleCount() > 0" x-cloak>
                             <table style="width:100%; font-size:13px; border-collapse:collapse;">
@@ -447,11 +447,16 @@
                             return {
                                 seq: 0,
                                 rows: [],
+                                // "Pick from library" state - the same sizes an admin can pick on
+                                // the create form. Only name and default measurements come across;
+                                // price, MRP, stock and SKU stay editable per size on this row.
+                                presets: @json($sizePresets ?? []),
+                                pickerOpen: false,
+                                pickedIds: {},
                                 init() {
                                     this.rows = (@json($kkSizeRows)).map(r => ({ ...r, uid: ++this.seq, remove: !!r.remove }));
-                                    // A size is required, so a product that has none opens on a
-                                    // row to fill in rather than on a button to find.
-                                    if (this.visibleCount() === 0) { this.add(); }
+                                    // Sizes come only from the library now - a product with none
+                                    // opens empty and the admin adds them with "Pick from library".
                                 },
                                 visibleCount() { return this.rows.filter(r => !r.remove).length; },
                                 add() {
@@ -460,6 +465,27 @@
                                         price: @json((string) $product->price), mrp: @json((string) $product->mrp),
                                         stock_quantity: 0, sku: '', measurements: '', is_active: true, remove: false,
                                     });
+                                },
+                                addPreset(p) {
+                                    // A size already on the form (not marked for removal) is not
+                                    // added a second time.
+                                    const has = this.rows.some(r => !r.remove && (r.name || '').trim().toLowerCase() === (p.name || '').trim().toLowerCase());
+                                    if (has) { return false; }
+                                    this.rows.push({
+                                        uid: ++this.seq, id: null, name: p.name,
+                                        price: @json((string) $product->price), mrp: @json((string) $product->mrp),
+                                        stock_quantity: 0, sku: '', measurements: p.measurements || '', is_active: true, remove: false,
+                                    });
+                                    return true;
+                                },
+                                applyPicker() {
+                                    let added = 0;
+                                    (this.presets || []).forEach(p => { if (this.pickedIds[p.id] && this.addPreset(p)) { added++; } });
+                                    // Drop the blank opener row (unsaved, no name) once real sizes
+                                    // are picked; saved rows keep their id and stay put.
+                                    if (added > 0) { this.rows = this.rows.filter(r => r.id || (r.name || '').trim() !== ''); }
+                                    this.pickedIds = {};
+                                    this.pickerOpen = false;
                                 },
                                 drop(i) {
                                     if (this.rows[i].id) { this.rows[i].remove = true; } else { this.rows.splice(i, 1); }
@@ -488,7 +514,7 @@
                     <div class="card p-5" x-data="kkColours()">
                         <div class="flex items-center justify-between mb-1">
                             <h2 class="text-[13px] font-semibold form-label-required" style="color: #303030;">Colours</h2>
-                            <button type="button" @click="add()" class="btn btn-secondary" style="font-size:12px; padding:4px 10px;">+ Add colour</button>
+                            @include('admin.products.partials.preset-picker', ['type' => 'colour'])
                         </div>
                         <p class="text-xs mb-4" style="color: #616161;">Every product needs at least one colour, each with a name and a swatch you pick. They show as swatches on the product page, under the sizes.</p>
 
@@ -500,7 +526,7 @@
                             </div>
                         @endif
 
-                        <p class="text-xs" style="color:#616161; padding:6px 0;" x-show="rows.length === 0" x-cloak>At least one colour is required - click &ldquo;Add colour&rdquo;.</p>
+                        <p class="text-xs" style="color:#616161; padding:6px 0;" x-show="rows.length === 0" x-cloak>At least one colour is required - click &ldquo;Pick from library&rdquo; to add one.</p>
 
                         <div x-show="rows.length > 0" x-cloak style="display:flex;flex-direction:column;gap:8px;">
                             <template x-for="(c, i) in rows" :key="c.uid">
@@ -540,6 +566,9 @@
                             return {
                                 seq: 0,
                                 rows: [],
+                                presets: @json($colourPresets ?? []),
+                                pickerOpen: false,
+                                pickedIds: {},
                                 init() {
                                     this.rows = (@json($kkColourRows)).map(c => ({
                                         ...c,
@@ -547,11 +576,23 @@
                                         picked: !!c.hex,
                                         hex: c.hex || KK_UNPICKED_SWATCH,
                                     }));
-                                    // A colour is required, so a product that has none opens on
-                                    // a row to fill in.
-                                    if (this.rows.length === 0) { this.add(); }
+                                    // Colours come only from the library now - a product with
+                                    // none opens empty and the admin adds them with "Pick from library".
                                 },
                                 add() { this.rows.push({ uid: ++this.seq, name: '', hex: KK_UNPICKED_SWATCH, picked: false }); },
+                                addPreset(p) {
+                                    const has = this.rows.some(r => (r.name || '').trim().toLowerCase() === (p.name || '').trim().toLowerCase());
+                                    if (has) { return false; }
+                                    this.rows.push({ uid: ++this.seq, name: p.name, hex: p.hex, picked: true });
+                                    return true;
+                                },
+                                applyPicker() {
+                                    let added = 0;
+                                    (this.presets || []).forEach(p => { if (this.pickedIds[p.id] && this.addPreset(p)) { added++; } });
+                                    if (added > 0) { this.rows = this.rows.filter(r => (r.name || '').trim() !== '' || r.picked); }
+                                    this.pickedIds = {};
+                                    this.pickerOpen = false;
+                                },
                             };
                         }
                     </script>
@@ -577,7 +618,7 @@
                     <div class="card p-5" x-data="kkTextures()">
                         <div class="flex items-center justify-between mb-1">
                             <h2 class="text-[13px] font-semibold" style="color: #303030;">Textures</h2>
-                            <button type="button" @click="add()" class="btn btn-secondary" style="font-size:12px; padding:4px 10px;">+ Add texture</button>
+                            @include('admin.products.partials.preset-picker', ['type' => 'texture'])
                         </div>
                         <p class="text-xs mb-4" style="color: #616161;">Optional - a texture is a name on its own, with no swatch to pick. They show on the product page under the colours, and become a filter on the shop.</p>
 
@@ -589,7 +630,7 @@
                             </div>
                         @endif
 
-                        <p class="text-xs" style="color:#616161; padding:6px 0;" x-show="rows.length === 0" x-cloak>No textures - click &ldquo;Add texture&rdquo; to offer one.</p>
+                        <p class="text-xs" style="color:#616161; padding:6px 0;" x-show="rows.length === 0" x-cloak>No textures - click &ldquo;Pick from library&rdquo; to offer one.</p>
 
                         <div x-show="rows.length > 0" x-cloak style="display:flex;flex-direction:column;gap:8px;">
                             <template x-for="(t, i) in rows" :key="t.uid">
@@ -608,6 +649,9 @@
                             return {
                                 seq: 0,
                                 rows: [],
+                                presets: @json($texturePresets ?? []),
+                                pickerOpen: false,
+                                pickedIds: {},
                                 init() {
                                     // uid, not the index, keys the x-for: removing a middle row
                                     // otherwise renumbers the rest and Alpine reuses the wrong
@@ -615,6 +659,19 @@
                                     this.rows = (@json($kkTextureRows)).map(name => ({ uid: ++this.seq, name }));
                                 },
                                 add() { this.rows.push({ uid: ++this.seq, name: '' }); },
+                                addPreset(p) {
+                                    const has = this.rows.some(r => (r.name || '').trim().toLowerCase() === (p.name || '').trim().toLowerCase());
+                                    if (has) { return false; }
+                                    this.rows.push({ uid: ++this.seq, name: p.name });
+                                    return true;
+                                },
+                                applyPicker() {
+                                    let added = 0;
+                                    (this.presets || []).forEach(p => { if (this.pickedIds[p.id] && this.addPreset(p)) { added++; } });
+                                    if (added > 0) { this.rows = this.rows.filter(r => (r.name || '').trim() !== ''); }
+                                    this.pickedIds = {};
+                                    this.pickerOpen = false;
+                                },
                             };
                         }
                     </script>

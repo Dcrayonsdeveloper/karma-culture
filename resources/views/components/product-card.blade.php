@@ -1,4 +1,4 @@
-@props(['product', 'showQuickView' => true, 'compact' => false])
+@props(['product', 'showQuickView' => true, 'compact' => false, 'salePrice' => null, 'unitsLeft' => null])
 
 @php
     $discount = $product->discount_percentage ?? 0;
@@ -6,6 +6,23 @@
     $rating = $product->rating ?? 0;
     $reviewCount = $product->review_count ?? 0;
     $outOfStock = !$product->isInStock();
+
+    // A time-limited price passed in by the page (a flash sale). It replaces
+    // the figure the card leads with and strikes the normal price beside it,
+    // so a sale tile is the same card as every other tile rather than a card
+    // with the sale's terms bolted on underneath it. Guarded the same way
+    // Product::flashSalePrice() guards checkout: a misconfigured sale must
+    // never raise the price.
+    $onSale = $salePrice !== null
+        && (float) $salePrice > 0
+        && (float) $salePrice < (float) $product->price;
+    $cardPrice = $onSale ? (float) $salePrice : (float) $product->price;
+    // What the shopper is saving against: the price this one replaces.
+    $cardWas = $onSale ? (float) $product->price : (float) $product->mrp;
+    $cardCut = $onSale
+        ? (int) round((1 - $cardPrice / max(0.01, (float) $product->price)) * 100)
+        : (int) round($discount);
+    $showWas = $onSale || $hasDiscount;
 
     // Read hover action settings (cached for 1hr by Setting::get)
     $showWishlist = \App\Models\Setting::get('product_card_wishlist', true);
@@ -41,8 +58,8 @@
                      :fallback="$placeholderImage"
                      zoom cover
                      class="aspect-[3/4] bg-neutral-50 rounded-[20px] overflow-hidden mb-2" />
-            @if($hasDiscount)
-                <span class="absolute top-2 left-2 bg-[#F8931D] text-white font-bold rounded-full text-[8px] w-8 h-8 flex items-center justify-center sm:w-auto sm:h-auto sm:text-[10px] sm:px-2 sm:py-0.5 sm:rounded-md">{{ round($discount) }}%<span class="hidden sm:inline">&nbsp;Off</span></span>
+            @if($showWas)
+                <span class="absolute top-2 left-2 bg-[#F8931D] text-white font-bold rounded-full text-[8px] w-8 h-8 flex items-center justify-center sm:w-auto sm:h-auto sm:text-[10px] sm:px-2 sm:py-0.5 sm:rounded-md">{{ $cardCut }}%<span class="hidden sm:inline">&nbsp;Off</span></span>
             @endif
         </a>
 
@@ -62,12 +79,18 @@
         </a>
 
         <div class="flex items-baseline gap-1 flex-wrap px-1">
-            <span class="text-sm font-bold text-[#222]">@price($product->price)</span>
-            @if($hasDiscount)
-                <span class="text-[10px] text-neutral-600 line-through">@price($product->mrp)</span>
-                <span class="text-[10px] font-semibold text-[#B06D0F]">{{ round($discount) }}% off</span>
+            <span class="text-sm font-bold text-[#222]">@price($cardPrice)</span>
+            @if($showWas)
+                <span class="text-[10px] text-neutral-600 line-through">@price($cardWas)</span>
+                <span class="text-[10px] font-semibold text-[#B06D0F]">{{ $cardCut }}% off</span>
             @endif
         </div>
+
+        @if($unitsLeft !== null)
+            <p class="text-[10px] font-medium mt-0.5 px-1" style="color:#8C5C34;">
+                {{ $unitsLeft > 0 ? $unitsLeft . ' left at this price' : 'Sale price sold out' }}
+            </p>
+        @endif
 
         @if($rating > 0)
             <div class="flex items-center gap-1 mt-1 px-1">
@@ -150,8 +173,8 @@
 
             {{-- Top-left badges --}}
             <div class="absolute top-2 left-2 sm:top-3 sm:left-3 flex flex-col gap-1">
-                @if($hasDiscount)
-                    <span class="bg-[#F8931D] text-white font-bold rounded-full text-[8px] w-8 h-8 flex items-center justify-center sm:w-auto sm:h-auto sm:text-[10px] sm:px-2 sm:py-0.5 sm:rounded-md">{{ round($discount) }}%<span class="hidden sm:inline">&nbsp;Off</span></span>
+                @if($showWas)
+                    <span class="bg-[#F8931D] text-white font-bold rounded-full text-[8px] w-8 h-8 flex items-center justify-center sm:w-auto sm:h-auto sm:text-[10px] sm:px-2 sm:py-0.5 sm:rounded-md">{{ $cardCut }}%<span class="hidden sm:inline">&nbsp;Off</span></span>
                 @endif
             </div>
 
@@ -203,12 +226,21 @@
 
             {{-- Price Row (directly after the name so prices align) --}}
             <div class="flex flex-wrap items-baseline gap-1.5 mb-1.5">
-                <span class="text-sm font-bold text-[#222]">@price($product->price)</span>
-                @if($hasDiscount)
-                    <span class="text-[11px] text-neutral-600 line-through">@price($product->mrp)</span>
-                    <span class="text-[11px] font-semibold text-[#B06D0F]">{{ round($discount) }}% off</span>
+                <span class="text-sm font-bold text-[#222]">@price($cardPrice)</span>
+                @if($showWas)
+                    <span class="text-[11px] text-neutral-600 line-through">@price($cardWas)</span>
+                    <span class="text-[11px] font-semibold text-[#B06D0F]">{{ $cardCut }}% off</span>
                 @endif
             </div>
+
+            {{-- How much of the sale allocation is left, in the sale's own
+                 colour. Sits with the price it qualifies rather than below the
+                 card, where it used to read as a caption for the next tile. --}}
+            @if($unitsLeft !== null)
+                <p class="text-[11px] font-medium mb-1.5" style="color:#8C5C34;">
+                    {{ $unitsLeft > 0 ? $unitsLeft . ' left at this price' : 'Sale price sold out' }}
+                </p>
+            @endif
 
             {{-- Rating Badge --}}
             @if($rating > 0)

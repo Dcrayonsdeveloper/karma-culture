@@ -98,7 +98,12 @@
                             <tr style="border-bottom: 1px solid #e3e3e3;">
                                 <td style="padding: 0.5rem 1rem;">
                                     <span style="display: inline-flex; align-items: center; gap: 0.5rem;">
-                                        @if($kkValue->shade_hex)
+                                        @if($kkValue->image_url)
+                                            {{-- The swatch the rail actually hangs, so this screen
+                                                 shows what a shopper sees rather than a bare name. --}}
+                                            <img src="{{ $kkValue->image_url }}" alt="" loading="lazy" aria-hidden="true"
+                                                 style="flex: none; width: 16px; height: 16px; border-radius: 50%; border: 1px solid #c9cccf; object-fit: cover;">
+                                        @elseif($kkValue->shade_hex)
                                             <span aria-hidden="true" style="flex: none; display: inline-block; width: 16px; height: 16px; border-radius: 50%; border: 1px solid #c9cccf; background: {{ $kkValue->shade_hex }};"></span>
                                         @endif
                                         <strong style="color: #303030; font-weight: 500;">{{ $kkValue->label }}</strong>

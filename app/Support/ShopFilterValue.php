@@ -27,6 +27,13 @@ class ShopFilterValue
         public readonly bool $hidden,
         /** Set only when hidden: the exclusion row to DELETE to unhide it. */
         public readonly ?string $exclusion_uuid = null,
+        /**
+         * Browser-ready swatch image, where the value has one. Only the texture
+         * rail carries these today: an admin uploads a fabric crop against a
+         * texture in the library and the home page rail wears it on the shirt
+         * instead of painting it a flat colour.
+         */
+        public readonly ?string $image_url = null,
     ) {}
 
     /** The raw filter value, as it goes into a query string. */

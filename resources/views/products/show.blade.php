@@ -122,6 +122,19 @@
     /* ===== Gallery - thumbnail rail + main image ===== */
     .kk-pdp__gallery {
         display: flex; gap: 14px; align-items: flex-start;
+        /* This box is a GRID ITEM, and the `margin-inline: auto` below opts it
+           out of stretching - auto margins make a grid item shrink-to-fit. It
+           then sizes to its CONTENTS, and .kk-pdp__main has none to measure:
+           every slide inside it is position:absolute, so the frame's intrinsic
+           width is zero. The gallery collapsed to 88px (the 74px rail plus the
+           14px gap), the frame to 0x0, and `aspect-ratio` faithfully turned a
+           zero width into a zero height - so every product photo on the site
+           rendered as an empty cream box while the thumbnails beside it were
+           fine, and the files themselves were never the problem.
+
+           A width to stretch FROM is what the max-width cap and the auto
+           margins were written against all along. */
+        width: 100%; /* kk-gallery-stretch */
         /* ONE height budget for the whole gallery, read by both the rail and the
            main frame below. They used to carry two independent copies of the
            same magic number, so changing one silently unaligned their bottom
@@ -180,7 +193,10 @@
     .kk-pdp__thumb.is-active { border-color: #2d1810; }
 
     .kk-pdp__main {
-        position: relative; flex: 1; min-width: 0;
+        /* Basis auto rather than 0: there is nothing in normal flow in
+           here to measure, so the frame has to take its size from the row
+           it sits in instead of from its own content. */
+        position: relative; flex: 1 1 auto; min-width: 0;
         aspect-ratio: 3/4;
         /* The height budget, expressed as a WIDTH.
         

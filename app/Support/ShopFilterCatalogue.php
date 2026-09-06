@@ -22,7 +22,8 @@ use Illuminate\Support\Facades\Cache;
  * Where each value comes from:
  *   size    - product_variants.name of active variants on active products
  *   shade   - products.attributes -> "Colours" (name + swatch hex)
- *   texture - products.attributes -> "Textures" (plain strings)
+ *   texture - products.attributes -> "Textures" (plain strings), wearing the
+ *             swatch image set against that name in the Textures library
  *   price   - bands derived from the live price spread, never exact prices
  *
  * Values are normalised before they are grouped, so Black / black / BLACK /
@@ -155,6 +156,7 @@ class ShopFilterCatalogue
                 count: $row['count'],
                 hidden: $hidden,
                 exclusion_uuid: $hidden ? $excluded[$key]['uuid'] : null,
+                image_url: $row['image'] ?? null,
             ));
         }
 
@@ -259,7 +261,7 @@ class ShopFilterCatalogue
     /**
      * Every value the live catalogue carries, keyed type -> normalised value.
      *
-     * @return array<string, array<string, array{label: string, count: int, hex: ?string, query: string}>>
+     * @return array<string, array<string, array{label: string, count: int, hex: ?string, image: ?string, query: string}>>
      */
     private static function derived(): array
     {
@@ -298,7 +300,7 @@ class ShopFilterCatalogue
      * the label has to go through ProductVariant::sizeLabel() before it can be
      * grouped at all, because older rows store the whole variant name.
      *
-     * @return array<string, array{label: string, count: int, hex: ?string, query: string}>
+     * @return array<string, array{label: string, count: int, hex: ?string, image: ?string, query: string}>
      */
     private static function deriveSizes(): array
     {
@@ -325,11 +327,35 @@ class ShopFilterCatalogue
 
         $sizes = self::assemble($spellings, $carriers, 'size');
 
-        // A shopper's order, not the alphabet's - which puts L before M and XL
-        // before XS.
-        uasort($sizes, fn ($a, $b) => ProductVariant::sizeRank($a['label']) <=> ProductVariant::sizeRank($b['label']));
+        // The rail offers only the sizes curated in the Sizes library, in the
+        // order set there - the variant data carries ~1,700 size/colour combos
+        // that would otherwise flood it. A preset no active product carries is
+        // dropped rather than opening an empty shop. With no presets defined we
+        // fall back to the shopper's natural size order over whatever exists.
+        $presets = \App\Models\SizePreset::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['name']);
 
-        return $sizes;
+        if ($presets->isEmpty()) {
+            uasort($sizes, fn ($a, $b) => ProductVariant::sizeRank($a['label']) <=> ProductVariant::sizeRank($b['label']));
+
+            return $sizes;
+        }
+
+        $ordered = [];
+
+        foreach ($presets as $preset) {
+            $key = self::normaliseKey($preset->name);
+
+            if (isset($sizes[$key])) {
+                $sizes[$key]['label'] = $preset->name;
+                $ordered[$key] = $sizes[$key];
+            }
+        }
+
+        return $ordered;
     }
 
     /**
@@ -340,7 +366,11 @@ class ShopFilterCatalogue
      * is a plain string. Either form is accepted for both, because the colour
      * list has carried bare strings since before it had swatches.
      *
-     * @return array<string, array{label: string, count: int, hex: ?string, query: string}>
+     * A texture additionally picks up the swatch image the admin uploaded
+     * against it in the Textures library, matched on the same normalised key -
+     * so Cotton, cotton and "Cotton " all wear the one swatch.
+     *
+     * @return array<string, array{label: string, count: int, hex: ?string, image: ?string, query: string}>
      */
     private static function deriveAttributeList(string $jsonKey, string $type): array
     {
@@ -372,13 +402,43 @@ class ShopFilterCatalogue
 
         $values = self::assemble($spellings, $carriers, $type);
 
+        $images = $type === 'texture' ? self::texturePresetImages() : [];
+
         foreach ($values as $key => $value) {
             $values[$key]['hex'] = $hexes[$key] ?? null;
+            $values[$key]['image'] = $images[$key] ?? null;
         }
 
         uasort($values, fn ($a, $b) => strcasecmp($a['label'], $b['label']));
 
         return $values;
+    }
+
+    /**
+     * The swatch image each texture in the library carries, keyed by
+     * normalised name.
+     *
+     * The library is where a swatch is set, but the rail is still derived from
+     * the products - a texture no active product carries stays off the rail
+     * however good its picture. Read inside the cached derivation, and
+     * {@see \App\Models\TexturePreset} bumps that cache on save, so a new
+     * swatch is live at once.
+     *
+     * @return array<string, string>
+     */
+    private static function texturePresetImages(): array
+    {
+        $images = [];
+
+        foreach (\App\Models\TexturePreset::query()->where('is_active', true)->get(['name', 'image_path']) as $preset) {
+            $src = $preset->image_src;
+
+            if ($src !== null) {
+                $images[self::normaliseKey($preset->name)] = $src;
+            }
+        }
+
+        return $images;
     }
 
     /**
@@ -421,7 +481,7 @@ class ShopFilterCatalogue
      *
      * @param  array<string, array<string, int>>  $spellings
      * @param  array<string, array<int, bool>>  $carriers
-     * @return array<string, array{label: string, count: int, hex: ?string, query: string}>
+     * @return array<string, array{label: string, count: int, hex: ?string, image: ?string, query: string}>
      */
     private static function assemble(array $spellings, array $carriers, string $type): array
     {
@@ -438,6 +498,7 @@ class ShopFilterCatalogue
                 'label' => $label,
                 'count' => count($carriers[$key] ?? []),
                 'hex' => null,
+                'image' => null,
                 'query' => self::queryFor($type, $label, $key),
             ];
         }
@@ -465,7 +526,7 @@ class ShopFilterCatalogue
      * catalogue change rather than once per request. A single band is not a
      * filter, so a catalogue that cannot be cut offers no price rail at all.
      *
-     * @return array<string, array{label: string, count: int, hex: ?string, query: string}>
+     * @return array<string, array{label: string, count: int, hex: ?string, image: ?string, query: string}>
      */
     private static function derivePriceBands(): array
     {
@@ -518,6 +579,7 @@ class ShopFilterCatalogue
                 'label' => self::priceLabel($min, $max),
                 'count' => $count,
                 'hex' => null,
+                'image' => null,
                 'query' => self::priceQuery($min, $max),
             ];
         }

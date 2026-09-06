@@ -3,6 +3,9 @@
 use App\Http\Controllers\Admin\AbandonedCartController;
 use App\Http\Controllers\Admin\AttributeController;
 use App\Http\Controllers\Admin\AttributeValueController;
+use App\Http\Controllers\Admin\ColourPresetController;
+use App\Http\Controllers\Admin\SizePresetController;
+use App\Http\Controllers\Admin\TexturePresetController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\Auth\LoginController;
 use App\Http\Controllers\Admin\BannerController;
@@ -185,6 +188,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // Attributes
             Route::resource('attributes', AttributeController::class)->except(['show']);
             Route::resource('attributes.values', AttributeValueController::class)->shallow()->except(['index', 'show']);
+
+            // Reusable Colour / Texture / Size libraries, picked on the product form.
+            Route::resource('colour-presets', ColourPresetController::class)->except(['show']);
+            Route::resource('texture-presets', TexturePresetController::class)->except(['show']);
+            Route::resource('size-presets', SizePresetController::class)->except(['show']);
 
             // Inventory
             Route::prefix('inventory')->name('inventory.')->group(function () {

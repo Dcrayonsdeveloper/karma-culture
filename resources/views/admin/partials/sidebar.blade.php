@@ -273,6 +273,27 @@
             </svg>
             Brands
         </a>
+        <a href="{{ route('admin.colour-presets.index') }}"
+           class="admin-nav-item {{ request()->routeIs('admin.colour-presets.*') ? 'active' : '' }}">
+            <svg style="width: 18px; height: 18px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+            </svg>
+            Colours
+        </a>
+        <a href="{{ route('admin.texture-presets.index') }}"
+           class="admin-nav-item {{ request()->routeIs('admin.texture-presets.*') ? 'active' : '' }}">
+            <svg style="width: 18px; height: 18px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+            </svg>
+            Textures
+        </a>
+        <a href="{{ route('admin.size-presets.index') }}"
+           class="admin-nav-item {{ request()->routeIs('admin.size-presets.*') ? 'active' : '' }}">
+            <svg style="width: 18px; height: 18px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7l3 3 3-3M6 10V4m9 10l3 3 3-3m-3 3V8M4 20h6M14 20h6"/>
+            </svg>
+            Sizes
+        </a>
         <a href="{{ route('admin.inventory.index') }}"
            class="admin-nav-item {{ request()->routeIs('admin.inventory.*') ? 'active' : '' }}">
             <svg style="width: 18px; height: 18px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
