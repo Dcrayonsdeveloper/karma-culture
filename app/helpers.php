@@ -161,8 +161,8 @@ if (!function_exists('asset_v')) {
      *
      * Appending the file's modification time makes the URL itself change when
      * the bytes change, which invalidates the browser cache, any proxy in
-     * between, and Hostinger's edge cache in one move — without depending on
-     * mod_headers or mod_expires being present on the host.
+     * between, and any edge cache in front of the site in one move — without
+     * depending on mod_headers or mod_expires being present on the host.
      *
      * The stat is memoised per request; a missing file (or one on a remote
      * disk) falls through to a plain asset() rather than erroring.

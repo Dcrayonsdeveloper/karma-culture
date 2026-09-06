@@ -82,9 +82,9 @@ class OffsiteUrlTest extends TestCase
         // links must not open a second tab because of that mismatch.
         config(['app.url' => 'https://karmaakulture.test']);
 
-        $this->app->instance('request', Request::create('https://palegreen-mouse-158092.hostingersite.com/new-in'));
+        $this->app->instance('request', Request::create('https://shop.example.org/new-in'));
 
-        $this->assertFalse(is_offsite_url('https://palegreen-mouse-158092.hostingersite.com/new-in'));
+        $this->assertFalse(is_offsite_url('https://shop.example.org/new-in'));
         $this->assertFalse(is_offsite_url('https://karmaakulture.test/new-in'));
         $this->assertTrue(is_offsite_url('https://www.youtube.com/'));
     }

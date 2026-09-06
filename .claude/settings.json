@@ -3,7 +3,6 @@
     "allow": [
       "Bash(gh pr merge *)",
       "Bash(gh pr view *)",
-      "Bash(./deploy.sh *)",
       "Bash(git checkout *)",
       "Bash(git pull *)",
       "Bash(git merge *)",
@@ -17,8 +16,7 @@
     "allow": [
       "$defaults",
       "Merging pull requests in this repository with `gh pr merge`, including the --squash and --delete-branch flags.",
-      "Ordinary git branch operations in this repository: checkout, pull, merge, and push, including pushing to the main branch.",
-      "Running `./deploy.sh` to deploy this project to its Hostinger production host. The script takes a full database backup before making changes and refuses to run unless local HEAD matches origin/main."
+      "Ordinary git branch operations in this repository: checkout, pull, merge, and push, including pushing to the main branch."
     ]
   }
 }

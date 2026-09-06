@@ -15,7 +15,7 @@ return new class extends Migration
      *
      * video_url keeps the leading slash so the model's video accessor resolves
      * it against public/ rather than the storage disk - the file stays exactly
-     * where it is and where deploy.sh already ships it. Nothing is copied, so
+     * where it is, alongside the rest of the deployed media. Nothing is copied, so
      * the homepage renders the same file it did before.
      *
      * Written against the query builder rather than the Banner model on

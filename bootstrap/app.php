@@ -29,7 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
     // instead of silently unhooking itself.
     ->withEvents(discover: false)
     ->withMiddleware(function (Middleware $middleware): void {
-        // The site runs behind Hostinger's proxy. Without this, request()->ip()
+        // The site runs behind a reverse proxy. Without this, request()->ip()
         // is the proxy's address for every visitor — so per-IP rate limiters
         // put the whole world in one bucket — and the scheme is read as http,
         // which breaks secure-cookie and absolute-URL generation.

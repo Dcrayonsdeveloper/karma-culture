@@ -30,12 +30,12 @@ Thumbs.db
 # ===== Media assets =====
 # Images and video are large binaries (public/images alone is ~105 MB, with
 # individual banner videos over 15 MB) and they bloat every clone and fetch
-# permanently, since git keeps all history. They are deployed by deploy.sh,
-# which syncs public/images to the webroot, so they still reach production.
+# permanently, since git keeps all history. They have to reach production by
+# some route other than git.
 /public/images/
 /storage/app/public/
 
-# Web icons/favicons in the public root (deploy.sh ships these too).
+# Web icons/favicons in the public root (shipped with the media, not git).
 # pos-desktop/assets/* is deliberately NOT ignored — those icons are build
 # inputs for the Electron POS app, not web media, and total only ~17 KB.
 /public/*.png
@@ -97,3 +97,47 @@ firebase-adminsdk*.json
 settings.json
 # Cygwin/Git-Bash crash artefacts
 *.stackdump
+
+# ===== Deploy keys, audit output, local archives =====
+# The rules above cover *.pem and *.key, but an OpenSSH private key is
+# conventionally written with no extension at all, so karmaakulture_deploy sat
+# in the repo root untracked *and* unignored - one `git add -A` from being
+# published. Match the key by name and the whole id_* family by shape.
+karmaakulture_deploy
+karmaakulture_deploy.pub
+id_ed25519
+id_ed25519.pub
+id_rsa
+id_rsa.pub
+*_deploy
+!*_deploy.php
+
+# Security audit output quotes the credentials it is reporting on - live AWS
+# keys, Meta tokens, the Shiprocket webhook token - in plaintext. Treat it the
+# same as a .env: useful locally, never committed.
+SECURITY_AUDIT_REPORT.md
+*audit*report*.md
+*AUDIT*REPORT*.md
+
+# Local archives of storage/ and other bulk exports (tens to hundreds of MB,
+# and they carry customer media).
+karmaa_storage.tar.gz
+*_storage.tar.gz
+*_backup.tar.gz
+*_files.tar.gz
+
+# Composer's own downloaded phar - an install artefact, not source.
+composer.phar
+
+# ===== Server config and captured environments =====
+# scripts/aws_env.txt is a full production .env - APP_KEY, DB_PASSWORD,
+# MAIL_PASSWORD, AWS keys, ANTHROPIC_API_KEY - sitting untracked and, until
+# now, unignored in a public repository. The *_env.txt shape catches its
+# siblings too. Server config names the host and its certificate paths, which
+# is infrastructure detail this repo should not carry either.
+scripts/*_env.txt
+*_env.txt
+scripts/nginx-*.conf
+nginx-*.conf
+scripts/setup-*-db.sh
+scripts/export-db.php

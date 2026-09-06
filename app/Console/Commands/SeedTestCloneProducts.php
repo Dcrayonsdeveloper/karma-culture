@@ -495,7 +495,8 @@ class SeedTestCloneProducts extends Command
 
         $candidates = [
             public_path('images'),
-            // The Hostinger layout: <domain>/public_html beside <domain>/<app>.
+            // Shared-hosting layout: <domain>/public_html beside <domain>/<app>.
+            // Guarded by is_dir() below, so it costs nothing where it is absent.
             dirname(base_path()).DIRECTORY_SEPARATOR.'public_html'.DIRECTORY_SEPARATOR.'images',
         ];
 

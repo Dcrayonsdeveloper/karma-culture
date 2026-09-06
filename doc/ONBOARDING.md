@@ -4,12 +4,14 @@ Everything a new developer needs, from `git clone` to shipping a change to the
 live site. Written against the repository as it actually is, not the generic
 Laravel version of these steps.
 
-> **The rest of `doc/` and `ssh/README.md` describe ForeverKids**, a different
-> site that happens to share the Hostinger account this project was copied
-> from. Their server paths will overwrite that site. For Karmaa Kulture, this
-> file and `deploy.sh` are the only authoritative sources.
+> **The rest of `doc/` was written for ForeverKids**, a different site this
+> project was copied from. Treat its server paths and hosting details as
+> belonging to that site, not this one. For Karmaa Kulture, this file is the
+> authoritative source.
 
-**Live site:** https://palegreen-mouse-158092.hostingersite.com/
+**Live site:** see `APP_URL` in the production `.env`. Deliberately not named
+here - this repository is public, and where the shop runs is not something a
+clone should advertise.
 
 ---
 
@@ -101,20 +103,18 @@ composer dev     # server + queue worker + log tail + vite, all at once
 every clone forever. A fresh checkout therefore has no product photography, and
 broken image frames locally are expected, not a bug. Options: upload a few
 images through the admin panel, or copy `public/images/` from someone who has
-it. `deploy.sh` syncs that directory to production separately from git.
+it. It has to reach the server by some route other than git.
 
 ### Real data (optional)
 
 The seeders give you a working shop with dummy content. If you need production-
-shaped data, every deploy writes a database backup on the server:
+shaped data, ask whoever administers the live server for a dump, then:
 
 ```bash
-ssh karmaakulture 'ls -lh ~/backups/karmaa_db_*.sql.gz | tail -5'
-scp karmaakulture:~/backups/karmaa_db_<stamp>.sql.gz .
 gunzip -c karmaa_db_<stamp>.sql.gz | mysql -u root karmaculture
 ```
 
-Requires the SSH access set up in section 5. Treat that dump as customer data.
+Treat that dump as customer data: it carries real names, addresses and orders.
 
 ---
 
@@ -154,87 +154,43 @@ Merge to `main` when reviewed. `main` is what production runs.
 
 ## 5. Deploying to production
 
-### One-time SSH access
+**There is no deployment path in this repository.**
 
-Deployment goes over SSH to Hostinger, so your key has to be on that account.
+Nothing in this repository points at the production server: no deploy script,
+no CI workflow, no host, no credentials. That is on purpose - the repository is
+public, and hostnames, addresses and account names in a public repo are a map
+for anyone looking for one. Whoever administers the server holds those details.
 
-```bash
-ssh-keygen -t ed25519 -C "your-name@karmaa"     # if you have no key
-cat ~/.ssh/id_ed25519.pub                        # send this to the account owner
-```
+A deploy script and an `ssh/` directory used to live here. They pointed at a
+shared account belonging to a *different* site, which a stray deploy could have
+damaged, so they were removed rather than left as a trap. They remain in git
+history if anyone needs to read them.
 
-Once the key is authorised, add this to `~/.ssh/config`:
+To deploy, ask the server administrator. What you need from them:
 
-```
-Host karmaakulture
-    HostName 167.88.41.35
-    Port 65002
-    User u322703740
-    IdentityFile ~/.ssh/id_ed25519
-    IdentitiesOnly yes
-```
+- how the instance receives code (SSH from a workstation, a pull on the server,
+  or a pipeline held elsewhere),
+- where the application lives on that instance,
+- which PHP binary and which database it uses.
 
-Confirm it works — the deploy script will not run without it:
+Keep those out of this repository. `main` is the source of truth for code.
 
-```bash
-ssh karmaakulture 'echo connected'
-```
+### What a deploy has to do, whatever runs it
 
-### Deploy
-
-```bash
-git checkout main
-git pull
-./deploy.sh karmaakulture       # answer y at the confirmation prompt
-```
-
-The script refuses to start unless **local `HEAD` equals `origin/main`**, so
-commit and push before deploying. Roughly five minutes; most of it is the asset
-build.
-
-### What it actually does
-
-1. Verifies `HEAD == origin/main` and pins the deploy to that SHA
-2. Finds the app on the server by looking for a `.env` mentioning "karmaa" —
-   never by hard-coded path, because the account hosts several other live sites
-3. Backs up the production database to `~/backups/karmaa_db_<stamp>.sql.gz`
-4. Builds assets **locally** (`npm run build`) and ships `public/build`
-5. Server: `git reset --hard <deployed SHA>`, `composer install --no-dev`,
-   `php artisan migrate --force`
-6. Syncs `public/images` and the webroot `.htaccess`
-7. Rebuilds config/route/view caches, restarts the queue
-8. Curls the site and reports the HTTP status
-
-Note step 4: assets come from **your working tree**, while PHP comes from git.
-Deploy from a clean tree, or you ship JS/CSS built from unfinished local edits
-against a backend that does not have them.
-
-### After deploying
-
-```bash
-curl -s -o /dev/null -w "%{http_code}\n" https://palegreen-mouse-158092.hostingersite.com/
-ssh karmaakulture 'cd ~/domains/palegreen-mouse-158092.hostingersite.com/karmaa_culture && git rev-parse --short HEAD'
-```
-
-The second command should print the commit you just deployed.
-
-### If something breaks
-
-```bash
-# what the server logged (daily files, not laravel.log)
-ssh karmaakulture 'cd ~/domains/palegreen-mouse-158092.hostingersite.com/karmaa_culture \
-    && tail -c 4000 storage/logs/laravel-$(date +%Y-%m-%d).log'
-```
-
-To roll back: check out the last good commit on `main`, push it, and deploy
-again. Database backups from every deploy are in `~/backups/` on the server.
+1. Build assets: `npm run build`. `public/build` is gitignored, so it never
+   arrives via git and the site 500s with "Vite manifest not found" without it.
+2. `composer install --no-dev --optimize-autoloader`
+3. `php artisan migrate --force`
+4. Rebuild the caches: `config:cache`, `route:cache`, `view:cache`
+5. Restart the queue worker
+6. Sync `public/images`, also gitignored
 
 ---
 
 ## 6. Things that will bite you
 
-- **`doc/` and `ssh/README.md` are stale.** They document ForeverKids paths.
-  Deploying by following them writes to the wrong site.
+- **The rest of `doc/` is stale.** It documents ForeverKids paths and hosting.
+  Do not follow its server instructions for this site.
 - **`composer install` on PHP 8.3 fails** with a platform error. It is the
   `config.platform` pin, not a missing extension — install 8.4.
 - **Tests drop tables.** `.env.testing` must name a throwaway schema.
@@ -246,4 +202,5 @@ again. Database backups from every deploy are in `~/backups/` on the server.
   process is left running detached and races whatever you run next. Redirect to
   a file instead.
 - **`public/build` is gitignored.** If the live site 500s with "Vite manifest
-  not found", an asset upload was interrupted — re-run the deploy.
+  not found", the built assets never reached the server — they do not travel
+  with git.

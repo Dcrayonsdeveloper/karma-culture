@@ -9,11 +9,10 @@ return new class extends Migration
      * Retry of 2026_08_04_130000, which silently created nothing on production.
      *
      * That migration guarded on is_file(public_path(...)). Under CLI that
-     * resolves to <app>/public/images, but this host serves the site from a
-     * sibling public_html/ directory - the same wrapper deploy.sh already works
-     * around - and the media only exists there. The check failed, the migration
-     * returned early, and Hero Banners still read "No hero banners yet" while
-     * the video played on the homepage.
+     * resolves to <app>/public/images, but the server it ran on served the site
+     * from a sibling public_html/ directory, and the media only existed there.
+     * The check failed, the migration returned early, and Hero Banners still
+     * read "No hero banners yet" while the video played on the homepage.
      *
      * The file is now looked for in every location it legitimately lives in.
      *
@@ -57,7 +56,7 @@ return new class extends Migration
             ->delete();
     }
 
-    /** public/ locally; the sibling public_html/ on Hostinger. */
+    /** public/ normally; the sibling public_html/ on shared hosting. */
     private function videoExists(): bool
     {
         $relative = ltrim(self::VIDEO, '/');
