@@ -241,7 +241,14 @@ class PageController extends Controller
 
         $attributes = [
             'location' => $location,
-            'url' => route('page.show', $page->slug, absolute: false),
+            // The page's canonical address, not /page/{slug} unconditionally.
+            // Four legal pages have a route of their own and /page/{slug} now
+            // forwards to it, so writing the generic path here pointed the menu
+            // at a redirect - which is how the live footer came to offer
+            // /page/gdpr beside three hand-written neighbours on /gdpr-style
+            // paths. Pages without a route of their own are unaffected:
+            // canonicalUrl() gives them the same /page/{slug} as before.
+            'url' => $page->canonicalPath(),
             'is_active' => (bool) $page->is_published,
         ];
 

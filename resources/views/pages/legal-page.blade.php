@@ -5,7 +5,10 @@
         @if(!empty($page->seo_data['meta_description']))
             <meta name="description" content="{{ $page->seo_data['meta_description'] }}">
         @endif
-        <link rel="canonical" href="{{ url()->current() }}">
+        {{-- Not url()->current(): this page is reachable at /page/{slug} as well
+             as at its own path, and pointing the tag at whichever one was asked
+             for made each address claim to be the canonical one. --}}
+        <link rel="canonical" href="{{ $page->canonicalUrl() }}">
     @endpush
 
     <div class="bg-neutral-50 border-b border-neutral-100">

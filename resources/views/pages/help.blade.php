@@ -1,6 +1,14 @@
 <x-layouts.app>
     <x-slot name="title">Help Center - {{ config('app.name') }}</x-slot>
 
+    @php
+        // Was a third hardcoded support number, different again from the one on
+        // /contact and the one in the footer. Reads the single Site Settings
+        // value the rest of the site uses; the literal stays as the fallback.
+        $kkPhone = trim((string) \App\Models\Setting::get('contact_phone', '')) ?: '+91 77974 44000';
+        $kkTel   = preg_replace('/[^0-9+]/', '', $kkPhone);
+    @endphp
+
     @push('meta')
         <meta name="description" content="Need help? Visit the {{ config('app.name') }} help center for answers about orders, shipping, returns, and account management.">
         <link rel="canonical" href="{{ url('/help') }}">
@@ -120,7 +128,7 @@
                         </div>
                         <h3 class="text-sm font-semibold text-neutral-900 mb-1">Phone Support</h3>
                         <p class="text-xs text-neutral-600 mb-3">Mon-Fri, 9am-5pm EST</p>
-                        <a href="tel:+917797444000" class="inline-flex items-center px-4 py-2 min-h-10 sm:min-h-0 text-[13px] font-medium text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50 transition-colors">+91 77974 44000</a>
+                        <a href="tel:{{ $kkTel }}" class="inline-flex items-center px-4 py-2 min-h-10 sm:min-h-0 text-[13px] font-medium text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50 transition-colors">{{ $kkPhone }}</a>
                     </div>
                 </div>
             </div>

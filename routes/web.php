@@ -50,7 +50,25 @@ Route::get('/', [App\Http\Controllers\HomeController::class, 'index'])->name('ho
 // is not quietly forwarded to a page the visitor did not ask for, which hides
 // the broken link from whoever wrote it and makes the 404 page a liar about
 // what this site actually has.
-Route::get('/product/{product:slug}', [App\Http\Controllers\ProductController::class, 'show'])->name('product.show');
+// A slug that no longer resolves is checked against the addresses this product
+// used to answer on before it 404s. Renaming a product would otherwise throw
+// away every link and search result pointing at the old address - which matters
+// here in particular, because the catalogue still carries slugs written from
+// the names it was imported under. missing() runs only when the binding above
+// found nothing, so a live product never pays for this lookup, and the answer
+// is a 301 rather than a quiet re-render: the old address is genuinely gone,
+// and saying so is what moves the indexed link to the new one.
+Route::get('/product/{product:slug}', [App\Http\Controllers\ProductController::class, 'show'])
+    ->name('product.show')
+    ->missing(function (Illuminate\Http\Request $request) {
+        $redirect = App\Models\ProductSlugRedirect::with('product')
+            ->where('old_slug', $request->route('product'))
+            ->first();
+
+        abort_unless($redirect?->product?->is_active, 404);
+
+        return redirect()->route('product.show', $redirect->product->slug, 301);
+    });
 
 // Everything else that hangs off one product. These are all named product.*
 // already; three of the four answered at /products/... while the fourth and the

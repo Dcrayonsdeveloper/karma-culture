@@ -254,9 +254,20 @@ class PageController extends Controller
         return view('pages.legal-page', compact('page'));
     }
 
-    public function show(Page $page): View
+    public function show(Page $page): View|RedirectResponse
     {
         abort_unless($page->is_published, 404);
+
+        // A page that has an address of its own is served only there. This path
+        // stays registered because it is the only address an admin-created page
+        // has, and because links already point at it - the one item in the
+        // footer Navigation table is /page/gdpr - but for the four legal pages
+        // it now forwards instead of serving a second copy. A 301 rather than a
+        // canonical tag: the duplicate is removed rather than annotated, and
+        // the links already pointing here follow to the right place.
+        if ($page->hasDedicatedRoute()) {
+            return redirect()->to($page->canonicalUrl(), 301);
+        }
 
         return view('pages.legal-page', compact('page'));
     }

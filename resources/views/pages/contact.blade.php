@@ -1,11 +1,30 @@
 <x-layouts.app>
     <x-slot name="title">Contact Us - {{ config('app.name') }}</x-slot>
 
+    @php
+        // The address, phone and email below used to be typed straight into the
+        // markup, while the footer on this same page read contact_email /
+        // contact_phone / contact_address out of Site Settings. The two
+        // disagreed in production - the card offered +91 93117 96900 and a
+        // Rohini address, the footer directly underneath it offered a different
+        // number and a different address - and editing Site Settings changed
+        // only the footer. Both now read the one set of values, so a shopper is
+        // never given two ways to reach a shop that has one.
+        //
+        // The literals stay as the fallback, so nothing disappears from the page
+        // on an install where these settings were never filled in.
+        $kkPhone   = trim((string) \App\Models\Setting::get('contact_phone', '')) ?: '+91 93117 96900';
+        $kkEmail   = trim((string) \App\Models\Setting::get('contact_email', '')) ?: 'support@karmaakulture.com';
+        $kkAddress = trim((string) \App\Models\Setting::get('contact_address', '')) ?: 'D-12/140, Rohini Sector-7, Delhi 110085';
+        // tel: wants digits and a leading +, nothing else.
+        $kkTel     = preg_replace('/[^0-9+]/', '', $kkPhone);
+    @endphp
+
     @push('meta')
-        <meta name="description" content="Get in touch with {{ config('app.name') }}. We're here to help with orders, returns, and any questions about kids' clothing.">
+        <meta name="description" content="Get in touch with {{ config('app.name') }}. We're here to help with orders, returns, and any questions.">
         <link rel="canonical" href="{{ url('/contact') }}">
         <meta property="og:title" content="Contact Us - {{ config('app.name') }}">
-        <meta property="og:description" content="Get in touch with {{ config('app.name') }}. We're here to help with orders, returns, and any questions about kids' clothing.">
+        <meta property="og:description" content="Get in touch with {{ config('app.name') }}. We're here to help with orders, returns, and any questions.">
         <meta property="og:type" content="website">
         <meta property="og:url" content="{{ url('/contact') }}">
         <meta name="twitter:card" content="summary">
@@ -18,22 +37,24 @@
             '@context' => 'https://schema.org',
             '@type' => 'ClothingStore',
             'name' => config('app.name'),
-            'description' => "Kids' clothing store offering fashionable and comfortable outfits for children.",
+            'description' => \App\Models\Setting::get('site_tagline', 'Premium tailored fashion for the modern individual.'),
             'url' => url('/'),
-            'telephone' => '+919311796900',
-            'email' => 'support@karmaakulture.com',
+            // The same three values the visible card and the footer use. This
+            // block used to read site_phone / site_email while the page printed
+            // something else, so the structured data handed to search engines
+            // disagreed with the page it described.
+            'telephone' => $kkPhone,
+            'email' => $kkEmail,
             'address' => [
                 '@type' => 'PostalAddress',
-                'streetAddress' => 'D-12/140, Rohini Sector-7',
-                'addressLocality' => 'Delhi',
-                'postalCode' => '110085',
+                'streetAddress' => $kkAddress,
                 'addressCountry' => 'IN',
             ],
-            'geo' => [
-                '@type' => 'GeoCoordinates',
-                'latitude' => 28.7041,
-                'longitude' => 77.1025,
-            ],
+            // 'geo' removed deliberately. It asserted 28.7041, 77.1025 - the
+            // generic centroid of Delhi, not this shop - as the store's exact
+            // coordinates. Publishing no coordinates is honest; publishing the
+            // wrong ones to three decimal places is not. Add real ones here if
+            // the shop has a physical storefront to point at.
             'openingHoursSpecification' => [
                 [
                     '@type' => 'OpeningHoursSpecification',
@@ -177,7 +198,7 @@
                                 </div>
                                 <div>
                                     <p class="text-sm font-medium text-neutral-900">Address</p>
-                                    <p class="text-[13px] text-neutral-600 leading-relaxed">D-12/140, Rohini Sector-7, Delhi 110085</p>
+                                    <p class="text-[13px] text-neutral-600 leading-relaxed">{{ $kkAddress }}</p>
                                 </div>
                             </div>
 
@@ -190,7 +211,7 @@
                                 </div>
                                 <div>
                                     <p class="text-sm font-medium text-neutral-900">Phone</p>
-                                    <a href="tel:+919311796900" class="text-[13px] text-[#6F9CA2] hover:text-[#5B878D] transition-colors">+91 93117 96900</a>
+                                    <a href="tel:{{ $kkTel }}" class="text-[13px] text-[#6F9CA2] hover:text-[#5B878D] transition-colors">{{ $kkPhone }}</a>
                                 </div>
                             </div>
 
@@ -203,7 +224,7 @@
                                 </div>
                                 <div>
                                     <p class="text-sm font-medium text-neutral-900">Email</p>
-                                    <a href="mailto:support@karmaakulture.com" class="text-[13px] text-[#6F9CA2] hover:text-[#5B878D] transition-colors">support@karmaakulture.com</a>
+                                    <a href="mailto:{{ $kkEmail }}" class="text-[13px] text-[#6F9CA2] hover:text-[#5B878D] transition-colors">{{ $kkEmail }}</a>
                                 </div>
                             </div>
 
@@ -225,7 +246,14 @@
                     <!-- Google Map -->
                     <div class="bg-white border border-neutral-100 rounded-xl overflow-hidden flex-1">
                         <iframe
-                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3499.123456789!2d77.1025!3d28.7041!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390d013e2d2075c1%3A0x2b5a4b2e8b8b8b8b!2sRohini+Sector+7%2C+Delhi+110085!5e0!3m2!1sen!2sin!4v1700000000000"
+                            {{-- The previous src was a hand-invented "pb=" string
+                                 (!1d3499.123456789, place id 0x2b...8b8b8b8b,
+                                 !4v1700000000000) - none of it produced by Google,
+                                 and it pinned a hardcoded address regardless of what
+                                 Site Settings said. The q= form needs no API key and
+                                 resolves whatever address the shop has actually
+                                 configured. --}}
+                            src="https://www.google.com/maps?q={{ urlencode($kkAddress) }}&output=embed"
                             width="100%"
                             height="280"
                             style="border:0;"

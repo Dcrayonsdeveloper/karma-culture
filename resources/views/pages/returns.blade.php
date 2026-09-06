@@ -1,6 +1,14 @@
 <x-layouts.app>
     <x-slot name="title">Returns Policy - {{ config('app.name') }}</x-slot>
 
+    @php
+        // Was a third hardcoded support number, different again from the one on
+        // /contact and the one in the footer. Reads the single Site Settings
+        // value the rest of the site uses; the literal stays as the fallback.
+        $kkPhone = trim((string) \App\Models\Setting::get('contact_phone', '')) ?: '+91 77974 44000';
+        $kkTel   = preg_replace('/[^0-9+]/', '', $kkPhone);
+    @endphp
+
     @push('meta')
         <meta name="description" content="Returns and exchange policy for {{ config('app.name') }}. Easy returns on kids' clothing within the return window.">
         <link rel="canonical" href="{{ route('returns') }}">
@@ -201,11 +209,11 @@
                         </svg>
                         Contact Us
                     </a>
-                    <a href="tel:+917797444000" class="inline-flex items-center gap-2 px-4 py-2 min-h-10 sm:min-h-0 text-[13px] font-medium text-neutral-700 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
+                    <a href="tel:{{ $kkTel }}" class="inline-flex items-center gap-2 px-4 py-2 min-h-10 sm:min-h-0 text-[13px] font-medium text-neutral-700 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
                         </svg>
-                        +91 77974 44000
+                        {{ $kkPhone }}
                     </a>
                 </div>
             </div>
