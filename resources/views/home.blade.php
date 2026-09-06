@@ -1479,6 +1479,24 @@
                 ->with(['children' => fn($q) => $q->where('is_active', true)->orderBy('position')])
                 ->first();
 
+            // Kids, on the same terms as the two above: read from the DB rather
+            // than from the controller's category list, so the rail is not at the
+            // mercy of that list's ordering or limit.
+            //
+            // Named $kidsChildren, not $kidsKids. The two rails above call their
+            // subcategories "kids" - $mensKids is the children of Men's - and a
+            // section that is itself called Kids collides with that badly enough
+            // to be worth breaking the pattern for.
+            $kidsRoot = \App\Models\Category::whereNull('parent_id')
+                ->where('is_active', true)
+                ->where(function ($q) {
+                    $q->where('slug', 'kids')->orWhere('slug', 'kid')
+                      ->orWhere('name', 'Kids')->orWhere('name', "Kids'")
+                      ->orWhere('name', 'Kid');
+                })
+                ->with(['children' => fn($q) => $q->where('is_active', true)->orderBy('position')])
+                ->first();
+
             $mensKids   = $mensRoot   ? $mensRoot->children->take(12)  : collect();
             $womensKids = $womensRoot
                 ? $womensRoot->children
@@ -1486,8 +1504,11 @@
                     ->take(12)->values()
                 : collect();
 
+            $kidsChildren = $kidsRoot ? $kidsRoot->children->take(12) : collect();
+
             $mensTints   = ['#7a6347', '#5a4a3c', '#3a2a1f', '#8a6f52'];
             $womensTints = ['#947254', '#7a6347', '#6e5238', '#5a4a3c', '#8a6f52', '#3a2a1f', '#4a3320'];
+            $kidsTints   = ['#8a6f52', '#6e5238', '#7a6347', '#4a3320', '#5a4a3c', '#3a2a1f'];
         @endphp
 
         @if($mensKids->count())
@@ -1571,6 +1592,50 @@
                                 <img src="{{ $tileImage }}" alt="{{ $child->name }}" loading="lazy">
                             @else
                                 <div class="w-full h-full" style="background: linear-gradient(135deg, {{ $womensTints[$i % count($womensTints)] }} 0%, var(--kk-brown-dark) 100%);"></div>
+                            @endif
+                            <div class="kk-tile-overlay"></div>
+                            <div class="kk-tile-label"><span class="pill">{{ Str::upper($child->name) }}</span></div>
+                        </a>
+                    @endforeach
+                    </div>
+                    <button type="button" class="kk-catgrid__nav kk-catgrid__nav--next" :class="{ 'is-disabled': atEnd }" @click="next()" aria-label="Next">
+                        <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </button>
+                </div>
+            </div>
+        </section>
+        @endif
+
+        @if($kidsChildren->count())
+        <section class="kk-section">
+            <div class="container mx-auto px-4">
+                <div class="kk-section-header">
+                    <div class="left">
+                        <span class="kk-eyebrow">Shop</span>
+                        <h2 class="kk-section-title">Kids</h2>
+                    </div>
+                    <a href="{{ route('category.show', $kidsRoot) }}" class="kk-view-all">View All <span aria-hidden="true">&rarr;</span></a>
+                </div>
+                <div class="kk-catgrid kk-catgrid--kids" x-data="kkCarousel">
+                    <button type="button" class="kk-catgrid__nav kk-catgrid__nav--prev" :class="{ 'is-disabled': atStart }" @click="prev()" aria-label="Previous">
+                        <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                    </button>
+                    <div class="kk-catgrid__track" x-ref="track" @scroll.debounce.80ms="update()">
+                    @foreach($kidsChildren as $i => $child)
+                        <a href="{{ route('category.show', $child) }}" class="kk-tile kk-media">
+                            @if($child->video_url)
+                                @php $tileVideo = str_starts_with($child->video_url, 'http') ? $child->video_url : asset_v($child->video_url); @endphp
+                                {{-- No blurred copy behind a tile video: these rails run up
+                                     to 12 clips each, and a second decoder per tile can
+                                     cross the browser's concurrent-decode cap, at which
+                                     point clips stop painting - the blank tile this frame
+                                     exists to prevent. The dark frame carries the margin. --}}
+                                <video src="{{ $tileVideo }}" autoplay muted loop playsinline preload="metadata"></video>
+                            @elseif($child->image_url)
+                                @php $tileImage = asset_v('storage/' . $child->image_url); @endphp
+                                <img src="{{ $tileImage }}" alt="{{ $child->name }}" loading="lazy">
+                            @else
+                                <div class="w-full h-full" style="background: linear-gradient(135deg, {{ $kidsTints[$i % count($kidsTints)] }} 0%, var(--kk-brown-dark) 100%);"></div>
                             @endif
                             <div class="kk-tile-overlay"></div>
                             <div class="kk-tile-label"><span class="pill">{{ Str::upper($child->name) }}</span></div>
