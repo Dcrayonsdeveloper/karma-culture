@@ -1,7 +1,10 @@
 {{--
     "Pick from library" dropdown for the Sizes / Colours / Textures sections.
     It lives inside the section's kk* Alpine component, which must expose:
-      presets (array), pickerOpen (bool), pickedIds (map), applyPicker().
+      presets (array), pickerOpen (bool), pickedIds (map), togglePicker(),
+      applyPicker().
+    The ticks mirror the section's rows: opening it ticks everything already
+    on the form, so unticking one takes it off again.
     $type is 'size' | 'colour' | 'texture' and only changes the label and
     whether a swatch is shown next to each row.
 --}}
@@ -13,14 +16,14 @@
         'texture' => ['route' => 'admin.texture-presets.index', 'label' => 'Textures'],
     ][$type];
 @endphp
-<div style="position:relative;" @keydown.escape.window="pickerOpen = false; pickedIds = {}">
-    <button type="button" @click="pickerOpen = !pickerOpen"
+<div style="position:relative;" @keydown.escape.window="pickerOpen = false">
+    <button type="button" @click="togglePicker()"
             class="btn btn-secondary" style="font-size:12px; padding:4px 10px; display:inline-flex; align-items:center; gap:4px;">
         <svg style="width:13px;height:13px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
         Pick from library
     </button>
 
-    <div x-show="pickerOpen" x-cloak @click.outside="pickerOpen = false; pickedIds = {}"
+    <div x-show="pickerOpen" x-cloak @click.outside="pickerOpen = false"
          style="position:absolute; right:0; top:calc(100% + 4px); z-index:40; width:270px; background:#fff; border:1px solid #d4d4d4; border-radius:.5rem; box-shadow:0 6px 20px rgba(0,0,0,.14);">
         <template x-if="presets.length === 0">
             <p style="font-size:12px; color:#616161; padding:.85rem;">
@@ -50,8 +53,8 @@
                     </template>
                 </div>
                 <div style="display:flex; justify-content:flex-end; align-items:center; gap:.5rem; padding:.5rem; border-top:1px solid #f1f1f1;">
-                    <button type="button" @click="pickerOpen = false; pickedIds = {}" style="font-size:12px; color:#616161; background:none; border:0; cursor:pointer;">Cancel</button>
-                    <button type="button" @click="applyPicker()" class="btn btn-primary" style="font-size:12px; padding:3px 10px;">Add selected</button>
+                    <button type="button" @click="pickerOpen = false" style="font-size:12px; color:#616161; background:none; border:0; cursor:pointer;">Cancel</button>
+                    <button type="button" @click="applyPicker()" class="btn btn-primary" style="font-size:12px; padding:3px 10px;">Done</button>
                 </div>
             </div>
         </template>

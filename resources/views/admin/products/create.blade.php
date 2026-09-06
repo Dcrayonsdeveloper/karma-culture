@@ -364,24 +364,42 @@
                                         stock_quantity: '0', sku: '', measurements: '', is_active: true,
                                     });
                                 },
+                                togglePicker() {
+                                    if (this.pickerOpen) { this.pickerOpen = false; return; }
+                                    // The ticks are the list: the picker opens with every size
+                                    // already on the form ticked, so unticking one takes it off.
+                                    this.pickedIds = {};
+                                    (this.presets || []).forEach(p => { this.pickedIds[p.id] = this.hasPreset(p); });
+                                    this.pickerOpen = true;
+                                },
+                                hasPreset(p) {
+                                    return this.rows.some(r => (r.name || '').trim().toLowerCase() === (p.name || '').trim().toLowerCase());
+                                },
                                 addPreset(p) {
                                     // Ticking a size already on the form should not open a second
                                     // row for it, so a name that is already there is skipped.
-                                    const has = this.rows.some(r => (r.name || '').trim().toLowerCase() === (p.name || '').trim().toLowerCase());
-                                    if (has) { return false; }
+                                    if (this.hasPreset(p)) { return false; }
                                     this.rows.push({
                                         uid: ++this.seq, name: p.name, price: '', mrp: '',
                                         stock_quantity: '0', sku: '', measurements: p.measurements || '', is_active: true,
                                     });
                                     return true;
                                 },
+                                removePreset(p) {
+                                    // Only rows that are this preset go: a size typed by hand is
+                                    // not in the library, so the picker never touches it.
+                                    const name = (p.name || '').trim().toLowerCase();
+                                    this.rows = this.rows.filter(r => (r.name || '').trim().toLowerCase() !== name);
+                                },
                                 applyPicker() {
                                     let added = 0;
-                                    (this.presets || []).forEach(p => { if (this.pickedIds[p.id] && this.addPreset(p)) { added++; } });
+                                    (this.presets || []).forEach(p => {
+                                        if (this.pickedIds[p.id]) { if (this.addPreset(p)) { added++; } }
+                                        else { this.removePreset(p); }
+                                    });
                                     // Drop the blank opener row once real sizes are picked, so a
                                     // picked-only product does not bounce on an empty size row.
                                     if (added > 0) { this.rows = this.rows.filter(r => (r.name || '').trim() !== ''); }
-                                    this.pickedIds = {};
                                     this.pickerOpen = false;
                                 },
                             };
@@ -480,19 +498,37 @@
                                     // empty and the admin adds them with "Pick from library".
                                 },
                                 add() { this.rows.push({ uid: ++this.seq, name: '', hex: KK_UNPICKED_SWATCH, picked: false }); },
+                                togglePicker() {
+                                    if (this.pickerOpen) { this.pickerOpen = false; return; }
+                                    // The ticks are the list: the picker opens with every colour
+                                    // already on the form ticked, so unticking one takes it off.
+                                    this.pickedIds = {};
+                                    (this.presets || []).forEach(p => { this.pickedIds[p.id] = this.hasPreset(p); });
+                                    this.pickerOpen = true;
+                                },
+                                hasPreset(p) {
+                                    return this.rows.some(r => (r.name || '').trim().toLowerCase() === (p.name || '').trim().toLowerCase());
+                                },
                                 addPreset(p) {
-                                    const has = this.rows.some(r => (r.name || '').trim().toLowerCase() === (p.name || '').trim().toLowerCase());
-                                    if (has) { return false; }
+                                    if (this.hasPreset(p)) { return false; }
                                     this.rows.push({ uid: ++this.seq, name: p.name, hex: p.hex, picked: true });
                                     return true;
                                 },
+                                removePreset(p) {
+                                    // Only rows that are this preset go: a colour typed by hand is
+                                    // not in the library, so the picker never touches it.
+                                    const name = (p.name || '').trim().toLowerCase();
+                                    this.rows = this.rows.filter(r => (r.name || '').trim().toLowerCase() !== name);
+                                },
                                 applyPicker() {
                                     let added = 0;
-                                    (this.presets || []).forEach(p => { if (this.pickedIds[p.id] && this.addPreset(p)) { added++; } });
+                                    (this.presets || []).forEach(p => {
+                                        if (this.pickedIds[p.id]) { if (this.addPreset(p)) { added++; } }
+                                        else { this.removePreset(p); }
+                                    });
                                     // Drop the blank opener row (no name, no swatch picked) once
                                     // real colours are picked.
                                     if (added > 0) { this.rows = this.rows.filter(r => (r.name || '').trim() !== '' || r.picked); }
-                                    this.pickedIds = {};
                                     this.pickerOpen = false;
                                 },
                             };
@@ -562,19 +598,37 @@
                                     this.rows = (@json($kkTextureRows)).map(name => ({ uid: ++this.seq, name }));
                                 },
                                 add() { this.rows.push({ uid: ++this.seq, name: '' }); },
+                                togglePicker() {
+                                    if (this.pickerOpen) { this.pickerOpen = false; return; }
+                                    // The ticks are the list: the picker opens with every texture
+                                    // already on the form ticked, so unticking one takes it off.
+                                    this.pickedIds = {};
+                                    (this.presets || []).forEach(p => { this.pickedIds[p.id] = this.hasPreset(p); });
+                                    this.pickerOpen = true;
+                                },
+                                hasPreset(p) {
+                                    return this.rows.some(r => (r.name || '').trim().toLowerCase() === (p.name || '').trim().toLowerCase());
+                                },
                                 addPreset(p) {
-                                    const has = this.rows.some(r => (r.name || '').trim().toLowerCase() === (p.name || '').trim().toLowerCase());
-                                    if (has) { return false; }
+                                    if (this.hasPreset(p)) { return false; }
                                     this.rows.push({ uid: ++this.seq, name: p.name });
                                     return true;
                                 },
+                                removePreset(p) {
+                                    // Only rows that are this preset go: a texture typed by hand
+                                    // is not in the library, so the picker never touches it.
+                                    const name = (p.name || '').trim().toLowerCase();
+                                    this.rows = this.rows.filter(r => (r.name || '').trim().toLowerCase() !== name);
+                                },
                                 applyPicker() {
                                     let added = 0;
-                                    (this.presets || []).forEach(p => { if (this.pickedIds[p.id] && this.addPreset(p)) { added++; } });
+                                    (this.presets || []).forEach(p => {
+                                        if (this.pickedIds[p.id]) { if (this.addPreset(p)) { added++; } }
+                                        else { this.removePreset(p); }
+                                    });
                                     // Textures are optional, so only blank rows added by hand are
                                     // pruned once a real one is picked.
                                     if (added > 0) { this.rows = this.rows.filter(r => (r.name || '').trim() !== ''); }
-                                    this.pickedIds = {};
                                     this.pickerOpen = false;
                                 },
                             };
