@@ -875,37 +875,6 @@
            tile controls would never appear; there they stay visible instead. */
         @media (hover: none) { .kk-media > .opacity-0 { opacity: 1; } }
 
-        /* The main-media picker: a radio in all but name. Ticked and blue on the
-           tile that leads the product, an empty ring on the rest. */
-        .kk-main-pick {
-            position: absolute; bottom: 6px; left: 6px; z-index: 30;
-            display: inline-flex; align-items: center; gap: 5px;
-            padding: 3px 8px 3px 3px; border: 0; border-radius: 999px;
-            font-size: 10px; font-weight: 600; line-height: 1; color: #fff;
-            background: rgba(0,0,0,.62); cursor: pointer;
-            /* The tiles are draggable, and a press that starts on this control
-               is a click, not the beginning of a drag. */
-            -webkit-user-select: none; user-select: none;
-            transition: background .15s ease;
-        }
-        .kk-main-pick:hover:not(:disabled) { background: rgba(0,0,0,.82); }
-        .kk-main-pick:disabled { cursor: default; opacity: .6; }
-        .kk-main-pick:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
-        .kk-main-pick__tick {
-            display: inline-flex; align-items: center; justify-content: center;
-            width: 15px; height: 15px; flex: none;
-            border: 1.5px solid rgba(255,255,255,.75); border-radius: 50%;
-            background: transparent;
-        }
-        .kk-main-pick__tick svg { width: 9px; height: 9px; opacity: 0; }
-        /* Ticked. The check appears and the pill takes the admin's blue, so the
-           main tile is legible at a glance across a grid of eight. */
-        .kk-main-pick.is-main { background: #005bd3; }
-        .kk-main-pick.is-main:hover:not(:disabled) { background: #005bd3; }
-        .kk-main-pick.is-main .kk-main-pick__tick {
-            background: #fff; border-color: #fff; color: #005bd3;
-        }
-        .kk-main-pick.is-main .kk-main-pick__tick svg { opacity: 1; }
     </style>
     @endpush
 

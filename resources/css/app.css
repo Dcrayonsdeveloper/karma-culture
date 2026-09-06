@@ -1499,6 +1499,73 @@ a:focus-visible,
    Container Utilities
    ======================================== */
 
+/* ========================================
+   Admin: main-media picker
+   ========================================
+
+   Lives here rather than in a @push('styles') beside the markup, and that is
+   not a preference. admin/products/edit.blade.php is wrapped in
+   <x-layouts.admin>, a Blade COMPONENT: the layout renders @stack('styles')
+   in <head> and only then evaluates {{ $slot }}, so a push from inside the
+   slot arrives after the stack has been flushed and never reaches the page.
+   @stack('scripts') sits after the slot, which is why the JS in that same file
+   works. Without this the button lost `position: absolute`, fell into normal
+   flow at the foot of the tile, and was clipped in half by overflow-hidden.
+
+   A radio in all but name: ticked and blue on the tile that leads the product,
+   an empty ring on the rest. */
+.kk-main-pick {
+    position: absolute;
+    bottom: 6px;
+    left: 6px;
+    z-index: 30;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px 3px 3px;
+    border: 0;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+    color: #fff;
+    background: rgba(0, 0, 0, .62);
+    cursor: pointer;
+    /* The tiles are draggable, and a press that starts here is a click. */
+    -webkit-user-select: none;
+    user-select: none;
+    transition: background .15s ease;
+}
+
+.kk-main-pick:hover:not(:disabled) { background: rgba(0, 0, 0, .82); }
+.kk-main-pick:disabled { cursor: default; opacity: .6; }
+.kk-main-pick:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+
+.kk-main-pick__tick {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 15px;
+    height: 15px;
+    flex: none;
+    border: 1.5px solid rgba(255, 255, 255, .75);
+    border-radius: 50%;
+    background: transparent;
+}
+
+.kk-main-pick__tick svg { width: 9px; height: 9px; opacity: 0; }
+
+/* Ticked. The check appears and the pill takes the admin's blue, so the main
+   tile is legible at a glance across a grid of eight. */
+.kk-main-pick.is-main,
+.kk-main-pick.is-main:hover:not(:disabled) { background: #005bd3; }
+.kk-main-pick.is-main .kk-main-pick__tick {
+    background: #fff;
+    border-color: #fff;
+    color: #005bd3;
+}
+.kk-main-pick.is-main .kk-main-pick__tick svg { opacity: 1; }
+
 .container-narrow {
     max-width: 48rem;
     margin-left: auto;
