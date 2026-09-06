@@ -116,7 +116,7 @@
     .pdp-wrapper { background: #EFE2CB; }
     .kk-pdp { display: grid; gap: 28px; padding: 24px 0 56px; }
     @media (min-width: 1024px) {
-        .kk-pdp { grid-template-columns: 1.2fr 1fr; gap: 56px; align-items: start; }
+        .kk-pdp { grid-template-columns: 45% 1fr; gap: 40px; align-items: start; }
     }
 
     /* ===== Gallery - thumbnail rail + main image ===== */
@@ -147,14 +147,39 @@
 
     .kk-pdp__main {
         position: relative; flex: 1; min-width: 0;
-        /* cap to viewport height so the pinned (sticky) image is never cut off */
-        aspect-ratio: 4/5; max-height: min(580px, calc(100vh - 80px));
+        /* No fixed aspect ratio - let image determine size */
+        min-height: 450px;
+        max-height: min(850px, calc(100vh - 80px));
         border-radius: 10px; overflow: hidden; background: #fff; cursor: zoom-in;
+        display: flex; align-items: center; justify-content: center;
+    }
+    /* Main image - show full image centered without cropping */
+    .kk-pdp__main img:not(.kk-media__fill),
+    .kk-pdp__main video {
+        max-width: 100% !important; 
+        max-height: 100% !important;
+        width: auto !important;
+        height: auto !important;
+        object-fit: contain !important;
+    }
+    /* Hide blurred background on main image - show clean */
+    .kk-pdp__main .kk-media__fill {
+        display: none;
     }
     /* One .kk-media frame per slide rather than one around the whole stack: the
        error handler marks the frame it finds, so a single missing file would
        otherwise blank out every other image in the gallery. */
-    .kk-pdp__slide { position: absolute; inset: 0; background: #fff; }
+    .kk-pdp__slide { 
+        position: absolute; inset: 0; background: #fff; 
+        display: flex; align-items: center; justify-content: center;
+    }
+    .kk-pdp__slide img { 
+        max-width: 100% !important; 
+        max-height: 100% !important; 
+        width: auto !important; 
+        height: auto !important; 
+        object-fit: contain !important;
+    }
     .kk-pdp__slide--video { background: #000; cursor: default; }
     .kk-pdp__counter {
         position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
@@ -180,9 +205,9 @@
         .kk-pdp__thumb { width: 60px; flex-shrink: 0; }
         /* flex:none + width:100% so aspect-ratio drives the height in the
            column layout (flex:1 would collapse it to 0 height on mobile).
-           Cap to 45vh so the image stays compact on phones and the
+           Cap to 50vh so the image stays compact on phones and the
            title/price/size sit near the top of the screen. */
-        .kk-pdp__main { aspect-ratio: 3/4; max-height: 45vh; flex: none; width: 100%; }
+        .kk-pdp__main { min-height: 300px; max-height: 50vh; flex: none; width: 100%; }
     }
 
     /* ===== Info column - scrolls normally ===== */
@@ -461,7 +486,7 @@
                                 <img src="{{ $m['url'] }}" alt="{{ $product->name }}"
                                      data-fallback="{{ $noMediaFallback }}"
                                      onerror="this.onerror=null;this.src='{{ $noMediaFallback }}';"
-                                     class="w-full h-full object-cover"
+                                     style="max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain;"
                                      sizes="(max-width: 1024px) 100vw, 50vw" decoding="async"
                                      loading="{{ $i === 0 ? 'eager' : 'lazy' }}" @if($i === 0) fetchpriority="high" @endif>
                             </div>

@@ -112,13 +112,7 @@
                artwork at that size fills the box with nothing cropped at all;
                anything else is centre-cropped to it - see .kk-hero-media in the
                hero's own stylesheet further down the page. */
-            .kk-hero-slide {
-                position: relative; width: 100%; overflow: hidden;
-                aspect-ratio: {{ \App\Models\Banner::HERO_DESKTOP_SIZE[0] }} / {{ \App\Models\Banner::HERO_DESKTOP_SIZE[1] }};
-            }
-            @media (max-width: 767px) {
-                .kk-hero-slide { aspect-ratio: {{ \App\Models\Banner::HERO_MOBILE_SIZE[0] }} / {{ \App\Models\Banner::HERO_MOBILE_SIZE[1] }}; }
-            }
+            /* Hero slide CSS moved to app.css - 16:9 desktop, 16:9 mobile (or 3:4 if has-mobile-media class) */
 
             /* Tile cards (Category / Aesthetics / Occasions) */
             .kk-tile { position: relative; display: block; overflow: hidden; border-radius: 4px; color: var(--kk-cream); text-decoration: none; background: var(--kk-cream-dark); aspect-ratio: 4/5; }
@@ -961,7 +955,7 @@
                             // is a painted rectangle.
                             $kkHasCaption = $banner->title || $banner->subtitle || ($banner->button_text && $banner->link);
                         @endphp
-                        <div class="kk-hero-slide"
+                        <div class="kk-hero-slide{{ $banner->has_mobile_media ? ' has-mobile-media' : '' }}"
                              @if($heroCount > 1)
                                  x-show="current === {{ $i }}"
                                  x-transition:enter="kk-fade-enter" x-transition:enter-start="kk-fade-start"

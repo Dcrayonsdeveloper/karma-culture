@@ -2784,3 +2784,161 @@ html.kk-sel-locked body {
     outline-offset: 2px !important;
     border-color: var(--kk-tan-dark, #8c5c34);
 }
+
+
+/* ========================================
+   Hero Banner Section
+   Desktop: 16:9 aspect ratio
+   Mobile: 16:9 (same as desktop, unless mobile-specific media exists)
+   When mobile media is provided, use 3:4 aspect ratio
+   ======================================== */
+
+.kk-hero-slide {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+}
+
+/* Mobile: Keep 16:9 by default (same desktop banner scales down) */
+@media (max-width: 767px) {
+    .kk-hero-slide {
+        aspect-ratio: 16 / 9;
+    }
+    
+    /* When banner has mobile-specific media, use 3:4 portrait */
+    .kk-hero-slide.has-mobile-media {
+        aspect-ratio: 3 / 4;
+    }
+}
+
+/* Hero media container - fills the slide */
+.kk-hero-media {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.kk-hero-media img,
+.kk-hero-media video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block; /* Remove inline element gap */
+}
+
+/* Fix bottom line gap on hero slide */
+.kk-hero-slide {
+    line-height: 0;
+}
+
+.kk-hero-slide video,
+.kk-hero-slide img {
+    display: block;
+    vertical-align: bottom;
+}
+
+/* Hero link wrapper */
+.kk-hero-link {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    text-decoration: none;
+}
+
+/* Hero caption overlay */
+.kk-hero-caption {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 2rem 4rem;
+    color: #fff;
+}
+
+@media (max-width: 767px) {
+    .kk-hero-caption {
+        padding: 1.5rem 1.25rem;
+        justify-content: flex-end;
+        padding-bottom: 3rem;
+    }
+}
+
+.kk-hero-title {
+    font-family: var(--kk-display, 'Playfair Display', Georgia, serif);
+    font-size: clamp(1.75rem, 5vw, 3.5rem);
+    font-weight: 600;
+    line-height: 1.1;
+    margin: 0 0 0.5rem;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.kk-hero-subtitle {
+    font-size: clamp(0.875rem, 2vw, 1.25rem);
+    font-weight: 400;
+    margin: 0 0 1.5rem;
+    opacity: 0.9;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.kk-hero-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.75rem;
+    background: var(--kk-cream, #efe2cb);
+    color: var(--kk-brown-dark, #2d1810);
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.kk-hero-cta:hover {
+    background: #fff;
+    transform: translateY(-2px);
+}
+
+/* Hero carousel navigation dots */
+.kk-hero-dots {
+    position: absolute;
+    bottom: 1.25rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.kk-hero-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.kk-hero-dot:hover,
+.kk-hero-dot.is-active {
+    background: #fff;
+    transform: scale(1.25);
+}
+
+/* Hero fade transitions */
+.kk-fade-enter {
+    transition: opacity 0.5s ease;
+}
+
+.kk-fade-start {
+    opacity: 0;
+}
