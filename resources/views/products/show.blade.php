@@ -582,10 +582,20 @@
                                  @click="showZoom = true"
                                  aria-label="View {{ $product->name }} full size ({{ $i + 1 }} of {{ count($media) }})"
                                  x-show="currentImage === {{ $i }}" @if($i !== 0) x-cloak @endif>
+                                {{-- No inline sizing. It used to carry
+                                     width:auto; height:auto; object-fit:contain, which
+                                     quietly cancelled the kk-media--cover class on the
+                                     button above and everything the comment beside it
+                                     says: an inline style outranks any stylesheet, so
+                                     the photo was letterboxed inside a frame written to
+                                     be filled, and the 3:4 box it left showed cream down
+                                     two sides of every portrait on the site.
+                                     Sizing belongs to .kk-media, which already gives the
+                                     subject width:100%, height:100% and - through
+                                     --cover - object-fit:cover. --}}
                                 <img src="{{ $m['url'] }}" alt="{{ $product->name }}"
                                      data-fallback="{{ $noMediaFallback }}"
                                      onerror="this.onerror=null;this.src='{{ $noMediaFallback }}';"
-                                     style="max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain;"
                                      sizes="(max-width: 1024px) 100vw, 50vw" decoding="async"
                                      loading="{{ $i === 0 ? 'eager' : 'lazy' }}" @if($i === 0) fetchpriority="high" @endif>
                                 {!! $mediaFallback !!}
