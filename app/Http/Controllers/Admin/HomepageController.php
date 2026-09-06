@@ -24,13 +24,18 @@ use Illuminate\Validation\Rule;
 class HomepageController extends Controller
 {
     /**
-     * Upload ceiling for hero videos, in kilobytes.
+     * Upload ceiling for videos on this screen, in kilobytes.
      *
-     * The existing hero clips are around 15 MB, so 64 MB leaves comfortable
-     * headroom. The server allows 256 MB per upload, so PHP will not reject a
-     * file before this rule can report a readable error.
+     * This was its own 64 MB constant, justified by "the existing hero clips
+     * are around 15 MB, so 64 MB leaves comfortable headroom" - reasoning from
+     * the bloat rather than from what a web page can afford, and the About Us
+     * reels went through this same rule: seven of them, averaging 19 MB.
+     *
+     * Deferred to BannerMedia so there is one number rather than two that can
+     * drift, which is the fault the videoRules() docblock below already
+     * describes having fixed once.
      */
-    private const MAX_VIDEO_KB = 65536;
+    private const MAX_VIDEO_KB = \App\Support\BannerMedia::MAX_VIDEO_KB;
 
     /**
      * A link an admin may point a banner, button or menu item at.
