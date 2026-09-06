@@ -6,10 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Attribute;
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\ColourPreset;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use App\Models\Seller;
+use App\Models\SizePreset;
+use App\Models\TexturePreset;
 use App\Rules\NoHtml;
 use App\Rules\ValidationRules as V;
 use Closure;
@@ -183,11 +186,29 @@ class ProductController extends Controller
         $sellers = Seller::with('user')->orderBy('store_name')->get();
         $brands = Brand::where('is_active', true)->orderBy('name')->get();
         $attributes = Attribute::with('values')->orderBy('name')->get();
+        [$sizePresets, $colourPresets, $texturePresets] = $this->presetLibraries();
 
         return view('admin.products.create', compact(
             'categories', 'sellers', 'brands', 'attributes',
-            'extraCategoryIds', 'collections', 'selectedCollectionIds'
+            'extraCategoryIds', 'collections', 'selectedCollectionIds',
+            'sizePresets', 'colourPresets', 'texturePresets'
         ));
+    }
+
+    /**
+     * The active Colour / Texture / Size libraries offered as "pick from
+     * library" tick-boxes on the product form. Only the fields a picked row
+     * needs are loaded; everything else about a size stays per-product.
+     *
+     * @return array{0: \Illuminate\Support\Collection, 1: \Illuminate\Support\Collection, 2: \Illuminate\Support\Collection}
+     */
+    private function presetLibraries(): array
+    {
+        return [
+            SizePreset::active()->ordered()->get(['id', 'name', 'measurements']),
+            ColourPreset::active()->ordered()->get(['id', 'name', 'hex']),
+            TexturePreset::active()->ordered()->get(['id', 'name']),
+        ];
     }
 
     public function store(Request $request): RedirectResponse
@@ -402,10 +423,12 @@ class ProductController extends Controller
 
         $collections = Category::system()->orderBy('position')->orderBy('name')->get();
         $selectedCollectionIds = $product->collections()->pluck('categories.id')->all();
+        [$sizePresets, $colourPresets, $texturePresets] = $this->presetLibraries();
 
         return view('admin.products.edit', compact(
             'product', 'categories', 'sellers', 'brands', 'attributes',
-            'extraCategoryIds', 'collections', 'selectedCollectionIds'
+            'extraCategoryIds', 'collections', 'selectedCollectionIds',
+            'sizePresets', 'colourPresets', 'texturePresets'
         ));
     }
 
