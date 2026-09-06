@@ -15,17 +15,26 @@
             </div>
 
             @if($products->isNotEmpty())
-                {{-- The listing grid's own columns and gaps, holding the listing
-                     grid's own card. A product saved from the shop is drawn here
-                     by the same component that drew it there - same 3:4 frame,
-                     same badge, same brand line, rating, chips and actions -
-                     because recognising it is the entire job of this page.
+                {{-- The listing grid's card, at the listing grid's size.
+
+                     One column more than the shop from lg up, and that is what
+                     makes them match rather than what makes them differ. The
+                     shop's grid shares its row with the filter sidebar - 240px
+                     of w-60 and a 24px gap - so it draws its four columns into
+                     about 984px. This page has no sidebar, so the same four
+                     columns would have the full 1248px to spread over and every
+                     tile would come out a third bigger than the one the shopper
+                     saved. Five columns here lands within a couple of pixels of
+                     the shop's card at xl, and four lands on it at lg, where the
+                     shop is still drawing three beside its sidebar. Below lg the
+                     sidebar is stacked away and both grids are full width, so
+                     the counts are the same there.
 
                      Each tile is wrapped rather than modified: the wrapper is
                      what disappears when the heart on the card takes the product
                      off the list, so the grid closes up on the spot instead of
                      leaving a hole until the next page load. --}}
-                <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                     @foreach($products as $product)
                         <div x-show="$store.wishlist.has({{ $product->id }})">
                             <x-product-card :product="$product" :show-wishlist="true" />
