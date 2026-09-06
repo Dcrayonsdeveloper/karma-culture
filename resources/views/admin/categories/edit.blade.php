@@ -123,7 +123,17 @@
                                 <input type="file" name="image" id="image" accept="image/jpeg,image/png,image/webp"
                                        style="font-size: 13px; color: #616161;"
                                        @change="preview = $event.target.files[0] ? URL.createObjectURL($event.target.files[0]) : null; removing = false">
-                                <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">JPG, PNG or WebP. Max 2MB.</p>
+                                {{-- The size is named, not just the format. The home page
+                                     tile is cropped to 4:5 and fills it, so anything
+                                     squarer loses its top and bottom and anything taller
+                                     loses its sides - which is only ever discovered once
+                                     the tile is already on the storefront. 464x580 is that
+                                     ratio at the size the tile is actually rendered. --}}
+                                <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
+                                    JPG, PNG or WebP. Max 2MB.
+                                    <strong style="color: #303030; font-weight: 600;">Best at 464 &times; 580px</strong>
+                                    &mdash; the 4:5 shape the category tile is cropped to.
+                                </p>
                                 @error('image') <p class="form-error">{{ $message }}</p> @enderror
                                 @if($category->image_url)
                                     <label style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; cursor: pointer;">
