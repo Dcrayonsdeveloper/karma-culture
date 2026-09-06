@@ -43,6 +43,18 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
 
+        // kk_wishlist is written and read by JavaScript, so it arrives as plain
+        // text and the default decryption throws it away - the server saw no
+        // wishlist at all. Excepted so /wishlist can read the same list the
+        // browser holds and render it with the real product card, rather than
+        // shipping ids to the client and having it draw a second card of its
+        // own that drifts from every other tile on the site.
+        //
+        // Nothing is given away by leaving it in the clear: it holds product
+        // ids and nothing else, and the browser already keeps it unencrypted
+        // because its own code has to read it.
+        $middleware->encryptCookies(except: ['kk_wishlist']);
+
         // ContentSecurityPolicy is deliberately NOT registered yet.
         //
         // The policy as written does not match what the storefront loads: it

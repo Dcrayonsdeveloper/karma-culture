@@ -1,4 +1,4 @@
-@props(['product', 'showQuickView' => true, 'compact' => false, 'salePrice' => null, 'unitsLeft' => null])
+@props(['product', 'showQuickView' => true, 'compact' => false, 'salePrice' => null, 'unitsLeft' => null, 'showWishlist' => null])
 
 @php
     $discount = $product->discount_percentage ?? 0;
@@ -25,7 +25,11 @@
     $showWas = $onSale || $hasDiscount;
 
     // Read hover action settings (cached for 1hr by Setting::get)
-    $showWishlist = \App\Models\Setting::get('product_card_wishlist', true);
+    //
+    // The caller may insist, and /wishlist does: the heart is the only way to
+    // take something off that page, so a card there without one is a list
+    // nobody can empty. Everywhere else the admin setting still decides.
+    $showWishlist = $showWishlist ?? \App\Models\Setting::get('product_card_wishlist', true);
     $showAddToCart = \App\Models\Setting::get('product_card_add_to_cart', true);
     $showQuickViewBtn = $showQuickView && \App\Models\Setting::get('product_card_quick_view', true);
     $hasHoverActions = $showWishlist || $showQuickViewBtn;
