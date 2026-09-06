@@ -140,10 +140,22 @@
                    clip it ships with is 1426x370, so it gets the desktop box and
                    plays whole on a phone. */
                 $kkPhoneBox = \App\Models\Banner::heroPhoneBox($banners ?? collect());
+
+                /* And when that answer IS the desktop shape - the store with no
+                   banners, or any hero where some slide has no phone artwork -
+                   the override is not written at all, rather than restating the
+                   base rule under a media query. A phone then simply inherits
+                   the slide's own ratio. Anyone reading the computed styles in
+                   devtools sees one rule deciding the hero's shape instead of
+                   two identical ones, which is how the original 3:2 override
+                   went unnoticed for so long. */
+                $kkPhoneOverride = $kkPhoneBox !== \App\Models\Banner::HERO_DESKTOP_SIZE;
             @endphp
+            @if($kkPhoneOverride)
             @media (max-width: 767px) {
                 .kk-hero-slide { aspect-ratio: {{ $kkPhoneBox[0] }} / {{ $kkPhoneBox[1] }}; }
             }
+            @endif
 
             /* Tile cards (Category / Aesthetics / Occasions) */
             .kk-tile { position: relative; display: block; overflow: hidden; border-radius: 4px; color: var(--kk-cream); text-decoration: none; background: var(--kk-cream-dark); aspect-ratio: 4/5; }

@@ -204,10 +204,16 @@ class HeroBannerMobileMediaTest extends TestCase
         [$deskW, $deskH] = Banner::HERO_DESKTOP_SIZE;
         [$mobW, $mobH] = Banner::HERO_MOBILE_SIZE;
 
-        // The phone box is the desktop shape, so the strip is not cropped.
-        $this->assertMatchesRegularExpression(
-            '/@media \(max-width: 767px\)\s*\{\s*\.kk-hero-slide \{ aspect-ratio: '
-                .$deskW.' \/ '.$deskH.'; \}/s',
+        // The phone box is the desktop shape, so no phone override is written at
+        // all - the slide keeps the one ratio it already has and the strip is
+        // not cropped. Restating the base rule under a media query would render
+        // identically, but it is the duplicate that hid the old 3:2 crop, so the
+        // absence is the thing worth pinning.
+        // Targeted at the slide rule specifically: the page carries several other
+        // 767px blocks (the category rail, the caption), so a bare search for the
+        // media query would match those and never fail.
+        $this->assertDoesNotMatchRegularExpression(
+            '/@media \(max-width: 767px\)\s*\{\s*\.kk-hero-slide\s*\{/s',
             $html
         );
         // And the 3:2 box is not imposed on artwork that is not 3:2.
