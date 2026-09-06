@@ -9,6 +9,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -28,6 +29,8 @@ class SendBlogPostNewsletter extends Command
     protected $signature = 'newsletter:send-blog-posts
                             {--limit=150 : Messages to send in this run}
                             {--post= : Only this post id}
+                            {--resend : Clear the sent stamp on --post first, so it goes out again}
+                            {--test= : Send one copy of --post to this address and stop}
                             {--pretend : List what would be sent, send nothing}';
 
     protected $description = 'Email newly published blog posts to active newsletter subscribers';
@@ -36,6 +39,14 @@ class SendBlogPostNewsletter extends Command
     {
         $budget = max(1, (int) $this->option('limit'));
         $pretend = (bool) $this->option('pretend');
+
+        if ($address = $this->option('test')) {
+            return $this->sendTest($address);
+        }
+
+        if ($this->option('resend') && ! $this->unstamp()) {
+            return self::FAILURE;
+        }
 
         $posts = BlogPost::awaitingNewsletter()
             ->when($this->option('post'), fn ($q, $id) => $q->whereKey($id))
@@ -79,12 +90,137 @@ class SendBlogPostNewsletter extends Command
     }
 
     /**
+     * One copy of a post to one address, to prove the mail actually works.
+     *
+     * "Nobody got the newsletter" has two halves that look the same from the
+     * outside - the send never happened, or it happened and the message did
+     * not survive the trip to the inbox - and no amount of reading the
+     * database tells them apart. This sends a real message through the real
+     * transport so the answer arrives, or does not, in a mailbox someone can
+     * look at.
+     *
+     * It writes no dispatch row and stamps nothing, so a test is never
+     * mistaken for the announcement and never costs a subscriber theirs.
+     */
+    private function sendTest(string $address): int
+    {
+        $id = $this->option('post');
+
+        if (! $id) {
+            $this->error('--test needs --post=<id> to know which post to send.');
+
+            return self::FAILURE;
+        }
+
+        $post = BlogPost::find($id);
+
+        if (! $post) {
+            $this->error("No blog post with id {$id}.");
+
+            return self::FAILURE;
+        }
+
+        // The real subscriber where the address is on the list, so the test is
+        // the exact message that person is sent - their name in the greeting
+        // and their own unsubscribe link, not a stand-in that renders and
+        // proves nothing about theirs.
+        $subscriber = NewsletterSubscriber::whereRaw('LOWER(email) = ?', [mb_strtolower(trim($address))])->first();
+
+        if (! $subscriber) {
+            $subscriber = new NewsletterSubscriber(['email' => $address]);
+
+            // Set in memory and never saved. unsubscribeUrl() mints and SAVES a
+            // token when it finds none, which on an unsaved model would put a
+            // brand new subscriber on the list as a side effect of testing.
+            $subscriber->unsubscribe_token = Str::random(48);
+        }
+
+        try {
+            Mail::to($address)->send(new BlogPostPublished($post, $subscriber));
+        } catch (Throwable $e) {
+            $this->error('The mailer refused it: '.$e->getMessage());
+
+            return self::FAILURE;
+        }
+
+        $this->info("Test copy of #{$post->id} \"{$post->title}\" sent to {$address}.");
+        $this->line('  Nothing was stamped and no dispatch row was written.');
+        $this->line('  If it does not arrive, check spam - the send itself worked.');
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * Take the sent stamp back off a post so the next pass announces it.
+     *
+     * The dispatch rows are deliberately left alone. They are the record of
+     * who has actually had a message, so keeping them means a resend reaches
+     * exactly the people the first attempt missed - the whole list when the
+     * post was stamped without a single send, and nobody at all when it really
+     * did go out. Without that, "send it again" would mean a second copy in
+     * the inbox of everyone who already read it.
+     *
+     * Scoped to one post on purpose: unstamping the archive would announce
+     * every historic post at once.
+     */
+    private function unstamp(): bool
+    {
+        $id = $this->option('post');
+
+        if (! $id) {
+            $this->error('--resend needs --post=<id>, so the whole archive cannot go out by accident.');
+
+            return false;
+        }
+
+        $post = BlogPost::find($id);
+
+        if (! $post) {
+            $this->error("No blog post with id {$id}.");
+
+            return false;
+        }
+
+        if (! $post->newsletter_sent_at) {
+            $this->line("#{$post->id} is not stamped - it was already waiting to go out.");
+
+            return true;
+        }
+
+        if ($this->option('pretend')) {
+            $this->line("[pretend] would clear the stamp on #{$post->id}.");
+
+            return true;
+        }
+
+        $post->forceFill(['newsletter_sent_at' => null])->save();
+        $this->info("Stamp cleared on #{$post->id} - {$post->title}");
+
+        return true;
+    }
+
+    /**
      * @return array{0: int, 1: int, 2: int} sent, failed, remaining budget
      */
     private function sendPost(BlogPost $post, int $budget, bool $pretend): array
     {
         $sent = 0;
         $failed = 0;
+
+        // Listed in one query rather than through the batching loop below.
+        // That loop re-reads the remaining list after each batch, which only
+        // shrinks because a real send writes a dispatch row - a pretend run
+        // writes nothing, so the same fifty addresses would be read back and
+        // printed over and over until the budget ran out.
+        if ($pretend) {
+            foreach ($this->remainingFor($post)->limit($budget)->get() as $subscriber) {
+                $this->line("  would send to {$subscriber->email}");
+                $sent++;
+                $budget--;
+            }
+
+            return [$sent, 0, $budget];
+        }
 
         // Re-queried per batch rather than iterated as one cursor: each send
         // writes a dispatch row, which changes the result of this query, and a
@@ -103,13 +239,6 @@ class SendBlogPostNewsletter extends Command
                 }
 
                 $budget--;
-
-                if ($pretend) {
-                    $this->line("  would send to {$subscriber->email}");
-                    $sent++;
-
-                    continue;
-                }
 
                 // Claimed before the send, not after. The unique index is what
                 // stops two overlapping runs mailing the same person twice, and
