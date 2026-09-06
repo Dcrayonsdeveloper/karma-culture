@@ -1,7 +1,7 @@
 ===========================================================================
 KARMAA KULTURE - OPTION C "AI SALES ASSISTANT" - INTEGRATION STATUS
 Audited: 14 August 2026
-Live site: https://palegreen-mouse-158092.hostingersite.com
+Live site: see APP_URL in the production .env
 Deployed commit: d272aa0
 ===========================================================================
 
