@@ -60,9 +60,13 @@
                     </div>
 
                     <!-- Media (images + videos, drag to reorder) -->
-                    <div class="card p-5" x-data="imageManager('{{ route('admin.products.images.reorder', $product) }}')">
+                    <div class="card p-5" x-data="imageManager(
+                        '{{ route('admin.products.images.reorder', $product) }}',
+                        '{{ route('admin.products.images.primary', [$product, 0]) }}',
+                        {{ (int) (optional($product->images->firstWhere('is_primary', true))->id ?? 0) }}
+                    )">
                         <h2 class="text-[13px] font-semibold mb-1" style="color: #303030;">Media</h2>
-                        <p class="text-xs mb-3" style="color: #616161;">Images &amp; videos. <strong>Drag tiles to reorder</strong> (saved instantly). The tile marked "Main" is the primary image.</p>
+                        <p class="text-xs mb-3" style="color: #616161;">Images &amp; videos. <strong>Drag tiles to reorder</strong> (saved instantly). The tile marked "Main" leads the product - press <strong>Make main</strong> on any tile, image or video.</p>
 
                         @php $allMedia = $product->images->sortBy('position'); @endphp
 
@@ -87,10 +91,23 @@
                                 @else
                                     <img class="kk-media__fill" src="{{ $image->display_url }}" alt="" aria-hidden="true" onerror="this.remove()">
                                     <img src="{{ $image->display_url }}" alt="{{ $image->alt_text }}" onerror="this.closest('.kk-media').classList.add('is-broken')">
-                                    @if($image->is_primary)
-                                        <span class="absolute bottom-0 left-0 right-0 z-10 px-2 py-1 text-[10px] font-semibold text-center text-white" style="background: rgba(0,91,211,0.85);">Main</span>
-                                    @endif
                                 @endif
+                                {{-- Outside the image branch on purpose: this badge used to
+                                     live inside it, which is why a video could never be the
+                                     main one however it was ordered. --}}
+                                <span class="absolute bottom-0 left-0 right-0 z-10 px-2 py-1 text-[10px] font-semibold text-center text-white"
+                                      style="background: rgba(0,91,211,0.85);"
+                                      x-show="mainMediaId === {{ $image->id }}"
+                                      @if(! $image->is_primary) x-cloak @endif>Main</span>
+                                {{-- The way to set it. Hidden on the tile that already is
+                                     the main one, so the control only ever offers a change. --}}
+                                <button type="button" class="absolute bottom-0 left-0 right-0 z-20 px-2 py-1 text-[10px] font-semibold text-center text-white"
+                                        style="background: rgba(0,0,0,0.65); border: 0; cursor: pointer;"
+                                        x-show="mainMediaId !== {{ $image->id }}"
+                                        @if($image->is_primary) x-cloak @endif
+                                        @click.stop="makeMain({{ $image->id }})"
+                                        :disabled="settingMain"
+                                        title="Use this as the product's main media">Make main</button>
                                 <span class="kk-media__fallback" aria-hidden="true">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                                         <rect x="3" y="4" width="18" height="16" rx="2"/>
@@ -872,9 +889,15 @@
         const IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
         const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
 
-        function imageManager(reorderUrl = '') {
+        function imageManager(reorderUrl = '', primaryUrlTemplate = '', currentMainId = 0) {
             return {
                 reorderUrl,
+                // The route is generated with a 0 in the id slot and the real id
+                // is swapped in per tile, so the URL is still built by the router
+                // rather than assembled by hand out here.
+                primaryUrlTemplate,
+                mainMediaId: currentMainId,
+                settingMain: false,
                 deletedIds: [],
                 mainPreview: null,
                 mainImageChanged: false,
@@ -896,6 +919,43 @@
                     reader.readAsDataURL(file);
                 },
                 markForDelete(id) { if (!confirm('Remove this media item?')) return; this.deletedIds.push(id); },
+                /* Saved on the spot, like the drag-to-reorder above it.
+
+                   Deliberately not a field on the big form: the media grid
+                   already saves itself, and burying this in the form would mean
+                   choosing a main video only took effect if the admin also
+                   remembered to press Save at the bottom of a long page.
+
+                   The badge moves before the request comes back and moves back
+                   if it fails, so the grid never sits showing a main tile the
+                   server does not agree with. */
+                async makeMain(id) {
+                    if (this.settingMain || this.mainMediaId === id) return;
+
+                    const previous = this.mainMediaId;
+                    this.settingMain = true;
+                    this.mainMediaId = id;
+
+                    try {
+                        const response = await fetch(this.primaryUrlTemplate.replace(/0(\?.*)?$/, id), {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json',
+                            },
+                        });
+
+                        if (!response.ok) throw new Error('HTTP ' + response.status);
+
+                        if (window.toastr) toastr.success('Main media updated.');
+                    } catch (e) {
+                        this.mainMediaId = previous;
+                        if (window.toastr) toastr.error('Could not set the main media. Please try again.');
+                    } finally {
+                        this.settingMain = false;
+                    }
+                },
                 handleGalleryFiles(files) {
                     let overCap = 0;
                     for (const file of files) {

@@ -19,6 +19,7 @@ use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -994,6 +995,40 @@ class ProductController extends Controller
         }
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Choose which piece of media is the product's main one.
+     *
+     * It could only ever be a photograph before: the "Main" badge was rendered
+     * inside the image branch of the tile, and the only way to set one was to
+     * upload a replacement. A product whose best asset is its video had no way
+     * to lead with it.
+     *
+     * is_primary already allowed this - the column is on every media row,
+     * video or not - so this is the missing verb rather than a new concept.
+     * One primary per product, cleared in the same transaction it is set, so
+     * two rows can never both claim it.
+     */
+    public function setPrimaryImage(Product $product, ProductImage $image): JsonResponse
+    {
+        // Route-model binding resolves the media on its own, so it has to be
+        // confirmed as this product's - otherwise any id would do.
+        abort_unless((int) $image->product_id === (int) $product->id, 404);
+
+        DB::transaction(function () use ($product, $image): void {
+            ProductImage::where('product_id', $product->id)
+                ->where('id', '!=', $image->id)
+                ->update(['is_primary' => false]);
+
+            $image->forceFill(['is_primary' => true])->save();
+        });
+
+        return response()->json([
+            'success' => true,
+            'id' => $image->id,
+            'is_video' => $image->is_video,
+        ]);
     }
 
     public function destroy(Product $product): RedirectResponse

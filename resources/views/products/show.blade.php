@@ -49,11 +49,29 @@
                 'url'   => $resolveUrl($img->url) ?: $noMediaFallback,
                 'type'  => $img->media_type ?? 'image',
                 'thumb' => $img->thumbnail_url ? $resolveUrl($img->thumbnail_url) : null,
+                'main'  => (bool) $img->is_primary,
             ];
         })->values()->toArray();
         if (empty($media)) {
-            $media = [['url' => $product->primary_image_url, 'type' => 'image', 'thumb' => null]];
+            $media = [['url' => $product->primary_image_url, 'type' => 'image', 'thumb' => null, 'main' => true]];
         }
+
+        /* The gallery opens on whichever media the admin marked as main, rather
+           than on whatever happens to sort first. Position still decides the
+           order of the strip - the two are separate choices, and a main video
+           does not have to be dragged to the front to lead. */
+        $kkMainIndex = 0;
+        foreach ($media as $i => $m) {
+            if (! empty($m['main'])) {
+                $kkMainIndex = $i;
+                break;
+            }
+        }
+
+        // A main video plays by itself. Muted, because no autoplay policy allows
+        // sound unprompted, and only this one - the rest of the gallery stays
+        // quiet until it is asked for.
+        $kkMainIsVideo = ($media[$kkMainIndex]['type'] ?? 'image') === 'video';
         // Backward-compat: keep $images (image URLs only) for any legacy references.
         $images = collect($media)->pluck('url')->toArray();
 
@@ -557,8 +575,15 @@
                     @foreach($media as $i => $m)
                         @if($m['type'] === 'video')
                             <div class="kk-media kk-pdp__slide kk-pdp__slide--video"
-                                 x-show="currentImage === {{ $i }}" @if($i !== 0) x-cloak @endif>
-                                <video controls playsinline preload="metadata"
+                                 x-show="currentImage === {{ $i }}" @if($i !== $kkMainIndex) x-cloak @endif>
+                                {{-- The main video starts on its own. preload jumps from
+                                     metadata to auto for that one alone: a clip that is
+                                     about to play needs its first frames, and every other
+                                     clip on the page still costs only its header. --}}
+                                <video controls playsinline
+                                       preload="{{ $m['main'] ? 'auto' : 'metadata' }}"
+                                       data-kk-main="{{ $m['main'] ? '1' : '0' }}"
+                                       @if($m['main']) autoplay muted loop @endif
                                        controlsList="nodownload noplaybackrate noremoteplayback" disablepictureinpicture
                                        @if($m['thumb']) poster="{{ $m['thumb'] }}" @endif>
                                     <source src="{{ $m['url'] }}">
@@ -581,7 +606,7 @@
                                  class="kk-media kk-media--cover kk-pdp__slide"
                                  @click="showZoom = true"
                                  aria-label="View {{ $product->name }} full size ({{ $i + 1 }} of {{ count($media) }})"
-                                 x-show="currentImage === {{ $i }}" @if($i !== 0) x-cloak @endif>
+                                 x-show="currentImage === {{ $i }}" @if($i !== $kkMainIndex) x-cloak @endif>
                                 {{-- No inline sizing. It used to carry
                                      width:auto; height:auto; object-fit:contain, which
                                      quietly cancelled the kk-media--cover class on the
@@ -2381,8 +2406,11 @@
 
     function productPage() {
         return {
-            currentImage: 0,
+            currentImage: {{ $kkMainIndex }},
             imageCount: {{ count($media) }},
+            // Which slide leads, so coming back to it can start it playing again.
+            mainIndex: {{ $kkMainIndex }},
+            mainIsVideo: {{ $kkMainIsVideo ? 'true' : 'false' }},
             touchStartX: 0,
             quantity: 1,
             selectedSize: @json($kkDefaultSize),
@@ -2441,6 +2469,27 @@
 
             pauseVideos() {
                 this.$el.querySelectorAll('video').forEach((v) => { try { v.pause(); } catch (e) {} });
+
+                /* Stepping back onto the main video should start it again. The
+                   autoplay attribute fires once, on load, so without this the
+                   clip that introduced the product sits frozen the second time
+                   a shopper looks at it. Muted, so the browser allows it and so
+                   nobody is shouted at on the way back. */
+                if (!this.mainIsVideo || this.currentImage !== this.mainIndex) return;
+
+                if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+                const main = this.$el.querySelector('video[data-kk-main="1"]');
+
+                if (!main) return;
+
+                main.muted = true;
+
+                const played = main.play();
+
+                // Rejected while the browser is not ready to allow it; the
+                // controls are right there, so there is nothing to handle.
+                if (played && typeof played.catch === 'function') played.catch(() => {});
             },
 
             // Mobile swipe on the main gallery image

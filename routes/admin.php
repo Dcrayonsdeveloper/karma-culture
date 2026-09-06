@@ -162,6 +162,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('/products/{product}/toggle-status', [ProductController::class, 'toggleStatus'])->name('products.toggle-status');
             Route::put('/products/{product}/toggle-featured', [ProductController::class, 'toggleFeatured'])->name('products.toggle-featured');
             Route::post('/products/{product}/images/reorder', [ProductController::class, 'reorderImages'])->name('products.images.reorder');
+            Route::post('/products/{product}/images/{image}/primary', [ProductController::class, 'setPrimaryImage'])->name('products.images.primary');
             // A+ Content (Amazon-style banner images)
             Route::post('/products/{product}/aplus', [ProductAplusImageController::class, 'store'])->name('products.aplus.store');
             Route::post('/products/{product}/aplus/reorder', [ProductAplusImageController::class, 'reorder'])->name('products.aplus.reorder');

@@ -435,13 +435,29 @@ class Product extends Model
 
     public function getPrimaryImageUrlAttribute(): string
     {
-        // Never use a video as the thumbnail - pick the primary image, else the
-        // first non-video media, else any first media.
+        // Never the video file itself - a listing card is an <img>, and pointing
+        // it at an .mp4 renders a broken frame.
         $notVideo = fn ($i) => ($i->media_type ?? 'image') !== 'video';
         $primary = $this->images->firstWhere('is_primary', true);
-        $img = ($primary && $notVideo($primary)) ? $primary
-            : ($this->images->first($notVideo) ?? $this->images->first());
-        $url = $img?->url;
+
+        // A video CAN be the main media now, and when it is, its poster is the
+        // still the merchandiser chose to represent the product. Preferring it
+        // over an unrelated photograph is what keeps the card and the product
+        // page showing the same thing. A poster is optional, so this falls
+        // through to the old order when there is none.
+        if ($primary && ! $notVideo($primary) && $primary->thumbnail_url) {
+            $url = $primary->thumbnail_url;
+        } else {
+            $img = ($primary && $notVideo($primary)) ? $primary
+                : ($this->images->first($notVideo) ?? $this->images->first());
+            $url = $img?->url;
+
+            // The fallback found nothing but the video itself; a broken frame
+            // is worse than the placeholder below.
+            if ($img && ! $notVideo($img)) {
+                $url = $img->thumbnail_url;
+            }
+        }
 
         if ($url) {
             // An external address is not ours to fingerprint. Everything else
