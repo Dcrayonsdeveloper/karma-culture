@@ -92,22 +92,41 @@
                                     <img class="kk-media__fill" src="{{ $image->display_url }}" alt="" aria-hidden="true" onerror="this.remove()">
                                     <img src="{{ $image->display_url }}" alt="{{ $image->alt_text }}" onerror="this.closest('.kk-media').classList.add('is-broken')">
                                 @endif
-                                {{-- Outside the image branch on purpose: this badge used to
-                                     live inside it, which is why a video could never be the
-                                     main one however it was ordered. --}}
-                                <span class="absolute bottom-0 left-0 right-0 z-10 px-2 py-1 text-[10px] font-semibold text-center text-white"
-                                      style="background: rgba(0,91,211,0.85);"
-                                      x-show="mainMediaId === {{ $image->id }}"
-                                      @if(! $image->is_primary) x-cloak @endif>Main</span>
-                                {{-- The way to set it. Hidden on the tile that already is
-                                     the main one, so the control only ever offers a change. --}}
-                                <button type="button" class="absolute bottom-0 left-0 right-0 z-20 px-2 py-1 text-[10px] font-semibold text-center text-white"
-                                        style="background: rgba(0,0,0,0.65); border: 0; cursor: pointer;"
-                                        x-show="mainMediaId !== {{ $image->id }}"
-                                        @if($image->is_primary) x-cloak @endif
+                                {{-- Which tile leads the product, and the way to change it:
+                                     ONE control, ticked on the main tile and empty on the
+                                     rest.
+
+                                     It used to be two, both pinned to the same edge - a
+                                     blue "Main" badge on the chosen tile, and a separate
+                                     "Make main" bar on every other one, each hidden
+                                     whenever the other showed. Reading the grid meant
+                                     noticing which tile had a different coloured strip,
+                                     and nothing on the page said "this one is selected"
+                                     in the way a tick does.
+
+                                     Outside the image branch on purpose: the badge used
+                                     to live inside it, which is why a video could never
+                                     be the main one however it was ordered.
+
+                                     Always rendered, never hover-gated: on a touch screen
+                                     there is no hover, and a control you cannot see is a
+                                     control you cannot press. --}}
+                                <button type="button"
+                                        class="kk-main-pick"
+                                        :class="mainMediaId === {{ $image->id }} ? 'is-main' : ''"
                                         @click.stop="makeMain({{ $image->id }})"
                                         :disabled="settingMain"
-                                        title="Use this as the product's main media">Make main</button>
+                                        :aria-pressed="mainMediaId === {{ $image->id }} ? 'true' : 'false'"
+                                        :title="mainMediaId === {{ $image->id }}
+                                            ? 'This is the main media'
+                                            : 'Use this as the main media'">
+                                    <span class="kk-main-pick__tick" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                        </svg>
+                                    </span>
+                                    <span x-text="mainMediaId === {{ $image->id }} ? 'Main' : 'Make main'">{{ $image->is_primary ? 'Main' : 'Make main' }}</span>
+                                </button>
                                 <span class="kk-media__fallback" aria-hidden="true">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                                         <rect x="3" y="4" width="18" height="16" rx="2"/>
@@ -855,6 +874,38 @@
         /* group-hover only fires where a pointer can hover, so on a touch screen the
            tile controls would never appear; there they stay visible instead. */
         @media (hover: none) { .kk-media > .opacity-0 { opacity: 1; } }
+
+        /* The main-media picker: a radio in all but name. Ticked and blue on the
+           tile that leads the product, an empty ring on the rest. */
+        .kk-main-pick {
+            position: absolute; bottom: 6px; left: 6px; z-index: 30;
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 3px 8px 3px 3px; border: 0; border-radius: 999px;
+            font-size: 10px; font-weight: 600; line-height: 1; color: #fff;
+            background: rgba(0,0,0,.62); cursor: pointer;
+            /* The tiles are draggable, and a press that starts on this control
+               is a click, not the beginning of a drag. */
+            -webkit-user-select: none; user-select: none;
+            transition: background .15s ease;
+        }
+        .kk-main-pick:hover:not(:disabled) { background: rgba(0,0,0,.82); }
+        .kk-main-pick:disabled { cursor: default; opacity: .6; }
+        .kk-main-pick:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+        .kk-main-pick__tick {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 15px; height: 15px; flex: none;
+            border: 1.5px solid rgba(255,255,255,.75); border-radius: 50%;
+            background: transparent;
+        }
+        .kk-main-pick__tick svg { width: 9px; height: 9px; opacity: 0; }
+        /* Ticked. The check appears and the pill takes the admin's blue, so the
+           main tile is legible at a glance across a grid of eight. */
+        .kk-main-pick.is-main { background: #005bd3; }
+        .kk-main-pick.is-main:hover:not(:disabled) { background: #005bd3; }
+        .kk-main-pick.is-main .kk-main-pick__tick {
+            background: #fff; border-color: #fff; color: #005bd3;
+        }
+        .kk-main-pick.is-main .kk-main-pick__tick svg { opacity: 1; }
     </style>
     @endpush
 
@@ -937,7 +988,20 @@
                     this.mainMediaId = id;
 
                     try {
-                        const response = await fetch(this.primaryUrlTemplate.replace(/0(\?.*)?$/, id), {
+                        // The id goes in the {image} SLOT, which is not the end of
+                        // the URL - the route is
+                        // /products/{product}/images/{image}/primary, so it is
+                        // generated with a 0 in the middle and ends with "primary".
+                        //
+                        // This was /0(\?.*)?$/, which only matches a 0 at the very
+                        // end of the string. Nothing ever matched, so every press
+                        // posted to .../images/0/primary, route-model binding
+                        // found no image 0 and answered 404, and the catch below
+                        // put the tile back. The badge flicked and returned, which
+                        // read as "the main media cannot be changed".
+                        const url = this.primaryUrlTemplate.replace(/\/0\/primary(?=$|\?)/, '/' + id + '/primary');
+
+                        const response = await fetch(url, {
                             method: 'POST',
                             headers: {
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
