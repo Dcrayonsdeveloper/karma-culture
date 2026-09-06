@@ -45,9 +45,21 @@ app.on('web-contents-created', (_event, contents) => {
 // ---------------------------------------------------------------------------
 // Persistent settings (printer config, kiosk mode, auto-start)
 // ---------------------------------------------------------------------------
+// The build stamps the till's own store in. `serverUrl` had been left at
+// foreverkids.dcrayons.app - the project this app was forked from - so a fresh
+// install opened somebody else's shop, and it is also the prefix the
+// navigation allowlist below matches on, which is why the fallback is a real
+// URL rather than '': `url.startsWith('')` is true for every URL and would
+// wave through any page the till was ever pointed at.
+const POS_SERVER_URL = process.env.POS_SERVER_URL || 'http://localhost/pos';
+
 const store = new Store({
   name: 'pos-settings',
-  encryptionKey: 'fk-pos-2026',  // Obfuscates settings file on disk
+  // Obfuscates the settings file on disk. Not a secret - it ships inside the
+  // binary and electron-store uses it to scramble a local preferences file,
+  // not to protect anything - but it is per-deployment so one build's settings
+  // file is not readable by another's.
+  encryptionKey: process.env.POS_STORE_KEY || 'kk-pos-default',
   defaults: {
     printerType:  'none',  // 'usb' | 'network' | 'none'
     printerIp:    '',
@@ -55,7 +67,7 @@ const store = new Store({
     printerWidth: 48,      // 32 | 40 | 48 | 56 chars (paper width)
     kioskMode:    true,
     autoStart:    false,
-    serverUrl:    'https://foreverkids.dcrayons.app/pos',
+    serverUrl:    POS_SERVER_URL,
   },
 });
 

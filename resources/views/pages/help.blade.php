@@ -1,6 +1,15 @@
 <x-layouts.app>
     <x-slot name="title">Help Center - {{ config('app.name') }}</x-slot>
 
+    {{-- Phone Support advertised a number typed into this page, which was not
+         the number on the contact page and not the one in the footer. It reads
+         the store's configured line now, and the block hides when none is set
+         rather than inviting shoppers to call a number nobody answers. --}}
+    @php
+        $kkPhone = trim((string) \App\Models\Setting::get('contact_phone', ''));
+        $kkTel   = $kkPhone !== '' ? preg_replace('/[^0-9+]/', '', $kkPhone) : '';
+    @endphp
+
     @push('meta')
         <meta name="description" content="Need help? Visit the {{ config('app.name') }} help center for answers about orders, shipping, returns, and account management.">
         <link rel="canonical" href="{{ url('/help') }}">
@@ -112,6 +121,7 @@
                         <p class="text-xs text-neutral-600 mb-3">We'll respond within 24 hours.</p>
                         <a href="{{ route('contact') }}" class="inline-flex items-center px-4 py-2 min-h-10 sm:min-h-0 text-[13px] font-medium text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50 transition-colors">Send Email</a>
                     </div>
+                    @if($kkPhone !== '')
                     <div class="text-center">
                         <div class="w-11 h-11 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-3">
                             <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -119,9 +129,12 @@
                             </svg>
                         </div>
                         <h3 class="text-sm font-semibold text-neutral-900 mb-1">Phone Support</h3>
-                        <p class="text-xs text-neutral-600 mb-3">Mon-Fri, 9am-5pm EST</p>
-                        <a href="tel:+917797444000" class="inline-flex items-center px-4 py-2 min-h-10 sm:min-h-0 text-[13px] font-medium text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50 transition-colors">+91 77974 44000</a>
+                        {{-- Was "9am-5pm EST" on a store that ships from India
+                             and lists Asia/Kolkata as its timezone. --}}
+                        <p class="text-xs text-neutral-600 mb-3">Mon-Fri, 9am-6pm IST</p>
+                        <a href="tel:{{ $kkTel }}" class="inline-flex items-center px-4 py-2 min-h-10 sm:min-h-0 text-[13px] font-medium text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50 transition-colors">{{ $kkPhone }}</a>
                     </div>
+                    @endif
                 </div>
             </div>
         </div>
