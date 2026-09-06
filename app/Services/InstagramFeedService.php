@@ -13,7 +13,18 @@ class InstagramFeedService
 
     public function __construct()
     {
-        $this->accessToken = config('services.instagram.access_token', env('INSTAGRAM_ACCESS_TOKEN', ''));
+        // Coalesce rather than lean on config()'s default: that default only
+        // applies when the KEY IS ABSENT, and config/services.php defines this
+        // one - so an unset INSTAGRAM_ACCESS_TOKEN resolves to null, not to the
+        // '' passed here, and assigning null to a string property is a
+        // TypeError that took the whole home page down anywhere the token was
+        // not configured. getPosts() already treats an empty token as "no feed",
+        // so '' is the right resting state.
+        //
+        // env() is dropped with it: config/services.php already reads that
+        // variable, and calling env() outside config breaks under config:cache,
+        // where it returns null on a production box that has the value set.
+        $this->accessToken = (string) (config('services.instagram.access_token') ?? '');
     }
 
     /**

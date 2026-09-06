@@ -154,7 +154,12 @@ class HeroBannerMobileMediaTest extends TestCase
      *
      * A video slide used to opt out of the slide's box and take its height from
      * its own file, so the carousel lurched from a 370px strip to a 1008px clip
-     * as it advanced. No slide may size itself any more - whatever it carries.
+     * as it advanced. No slide reads its own FILE for a height any more.
+     *
+     * The box is still chosen per slide, but from a class this page sets and a
+     * ratio app.css holds - two values, 16:9 and 3:4, both known in advance.
+     * That is what separates it from the escape hatches below: a slide can be
+     * one of two known shapes, never whatever shape the upload happened to be.
      */
     public function test_no_slide_sizes_itself_from_its_own_media(): void
     {
@@ -172,60 +177,40 @@ class HeroBannerMobileMediaTest extends TestCase
         $this->assertStringContainsString('<div class="kk-hero-slide"', $this->heroMarkup());
     }
 
-    public function test_the_slide_box_matches_the_size_the_admin_screen_recommends(): void
+    /**
+     * The slide box is chosen per banner, by a class, not by one ratio for the
+     * whole hero.
+     *
+     * The ratios themselves live in app.css now (16:9, and 3:4 on phones for a
+     * slide carrying `has-mobile-media`), so this page's job is only to say
+     * which banners qualify. A banner with its own phone artwork gets the
+     * portrait box on a phone and its own still to fill it; one without keeps
+     * the wide box and is sent the desktop file, so neither is ever cropped.
+     */
+    public function test_a_banner_with_phone_artwork_is_marked_for_the_portrait_box(): void
     {
-        // This banner has phone artwork of its own, so both boxes are in play.
         $this->hero(['mobile_image_url' => 'banners/mobile/phone.jpg']);
 
-        // The stylesheet, not the markup, is what this one is about.
-        $html = $this->get('/')->getContent();
-        [$deskW, $deskH] = Banner::HERO_DESKTOP_SIZE;
-        [$mobW, $mobH] = Banner::HERO_MOBILE_SIZE;
-
-        $this->assertStringContainsString("aspect-ratio: {$deskW} / {$deskH}", $html);
-        $this->assertStringContainsString("aspect-ratio: {$mobW} / {$mobH}", $html);
+        $this->assertStringContainsString('kk-hero-slide has-mobile-media', $this->heroMarkup());
     }
 
-    /**
-     * The phone box follows the FILE, not the device.
-     *
-     * frameFor('mobile') falls back to the desktop file when a banner has no
-     * phone artwork, and almost no banner has any - so the 3:2 phone box was
-     * not framing phone artwork at all. It was cropping a 3.85:1 strip to 39%
-     * of its width, which is the banner reaching a phone with both ends cut
-     * off. A banner with nothing of its own for phones keeps the shape of the
-     * file that will actually be drawn.
-     */
-    public function test_a_banner_without_phone_artwork_keeps_its_own_shape_on_a_phone(): void
+    public function test_a_banner_without_phone_artwork_keeps_the_wide_box(): void
     {
         $this->hero();
 
-        $html = $this->get('/')->getContent();
-        [$deskW, $deskH] = Banner::HERO_DESKTOP_SIZE;
-        [$mobW, $mobH] = Banner::HERO_MOBILE_SIZE;
+        $markup = $this->heroMarkup();
 
-        // The phone box is the desktop shape, so no phone override is written at
-        // all - the slide keeps the one ratio it already has and the strip is
-        // not cropped. Restating the base rule under a media query would render
-        // identically, but it is the duplicate that hid the old 3:2 crop, so the
-        // absence is the thing worth pinning.
-        // Targeted at the slide rule specifically: the page carries several other
-        // 767px blocks (the category rail, the caption), so a bare search for the
-        // media query would match those and never fail.
-        $this->assertDoesNotMatchRegularExpression(
-            '/@media \(max-width: 767px\)\s*\{\s*\.kk-hero-slide\s*\{/s',
-            $html
-        );
-        // And the 3:2 box is not imposed on artwork that is not 3:2.
-        $this->assertStringNotContainsString("aspect-ratio: {$mobW} / {$mobH}", $html);
+        $this->assertStringNotContainsString('has-mobile-media', $markup);
+        $this->assertStringContainsString('<div class="kk-hero-slide"', $markup);
     }
 
     /**
-     * One box for the whole hero, still - a carousel whose slides each sized
-     * themselves is what made it lurch as it advanced. So the narrow phone box
-     * is only taken when EVERY slide has phone artwork to fill it.
+     * And the choice really is per slide: a hero holding one of each marks only
+     * the one that earns it. This is the half a single-banner test cannot see,
+     * and the reason the box is a class rather than a value computed once for
+     * the carousel.
      */
-    public function test_one_slide_without_phone_artwork_keeps_the_whole_hero_on_the_wide_box(): void
+    public function test_a_mixed_hero_marks_only_the_slides_that_have_phone_artwork(): void
     {
         $this->hero(['mobile_image_url' => 'banners/mobile/phone.jpg']);
         Banner::create([
@@ -236,22 +221,10 @@ class HeroBannerMobileMediaTest extends TestCase
             'is_active' => true,
         ]);
 
-        $html = $this->get('/')->getContent();
-        [$mobW, $mobH] = Banner::HERO_MOBILE_SIZE;
-
-        $this->assertStringNotContainsString("aspect-ratio: {$mobW} / {$mobH}", $html);
-
-        // And the banner that DOES have phone artwork must not serve it into
-        // that wide box - a 3:2 still cropped to 3.85:1 loses 61% of its width,
-        // which is the crop this whole arrangement exists to avoid.
-        //
-        // The <picture> wrapper itself is not the tell: every image banner ships
-        // one, even when both screens resolve to the same file. What must be
-        // absent is the phone-specific <source> inside it, and the phone file
-        // it would have pointed at.
         $markup = $this->heroMarkup();
-        $this->assertStringNotContainsString('storage/banners/mobile/phone.jpg', $markup);
-        $this->assertStringNotContainsString('media="(max-width: 767px)"', $markup);
+
+        $this->assertSame(1, substr_count($markup, 'has-mobile-media'));
+        $this->assertStringContainsString('<div class="kk-hero-slide"', $markup);
     }
 
     /**
