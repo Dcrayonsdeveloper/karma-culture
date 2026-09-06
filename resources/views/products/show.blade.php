@@ -673,10 +673,18 @@
                    as a separate thing from the button under it. */
                 .kk-texture-chip.is-selected .kk-texture-chip__swatch { box-shadow: 0 0 0 1px rgba(239, 226, 203, .55); }
                 /* Mobile: wrap all sizes onto multiple rows (no hidden horizontal
-                   scroll) and enlarge tap targets to ~44px for easy tapping. */
+                   scroll) and enlarge tap targets for easy tapping.
+
+                   A chip is as wide as its own label, never wider. This used to
+                   say flex: 1 0 auto, and the grow was the whole problem: every
+                   chip stretched to swallow whatever space was left on its row,
+                   so "Silk" alone on the last row became a button the width of
+                   the phone and the three rails read as three different
+                   controls. min-width is a tap-target floor, not a filler - it
+                   only ever applies to a label too short to be worth tapping. */
                 @media (max-width: 640px) {
                     .kk-sizeguide__row { flex-wrap: wrap; overflow-x: visible; gap: 8px; }
-                    .kk-sizeguide__size { flex: 1 0 auto; min-width: 58px; text-align: center; padding: 11px 10px; font-size: 13px; }
+                    .kk-sizeguide__size { flex: 0 0 auto; min-width: 44px; text-align: center; padding: 11px 12px; font-size: 13px; }
                 }
                 </style>
                 @php
