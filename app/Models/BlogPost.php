@@ -19,6 +19,7 @@ class BlogPost extends Model
         'author_id',
         'is_published',
         'published_at',
+        'newsletter_sent_at',
         'seo_data',
         'view_count',
     ];
@@ -30,6 +31,7 @@ class BlogPost extends Model
             'seo_data'     => 'array',
             'is_published' => 'boolean',
             'published_at' => 'datetime',
+            'newsletter_sent_at' => 'datetime',
         ];
     }
 
@@ -44,6 +46,18 @@ class BlogPost extends Model
                      ->where(function ($q) {
                          $q->whereNull('published_at')->orWhere('published_at', '<=', now());
                      });
+    }
+
+    /**
+     * Published, and the subscribers have not been told yet.
+     *
+     * Built on scopePublished() rather than beside it, so a post scheduled for
+     * next Tuesday is not mailed out today: the same clause decides who can
+     * read it and who gets told about it.
+     */
+    public function scopeAwaitingNewsletter($query)
+    {
+        return $query->published()->whereNull('newsletter_sent_at');
     }
 
     public function getReadingTimeAttribute(): int

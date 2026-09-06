@@ -9,6 +9,7 @@ use App\Services\NotificationService;
 use App\Support\OfferClaims;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 use Illuminate\Support\Facades\Log;
 
 class NewsletterController extends Controller
@@ -229,4 +230,30 @@ class NewsletterController extends Controller
             ]);
         }
     }
+
+    /**
+     * Leave the newsletter, from the link in the footer of an email.
+     *
+     * Always answers the same page, whether the token matched or not. A token
+     * that is unknown - an old link, a truncated one, a guess - would
+     * otherwise turn this into an oracle for which tokens exist, and to the
+     * person clicking there is nothing useful to say either way: they asked
+     * not to receive this mail, and they will not.
+     *
+     * The row is kept. is_active false is what excludes the address from every
+     * future send, and keeping it is what makes that permanent: delete it and
+     * the same address subscribing again - or the same list being imported
+     * again - starts the mail up as though nothing was ever asked.
+     */
+    public function unsubscribe(string $token): View
+    {
+        $subscriber = NewsletterSubscriber::where('unsubscribe_token', $token)->first();
+
+        $subscriber?->unsubscribe();
+
+        return view('newsletter.unsubscribed', [
+            'email' => $subscriber?->email,
+        ]);
+    }
+
 }

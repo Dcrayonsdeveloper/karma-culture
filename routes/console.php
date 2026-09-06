@@ -28,6 +28,22 @@ Schedule::command('cart:send-abandoned-reminders')->dailyAt('10:00');
 // Notify subscribers when products are back in stock (every 2 hours)
 Schedule::command('stock:notify-back-in-stock')->everyTwoHours();
 
+// Tell the newsletter list about blog posts that have gone live.
+//
+// Every five minutes rather than daily: a post is published when someone
+// presses publish, and "the announcement goes out within the hour" is a worse
+// answer than the one this gives. The command takes only the work left, so a
+// run with nothing waiting costs one indexed query.
+//
+// withoutOverlapping because mail here is synchronous SMTP with no queue
+// worker - a send to a long list outlives the five-minute gap, and two runs
+// racing would be two runs claiming the same subscribers. runInBackground so
+// the rest of the schedule is not held up behind it.
+Schedule::command('newsletter:send-blog-posts')
+    ->everyFiveMinutes()
+    ->withoutOverlapping(30)
+    ->runInBackground();
+
 // Refresh the About Us reel strip from Instagram, daily at 4am.
 //
 // Same caveat as the abandoned-cart entry above: nothing on this host runs

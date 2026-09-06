@@ -61,6 +61,14 @@ return Application::configure(basePath: dirname(__DIR__))
             'payu/success',
             'payu/failure',
             'webhooks/shiprocket',
+            // Gmail and Outlook POST here when the reader uses the mail
+            // client's own unsubscribe button (the List-Unsubscribe-Post
+            // header on App\Mail\BlogPostPublished). The request comes from
+            // their servers, carries no session and no token, and refusing it
+            // means the button appears to do nothing - which is worse than the
+            // risk it trades away: the URL's own token is the credential, and
+            // the only thing this endpoint can do is stop mail being sent.
+            'newsletter/unsubscribe/*',
         ]);
 
         $middleware->api(prepend: [

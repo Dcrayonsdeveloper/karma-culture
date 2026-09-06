@@ -389,6 +389,21 @@ Route::middleware('auth')->group(function () {
 // Newsletter
 Route::post('/newsletter/subscribe', [App\Http\Controllers\NewsletterController::class, 'subscribe'])->middleware('throttle:5,1,newsletter')->name('newsletter.subscribe');
 
+// Leaving the list. GET because it is a link in an email - the only control a
+// mail client can offer - and deliberately not throttled the way subscribe is:
+// someone trying to stop mail arriving must never be told to come back later.
+// The token in the URL is the whole credential, so there is no session or
+// login involved; an address is unsubscribed by whoever holds the link, which
+// is the person the mail was sent to.
+Route::get('/newsletter/unsubscribe/{token}', [App\Http\Controllers\NewsletterController::class, 'unsubscribe'])
+    ->name('newsletter.unsubscribe');
+
+// The same thing over POST, for the One-Click header the Mailable sets. Gmail
+// and Outlook POST here when their own unsubscribe button is used, and they
+// send no CSRF token - it is excluded in bootstrap/app.php for that reason.
+Route::post('/newsletter/unsubscribe/{token}', [App\Http\Controllers\NewsletterController::class, 'unsubscribe'])
+    ->name('newsletter.unsubscribe.post');
+
 // Recommendations (AJAX)
 Route::prefix('recommendations')->name('recommendations.')->group(function () {
     Route::get('/recently-viewed', [App\Http\Controllers\Web\RecommendationController::class, 'recentlyViewed'])->name('recently-viewed');
