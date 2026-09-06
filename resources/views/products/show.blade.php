@@ -659,6 +659,19 @@
                 .kk-sizeguide__size:hover { border-color: #2d1810; }
                 .kk-sizeguide__size.is-selected { background: #2d1810; color: #efe2cb; border-color: #2d1810; }
                 .kk-sizeguide__size.is-unavailable { color: #a08e76; text-decoration: line-through; cursor: not-allowed; opacity: .55; }
+
+                /* A texture chip is a size chip that carries a crop of the fabric.
+                   Same border, same radius, same selected state - only the left
+                   padding gives way to the swatch, so the two rows of chips on
+                   this page still read as one control and not two designs.
+                   The swatch is square and clipped: the uploads are photographs
+                   of cloth at whatever ratio the camera gave them. */
+                .kk-texture-chip { display: inline-flex; align-items: center; gap: 7px; padding-left: 5px; }
+                .kk-texture-chip__swatch { width: 22px; height: 22px; border-radius: 4px; object-fit: cover; display: block; flex: 0 0 auto; background: #efe2cb; }
+                /* The selected chip goes dark, and a swatch sitting directly on
+                   it loses its edge - the ring is what keeps the fabric readable
+                   as a separate thing from the button under it. */
+                .kk-texture-chip.is-selected .kk-texture-chip__swatch { box-shadow: 0 0 0 1px rgba(239, 226, 203, .55); }
                 /* Mobile: wrap all sizes onto multiple rows (no hidden horizontal
                    scroll) and enlarge tap targets to ~44px for easy tapping. */
                 @media (max-width: 640px) {
@@ -732,6 +745,25 @@
                     $kkDefaultSize = $kkSizes->first();
                     $kkDefaultColour = $kkColours->first();
                     $kkDefaultTexture = $kkTextures->first();
+
+                    // The swatch for each of those names, from the Textures
+                    // library. The product stores a name and only a name, so
+                    // the picture is joined on here rather than duplicated onto
+                    // every product that happens to be cotton - change the
+                    // swatch once in admin and every product wearing that
+                    // texture changes with it.
+                    //
+                    // Keyed lower-case because the two sides are typed by
+                    // different people on different screens: the library says
+                    // "Cotton" and a product's attributes JSON may say "cotton".
+                    // One query for the handful of rows in the table, and only
+                    // when this product actually offers a texture.
+                    $kkTextureSwatches = $kkTextures->isEmpty()
+                        ? collect()
+                        : \App\Models\TexturePreset::active()
+                            ->get(['name', 'image_path'])
+                            ->mapWithKeys(fn ($p) => [mb_strtolower($p->name) => $p->image_src])
+                            ->filter();
                     $kkDefaultVariant = $kkDefaultSize !== null ? ($kkSizeVariant[$kkDefaultSize] ?? null) : null;
                 @endphp
                 @if($kkSizes->isNotEmpty())
@@ -777,15 +809,42 @@
                 @endif
 
                 @if($kkTextures->isNotEmpty())
-                {{-- Chips, not swatches: a texture has no colour to preview, so it borrows
-                     the size buttons' styling rather than the colour picker's dot. --}}
+                {{-- The one screen that shows the fabric.
+
+                     A texture is a thing you would touch, and "Linen" as a word
+                     asks the shopper to remember what linen looks like. Where
+                     the library has a swatch, the chip wears a crop of it and
+                     the name stays beside it - the picture says what the fabric
+                     is, the word says which one to ask for.
+
+                     Deliberately only here. The filter rail lists textures as
+                     names alone: twenty swatches down the side of a listing
+                     compete with the products they are meant to be filtering,
+                     and at that size a close crop of cotton and one of linen
+                     are the same beige square.
+
+                     A texture with no swatch uploaded keeps the plain chip, so
+                     the picker is never half-built while the library is being
+                     filled in. --}}
                 <section class="kk-sizeguide" id="kk-texture-select" aria-label="Select texture">
                     <h2 class="kk-sizeguide__title">Select Texture<span class="kk-sizeguide__sel" x-show="selectedTexture" x-cloak> - <span x-text="selectedTexture"></span></span></h2>
                     <div class="kk-sizeguide__row">
                         @foreach($kkTextures as $kkT)
-                            <button type="button" class="kk-sizeguide__size"
+                            @php $kkSwatch = $kkTextureSwatches[mb_strtolower($kkT)] ?? null; @endphp
+                            <button type="button" class="kk-sizeguide__size{{ $kkSwatch ? ' kk-texture-chip' : '' }}"
                                     :class="selectedTexture === '{{ $kkT }}' ? 'is-selected' : ''"
-                                    @click="selectedTexture = '{{ $kkT }}'">{{ $kkT }}</button>
+                                    @click="selectedTexture = '{{ $kkT }}'">
+                                @if($kkSwatch)
+                                    {{-- aria-hidden and empty alt: the button's own text
+                                         already names the texture, and a screen reader
+                                         reading "Cotton Cotton" is the cost of decorating
+                                         a label with a picture of itself. --}}
+                                    <img src="{{ $kkSwatch }}" alt="" aria-hidden="true"
+                                         class="kk-texture-chip__swatch" loading="lazy" decoding="async"
+                                         onerror="this.remove()">
+                                @endif
+                                <span>{{ $kkT }}</span>
+                            </button>
                         @endforeach
                     </div>
                 </section>

@@ -295,8 +295,14 @@
                             <input type="checkbox" name="texture[]" value="{{ $kkTexture }}"
                                    @checked(in_array($kkTexture, $kkValues['texture'], true))
                                    onchange="this.form.submit()" class="sr-only peer">
-                            {{-- A texture is a plain word with nothing to show beside it, so
-                                 this is the Size chip rather than the Colour one - including
+                            {{-- The name alone, and that is a choice rather than a gap:
+                                 the Textures library does now hold a swatch per texture,
+                                 and the product page wears it. Here it would not help -
+                                 a column of fabric crops down the side of a listing
+                                 competes with the products it is meant to be filtering,
+                                 and at chip size a close crop of cotton and one of linen
+                                 are the same beige square. So this is the Size chip
+                                 rather than the Colour one - including
                                  the peer-checked:hover pair, which is here for the same
                                  reason: Tailwind v4 wraps peer-* in :where(), so the plain
                                  hover:text-* rule would win on source order and repaint a
