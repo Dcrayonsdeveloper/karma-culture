@@ -1376,8 +1376,19 @@
             .kk-hero-nav:hover { background: #fff; }
             .kk-hero-nav--prev { left: 14px; }
             .kk-hero-nav--next { right: 14px; }
+            /* Centred by being full width with justify-content, NOT by the
+               left:50% + translateX(-50%) trick.
+
+               transform:none is the whole point of this rule. app.css also
+               defines .kk-hero-dots, using that trick, and this block only
+               overrode left and right - so the bar became 1424px wide and the
+               leftover translateX(-50%) then dragged it half its OWN width to
+               the left, parking the dots off the bottom-left corner. Two
+               stylesheets describing one component; this one wins on order, so
+               it has to undo everything the other one set. */
             .kk-hero-dots {
                 position: absolute; left: 0; right: 0; bottom: 14px; z-index: 2;
+                transform: none;
                 display: flex; justify-content: center; gap: 8px;
             }
             .kk-hero-dot {
@@ -1810,9 +1821,14 @@
                      without the clips being laid down twice. --}}
                 <div class="kk-about-reels" x-data="kkAboutReels()"
                      style="--kk-reel-count: {{ $aboutReels->count() }};">
-                    <div class="kk-about-reels__track" x-ref="track"
-                         @mouseenter="paused = true" @mouseleave="paused = false"
-                         @focusin="paused = true" @focusout="paused = false">
+                    {{-- No pause-on-hover. A phone has no hover, but a touch
+                         synthesises mouseenter and very often never sends the
+                         matching mouseleave - so a tap, or a finger dragged
+                         across the strip while scrolling the page, latched the
+                         strip stopped for good. focusin on a <video> did the
+                         same. The strip is decorative and runs one way, so
+                         there is nothing to pause for. --}}
+                    <div class="kk-about-reels__track" x-ref="track">
                         @foreach($aboutReels as $aboutReel)
                             {{-- Admin-set clips of any ratio, so they are shown whole: a
                                  landscape capture used to be cropped to a ribbon of its
@@ -1844,7 +1860,6 @@
                        as will do. A strip that already fits stands still. */
                     function kkAboutReels() {
                         return {
-                            paused: false,
                             init() {
                                 // Decorative motion, so anyone who has asked their
                                 // OS for less of it gets a strip that just sits.
@@ -1854,13 +1869,72 @@
                                 const track = this.$refs.track;
                                 const reels = Array.from(track.children);
                                 const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
-                                const lead = () => track.firstElementChild.getBoundingClientRect().width + gap;
+                                // Guarded: a clip that has not laid out yet measures
+                                // zero, and a zero lead would recycle the whole line
+                                // in a handful of frames.
+                                const lead = () => {
+                                    const first = track.firstElementChild;
+
+                                    return first ? first.getBoundingClientRect().width + gap : 0;
+                                };
+
+                                /* Keep every clip running.
+
+                                   The markup already says autoplay/muted/loop, but
+                                   that is not enough on a phone. cloneNode hands
+                                   back a <video> that is not playing, so the copies
+                                   added below sit on their poster frame - which is
+                                   what made the strip look like it stopped after one
+                                   pass, once the originals had scrolled by and the
+                                   clones had taken their place. A phone also pauses
+                                   clips of its own accord: too many decoders at once,
+                                   or a tab that went to the background.
+
+                                   So each one is started here and started again
+                                   whenever the browser pauses it. muted and
+                                   playsInline are set as properties too, not just as
+                                   attributes, because the autoplay policy reads the
+                                   property. */
+                                const kick = (video) => {
+                                    video.muted = true;
+                                    video.playsInline = true;
+                                    video.loop = true;
+
+                                    const played = video.play();
+
+                                    // Rejected when the browser is not ready to let
+                                    // it play; the pause listener will come back to
+                                    // it, so there is nothing to handle here.
+                                    if (played && typeof played.catch === 'function') played.catch(() => {});
+                                };
+
+                                const kickAll = () => track.querySelectorAll('video').forEach(kick);
+
+                                // 'pause' does not bubble, hence the capture phase.
+                                track.addEventListener('pause', (event) => {
+                                    if (event.target instanceof HTMLVideoElement) kick(event.target);
+                                }, true);
+
+                                document.addEventListener('visibilitychange', () => {
+                                    if (!document.hidden) kickAll();
+                                });
+
+                                // iOS holds playback until the page has been touched
+                                // once, and refuses every play() before that.
+                                document.addEventListener('touchstart', kickAll, { once: true, passive: true });
+
+                                // Before the early return below: a strip too short to
+                                // travel should still be playing its clips.
+                                kickAll();
 
                                 if (track.scrollWidth <= strip.clientWidth) return;
 
                                 for (let i = 0; track.scrollWidth < strip.clientWidth + lead() && i < reels.length * 6; i++) {
                                     track.appendChild(reels[i % reels.length].cloneNode(true));
                                 }
+
+                                // The copies arrive stopped, so start them too.
+                                kickAll();
 
                                 let x = 0;
                                 let last = null;
@@ -1871,17 +1945,18 @@
                                     const dt = last === null ? 0 : Math.min((now - last) / 1000, 0.05);
                                     last = now;
 
-                                    if (!this.paused) {
-                                        x -= 45 * dt;
+                                    x -= 45 * dt;
 
-                                        const first = lead();
-                                        if (-x >= first) {
-                                            x += first;
-                                            track.appendChild(track.firstElementChild);
-                                        }
-
-                                        track.style.transform = 'translateX(' + x.toFixed(2) + 'px)';
+                                    const first = lead();
+                                    // first > 0: see the guard on lead(). Recycling on
+                                    // a zero measurement would empty the line instead
+                                    // of rotating it.
+                                    if (first > 0 && -x >= first) {
+                                        x += first;
+                                        track.appendChild(track.firstElementChild);
                                     }
+
+                                    track.style.transform = 'translateX(' + x.toFixed(2) + 'px)';
 
                                     requestAnimationFrame(step);
                                 };
