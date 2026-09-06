@@ -134,12 +134,192 @@ Alpine.store('toast', {
  *
  * Returns true when the caller may go ahead.
  */
-function kkRequireLogin() {
+function kkRequireLogin(beforeLeaving) {
     if (document.body.dataset.authenticated === 'true') return true;
+
+    // A last chance to write down what the shopper was in the middle of, so the
+    // trip to the login page can finish the job rather than just returning them
+    // to the button they already pressed.
+    if (typeof beforeLeaving === 'function') beforeLeaving();
 
     kkGoToLogin();
 
     return false;
+}
+
+/**
+ * The wishlist add a guest asked for, held across the login round-trip.
+ *
+ * Sending them to /login and back landed them on the same product with the item
+ * still not favourited, because the add returns at the gate above before the id
+ * is ever saved - so the click had to be made twice, and the second one looked
+ * like the first had failed.
+ *
+ * localStorage rather than the kk_wishlist cookie: the cookie is the list
+ * itself, and writing to it here would favourite the item for a browser that
+ * never signed in.
+ */
+const KK_PENDING_WISHLIST = 'kk_pending_wishlist';
+
+// Long enough to read the login page, register, and confirm an email; short
+// enough that it is still the same errand. Without a limit, a shopper who
+// walked away from the login would find the item favourited days later, on
+// whatever unrelated sign-in happened next.
+const KK_PENDING_WISHLIST_TTL = 30 * 60 * 1000;
+
+function kkStashWishlist(productId) {
+    try {
+        localStorage.setItem(KK_PENDING_WISHLIST, JSON.stringify({
+            id: productId,
+            at: Date.now(),
+        }));
+    } catch (e) {}
+}
+
+/** Reads and clears in one go, so a failure cannot re-fire on every page load. */
+function kkTakePendingWishlist() {
+    let held = null;
+
+    try {
+        held = localStorage.getItem(KK_PENDING_WISHLIST);
+        localStorage.removeItem(KK_PENDING_WISHLIST);
+    } catch (e) {
+        return null;
+    }
+
+    if (!held) return null;
+
+    try {
+        const { id, at } = JSON.parse(held);
+
+        if (!id || !at || Date.now() - at > KK_PENDING_WISHLIST_TTL) return null;
+
+        return parseInt(id, 10) || null;
+    } catch (e) {
+        // Anything we cannot read is already gone from storage by now.
+        return null;
+    }
+}
+
+/**
+ * Where the shopper was standing when the login gate stopped them.
+ *
+ * The trip to /login and back is an ordinary navigation, so the browser starts
+ * the returning page at the top. A shopper who favourited something half way
+ * down a listing signed in and lost their place - the same errand
+ * kkStashWishlist above exists to protect, one step further on.
+ *
+ * It cannot ride along in `next`: that becomes url.intended server-side and is
+ * deliberately kept to a bare path, so nothing but a path may go in it.
+ *
+ * sessionStorage rather than localStorage - this is one tab's errand and must
+ * not follow the shopper into another window. Guarded throughout because
+ * sessionStorage throws outright in some privacy modes.
+ */
+const KK_RETURN_SCROLL = 'kk_return_scroll';
+
+// The window kkStashWishlist already uses: long enough to read the login page,
+// register and confirm an email; short enough that it is still the same errand.
+const KK_RETURN_SCROLL_TTL = 30 * 60 * 1000;
+
+function kkStashScroll() {
+    try {
+        sessionStorage.setItem(KK_RETURN_SCROLL, JSON.stringify({
+            path: window.location.pathname + window.location.search,
+            y: Math.round(window.scrollY || window.pageYOffset || 0),
+            at: Date.now(),
+        }));
+    } catch (e) {}
+}
+
+/**
+ * Put the page back where it was, if this is the page that was left.
+ *
+ * Deliberately NOT read-and-clear like kkTakePendingWishlist. This runs on
+ * every page, the login page included, and clearing it there would throw the
+ * offset away one page before it is needed - which is the bug, not the fix. It
+ * is cleared when it is used, or when it is too old to be the same errand.
+ */
+function kkRestoreScroll() {
+    let held = null;
+
+    try {
+        held = sessionStorage.getItem(KK_RETURN_SCROLL);
+    } catch (e) {
+        return;
+    }
+
+    if (!held) return;
+
+    const drop = () => {
+        try { sessionStorage.removeItem(KK_RETURN_SCROLL); } catch (e) {}
+    };
+
+    let path, y, at;
+
+    try {
+        ({ path, y, at } = JSON.parse(held));
+    } catch (e) {
+        drop();
+        return;
+    }
+
+    const stale = !at || Date.now() - at > KK_RETURN_SCROLL_TTL;
+
+    // Somewhere else entirely: signing in can end on a different page, and a
+    // shopper who browses on from the login page must not be yanked down a
+    // page they arrived at fresh. Left in place unless it has aged out.
+    if (path !== window.location.pathname + window.location.search) {
+        if (stale) drop();
+
+        return;
+    }
+
+    drop();
+
+    if (stale) return;
+
+    const target = parseInt(y, 10) || 0;
+
+    if (target <= 0) return;
+
+    // A URL naming an anchor is asking for that section, and outranks a
+    // remembered offset - the same exception the reload correction makes.
+    if (window.location.hash) return;
+
+    // The passes below run as late as the load event, which on a storefront is
+    // seconds after the page became readable. Whoever moved the page in the
+    // meantime owns where it sits: a shopper who has started reading must never
+    // be snapped away. Keyed off input rather than a scroll flag, because the
+    // corrections themselves emit scroll events - the same reasoning, and the
+    // same event list, as partials/scroll-top-on-reload.blade.php.
+    let userMoved = false;
+    ['wheel', 'touchstart', 'touchmove', 'pointerdown', 'keydown'].forEach((type) => {
+        window.addEventListener(type, () => { userMoved = true; }, { passive: true, capture: true, once: true });
+    });
+
+    const settle = () => {
+        if (userMoved) return;
+
+        try {
+            window.scrollTo({ top: target, left: 0, behavior: 'instant' });
+        } catch (e) {
+            // 'instant' is a newer value of the enum; older engines throw on it
+            // rather than ignoring it. The two-argument form also sidesteps the
+            // scroll-smooth class on <html>.
+            window.scrollTo(0, target);
+        }
+    };
+
+    settle();
+
+    window.addEventListener('load', () => {
+        settle();
+
+        // Lazy images and fonts settle after load and drag everything below
+        // them out of position, so correct once more on the next frame.
+        if (window.requestAnimationFrame) window.requestAnimationFrame(settle);
+    }, { once: true });
 }
 
 /** The trip to the login page, carrying where to come back to. */
@@ -147,6 +327,9 @@ function kkGoToLogin() {
     // Path only, never the absolute URL: this becomes url.intended server-side,
     // and a full URL there is one bad validation away from an open redirect.
     const next = window.location.pathname + window.location.search;
+
+    // Which is why the offset travels separately - see kkStashScroll.
+    kkStashScroll();
 
     window.location.assign('/login?next=' + encodeURIComponent(next));
 }
@@ -536,12 +719,15 @@ Alpine.store('wishlist', {
     },
 
     async toggle(productId) {
+        productId = parseInt(productId, 10);
+
         // Both halves, not just adding: a wishlist that takes an account to
         // fill but not to empty is a wishlist a signed-out browser can still
-        // quietly rearrange.
-        if (!kkRequireLogin()) return;
+        // quietly rearrange. Only the add is worth carrying across the login -
+        // a guest cannot have favourited the item in the first place, so the
+        // intent behind the press is always "add this".
+        if (!kkRequireLogin(() => kkStashWishlist(productId))) return;
 
-        productId = parseInt(productId, 10);
         if (this.has(productId)) {
             this.remove(productId);
         } else {
@@ -550,9 +736,10 @@ Alpine.store('wishlist', {
     },
 
     async add(productId) {
-        if (!kkRequireLogin()) return;
-
         productId = parseInt(productId, 10);
+
+        if (!kkRequireLogin(() => kkStashWishlist(productId))) return;
+
         if (this.has(productId)) return;
 
         this.ids.push(productId);
@@ -822,6 +1009,20 @@ function initStores() {
     const wishlist = Alpine.store('wishlist');
     wishlist.ids = wishlist.readCookie();
     if (wishlist.ids.length) wishlist.fetch();
+
+    // Back where the login gate interrupted them. Runs whatever the outcome:
+    // a shopper who changed their mind on the login page and came back still
+    // wants the listing where they left it.
+    kkRestoreScroll();
+
+    // Finish the favourite that sent a guest to the login page. Reading it
+    // clears it, so an item can never be re-added on a later visit, and it is
+    // ignored outside its short window - see kkTakePendingWishlist.
+    if (document.body.dataset.authenticated === 'true') {
+        const pending = kkTakePendingWishlist();
+
+        if (pending) wishlist.add(pending);
+    }
 }
 
 // Handle timing: if DOM already loaded (module scripts can run late), init immediately
