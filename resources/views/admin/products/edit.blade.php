@@ -113,6 +113,17 @@
                                      control you cannot press. --}}
                                 <button type="button"
                                         class="kk-main-pick"
+                                        {{-- Placement inline, appearance in the class.
+                                             app.css is cache-busted by name, so a browser
+                                             holding an older copy of this page requests a
+                                             bundle the last build replaced, gets a 404 and
+                                             styles nothing - which drops this button into
+                                             normal flow, where overflow-hidden clips it and
+                                             every image that loads pushes it further down.
+                                             These four properties are the ones whose
+                                             absence breaks it, so they do not depend on a
+                                             file arriving. --}}
+                                        style="position: absolute; bottom: 6px; left: 6px; z-index: 30;"
                                         :class="mainMediaId === {{ $image->id }} ? 'is-main' : ''"
                                         @click.stop="makeMain({{ $image->id }})"
                                         :disabled="settingMain"
