@@ -9,6 +9,15 @@ namespace App\Support;
  * carried - label, shade_hex, query_string - so the home page rail and anything
  * else that reads a filter row keeps working unchanged now that the rows come
  * from the catalogue instead of a table.
+ *
+ * `image` is the one property here that no product supplies. It is looked up
+ * from the Colours / Textures master lists and it is DECORATION ONLY: the
+ * value's identity is still its label, the rail still only carries what some
+ * product carries, and a value with no master row - or a master row with no
+ * picture - is exactly the value it was before the lists existed. Nothing may
+ * branch on it beyond how the value is drawn; the moment something filters or
+ * groups by it, the picker has quietly become a second source of truth for
+ * what the shop sells.
  */
 class ShopFilterValue
 {
@@ -27,6 +36,8 @@ class ShopFilterValue
         public readonly bool $hidden,
         /** Set only when hidden: the exclusion row to DELETE to unhide it. */
         public readonly ?string $exclusion_uuid = null,
+        /** Master-list artwork for this value, when the admin has uploaded one. */
+        public readonly ?string $image = null,
     ) {}
 
     /** The raw filter value, as it goes into a query string. */

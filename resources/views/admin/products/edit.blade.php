@@ -347,14 +347,27 @@
                         $kkSizeErrors = collect($errors->getMessages())
                             ->filter(fn ($messages, $key) => $key === 'variants' || str_starts_with($key, 'variants.'))
                             ->flatten();
+                        // The master Sizes list, as plain names. A size row still posts and
+                        // still saves its own copy of the label, so this list only decides
+                        // what the picker offers - renaming or deleting a master row later
+                        // never reaches a product, an order or a cart line.
+                        $kkSizeNames = $sizeOptions->pluck('name')->values();
                     @endphp
                     <!-- Sizes & pricing -->
                     <div class="card p-5" x-data="kkSizes()">
                         <div class="flex items-center justify-between mb-1">
-                            <h2 class="text-[13px] font-semibold form-label-required" style="color: #303030;">Sizes &amp; pricing</h2>
+                            <div class="flex items-baseline gap-2">
+                                <h2 class="text-[13px] font-semibold form-label-required" style="color: #303030;">Sizes &amp; pricing</h2>
+                                {{-- The picker can only offer what the master list holds, so
+                                     "the size I need is not there" needs an answer that is one
+                                     click away. New tab on purpose: this form is half filled in
+                                     and navigating away from it loses everything typed so far. --}}
+                                <a href="{{ route('admin.sizes.index') }}" target="_blank" rel="noopener"
+                                   class="text-[11px]" style="color: #616161;">Manage sizes</a>
+                            </div>
                             <button type="button" @click="add()" class="btn btn-secondary" style="font-size:12px; padding:4px 10px;">+ Add size</button>
                         </div>
-                        <p class="text-xs mb-4" style="color: #616161;">Every product needs at least one size. Each row is one size a customer can buy, with its own price and stock. Measurements are optional and let the assistant advise on fit. Leave SKU blank and one is generated. Colours are set separately below.</p>
+                        <p class="text-xs mb-4" style="color: #616161;">Every product needs at least one size. Each row is one size a customer can buy, with its own price and stock, picked from the sizes you keep under Products &rarr; Sizes. Measurements are optional and let the assistant advise on fit. Leave SKU blank and one is generated. Colours are set separately below.</p>
 
                         @if($kkSizeErrors->isNotEmpty())
                             <div class="mb-3">
@@ -386,9 +399,35 @@
                                             <td style="padding:.4rem;">
                                                 <input type="hidden" x-bind:name="'variants[' + i + '][id]'" x-bind:value="r.id || ''">
                                                 <input type="hidden" x-bind:name="'variants[' + i + '][delete]'" x-bind:value="r.remove ? 1 : ''">
-                                                <input type="text" x-bind:name="'variants[' + i + '][name]'" x-model="r.name" placeholder="M-40"
-                                                       maxlength="100" aria-label="Size"
-                                                       style="width:92px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;">
+                                                {{-- A shop that has not filled its Sizes list in yet gets the
+                                                     free-text box back, not an empty dropdown: locking the admin
+                                                     out of editing a product until they have visited another
+                                                     screen would be a worse form than the one this replaces. The
+                                                     branch is plain Blade because the list cannot change while
+                                                     the page is open - only the rows can. --}}
+                                                @if($kkSizeNames->isNotEmpty())
+                                                    {{-- Same name, same aria-label, same posted value as the text
+                                                         box it replaces: nothing downstream can tell the
+                                                         difference, and the compare-at guard still finds this row
+                                                         by its aria-labels. The options are drawn by Alpine so a
+                                                         row added after load gets the list too, and optionsFor()
+                                                         carries whatever the row already holds - which on this
+                                                         form is usually a size saved long before the list
+                                                         existed. --}}
+                                                    <select x-bind:name="'variants[' + i + '][name]'" x-model="r.name"
+                                                            aria-label="Size"
+                                                            x-init="$nextTick(() => { $el.value = r.name })"
+                                                            style="width:120px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;background:#fff;">
+                                                        <option value="" disabled>Select a size</option>
+                                                        <template x-for="opt in optionsFor(r.name)" :key="opt">
+                                                            <option x-bind:value="opt" x-text="labelFor(opt)"></option>
+                                                        </template>
+                                                    </select>
+                                                @else
+                                                    <input type="text" x-bind:name="'variants[' + i + '][name]'" x-model="r.name" placeholder="M-40"
+                                                           maxlength="100" aria-label="Size"
+                                                           style="width:92px;font-size:12px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.25rem .5rem;">
+                                                @endif
                                             </td>
                                             <td style="padding:.4rem;text-align:right;">
                                                 <input type="number" step="0.01" min="0" max="9999999.99" x-bind:name="'variants[' + i + '][price]'" x-model="r.price"
@@ -443,6 +482,12 @@
                         </template>
                     </div>
                     <script>
+                        // The admin's own Sizes list, and only what the picker offers with:
+                        // the server still accepts any size string it is sent, because
+                        // product imports, the API, the seeders and 1,266 live products
+                        // already carry values that are on no list at all. A Rule::in here
+                        // would start refusing the catalogue that exists.
+                        const KK_SIZES = @json($kkSizeNames);
                         function kkSizes() {
                             return {
                                 seq: 0,
@@ -464,6 +509,12 @@
                                 drop(i) {
                                     if (this.rows[i].id) { this.rows[i].remove = true; } else { this.rows.splice(i, 1); }
                                 },
+                                // A row already holding a size that is not on the master list -
+                                // most of this catalogue, until the lists are filled in - keeps
+                                // it at the top of that row's own dropdown, so opening a product
+                                // and saving it cannot rewrite the size a customer is wearing.
+                                optionsFor(v) { return KK_SIZES.includes(v) ? KK_SIZES : (v ? [v, ...KK_SIZES] : KK_SIZES); },
+                                labelFor(v) { return KK_SIZES.includes(v) ? v : v + ' — not in list'; },
                             };
                         }
                     </script>
@@ -484,13 +535,26 @@
                         $kkColourErrors = collect($errors->getMessages())
                             ->filter(fn ($messages, $key) => $key === 'colours' || str_starts_with($key, 'colours.'))
                             ->flatten();
+                        // The master Colours list: a name and, where the admin set one, the
+                        // shade to fill the swatch in with. The product still saves its own
+                        // copy of both, so this only decides what the picker offers.
+                        $kkColourMasters = $colourOptions->map(fn ($c) => [
+                            'name' => (string) $c->name,
+                            'hex' => (string) ($c->hex_code ?? ''),
+                        ])->values();
                     @endphp
                     <div class="card p-5" x-data="kkColours()">
                         <div class="flex items-center justify-between mb-1">
-                            <h2 class="text-[13px] font-semibold form-label-required" style="color: #303030;">Colours</h2>
+                            <div class="flex items-baseline gap-2">
+                                <h2 class="text-[13px] font-semibold form-label-required" style="color: #303030;">Colours</h2>
+                                {{-- One click to the list, in a new tab, for the colour that is
+                                     not on it yet - this form is half filled in by now. --}}
+                                <a href="{{ route('admin.colours.index') }}" target="_blank" rel="noopener"
+                                   class="text-[11px]" style="color: #616161;">Manage colours</a>
+                            </div>
                             <button type="button" @click="add()" class="btn btn-secondary" style="font-size:12px; padding:4px 10px;">+ Add colour</button>
                         </div>
-                        <p class="text-xs mb-4" style="color: #616161;">Every product needs at least one colour, each with a name and a swatch you pick. They show as swatches on the product page, under the sizes.</p>
+                        <p class="text-xs mb-4" style="color: #616161;">Every product needs at least one colour, each with a name and a swatch. Pick from the colours you keep under Products &rarr; Colours and the swatch fills itself in; you can still change it here. They show as swatches on the product page, under the sizes.</p>
 
                         @if($kkColourErrors->isNotEmpty())
                             <div class="mb-3">
@@ -521,9 +585,26 @@
                                                    ? 'width:34px;height:32px;border:1px solid #d4d4d4;border-radius:.375rem;padding:0;background:none;cursor:pointer;'
                                                    : 'position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;'">
                                     </span>
-                                    <input type="text" x-bind:name="'colours[' + i + '][name]'" x-model="c.name" placeholder="Navy"
-                                           maxlength="60" aria-label="Colour name"
-                                           style="flex:1 1 auto;max-width:240px;font-size:13px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.4rem .6rem;">
+                                    {{-- Free text again when the master list is empty, for the
+                                         same reason as the sizes above: an empty dropdown would
+                                         make a shop that has not filled its lists in unable to
+                                         save a product at all. --}}
+                                    @if($kkColourMasters->isNotEmpty())
+                                        <select x-bind:name="'colours[' + i + '][name]'" x-model="c.name"
+                                                aria-label="Colour name"
+                                                x-init="$nextTick(() => { $el.value = c.name })"
+                                                @change="applyShade(c, $event.target.value)"
+                                                style="flex:1 1 auto;max-width:240px;font-size:13px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.4rem .6rem;background:#fff;">
+                                            <option value="" disabled>Select a colour</option>
+                                            <template x-for="opt in optionsFor(c.name)" :key="opt">
+                                                <option x-bind:value="opt" x-text="labelFor(opt)"></option>
+                                            </template>
+                                        </select>
+                                    @else
+                                        <input type="text" x-bind:name="'colours[' + i + '][name]'" x-model="c.name" placeholder="Navy"
+                                               maxlength="60" aria-label="Colour name"
+                                               style="flex:1 1 auto;max-width:240px;font-size:13px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.4rem .6rem;">
+                                    @endif
                                     <button type="button" @click="rows.splice(i, 1)" title="Remove" class="btn-icon"
                                             style="color:#d72c0d;background:none;border:0;cursor:pointer;font-size:16px;line-height:1;">&times;</button>
                                 </div>
@@ -536,6 +617,12 @@
                         // colour - black included - registers as a change and marks the row as
                         // chosen. Until then the row posts no hex and nothing is saved for it.
                         const KK_UNPICKED_SWATCH = '#7f7f81';
+                        // The admin's own Colours list - {name, hex} - and, like the sizes,
+                        // only what the picker offers with. Nothing server-side is narrowed
+                        // to it, because 1,266 live products carry colours that are on no
+                        // list and an import may post anything at all.
+                        const KK_COLOURS = @json($kkColourMasters);
+                        const KK_COLOUR_NAMES = KK_COLOURS.map(c => c.name);
                         function kkColours() {
                             return {
                                 seq: 0,
@@ -552,6 +639,22 @@
                                     if (this.rows.length === 0) { this.add(); }
                                 },
                                 add() { this.rows.push({ uid: ++this.seq, name: '', hex: KK_UNPICKED_SWATCH, picked: false }); },
+                                // A colour already on the row that is not on the master list
+                                // keeps its place at the top of that row's dropdown, so an old
+                                // product is never quietly re-coloured by being opened.
+                                optionsFor(v) { return KK_COLOUR_NAMES.includes(v) ? KK_COLOUR_NAMES : (v ? [v, ...KK_COLOUR_NAMES] : KK_COLOUR_NAMES); },
+                                labelFor(v) { return KK_COLOUR_NAMES.includes(v) ? v : v + ' — not in list'; },
+                                // Picking a master colour that carries a shade fills the swatch
+                                // in and counts as having chosen it - that is the whole point of
+                                // keeping a hex on the master row. A master colour with no shade
+                                // deliberately leaves the row unpicked: the rule that no colour
+                                // is ever saved with a swatch nobody chose still holds, and the
+                                // admin is asked for one. The swatch stays editable either way,
+                                // so this run of Navy can be a shade off the standard Navy.
+                                applyShade(c, name) {
+                                    const master = KK_COLOURS.find(m => m.name === name);
+                                    if (master && master.hex) { c.hex = master.hex; c.picked = true; }
+                                },
                             };
                         }
                     </script>
@@ -573,13 +676,21 @@
                         $kkTextureErrors = collect($errors->getMessages())
                             ->filter(fn ($messages, $key) => $key === 'textures' || str_starts_with($key, 'textures.'))
                             ->flatten();
+                        // The master Textures list, as plain names - the product still saves
+                        // its own copy of whichever one is chosen.
+                        $kkTextureNames = $textureOptions->pluck('name')->values();
                     @endphp
                     <div class="card p-5" x-data="kkTextures()">
                         <div class="flex items-center justify-between mb-1">
-                            <h2 class="text-[13px] font-semibold" style="color: #303030;">Textures</h2>
+                            <div class="flex items-baseline gap-2">
+                                <h2 class="text-[13px] font-semibold" style="color: #303030;">Textures</h2>
+                                {{-- Same escape hatch as the two lists above, same new tab. --}}
+                                <a href="{{ route('admin.textures.index') }}" target="_blank" rel="noopener"
+                                   class="text-[11px]" style="color: #616161;">Manage textures</a>
+                            </div>
                             <button type="button" @click="add()" class="btn btn-secondary" style="font-size:12px; padding:4px 10px;">+ Add texture</button>
                         </div>
-                        <p class="text-xs mb-4" style="color: #616161;">Optional - a texture is a name on its own, with no swatch to pick. They show on the product page under the colours, and become a filter on the shop.</p>
+                        <p class="text-xs mb-4" style="color: #616161;">Optional - a texture is a name on its own, with no swatch to pick, chosen from the textures you keep under Products &rarr; Textures. They show on the product page under the colours, and become a filter on the shop.</p>
 
                         @if($kkTextureErrors->isNotEmpty())
                             <div class="mb-3">
@@ -594,9 +705,25 @@
                         <div x-show="rows.length > 0" x-cloak style="display:flex;flex-direction:column;gap:8px;">
                             <template x-for="(t, i) in rows" :key="t.uid">
                                 <div style="display:flex;align-items:center;gap:8px;">
-                                    <input type="text" x-bind:name="'textures[' + i + ']'" x-model="t.name" placeholder="Matte"
-                                           maxlength="60" aria-label="Texture name"
-                                           style="flex:1 1 auto;max-width:240px;font-size:13px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.4rem .6rem;">
+                                    {{-- Free text when the master list is empty - a texture is
+                                         optional, but an empty dropdown next to an "Add texture"
+                                         button that does nothing is worse than the box it
+                                         replaces. --}}
+                                    @if($kkTextureNames->isNotEmpty())
+                                        <select x-bind:name="'textures[' + i + ']'" x-model="t.name"
+                                                aria-label="Texture name"
+                                                x-init="$nextTick(() => { $el.value = t.name })"
+                                                style="flex:1 1 auto;max-width:240px;font-size:13px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.4rem .6rem;background:#fff;">
+                                            <option value="" disabled>Select a texture</option>
+                                            <template x-for="opt in optionsFor(t.name)" :key="opt">
+                                                <option x-bind:value="opt" x-text="labelFor(opt)"></option>
+                                            </template>
+                                        </select>
+                                    @else
+                                        <input type="text" x-bind:name="'textures[' + i + ']'" x-model="t.name" placeholder="Matte"
+                                               maxlength="60" aria-label="Texture name"
+                                               style="flex:1 1 auto;max-width:240px;font-size:13px;border:1px solid #d4d4d4;border-radius:.375rem;padding:.4rem .6rem;">
+                                    @endif
                                     <button type="button" @click="rows.splice(i, 1)" title="Remove" class="btn-icon"
                                             style="color:#d72c0d;background:none;border:0;cursor:pointer;font-size:16px;line-height:1;">&times;</button>
                                 </div>
@@ -604,6 +731,9 @@
                         </div>
                     </div>
                     <script>
+                        // The admin's own Textures list; not enforced server-side, for the
+                        // same reason the sizes and colours are not.
+                        const KK_TEXTURES = @json($kkTextureNames);
                         function kkTextures() {
                             return {
                                 seq: 0,
@@ -615,6 +745,11 @@
                                     this.rows = (@json($kkTextureRows)).map(name => ({ uid: ++this.seq, name }));
                                 },
                                 add() { this.rows.push({ uid: ++this.seq, name: '' }); },
+                                // A texture the product already carries that is not on the
+                                // master list stays selectable on its own row, so opening the
+                                // form never rewrites it.
+                                optionsFor(v) { return KK_TEXTURES.includes(v) ? KK_TEXTURES : (v ? [v, ...KK_TEXTURES] : KK_TEXTURES); },
+                                labelFor(v) { return KK_TEXTURES.includes(v) ? v : v + ' — not in list'; },
                             };
                         }
                     </script>

@@ -6,10 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Attribute;
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\Colour;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use App\Models\Seller;
+use App\Models\Size;
+use App\Models\Texture;
 use App\Rules\NoHtml;
 use App\Rules\ValidationRules as V;
 use Closure;
@@ -184,9 +187,23 @@ class ProductController extends Controller
         $brands = Brand::where('is_active', true)->orderBy('name')->get();
         $attributes = Attribute::with('values')->orderBy('name')->get();
 
+        // The three master lists behind the size, colour and texture pickers.
+        // They are an affordance, not a constraint: the form still posts a plain
+        // string and store() still accepts one, so an import, the API or a
+        // product that predates these lists is never refused. Hidden rows are
+        // left out because switching one off is how the admin retires a value
+        // from new products without touching the ones already carrying it.
+        // An empty list is perfectly fine - the form falls back to the free-text
+        // box it has always had, so a shop that has not filled these in yet can
+        // still add a product.
+        $sizeOptions = Size::active()->ordered()->get(['name']);
+        $colourOptions = Colour::active()->ordered()->get(['name', 'hex_code']);
+        $textureOptions = Texture::active()->ordered()->get(['name']);
+
         return view('admin.products.create', compact(
             'categories', 'sellers', 'brands', 'attributes',
-            'extraCategoryIds', 'collections', 'selectedCollectionIds'
+            'extraCategoryIds', 'collections', 'selectedCollectionIds',
+            'sizeOptions', 'colourOptions', 'textureOptions'
         ));
     }
 
@@ -403,9 +420,19 @@ class ProductController extends Controller
         $collections = Category::system()->orderBy('position')->orderBy('name')->get();
         $selectedCollectionIds = $product->collections()->pluck('categories.id')->all();
 
+        // Same three master lists the create form uses - see create() for why
+        // they are only ever an offer. It matters more here: a product saved
+        // before the lists existed carries values that are on none of them, and
+        // the pickers keep those exactly as they are rather than quietly
+        // rewriting a live product to the nearest thing on a list.
+        $sizeOptions = Size::active()->ordered()->get(['name']);
+        $colourOptions = Colour::active()->ordered()->get(['name', 'hex_code']);
+        $textureOptions = Texture::active()->ordered()->get(['name']);
+
         return view('admin.products.edit', compact(
             'product', 'categories', 'sellers', 'brands', 'attributes',
-            'extraCategoryIds', 'collections', 'selectedCollectionIds'
+            'extraCategoryIds', 'collections', 'selectedCollectionIds',
+            'sizeOptions', 'colourOptions', 'textureOptions'
         ));
     }
 

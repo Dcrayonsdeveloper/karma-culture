@@ -2,12 +2,15 @@
 
 namespace App\Support;
 
+use App\Models\Colour;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\ShopFilterExclusion;
+use App\Models\Texture;
 use Closure;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * The filter values the shop actually carries, worked out from the catalogue.
@@ -31,6 +34,15 @@ use Illuminate\Support\Facades\Cache;
  * The whole derivation is cached against ProductVariant::filterCacheVersion(),
  * which every product, variant and exclusion save bumps - so a page request
  * costs a cache read, not a scan of the catalogue, and an edit is live at once.
+ *
+ * There is a THIRD input, and it deliberately has no say in any of the above:
+ * the Colours and Textures master lists an admin curates. Those supply artwork
+ * - a fabric photo, and a swatch hex for a colour no product bothered to give
+ * one - for values the catalogue already carries. They never add a value. A
+ * colour sitting in the picker that nobody has put on a product is not a
+ * hanger, or the rails would go straight back to promoting listings with
+ * nothing on them, which is the whole reason they stopped being a typed-in
+ * table. See {@see masters()}.
  */
 class ShopFilterCatalogue
 {
@@ -45,8 +57,19 @@ class ShopFilterCatalogue
     /** Where the price bands are cut: the quartiles of the live catalogue. */
     private const PRICE_QUANTILES = [0.25, 0.5, 0.75];
 
-    /** Container keys the per-request memo is held under. */
-    private const MEMO = ['kk.shop_filters.version', 'kk.shop_filters.derived', 'kk.shop_filters.exclusions'];
+    /**
+     * Container keys the per-request memo is held under.
+     *
+     * This list is what forget() clears, so anything memoised below has to be
+     * named here too - a key added to one and not the other is a cache an
+     * admin's own save cannot invalidate for the rest of their request.
+     */
+    private const MEMO = [
+        'kk.shop_filters.version',
+        'kk.shop_filters.derived',
+        'kk.shop_filters.exclusions',
+        'kk.shop_filters.masters',
+    ];
 
     /**
      * Remember one answer for the rest of the request.
@@ -136,6 +159,10 @@ class ShopFilterCatalogue
 
         $derived = self::derived()[$type] ?? [];
         $excluded = self::exclusions()[$type] ?? [];
+        // Artwork only. $derived decides which rows exist; this decides how the
+        // ones that already exist are drawn, and an unmatched master row is
+        // simply never read.
+        $masters = self::masters()[$type] ?? [];
 
         $rows = collect();
 
@@ -150,11 +177,18 @@ class ShopFilterCatalogue
                 type: $type,
                 key: $key,
                 label: $row['label'],
-                shade_hex: $row['hex'] ?? null,
+                // The product's own swatch wins, every time. It is the hex the
+                // shopper is shown on the product page, so a rail that painted
+                // the master list's idea of Ivory over it would be the one
+                // telling the lie. The curated hex is a fallback for a colour
+                // no product ever bothered to give one - which is most of them,
+                // because the colour list on a product accepts bare strings.
+                shade_hex: $row['hex'] ?? $masters[$key]['hex'] ?? null,
                 query_string: $row['query'],
                 count: $row['count'],
                 hidden: $hidden,
                 exclusion_uuid: $hidden ? $excluded[$key]['uuid'] : null,
+                image: $masters[$key]['image'] ?? null,
             ));
         }
 
@@ -172,11 +206,16 @@ class ShopFilterCatalogue
                     type: $type,
                     key: $key,
                     label: $row['label'],
-                    shade_hex: null,
+                    // Nothing carries it, so there is no product hex to prefer:
+                    // whatever the picker holds is all anyone can be shown, and
+                    // a retired value drawn with its swatch is far easier to
+                    // recognise in a list than a bare word.
+                    shade_hex: $masters[$key]['hex'] ?? null,
                     query_string: self::queryFor($type, $row['label'], $key),
                     count: 0,
                     hidden: true,
                     exclusion_uuid: $row['uuid'],
+                    image: $masters[$key]['image'] ?? null,
                 ));
             }
         }

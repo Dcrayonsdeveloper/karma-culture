@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\BlogPostController;
 use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ChatbotAnalyticsController;
+use App\Http\Controllers\Admin\ColourController;
 use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\CurrencyController;
 use App\Http\Controllers\Admin\CustomerController;
@@ -39,10 +40,12 @@ use App\Http\Controllers\Admin\SearchController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\ShippingRateController;
 use App\Http\Controllers\Admin\ShippingZoneController;
+use App\Http\Controllers\Admin\SizeController;
 use App\Http\Controllers\Admin\StaffController;
 use App\Http\Controllers\Admin\StoreController;
 use App\Http\Controllers\Admin\SupportTicketController;
 use App\Http\Controllers\Admin\TaxRateController;
+use App\Http\Controllers\Admin\TextureController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -181,6 +184,32 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
             // Brands
             Route::resource('brands', BrandController::class)->except(['show']);
+
+            // Sizes, Colours and Textures - the pickers the product form offers.
+            //
+            // These are master LISTS, not the values themselves. A product does
+            // not point at a row here; it stores its own copy of the word (a
+            // variant name for a size, the attributes JSON for a colour or a
+            // texture) and the cart and order lines copy it again. So editing
+            // or deleting a row changes what an admin is offered next time and
+            // changes nothing about a product, a basket or an order that has
+            // already been placed - which is exactly why they are safe to
+            // curate from here without a migration.
+            //
+            // toggle and move are POST while the resource's update is PUT/PATCH
+            // and its destroy is DELETE, so there is no verb to collide over
+            // even before the extra path segment separates them.
+            Route::resource('sizes', SizeController::class)->except(['show']);
+            Route::post('sizes/{size}/toggle', [SizeController::class, 'toggle'])->name('sizes.toggle');
+            Route::post('sizes/{size}/move/{direction}', [SizeController::class, 'move'])->name('sizes.move');
+
+            Route::resource('colours', ColourController::class)->except(['show']);
+            Route::post('colours/{colour}/toggle', [ColourController::class, 'toggle'])->name('colours.toggle');
+            Route::post('colours/{colour}/move/{direction}', [ColourController::class, 'move'])->name('colours.move');
+
+            Route::resource('textures', TextureController::class)->except(['show']);
+            Route::post('textures/{texture}/toggle', [TextureController::class, 'toggle'])->name('textures.toggle');
+            Route::post('textures/{texture}/move/{direction}', [TextureController::class, 'move'])->name('textures.move');
 
             // Attributes
             Route::resource('attributes', AttributeController::class)->except(['show']);
