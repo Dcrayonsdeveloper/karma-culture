@@ -670,6 +670,38 @@ body:not(.layout-admin) a.text-white {
     border: 1px solid rgba(45, 24, 16, .18);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .55);
 }
+/* A texture tile in the popup - the same idea as the product page's
+   .kk-texture-swatch, one size down to sit in a 420px panel beside the size
+   and colour rows without taking a third of the body height.
+
+   The swatch IS the control: five near-identical words made the shopper read
+   the row to find the fabric they wanted, when the whole point of a photograph
+   of cloth is that it is recognised at a glance. Which one is picked is named
+   in the heading above, the way size and colour already are. The crop is
+   square and clipped because the uploads are photographs of cloth at whatever
+   ratio the camera gave them. */
+.kk-qa__swatch {
+    position: relative; width: 54px; height: 54px; padding: 0; flex: 0 0 auto;
+    border: 1px solid #dcc9ab; border-radius: 4px;
+    background: var(--kk-cream, #efe2cb);
+    overflow: hidden;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.kk-qa__swatch img { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: cover; display: block; }
+.kk-qa__swatch:hover { border-color: var(--kk-tan-dark, #8c5c34); }
+/* A ring rather than a thicker border, so picking a tile does not nudge the
+   rest of the row along by a pixel. */
+.kk-qa__swatch.is-selected {
+    border-color: var(--kk-brown-dark, #2d1810);
+    box-shadow: 0 0 0 2px var(--kk-brown-dark, #2d1810);
+}
+/* Underneath the picture, not removed: it is the button's accessible name, and
+   it is what a shopper sees if the swatch fails to load. */
+.kk-qa__swatch-name {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    text-align: center; padding: 2px; font-size: 10px; font-weight: 600; line-height: 1.15;
+    color: var(--kk-text, #2d1810); letter-spacing: .01em;
+}
 .kk-qa__qty {
     padding: 9px 12px;
     border: 1px solid #c9b393; border-radius: 6px;
@@ -714,6 +746,10 @@ body:not(.layout-admin) a.text-white {
     .kk-qa__panel { max-width: 100%; max-height: 85vh; border-radius: 14px 14px 0 0; margin: auto 0 0; }
     .kk-qa__backdrop { padding: 0; align-items: flex-end; }
     .kk-qa__chip { flex: 1 0 auto; text-align: center; padding: 11px 12px; }
+    /* The chip above grows to fill its row; a swatch must not - stretching a
+       54px crop of cloth to the width of the phone is not a bigger swatch,
+       it is a smeared one. */
+    .kk-qa__swatch { flex: 0 0 auto; }
 }
 
 /* Storefront sits on cream — keep the fixed-header spacer and any

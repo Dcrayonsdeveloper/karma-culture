@@ -521,6 +521,7 @@ Alpine.store('quickAdd', {
     product: null,
     size: null,
     colour: null,
+    texture: null,
     quantity: 1,
 
     async show(productId) {
@@ -535,6 +536,7 @@ Alpine.store('quickAdd', {
         this.product = null;
         this.size = null;
         this.colour = null;
+        this.texture = null;
         this.quantity = 1;
         document.body.style.overflow = 'hidden';
 
@@ -545,6 +547,7 @@ Alpine.store('quickAdd', {
             // popup is one press from done for the common case.
             this.size = response.data.sizes?.[0]?.label ?? null;
             this.colour = response.data.colours?.[0]?.name ?? null;
+            this.texture = response.data.textures?.[0]?.name ?? null;
         } catch (error) {
             // A 401 has already sent the browser to the login page.
             if (error.response?.status !== 401) {
@@ -569,6 +572,15 @@ Alpine.store('quickAdd', {
 
     get colours() {
         return this.product?.colours ?? [];
+    },
+
+    /**
+     * Textures arrive as {name, image}. The image is the fabric photographed,
+     * joined on from the library server-side; it is null for a texture nobody
+     * has uploaded a swatch for yet, and the popup draws a lettered chip there.
+     */
+    get textures() {
+        return this.product?.textures ?? [];
     },
 
     /** The size row behind the current selection, when the product has one. */
@@ -615,6 +627,7 @@ Alpine.store('quickAdd', {
         if (!this.product || this.isAdding) return false;
         if (this.sizes.length && !this.size) return false;
         if (this.colours.length && !this.colour) return false;
+        if (this.textures.length && !this.texture) return false;
 
         return this.available > 0;
     },
@@ -630,6 +643,10 @@ Alpine.store('quickAdd', {
 
     selectColour(name) {
         this.colour = name;
+    },
+
+    selectTexture(name) {
+        this.texture = name;
     },
 
     async submit() {
@@ -648,13 +665,19 @@ Alpine.store('quickAdd', {
 
             return;
         }
+        if (this.textures.length && !this.texture) {
+            Alpine.store('toast').error('Please select a texture');
+
+            return;
+        }
 
         this.isAdding = true;
         const productId = this.product.id;
 
         try {
             const added = await Alpine.store('cart').add(
-                productId, this.quantity, this.variantId, this.size, this.colour
+                productId, this.quantity, this.variantId, this.size, this.colour,
+                { texture: this.texture }
             );
             // A failed add has shown its own error toast and the popup stays
             // open, so the shopper can pick a different size rather than start

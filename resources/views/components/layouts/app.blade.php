@@ -723,6 +723,46 @@
                             </div>
                         </div>
 
+                        {{-- Texture, wearing the fabric the way the product page
+                             does. A texture is a thing you would touch, and
+                             "Linen" as a word asks the shopper to remember what
+                             linen looks like - so where the library has a swatch
+                             the tile is a crop of the cloth, and the name it is
+                             labelled with shows in the heading above.
+
+                             It has to be asked for here at all because /cart/add
+                             holds a line to what the product offers: a textured
+                             product added from a card with no texture on the
+                             line reaches packing with nothing to pick from the
+                             shelf. --}}
+                        <div class="kk-qa__group" x-show="$store.quickAdd.textures.length">
+                            <p class="kk-qa__label">Texture <span x-show="$store.quickAdd.texture" x-text="'- ' + $store.quickAdd.texture"></span></p>
+                            <div class="kk-qa__row">
+                                <template x-for="t in $store.quickAdd.textures" :key="t.name">
+                                    {{-- One button either way: the swatch tile when the
+                                         library has a picture, the lettered chip when it
+                                         does not, so the row is never half-built while
+                                         the library is still being filled in. --}}
+                                    <button type="button"
+                                            :class="[t.image ? 'kk-qa__swatch' : 'kk-qa__chip', $store.quickAdd.texture === t.name ? 'is-selected' : '']"
+                                            :aria-pressed="$store.quickAdd.texture === t.name"
+                                            :title="t.name"
+                                            @click="$store.quickAdd.selectTexture(t.name)">
+                                        {{-- The name sits under the picture rather than
+                                             being dropped: it names the button for a
+                                             screen reader, and it is what shows if the
+                                             swatch 404s - a tile with a dead image is
+                                             otherwise an unlabelled square. --}}
+                                        <span :class="t.image ? 'kk-qa__swatch-name' : ''" x-text="t.name"></span>
+                                        <template x-if="t.image">
+                                            <img :src="t.image" alt="" aria-hidden="true"
+                                                 loading="lazy" decoding="async" onerror="this.remove()">
+                                        </template>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+
                         <div class="kk-qa__group">
                             <p class="kk-qa__label">Quantity</p>
                             <select class="kk-qa__qty" x-model.number="$store.quickAdd.quantity" aria-label="Quantity">

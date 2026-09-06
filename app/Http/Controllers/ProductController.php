@@ -9,6 +9,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductQuestion;
 use App\Models\ProductView;
+use App\Models\TexturePreset;
 use App\Services\RecommendationService;
 use App\Services\ReviewSchemaService;
 use App\Support\ProductFilters;
@@ -282,6 +283,20 @@ class ProductController extends Controller
             ];
         })->values();
 
+        // The swatch behind each texture name, joined on the way the product
+        // page joins it: a product stores the name alone, so the picture lives
+        // in the library and one upload there re-dresses every product wearing
+        // that fabric. Keyed lower-case because the two sides are typed by
+        // different people on different screens - the library says "Cotton",
+        // a product's attributes JSON may say "cotton". One query, and only
+        // when this product actually offers a texture.
+        $textureSwatches = $options->textures->isEmpty()
+            ? collect()
+            : TexturePreset::active()
+                ->get(['name', 'image_path'])
+                ->mapWithKeys(fn ($p) => [mb_strtolower($p->name) => $p->image_src])
+                ->filter();
+
         return response()->json([
             'id' => $product->id,
             'name' => $product->name,
@@ -302,6 +317,16 @@ class ProductController extends Controller
             'sizes' => $sizes,
             'colours' => $options->colours
                 ->map(fn (array $c) => ['name' => $c['name'], 'hex' => $hex[$c['name']] ?? null])
+                ->values(),
+            // A texture is required at the cart the moment a product offers one,
+            // so the popup has to be able to ask for it - without this the round
+            // cart button on a card could only ever add a textured product with
+            // no texture on the line, which is the one thing packing cannot fill.
+            // image is null for a texture the library has no swatch for; the
+            // popup falls back to a lettered chip there, so the row is never
+            // half-built while the library is being filled in.
+            'textures' => $options->textures
+                ->map(fn (string $t) => ['name' => $t, 'image' => $textureSwatches[mb_strtolower($t)] ?? null])
                 ->values(),
         ]);
     }
