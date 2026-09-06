@@ -1243,6 +1243,25 @@
                IS the designed surface for a banner that fails to load. */
             .kk-media.kk-hero-media:not(.is-broken) { background: none; }
 
+            /* The hairline of black around the banner.
+
+               Nothing in the stylesheets paints it - .kk-hero, .kk-media--dark
+               and the frame itself are all transparent here now. It comes from
+               the <video> element, which paints its own black behind the
+               decoded frame, and from a box that does not land on whole pixels:
+               .kk-hero-slide is aspect-ratio 16/9 of a viewport width that is
+               rarely a multiple of 16, so the frame computes to something like
+               637.31px and the leftover fraction of a row at the far edge is
+               the element's own ground rather than any part of the picture.
+
+               So the frame is drawn a pixel wider and a pixel taller than its
+               box and the slide's overflow: hidden takes the excess back. Only
+               right and bottom need it - inset pins top and left to a whole 0 -
+               and at 1px in ~637 the crop is not a visible change. Adjusting
+               the video instead (a scale transform) would do the same job and
+               cost the framing the admin set on the banner. */
+            .kk-media.kk-hero-media { width: calc(100% + 1px); height: calc(100% + 1px); }
+
             /* The one frame in the store that crops. Everywhere else .kk-media shows
                its subject whole over a blurred copy of itself (resources/css/app.css),
                which is right for a product shot that arrives in whatever shape the
