@@ -1463,34 +1463,6 @@ a:focus-visible,
    Container Utilities
    ======================================== */
 
-/* ========================================
-   Container
-   ========================================
-
-   Full bleed, with a floor. Tailwind's own .container is a ladder of
-   breakpoint max-widths - 640, 768, 1024, 1280, 1536 - which caps the page at
-   1536px however wide the display is. This spans the viewport instead and lets
-   the padding on each section do the insetting.
-
-   Written OUTSIDE @layer on purpose: `@import 'tailwindcss'` puts the utility
-   in a layer, and unlayered rules beat layered ones whatever their
-   specificity, so this needs no !important to win.
-
-   NOTE ON min-width, because it is not free. `body` carries overflow-x-clip,
-   so below 768px the excess is not scrolled - it is cut off and cannot be
-   reached at all. Measured on the live home page: at a 500px viewport the
-   container is still 768px, so 268px of every row is silently gone. Above
-   768px the floor never binds and this is inert. Swap the value for
-   `min(768px, 100%)` to keep the floor everywhere it fits and let a phone
-   have the viewport instead. */
-.container { /* kk-container-full */
-    width: 100%;
-    max-width: 100%;
-    min-width: 768px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
 .container-narrow {
     max-width: 48rem;
     margin-left: auto;
