@@ -129,10 +129,10 @@ final class ValidationRules
      * longer be typed by the person it belongs to.
      *
      * Client-side counterpart:
-     *   type="email" required maxlength="255"
+     *   type="email" required maxlength="50"
      *   and, for strictShape, the _emailError() mirror in resources/js/app.js
      */
-    public static function email(bool $required = true, int $max = 255, bool $strictShape = false): array
+    public static function email(bool $required = true, int $max = 50, bool $strictShape = false): array
     {
         $rules = [
             $required ? 'required' : 'nullable',

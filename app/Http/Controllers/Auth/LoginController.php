@@ -71,6 +71,12 @@ class LoginController extends Controller
         // first 72 bytes, so 1024 cannot lock anyone out while still refusing
         // a megabyte-long field.
         $validated = $request->validate([
+            // 255, not the 50 every INPUT field now uses. This does not accept a
+            // new address, it looks up one that already exists - and production
+            // holds a 55-character address today. Capping here would tell its
+            // owner their own email is invalid and shut them out of the account
+            // and out of password recovery, which is the one failure a length
+            // rule must not cause.
             'email' => ['required', 'string', 'email', 'max:255'],
             'password' => ['required', 'string', 'max:1024'],
             'remember' => ['nullable', 'boolean'],

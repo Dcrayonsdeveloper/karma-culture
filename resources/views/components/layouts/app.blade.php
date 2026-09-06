@@ -222,7 +222,7 @@
                 <form @submit.prevent="$store.authModal.login(email, password, remember)" class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-neutral-700 mb-1.5">Email Address</label>
-                        <input type="email" x-model="email" required autofocus
+                        <input type="email" maxlength="50" x-model="email" required autofocus
                                class="w-full px-3 py-2.5 bg-neutral-50 border border-neutral-300 rounded-lg text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#6F9CA2] focus:ring-0 transition-colors"
                                placeholder="you@example.com">
                         <template x-if="$store.authModal.errors.email">
@@ -299,7 +299,7 @@
 
                     <div>
                         <label class="block text-sm font-medium text-neutral-700 mb-1.5">Email Address</label>
-                        <input type="email" x-model="email" required
+                        <input type="email" maxlength="50" x-model="email" required
                                class="w-full px-3 py-2.5 bg-neutral-50 border border-neutral-300 rounded-lg text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#6F9CA2] focus:ring-0 transition-colors"
                                placeholder="you@example.com">
                         <template x-if="$store.authModal.errors.email">

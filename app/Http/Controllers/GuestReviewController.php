@@ -32,7 +32,7 @@ class GuestReviewController extends Controller
             // out and submitted after a login in another tab would still carry
             // them, and rejecting that outright would lose the review.
             'guest_name' => V::name(required: $user === null, max: 100),
-            'guest_email' => [$user ? 'nullable' : 'required', 'email', 'max:255'],
+            'guest_email' => [$user ? 'nullable' : 'required', 'email', 'max:50'],
             'rating' => 'required|integer|min:1|max:5',
             'title' => 'nullable|string|max:255',
             'content' => 'required|string|min:20|max:2000',

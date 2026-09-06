@@ -87,7 +87,7 @@
                                 {{-- pattern is the client-side half of email:strict: the browser's own
                                      type="email" check accepts "store@gmail" with no TLD. --}}
                                 <input type="email" name="email" value="{{ old('email') }}"
-                                       maxlength="200" autocomplete="email" pattern=".+@.+\..+"
+                                       maxlength="50" autocomplete="email" pattern=".+@.+\..+"
                                        title="Enter a full email address, like store@example.com"
                                        class="form-input" style="width: 100%;" placeholder="store@example.com">
                                 @error('email')

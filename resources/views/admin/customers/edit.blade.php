@@ -48,7 +48,7 @@
                         <label for="email" class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Email *</label>
                         {{-- pattern is the client-side half of email:strict: the browser's
                              own type="email" check accepts "dev@gmail" with no TLD. --}}
-                        <input type="email" name="email" id="email" value="{{ old('email', $customer->email) }}" required
+                        <input type="email" maxlength="50" name="email" id="email" value="{{ old('email', $customer->email) }}" required
                                maxlength="255" pattern=".+@.+\..+" autocomplete="email"
                                class="form-input" style="width: 100%;">
                         @error('email')

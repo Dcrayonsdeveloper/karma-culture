@@ -1948,7 +1948,7 @@
                                    autocomplete="name"
                                    pattern="{{ \App\Rules\ValidationRules::namePattern() }}"
                                    title="The full name may only contain letters, spaces, hyphens, apostrophes and periods.">
-                            <input class="kk-revform__input" type="email" name="guest_email" placeholder="Email (not published) *" value="{{ old('guest_email') }}" required maxlength="255">
+                            <input class="kk-revform__input" type="email" name="guest_email" placeholder="Email (not published) *" value="{{ old('guest_email') }}" required maxlength="50">
                         </div>
                     @endauth
                     <input class="kk-revform__input" type="text" name="title" placeholder="Review title" value="{{ old('title') }}" maxlength="255" style="margin-bottom:12px;">

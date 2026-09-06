@@ -50,7 +50,7 @@ class SetAdminCredentials extends Command
             ['email' => $email, 'password' => $password],
             [
                 'email' => [
-                    'required', 'email:rfc', 'max:255',
+                    'required', 'email:rfc', 'max:50',
                     Rule::unique('users', 'email')->ignore($user?->id)->whereNull('deleted_at'),
                 ],
                 // Was a bare 'min:8'. This command sets a real admin login, so

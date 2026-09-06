@@ -2413,7 +2413,7 @@
                      blur handler only checks data-no-validate. --}}
                 <form @submit.prevent="submit()" novalidate data-no-validate class="kk-newsletter-form" x-show="!done">
                     <label for="kk-newsletter-email" class="sr-only">Email address</label>
-                    <input id="kk-newsletter-email" type="email" x-model="email" required maxlength="255"
+                    <input id="kk-newsletter-email" type="email" x-model="email" required maxlength="50"
                            placeholder="Your email address" autocomplete="email">
                     <button type="submit" :disabled="submitting">
                         <span x-show="!submitting">{{ $newsletterButton }}</span>

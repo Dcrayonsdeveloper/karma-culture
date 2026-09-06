@@ -139,7 +139,7 @@
                 </div>
 
                 <form @submit.prevent="claim()" novalidate class="space-y-2.5">
-                    <input type="email" x-model="form.email" required placeholder="Email address *" autocomplete="email" aria-label="Email address"
+                    <input type="email" maxlength="50" x-model="form.email" required placeholder="Email address *" autocomplete="email" aria-label="Email address"
                         class="w-full rounded-lg border border-kk-cream-dark bg-kk-cream-lighter px-3.5 py-2.5 text-sm text-kk-brown focus:outline-none focus:ring-2 focus:ring-kk-tan focus:bg-white transition">
                     <input type="tel" x-model="form.phone" inputmode="numeric" maxlength="10" placeholder="Mobile number" autocomplete="tel" aria-label="Mobile number"
                         class="w-full rounded-lg border border-kk-cream-dark bg-kk-cream-lighter px-3.5 py-2.5 text-sm text-kk-brown focus:outline-none focus:ring-2 focus:ring-kk-tan focus:bg-white transition">

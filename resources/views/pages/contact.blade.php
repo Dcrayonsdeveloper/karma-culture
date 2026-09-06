@@ -108,7 +108,7 @@
 
                                 <div>
                                     <label for="email" class="block text-sm font-medium text-neutral-700 mb-1.5">Email Address <span class="text-red-400">*</span></label>
-                                    <input type="email" name="email" id="email" value="{{ old('email') }}" required maxlength="255"
+                                    <input type="email" name="email" id="email" value="{{ old('email') }}" required maxlength="50"
                                            class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all @error('email') border-red-300 bg-red-50 @enderror"
                                            placeholder="you@example.com">
                                     @error('email')

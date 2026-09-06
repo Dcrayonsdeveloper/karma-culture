@@ -129,7 +129,7 @@
                              TLD - which the server rule then rejects. The pattern closes that gap
                              so the mismatch is caught in the field rather than after submitting. --}}
                         <input type="email" name="contact_email" id="contact-email" value="{{ old('contact_email', $settings['contact_email']) }}"
-                               maxlength="255" autocomplete="email"
+                               maxlength="50" autocomplete="email"
                                pattern=".+@.+\..+" title="Enter a full email address, like hello@example.com"
                                class="form-input">
                     </div>

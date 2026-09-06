@@ -63,9 +63,10 @@ class StoreController extends Controller
 
             'address' => V::addressLine(required: false, max: 255),
             'phone' => V::mobile(required: false),
-            // 200, not the rule's 255 default: the column is varchar(255), so
-            // this is a deliberate ceiling rather than a schema limit.
-            'email' => V::email(required: false, max: 200),
+            // No ceiling of its own any more: it was 200 against the rule's old
+            // 255 default, and the default is now 50 - lower than the limit this
+            // was reaching for, so keeping it would only raise the cap back up.
+            'email' => V::email(required: false),
             'is_active' => V::boolean(),
         ];
     }

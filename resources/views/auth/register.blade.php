@@ -33,7 +33,7 @@
         <div>
             <label for="email" class="block text-sm font-medium text-neutral-700 mb-1">Email address</label>
             <input type="email" name="email" id="email" value="{{ old('email') }}"
-                   required autocomplete="email" inputmode="email" maxlength="255"
+                   required autocomplete="email" inputmode="email" maxlength="50"
                    class="form-input w-full @error('email') border-error-300 @enderror"
                    placeholder="you@example.com">
             @error('email')

@@ -81,7 +81,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label for="wholesale_email" style="display: block; font-size: 13px; font-weight: 500; color: #0F1111; margin-bottom: 0.375rem;">Email *</label>
-                        <input type="email" name="email" id="wholesale_email" class="min-h-10 sm:min-h-0" value="{{ old('email') }}" required maxlength="255"
+                        <input type="email" name="email" id="wholesale_email" class="min-h-10 sm:min-h-0" value="{{ old('email') }}" required maxlength="50"
                                placeholder="your@email.com"
                                style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d5d9d9; border-radius: 0.5rem; font-size: 13px; box-sizing: border-box;">
                         @error('email')

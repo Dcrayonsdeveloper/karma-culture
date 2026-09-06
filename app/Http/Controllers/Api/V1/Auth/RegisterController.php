@@ -48,7 +48,7 @@ class RegisterController extends Controller
         $validated = $request->validate([
             'first_name' => ['required', 'string', 'max:50'],
             'last_name' => ['required', 'string', 'max:50'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'email' => ['required', 'string', 'email', 'max:50', 'unique:users'],
             // Was ['nullable','string','max:20','unique:users'], which compared
             // the raw input - so one subscriber could hold as many accounts as
             // they could think of spacings for their own number. IndianMobile is

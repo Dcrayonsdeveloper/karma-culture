@@ -36,7 +36,7 @@ class StaffController extends Controller
             // matches the keystroke filter now on the two boxes in the blade.
             'first_name' => V::name(max: 50),
             'last_name' => V::name(max: 50),
-            'email' => 'required|email|unique:users,email',
+            'email' => 'required|email|max:50|unique:users,email',
             // Was 'required|min:8|confirmed' - eight characters of anything -
             // while every other form on the site that mints a password goes
             // through V::password(). A staff row is a real login to the admin
@@ -87,7 +87,7 @@ class StaffController extends Controller
             // matches the keystroke filter now on the two boxes in the blade.
             'first_name' => V::name(max: 50),
             'last_name' => V::name(max: 50),
-            'email' => 'required|email|unique:users,email,' . $staff->user_id,
+            'email' => 'required|email|max:50|unique:users,email,' . $staff->user_id,
             // Optional here - the box says "Leave blank to keep current" - but
             // a password that IS typed meets the same policy as a new one.
             'password' => [...V::password(required: false), 'max:255'],

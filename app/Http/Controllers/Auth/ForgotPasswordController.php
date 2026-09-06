@@ -43,6 +43,12 @@ class ForgotPasswordController extends Controller
             // Permissive `email` on purpose: this has to match an address that
             // is already stored, and an account created before the strict rule
             // existed must still be able to recover its password.
+            // 255, not the 50 every INPUT field now uses. This does not accept a
+            // new address, it looks up one that already exists - and production
+            // holds a 55-character address today. Capping here would tell its
+            // owner their own email is invalid and shut them out of the account
+            // and out of password recovery, which is the one failure a length
+            // rule must not cause.
             'email' => ['required', 'string', 'email', 'max:255'],
         ], [
             'email.required' => 'Please enter your email address.',

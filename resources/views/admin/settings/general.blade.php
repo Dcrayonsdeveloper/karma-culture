@@ -35,7 +35,7 @@
                     </div>
                     <div>
                         <label class="form-label form-label-required" style="font-size: 12px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Email Address</label>
-                        <input type="email" name="site_email" value="{{ old('site_email', $settings['site_email'] ?? '') }}" required class="form-input">
+                        <input type="email" maxlength="50" name="site_email" value="{{ old('site_email', $settings['site_email'] ?? '') }}" required class="form-input">
                         @error('site_email') <p class="form-error">{{ $message }}</p> @enderror
                     </div>
                     <div>

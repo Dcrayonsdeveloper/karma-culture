@@ -87,7 +87,7 @@
                     </div>
                     <div>
                         <label for="offer-email" class="sr-only">Email address</label>
-                        <input id="offer-email" type="email" x-model="form.email" required placeholder="Email address *" autocomplete="email"
+                        <input id="offer-email" type="email" maxlength="50" x-model="form.email" required placeholder="Email address *" autocomplete="email"
                             class="w-full rounded-lg border border-kk-cream-dark bg-kk-cream-lighter px-3.5 py-2.5 text-sm text-kk-brown focus:outline-none focus:ring-2 focus:ring-kk-tan focus:bg-white transition">
                     </div>
                     <div>

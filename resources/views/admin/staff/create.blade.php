@@ -50,7 +50,7 @@
 
                         <div>
                             <label class="form-label" style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Email <span style="color: #d72c0d;">*</span></label>
-                            <input type="email" name="email" value="{{ old('email') }}" required
+                            <input type="email" maxlength="50" name="email" value="{{ old('email') }}" required
                                    class="form-input" style="width: 100%;">
                             @error('email')
                                 <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>

@@ -30,7 +30,7 @@ class ProfileController extends Controller
             // name box uses, including the box in this very form.
             'first_name' => V::name(max: 50),
             'last_name' => V::name(max: 50),
-            'email' => 'required|email|unique:users,email,' . $user->id,
+            'email' => 'required|email|max:50|unique:users,email,' . $user->id,
             'current_password' => 'nullable|required_with:password',
             // Was 'nullable|min:8|confirmed'. An admin's own password is the
             // most valuable one on the site and was the least constrained of

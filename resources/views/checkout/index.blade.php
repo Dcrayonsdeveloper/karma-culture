@@ -123,7 +123,7 @@
                                          edited on the page, and dropping the name leaves it out of
                                          the POST altogether, so there is nothing for devtools to
                                          rewrite either. --}}
-                                    <input type="email" id="kk-co-email" value="{{ $prefill?->email }}"
+                                    <input type="email" maxlength="50" id="kk-co-email" value="{{ $prefill?->email }}"
                                            readonly aria-readonly="true"
                                            class="w-full text-sm border border-neutral-200 bg-neutral-100 text-neutral-600 rounded-lg px-3 py-2 cursor-not-allowed focus:outline-none">
                                     <p class="mt-1 text-[11px] text-neutral-500">

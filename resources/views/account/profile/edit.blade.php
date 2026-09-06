@@ -84,7 +84,7 @@
                                          passed here and was then rejected by email:strict on the
                                          server. The pattern insists on a dot after the @, which is
                                          what the server means by a valid address. --}}
-                                    <input type="email" name="email" id="email" value="{{ old('email', $user->email) }}" required
+                                    <input type="email" maxlength="50" name="email" id="email" value="{{ old('email', $user->email) }}" required
                                            maxlength="255" autocomplete="email"
                                            pattern=".+@.+\..+"
                                            title="Enter a valid email address, like you@example.com."

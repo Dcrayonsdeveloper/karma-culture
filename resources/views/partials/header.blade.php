@@ -527,7 +527,7 @@
 
                 <div class="kk-loginmodal__group">
                     <label class="kk-loginmodal__label" for="kk-auth-email">Email Address</label>
-                    <input type="email" id="kk-auth-email" class="kk-loginmodal__field"
+                    <input type="email" maxlength="50" id="kk-auth-email" class="kk-loginmodal__field"
                            :class="fieldErrors.email && 'has-error'"
                            x-model="form.email" placeholder="you@example.com" autocomplete="email">
                     <p class="kk-loginmodal__fielderror" x-show="fieldErrors.email" x-text="fieldErrors.email" x-cloak></p>
