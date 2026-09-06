@@ -123,6 +123,52 @@
                         </div>
                         @error('images') <p class="form-error mt-2">{{ $message }}</p> @enderror
                         @error('images.*') <p class="form-error mt-2">{{ $message }}</p> @enderror
+
+                        {{-- Video upload.
+
+                             store() has validated and saved `videos[]` all along -
+                             the same rules and the same ProductImage rows update()
+                             writes - but this form never rendered the input, so the
+                             only way to put a clip on a product was to create it
+                             without one and immediately edit it. The capability was
+                             there; the way in was not.
+
+                             Wording, caps and accept list are the edit screen's,
+                             character for character: two screens describing one
+                             server rule in two different sentences is how the two
+                             drift apart. --}}
+                        <div class="border border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors mt-3"
+                             style="border-color: #b5b5b5;"
+                             @click="$refs.videoInput.click()"
+                             @dragover.prevent="videoDragOver = true" @dragleave.prevent="videoDragOver = false"
+                             @drop.prevent="videoDragOver = false; handleVideoFiles($event.dataTransfer.files)"
+                             :style="{ borderColor: videoDragOver ? '#005bd3' : '#b5b5b5', background: videoDragOver ? '#f0f6ff' : '' }">
+                            <input type="file" name="videos[]" multiple accept="video/mp4,video/webm,video/quicktime"
+                                   x-ref="videoInput" style="display: none;" @change="handleVideoFiles($event.target.files)">
+                            <p class="text-xs font-medium" style="color: #005bd3;">Add videos</p>
+                            <p class="text-[11px]" style="color: #616161;">Up to 5 per save, MP4/WEBM/MOV, max 50MB each</p>
+                        </div>
+                        <div x-show="videoPreviews.length > 0" x-transition class="mt-3">
+                            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                                <template x-for="(preview, index) in videoPreviews" :key="'vid'+index">
+                                    {{-- kk-media--dark, as on the edit screen: a clip is
+                                         contained rather than cropped, and the cream default
+                                         flashes pale around it while it decodes. --}}
+                                    <div class="kk-media kk-media--dark relative group rounded-lg overflow-hidden aspect-square" style="border: 1px solid #e3e3e3;">
+                                        <video class="kk-media__fill" :src="preview.url" muted playsinline aria-hidden="true" tabindex="-1"></video>
+                                        <video :src="preview.url" muted playsinline></video>
+                                        <button type="button" @click="removeVideo(index)"
+                                                class="absolute top-1 right-1 z-10 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <svg style="width: 0.75rem; height: 0.75rem; color: #d72c0d;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                        </button>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                        {{-- The array-level max:5 rule reports under `videos`; without
+                             this the save is rejected in silence. --}}
+                        @error('videos') <p class="form-error mt-2">{{ $message }}</p> @enderror
+                        @error('videos.*') <p class="form-error mt-2">{{ $message }}</p> @enderror
                     </div>
 
                     <!-- Pricing -->
@@ -641,9 +687,15 @@
         // so the preview list and the FileList that actually gets submitted now grow
         // in step, the cap bites on the first pick, and a preview's index still
         // matches its file's index when a tile is removed.
+        // The caps mirror the server: images[] max:10 and videos[] max:5, videos
+        // at 50MB each (ProductController::VIDEO_RULES). Same values as the edit
+        // screen - one server rule, one number on both forms.
         const GALLERY_MAX = 10;
+        const VIDEO_MAX = 5;
         const IMAGE_MAX_BYTES = 2 * 1024 * 1024;
+        const VIDEO_MAX_BYTES = 50 * 1024 * 1024;
         const IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+        const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
 
         function imageUploader() {
             return {
@@ -653,6 +705,9 @@
                 galleryDragOver: false,
                 galleryFileList: new DataTransfer(),
                 galleryMax: GALLERY_MAX,
+                videoPreviews: [],
+                videoDragOver: false,
+                videoFileList: new DataTransfer(),
                 handleMainImage(file) {
                     if (!file) return;
                     // Dropping a file bypasses the input's accept list, so re-check the type.
@@ -685,6 +740,28 @@
                     this.galleryPreviews.splice(index, 1);
                     this.galleryFileList.items.remove(index);
                     this.$refs.galleryInput.files = this.galleryFileList.files;
+                },
+                handleVideoFiles(files) {
+                    let overCap = 0;
+                    for (const file of files) {
+                        // Dropping a file bypasses the input's accept list, so the
+                        // type is re-checked here the way the images are.
+                        if (!VIDEO_TYPES.includes(file.type)) { if (window.toastr) toastr.error(file.name + ' is not an MP4, WEBM or MOV.'); continue; }
+                        if (file.size > VIDEO_MAX_BYTES) { if (window.toastr) toastr.error(file.name + ' exceeds 50MB.'); continue; }
+                        if (this.videoFileList.items.length >= VIDEO_MAX) { overCap++; continue; }
+                        this.videoFileList.items.add(file);
+                        this.videoPreviews.push({ url: URL.createObjectURL(file), name: file.name });
+                    }
+                    this.$refs.videoInput.files = this.videoFileList.files;
+                    if (overCap > 0 && window.toastr) {
+                        toastr.error('Only ' + VIDEO_MAX + ' videos per save - ' + overCap + (overCap === 1 ? ' was' : ' were') + ' left out.');
+                    }
+                },
+                removeVideo(index) {
+                    URL.revokeObjectURL(this.videoPreviews[index].url);
+                    this.videoPreviews.splice(index, 1);
+                    this.videoFileList.items.remove(index);
+                    this.$refs.videoInput.files = this.videoFileList.files;
                 }
             };
         }
