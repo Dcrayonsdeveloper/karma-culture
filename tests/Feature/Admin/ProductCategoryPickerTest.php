@@ -11,10 +11,14 @@ use Tests\TestCase;
 
 /**
  * The product form's category picker listed every category, parents included,
- * so "Men" sat in the dropdown next to "Men > Shirts". A product filed onto
- * the parent then showed up under no sub-category the storefront browses, and
- * the two entries looked interchangeable to whoever was adding the product.
- * Only the bottom level is selectable now.
+ * so "Men" sat in the list next to "Men > Shirts". A product filed onto the
+ * parent then showed up under no sub-category the storefront browses, and the
+ * two entries looked interchangeable to whoever was adding the product. Only
+ * the bottom level is offered now.
+ *
+ * The picker is a list of checkboxes - the dropdown that used to sit above it
+ * asked the same question a second time and is gone - so "offered" means a
+ * `category_ids[]` box exists, and "already filed there" means it is ticked.
  */
 class ProductCategoryPickerTest extends TestCase
 {
@@ -63,7 +67,7 @@ class ProductCategoryPickerTest extends TestCase
                 ->getContent()
         );
 
-        $this->assertNotContains((string) $this->parent->id, $options, 'The parent category "Picker Men" is still selectable.');
+        $this->assertNotContains((string) $this->parent->id, $options, 'The parent category "Picker Men" is still tickable.');
         $this->assertContains((string) $this->child->id, $options, 'The sub-category is missing from the picker.');
     }
 
@@ -108,9 +112,9 @@ class ProductCategoryPickerTest extends TestCase
 
         $this->assertContains((string) $this->parent->id, $options, 'Editing this product would silently clear its category.');
         $this->assertMatchesRegularExpression(
-            '/<option value="'.$this->parent->id.'"[^>]*\bselected\b/',
+            '/<input[^>]*value="'.$this->parent->id.'"[^>]*checked/s',
             $html,
-            'The product\'s own category is no longer pre-selected on the edit form.'
+            'The product\'s own category is no longer ticked on the edit form.'
         );
     }
 
@@ -163,17 +167,13 @@ class ProductCategoryPickerTest extends TestCase
         $this->assertStringContainsString('Picker Men', $html);
     }
 
-    /** Values of the <option>s inside the product form's category select. */
+    /** Values of the checkboxes in the product form's category list. */
     private function categoryOptions(string $html): array
     {
-        $this->assertSame(
-            1,
-            preg_match('/<select[^>]+name="category_id".*?<\/select>/s', $html, $select),
-            'No category select found on the page.'
-        );
+        preg_match_all('/<input[^>]+name="category_ids\[\]"[^>]+value="(\d+)"/', $html, $matches);
 
-        preg_match_all('/<option value="(\d*)"/', $select[0], $matches);
+        $this->assertNotEmpty($matches[1], 'No category checkboxes found on the page.');
 
-        return array_values(array_filter($matches[1], fn ($value) => $value !== ''));
+        return $matches[1];
     }
 }

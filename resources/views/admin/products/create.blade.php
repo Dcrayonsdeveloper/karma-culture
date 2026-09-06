@@ -602,39 +602,34 @@
                     <div class="card p-5 space-y-4">
                         <h2 class="text-[13px] font-semibold" style="color: #303030;">Organization</h2>
                         <div>
-                            <label for="category_id" class="form-label form-label-required">Category</label>
-                            <select name="category_id" id="category_id" required class="form-input w-full @error('category_id') form-input-error @enderror">
-                                <option value="">Select</option>
-                                @foreach($categories as $category)
-                                    <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>{{ $category->path_label ?? $category->name }}</option>
-                                @endforeach
-                            </select>
-                            @error('category_id') <p class="form-error">{{ $message }}</p> @enderror
-                        </div>
-                        <div>
-                            {{-- The primary picker above answers "what is this product";
-                                 this answers "where should it show". A unisex shirt sits
-                                 on the men's and the women's shelf at once, and before
-                                 this the admin had to pick one and lose the other.
-                                 The primary is added on save, so it is not repeated here. --}}
-                            <label class="form-label">Also show in</label>
+                            {{-- One ticked list, the same shape as the Collections
+                                 list below. There used to be a "Category" dropdown
+                                 above it asking the same question a second time, and
+                                 the two answers could disagree: a product filed under
+                                 MEN > Kurtas but not ticked into it read one way in
+                                 the breadcrumb and another in every listing. The tick
+                                 is the whole answer now, and products.category_id -
+                                 what the breadcrumb and the canonical URL read - is
+                                 filled in from the first one on save. --}}
+                            <label class="form-label form-label-required">Categories</label>
                             <div style="max-height: 190px; overflow-y: auto; border: 1px solid #e3e3e3; border-radius: 0.5rem; padding: 0.5rem;">
                                 @forelse($categories as $category)
                                     <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0; font-size: 13px; cursor: pointer;">
-                                        <input type="checkbox" name="extra_category_ids[]" value="{{ $category->id }}"
+                                        <input type="checkbox" name="category_ids[]" value="{{ $category->id }}"
                                                style="width: 0.9rem; height: 0.9rem; accent-color: #303030;"
-                                               @checked(in_array($category->id, old('extra_category_ids', $extraCategoryIds ?? [])))>
+                                               @checked(in_array($category->id, old('category_ids', $selectedCategoryIds ?? [])))>
                                         <span>{{ $category->path_label ?? $category->name }}</span>
                                     </label>
                                 @empty
                                     <p style="font-size: 12px; color: #616161;">No categories yet.</p>
                                 @endforelse
                             </div>
-                            @error('extra_category_ids') <p class="form-error">{{ $message }}</p> @enderror
-                            @error('extra_category_ids.*') <p class="form-error">{{ $message }}</p> @enderror
+                            @error('category_ids') <p class="form-error">{{ $message }}</p> @enderror
+                            @error('category_ids.*') <p class="form-error">{{ $message }}</p> @enderror
                             <p class="text-[12px] mt-1" style="color: #616161;">
-                                Optional. The category above is always included. A parent category
-                                also shows everything filed under it, so there is no need to tick both.
+                                Tick every shelf this product belongs on - a unisex shirt sits
+                                under men's and women's at once. A parent category also shows
+                                everything filed under it, so there is no need to tick both.
                             </p>
                         </div>
                         <div>

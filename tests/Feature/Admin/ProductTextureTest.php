@@ -52,7 +52,7 @@ class ProductTextureTest extends TestCase
             'price' => 999,
             'mrp' => 1299,
             'stock_quantity' => 10,
-            'category_id' => $this->category->id,
+            'category_ids' => [$this->category->id],
             'is_active' => 1,
             // Both are required on the product form, so a payload without them
             // is refused before it can say anything about textures.

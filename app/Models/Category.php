@@ -273,21 +273,26 @@ class Category extends Model
 
     /**
      * The same list, minus every category that has children, for the product
-     * form's category picker. Parents like "Men" are shelves rather than
+     * form's category checkboxes. Parents like "Men" are shelves rather than
      * buckets: a product filed straight onto one never appears under any
      * sub-category shoppers actually browse, so only the bottom level is
-     * offered. $keepId re-admits one category regardless - pass the product's
-     * current category on the edit screen, so an older product sitting on a
-     * parent keeps its value instead of silently reverting to "Select".
+     * offered. $keep re-admits those regardless - pass the categories the
+     * product is already on when building the edit screen, so an older product
+     * sitting on a parent keeps that tick instead of having it silently
+     * cleared by the next save.
+     *
+     * @param  int|array<int, int>|null  $keep
      */
-    public static function assignableOptions(?int $keepId = null)
+    public static function assignableOptions(int|array|null $keep = null)
     {
+        $keepIds = array_flip(array_map('intval', (array) ($keep ?? [])));
+
         $parentIds = array_flip(
             static::whereNotNull('parent_id')->distinct()->pluck('parent_id')->all()
         );
 
         return static::optionsWithPath()
-            ->filter(fn ($category) => ! isset($parentIds[$category->id]) || $category->id === $keepId)
+            ->filter(fn ($category) => ! isset($parentIds[$category->id]) || isset($keepIds[$category->id]))
             ->values();
     }
 

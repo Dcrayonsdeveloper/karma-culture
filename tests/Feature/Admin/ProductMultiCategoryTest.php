@@ -19,6 +19,11 @@ use Tests\TestCase;
  * the breadcrumb, the canonical URL, coupon scoping and the reports all want
  * one canonical answer; the category_product pivot answers the different
  * question the listings ask, which is "should this product appear here".
+ *
+ * The form asks once: a list of checkboxes, `category_ids[]`. The primary is
+ * derived from the ticks rather than picked separately - a second dropdown
+ * asking the same question could be answered differently, and then the
+ * breadcrumb and the listings disagreed about the same product.
  */
 class ProductMultiCategoryTest extends TestCase
 {
@@ -63,7 +68,7 @@ class ProductMultiCategoryTest extends TestCase
             'sku' => 'UNI-1',
             'price' => 1499,
             'stock_quantity' => 10,
-            'category_id' => $this->menShirts->id,
+            'category_ids' => [$this->menShirts->id],
             'is_active' => 1,
             // Both forms require a size and a colour, so a payload without them
             // never gets as far as the shelves being checked here.
@@ -96,7 +101,7 @@ class ProductMultiCategoryTest extends TestCase
     {
         $this->actingAs($this->adminUser, 'admin')
             ->post(route('admin.products.store'), $this->payload([
-                'extra_category_ids' => [$this->womenShirts->id],
+                'category_ids' => [$this->menShirts->id, $this->womenShirts->id],
             ]))
             ->assertSessionHasNoErrors();
 
@@ -144,7 +149,7 @@ class ProductMultiCategoryTest extends TestCase
     {
         $this->actingAs($this->adminUser, 'admin')
             ->post(route('admin.products.store'), $this->payload([
-                'extra_category_ids' => [$this->womenShirts->id],
+                'category_ids' => [$this->menShirts->id, $this->womenShirts->id],
             ]));
 
         $product = Product::firstOrFail();
@@ -167,7 +172,7 @@ class ProductMultiCategoryTest extends TestCase
     {
         $this->actingAs($this->adminUser, 'admin')
             ->post(route('admin.products.store'), $this->payload([
-                'extra_category_ids' => [$this->womenShirts->id],
+                'category_ids' => [$this->menShirts->id, $this->womenShirts->id],
             ]));
 
         $html = $this->get(route('category.show', $this->womenShirts))->assertOk()->getContent();
@@ -183,7 +188,7 @@ class ProductMultiCategoryTest extends TestCase
     {
         $this->actingAs($this->adminUser, 'admin')
             ->post(route('admin.products.store'), $this->payload([
-                'extra_category_ids' => [$this->womenShirts->id],
+                'category_ids' => [$this->menShirts->id, $this->womenShirts->id],
             ]));
 
         foreach ([$this->menParent, $this->womenParent] as $parent) {
@@ -200,7 +205,7 @@ class ProductMultiCategoryTest extends TestCase
     {
         $this->actingAs($this->adminUser, 'admin')
             ->post(route('admin.products.store'), $this->payload([
-                'extra_category_ids' => [$this->womenShirts->id],
+                'category_ids' => [$this->menShirts->id, $this->womenShirts->id],
             ]));
 
         $product = Product::firstOrFail();
@@ -235,7 +240,7 @@ class ProductMultiCategoryTest extends TestCase
     {
         $this->actingAs($this->adminUser, 'admin')
             ->post(route('admin.products.store'), $this->payload([
-                'extra_category_ids' => [$this->womenShirts->id],
+                'category_ids' => [$this->menShirts->id, $this->womenShirts->id],
             ]));
 
         $this->womenShirts->delete();
@@ -248,16 +253,103 @@ class ProductMultiCategoryTest extends TestCase
     {
         $this->actingAs($this->adminUser, 'admin')
             ->post(route('admin.products.store'), $this->payload([
-                'extra_category_ids' => [999999],
+                'category_ids' => [999999],
             ]))
-            ->assertSessionHasErrors('extra_category_ids.0');
+            ->assertSessionHasErrors('category_ids.0');
+    }
+
+    /**
+     * With no dropdown to answer it, the filed category comes from the ticks -
+     * the first of them, which is the topmost row of a list sorted by path.
+     */
+    public function test_the_first_ticked_shelf_becomes_the_filed_category(): void
+    {
+        $this->actingAs($this->adminUser, 'admin')
+            ->post(route('admin.products.store'), $this->payload([
+                'category_ids' => [$this->womenShirts->id, $this->menShirts->id],
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame($this->womenShirts->id, Product::firstOrFail()->category_id);
+    }
+
+    /**
+     * Deriving it from the ticks must not mean re-deriving it on every save:
+     * the breadcrumb and the canonical URL would otherwise move the first time
+     * somebody edited the price.
+     */
+    public function test_editing_keeps_the_filed_category_while_it_is_still_ticked(): void
+    {
+        $product = $this->makeProduct($this->womenShirts, 'STICKY-1');
+
+        $this->actingAs($this->adminUser, 'admin')
+            ->put(route('admin.products.update', $product), $this->payload([
+                'name' => $product->name,
+                'slug' => $product->slug,
+                'sku' => $product->sku,
+                'category_ids' => [$this->menShirts->id, $this->womenShirts->id],
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame($this->womenShirts->id, $product->fresh()->category_id);
+    }
+
+    /** Untick it and it has to move, or category_id names a shelf it is off. */
+    public function test_unticking_the_filed_category_moves_it(): void
+    {
+        $product = $this->makeProduct($this->womenShirts, 'MOVED-1');
+
+        $this->actingAs($this->adminUser, 'admin')
+            ->put(route('admin.products.update', $product), $this->payload([
+                'name' => $product->name,
+                'slug' => $product->slug,
+                'sku' => $product->sku,
+                'category_ids' => [$this->menShirts->id],
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame($this->menShirts->id, $product->fresh()->category_id);
+    }
+
+    /** A product on no shelf appears on no page, so the form refuses one. */
+    public function test_a_product_with_no_shelf_ticked_is_refused(): void
+    {
+        $payload = $this->payload();
+        unset($payload['category_ids']);
+
+        $this->actingAs($this->adminUser, 'admin')
+            ->post(route('admin.products.store'), $payload)
+            ->assertSessionHasErrors('category_ids');
+
+        $this->assertSame(0, Product::count());
+    }
+
+    /** The dropdown is gone: one question, asked once. */
+    public function test_neither_form_offers_a_separate_category_dropdown(): void
+    {
+        $product = $this->makeProduct($this->menShirts, 'NO-SELECT-1');
+
+        $forms = [
+            'create' => route('admin.products.create'),
+            'edit' => route('admin.products.edit', $product),
+        ];
+
+        foreach ($forms as $which => $url) {
+            $html = $this->actingAs($this->adminUser, 'admin')->get($url)->assertOk()->getContent();
+
+            $this->assertStringNotContainsString(
+                'name="category_id"',
+                $html,
+                "The {$which} form still asks for a primary category separately."
+            );
+        }
     }
 
     public function test_both_product_forms_offer_the_shelf_list(): void
     {
         $this->actingAs($this->adminUser, 'admin')
             ->post(route('admin.products.store'), $this->payload([
-                'extra_category_ids' => [$this->womenShirts->id],
+                'category_ids' => [$this->menShirts->id, $this->womenShirts->id],
             ]));
 
         $product = Product::firstOrFail();
@@ -271,7 +363,7 @@ class ProductMultiCategoryTest extends TestCase
             $html = $this->actingAs($this->adminUser, 'admin')->get($url)->assertOk()->getContent();
 
             $this->assertStringContainsString(
-                'name="extra_category_ids[]"',
+                'name="category_ids[]"',
                 $html,
                 "The {$which} form has no shelf list."
             );
@@ -286,7 +378,7 @@ class ProductMultiCategoryTest extends TestCase
     {
         $this->actingAs($this->adminUser, 'admin')
             ->post(route('admin.products.store'), $this->payload([
-                'extra_category_ids' => [$this->womenShirts->id],
+                'category_ids' => [$this->menShirts->id, $this->womenShirts->id],
             ]));
 
         $product = Product::firstOrFail();

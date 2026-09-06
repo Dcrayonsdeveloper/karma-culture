@@ -210,7 +210,7 @@ class ProductVariantSkuTest extends TestCase
                 'price' => 999,
                 'mrp' => 1299,
                 'stock_quantity' => 5,
-                'category_id' => $this->category->id,
+                'category_ids' => [$this->category->id],
                 // The edit form requires a colour, so every save has to carry the
                 // list. Sizes come from each test's own `variants`.
                 'colours' => [
