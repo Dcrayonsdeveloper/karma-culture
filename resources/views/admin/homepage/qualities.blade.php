@@ -18,7 +18,7 @@
     </div>
 
     <p style="font-size: 12px; color: #616161; margin: 0 0 1rem 0;">
-        The grid of quality blocks on the home page's dark "Our Qualities" section. Each row is a title + short description, plus an optional background image — cards with an image render as a tall 3:4 photo tile, cards without one stay compact. Use the arrows on each row to change the order they appear in.
+        The grid of quality blocks on the home page's dark "Our Qualities" section. Each row is a title + short description, plus an optional background image — cards with an image render as a tall 4:5 photo tile, cards without one stay compact. Use the arrows on each row to change the order they appear in.
     </p>
 
     <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem;">
@@ -45,7 +45,18 @@
                         <div>
                             <label for="quality-new-image" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Background image</label>
                             <input type="file" name="image" id="quality-new-image" accept="image/jpeg,image/png,image/webp,image/gif" class="form-input" style="font-size: 12px; padding: 0.35rem;">
-                            <p style="font-size: 11px; color: #616161; margin: 0.35rem 0 0 0;">Optional. Portrait crops work best (3:4). The text sits over a dark gradient at the bottom, so avoid busy detail there. Max 5 MB.</p>
+                            {{-- The ratio here said 3:4, which is not the shape the card
+                                 is. .kk-quality is aspect-ratio 4/5 and the photo fills
+                                 it, so anyone who followed the old advice had the top and
+                                 bottom quietly cropped off. 1200x1500 is 4:5 at twice the
+                                 widest the card is ever drawn (582px on a phone), so it
+                                 stays sharp on a retina screen without being wasteful. --}}
+                            <p style="font-size: 11px; color: #616161; margin: 0.35rem 0 0 0;">
+                                Optional. JPG, PNG or WebP.
+                                <strong style="color: #303030; font-weight: 600;">Best at 1200 &times; 1500px (4:5 portrait)</strong>
+                                &mdash; the shape the card is cropped to. The text sits over a dark gradient at the
+                                bottom, so avoid busy detail there. Max 5 MB.
+                            </p>
                         </div>
                         <button type="submit" class="btn btn-primary" style="font-size: 13px; width: 100%;">Add Quality</button>
                     </div>
@@ -77,6 +88,12 @@
                                     </div>
                                     <input type="file" name="image" id="quality-{{ $quality->id }}-image"
                                            accept="image/jpeg,image/png,image/webp,image/gif" style="font-size: 11px; margin-top: 0.4rem; width: 88px;">
+                                    {{-- Same guidance as the add form. Someone replacing a
+                                         picture needs the size as much as someone adding
+                                         one, and this column is where they are looking. --}}
+                                    <p style="font-size: 10px; color: #8a8a8a; margin: 0.3rem 0 0 0; line-height: 1.3;">
+                                        1200 &times; 1500px<br>(4:5 portrait)
+                                    </p>
                                     @if($quality->image_url)
                                         <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 11px; color: #616161; margin-top: 0.35rem;">
                                             <input type="checkbox" name="remove_image" value="1"> Remove
