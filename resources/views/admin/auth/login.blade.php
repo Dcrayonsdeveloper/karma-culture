@@ -67,9 +67,21 @@
                 </div>
             @endif
 
-            {{-- Form --}}
-            <form method="POST" action="{{ route('admin.login') }}" style="display: flex; flex-direction: column; gap: 1.25rem;">
+            {{-- Form
+                 The fields are still real form fields, named and inside a real
+                 <form>, so password managers, autofill and a browser with no
+                 JavaScript all still understand this page. The submit handler
+                 below is what moves the values out of the POST body and into a
+                 request header; if it never runs, this posts normally and the
+                 controller reads the body instead. --}}
+            <form id="admin-login-form" method="POST" action="{{ route('admin.login') }}" style="display: flex; flex-direction: column; gap: 1.25rem;">
                 @csrf
+
+                {{-- Where the submit handler puts a rejected sign-in. The
+                     @error blocks below still cover the no-JavaScript path,
+                     which comes back as a redirect with the error flashed. --}}
+                <div id="login-error" role="alert" aria-live="polite"
+                     style="display: none; padding: 0.75rem 1rem; background: #fff4f4; border: 1px solid #f0c2bc; border-radius: 8px; color: #d72c0d; font-size: 13px;"></div>
 
                 {{-- Email --}}
                 <div>
@@ -128,6 +140,104 @@
     </div>
 
     <script>
+        /**
+         * Send the sign-in with the credentials in a request header instead of
+         * the POST body.
+         *
+         * The request is sent with no body at all: the email, the password and
+         * the CSRF token all travel as headers. `X-Admin-Auth` carries
+         * `Basic <base64("email:password")>`, the shape RFC 7617 defines,
+         * because a header may hold only ASCII while an email address or a
+         * password may hold anything - btoa() alone throws on the first
+         * non-Latin-1 character, so the string is encoded to UTF-8 bytes first.
+         *
+         * Base64 is not encryption. Whatever could have read the password out
+         * of the body can read it out of this header just as easily; HTTPS is
+         * what keeps it private, and that has not changed. What has changed is
+         * that the password now travels somewhere that crash reporters and
+         * request-logging middleware capture by default, and that the browser
+         * can no longer offer to save it, because it never sees a password
+         * field being submitted.
+         *
+         * If this handler does not run, the form posts normally and the
+         * controller reads the body - so a blocked script cannot lock the
+         * panel's administrator out of the panel.
+         */
+        (function () {
+            const form = document.getElementById('admin-login-form');
+            if (!form || typeof fetch !== 'function' || typeof TextEncoder !== 'function') {
+                return; // leave the plain form post in place
+            }
+
+            const box = document.getElementById('login-error');
+
+            // btoa() is Latin-1 only; go through UTF-8 bytes so an accented
+            // address or a password with anything in it survives the trip.
+            const b64 = (value) => {
+                const bytes = new TextEncoder().encode(value);
+                let binary = '';
+                bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+                return btoa(binary);
+            };
+
+            const showError = (message) => {
+                if (!box) { return; }
+                box.textContent = message;
+                box.style.display = 'block';
+            };
+
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+
+                const email = form.querySelector('#email').value;
+                const password = form.querySelector('#password').value;
+                const remember = form.querySelector('[name="remember"]');
+                const token = form.querySelector('[name="_token"]');
+                const button = form.querySelector('[type="submit"]');
+                const label = button ? button.textContent : '';
+
+                if (box) { box.style.display = 'none'; }
+                if (button) { button.disabled = true; button.textContent = 'Signing in...'; }
+
+                try {
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {
+                            'X-Admin-Auth': 'Basic ' + b64(email + ':' + password),
+                            'X-Admin-Remember': remember && remember.checked ? '1' : '0',
+                            'X-CSRF-TOKEN': token ? token.value : '',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json',
+                        },
+                    });
+
+                    const data = await response.json().catch(() => ({}));
+
+                    // The session id is rotated on both outcomes, so the token
+                    // that came back is the only one the next attempt can use.
+                    if (token && data.token) { token.value = data.token; }
+
+                    if (response.ok && data.redirect) {
+                        window.location.assign(data.redirect);
+                        return;
+                    }
+
+                    if (response.status === 429) {
+                        showError('Too many sign-in attempts. Wait a minute and try again.');
+                    } else if (response.status === 419) {
+                        showError('This page expired. Reload it and sign in again.');
+                    } else {
+                        showError(data.message || 'The provided credentials do not match our records.');
+                    }
+                } catch (error) {
+                    showError('Could not reach the server. Check your connection and try again.');
+                } finally {
+                    if (button) { button.disabled = false; button.textContent = label; }
+                }
+            });
+        })();
+
         function togglePassword() {
             const input = document.getElementById('password');
             const eyeOff = document.getElementById('eye-off');

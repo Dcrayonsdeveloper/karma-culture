@@ -46,14 +46,15 @@
         .cat-banner .kk-media.is-broken .kk-media__fallback { display: none; }
     </style>
     <div class="relative overflow-hidden cat-banner" style="background: linear-gradient(135deg, #F8931D 0%, #E07E0A 100%);">
-        {{-- The frame is positioned inline because .kk-media sets position and
-             background itself, and it wins over the Tailwind utilities. --}}
-        <div class="kk-media hidden sm:block" style="position: absolute; inset: 0; background: transparent;">
-            <img class="kk-media__fill" src="{{ asset_v('images/Forever.png') }}" alt="" aria-hidden="true">
-            {{-- Same art on every category page, so it carries no meaning of its
-                 own: the heading below names the category. --}}
-            <img src="{{ asset_v('images/Forever.png') }}" alt="">
-        </div>
+        {{-- The art that used to sit here was ForeverKids branding, inherited
+             from the codebase this shop was forked from: a cartoon of children
+             on an adult fashion banner. The file stopped being tracked in git
+             ("stop tracking media in git; deploy.sh ships it instead"), and
+             deploy.sh has not been able to find this app since the move to AWS,
+             so it was never shipped - every category page asked for an image
+             that 404d. Removed rather than restored, because restoring it would
+             put another brand's mark on this one. The gradient and the heading
+             carry the banner on their own. --}}
         <div class="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent"></div>
         <div class="relative container mx-auto h-full flex flex-col justify-center cat-banner-inner">
             <h1 class="text-2xl md:text-3xl font-bold text-white mb-1">{{ $category->name }}</h1>
