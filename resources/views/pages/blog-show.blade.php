@@ -31,7 +31,7 @@
         {{-- BlogPosting JSON-LD --}}
         <script type="application/ld+json">
         {!! json_encode([
-            '@context' => 'https://schema.org',
+            '@@context' => 'https://schema.org',
             '@type' => 'BlogPosting',
             'headline' => $post->title,
             'description' => $post->excerpt ?? Str::limit(strip_tags($post->content), 160),

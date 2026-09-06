@@ -28,7 +28,7 @@
         {{-- LocalBusiness Schema --}}
         <script type="application/ld+json">
         {!! json_encode(array_filter([
-            '@context' => 'https://schema.org',
+            '@@context' => 'https://schema.org',
             '@type' => 'ClothingStore',
             'name' => config('app.name'),
             'description' => "Kids' clothing store offering fashionable and comfortable outfits for children.",
