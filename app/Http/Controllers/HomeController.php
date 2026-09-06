@@ -9,12 +9,13 @@ use App\Models\HomepageSection;
 use App\Models\Product;
 use App\Models\Quality;
 use App\Models\Setting;
+use App\Services\InstagramFeedService;
 use App\Support\ShopFilterCatalogue;
 use Illuminate\View\View;
 
 class HomeController extends Controller
 {
-    public function index(): View
+    public function index(InstagramFeedService $instagramService): View
     {
         // Featured products
         $featuredProducts = Product::query()
@@ -136,6 +137,12 @@ class HomeController extends Controller
             'footer_about' => Setting::get('footer_about', 'Curated fashion for the modern individual. Discover timeless pieces crafted with care and devotion to our culture.'),
         ];
 
+        // Instagram feed posts, and the handle they actually came from - the
+        // Follow button used to name a fixed account regardless of whose posts
+        // were above it.
+        $instagramPosts = $instagramService->getPosts(6);
+        $instagramHandle = $instagramService->getUsername();
+
         return view('home', compact(
             'featuredProducts',
             'newArrivals',
@@ -148,7 +155,9 @@ class HomeController extends Controller
             'siteSettings',
             'flashSale',
             'shopFilters',
-            'qualities'
+            'qualities',
+            'instagramPosts',
+            'instagramHandle'
         ));
     }
 }

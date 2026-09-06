@@ -70,4 +70,23 @@ return [
         'whatsapp_phone_number_id' => env('META_WHATSAPP_PHONE_NUMBER_ID'),
     ],
 
+    /*
+     * The feed is read through the Facebook Graph API, not graph.instagram.com.
+     * Basic Display is the personal-account API and it cannot parse the
+     * system-user token this business holds - it answers "Cannot parse access
+     * token" for a token that is perfectly valid, which is why the strip has
+     * been empty. A Business account is addressed by its own numeric id, found
+     * once with:
+     *
+     *   GET /v21.0/{page-id}?fields=instagram_business_account
+     *
+     * Both values live in the environment so the account can be changed without
+     * a deploy, and so no account id ships in this repository.
+     */
+    'instagram' => [
+        'access_token' => env('INSTAGRAM_ACCESS_TOKEN'),
+        'user_id' => env('INSTAGRAM_USER_ID'),
+        'graph_version' => env('INSTAGRAM_GRAPH_VERSION', 'v21.0'),
+    ],
+
 ];
