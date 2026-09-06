@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Exceptions\EnvOnlySettingException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
@@ -79,6 +80,84 @@ class Setting extends Model
 
         static::saved($forget);
         static::deleted($forget);
+
+        // A credential must never come back into this table. Every writer used
+        // to be a controller decision - drop a field from one form and the next
+        // form, a seeder or a console command could still put a live payment
+        // salt in the database - so the refusal lives on the model instead,
+        // where every write path in the application has to pass through it.
+        static::saving(function (self $setting): void {
+            if (self::isEnvOnly((string) $setting->key) && (string) $setting->value !== '') {
+                throw new EnvOnlySettingException(
+                    'The setting ['.$setting->key.'] is a credential and is read from the environment only. '
+                    .'Set it in .env on the server; it cannot be stored in the database.'
+                );
+            }
+        });
+    }
+
+    /**
+     * Settings that are read from the environment and may never be stored.
+     *
+     * These were all typed into the admin panel once, which meant live payment,
+     * courier and AI credentials sat in the `settings` table - readable by
+     * anyone with an admin login and present in every database dump. The
+     * tracking identifiers are not secret, but they steer third-party scripts
+     * on every page, so they are pinned to the deployment too.
+     *
+     * @var array<int, string>
+     */
+    public const ENV_ONLY_KEYS = [
+        // Payments
+        'payu_merchant_key',
+        'payu_merchant_salt',
+        'payu_mode',
+        // Courier
+        'shiprocket_api_token',
+        'shiprocket_email',
+        'shiprocket_password',
+        // AI
+        'anthropic_api_key',
+        'gemini_api_key',
+        // Social
+        'instagram_access_token',
+        // Seeded but never read by any code - listed so they cannot come back.
+        'razorpay_webhook_secret',
+        'sms_api_key',
+        'whatsapp_app_secret',
+        'whatsapp_page_access_token',
+        'whatsapp_verify_token',
+        // Tracking identifiers
+        'google_analytics_id',
+        'google_tag_manager_id',
+        'facebook_pixel_id',
+        'google_search_console_verification',
+    ];
+
+    /**
+     * Key shapes that are refused even when nobody thought to list them.
+     *
+     * The list above only covers what exists today; this covers the next
+     * integration somebody adds. Anchored to the end of the key so ordinary
+     * content settings are unaffected - `meta_keywords` is not a key, and
+     * `pos_receipt_footer` is not a token.
+     */
+    private const ENV_ONLY_SUFFIXES = ['_api_key', '_secret', '_password', '_token', '_salt', '_access_key'];
+
+    /** Whether a key is a credential this table refuses to hold. */
+    public static function isEnvOnly(string $key): bool
+    {
+        if (in_array($key, self::ENV_ONLY_KEYS, true)) {
+            return true;
+        }
+
+        foreach (self::ENV_ONLY_SUFFIXES as $suffix) {
+            if (str_ends_with($key, $suffix)) {
+                return true;
+            }
+        }
+
+        return false;
     }
     /** Marks "no row in the database" so a missing setting is still cached. */
     private const MISSING = '__kk_setting_missing__';

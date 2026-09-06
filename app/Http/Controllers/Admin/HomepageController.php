@@ -708,26 +708,16 @@ class HomepageController extends Controller
      */
     public function updateInstagram(Request $request, InstagramReelService $instagram)
     {
+        // The access token is no longer accepted here. It is read from
+        // INSTAGRAM_ACCESS_TOKEN in .env, so a credential cannot be introduced
+        // from a browser - only the reel count is an admin's to set.
         $validated = $request->validate([
-            // Left blank means "keep the saved one": the field renders masked,
-            // so an admin changing only the count must not wipe the token by
-            // submitting the placeholder back.
-            'access_token' => ['nullable', 'string', 'max:512'],
             'reel_limit' => ['required', 'integer', 'min:1', 'max:20'],
         ], [
             'reel_limit.max' => 'The strip can hold at most 20 reels.',
         ]);
 
         Setting::set(InstagramReelService::LIMIT_KEY, (string) $validated['reel_limit'], 'integer', 'instagram');
-
-        $token = trim((string) ($validated['access_token'] ?? ''));
-
-        if ($token !== '') {
-            Setting::set(InstagramReelService::TOKEN_KEY, $token, 'string', 'instagram');
-            // A pasted token is a fresh long-lived one until Instagram says
-            // otherwise; refreshing later replaces this with the real date.
-            Setting::set(InstagramReelService::TOKEN_EXPIRES_KEY, now()->addDays(60)->toDateTimeString(), 'string', 'instagram');
-        }
 
         Cache::forget('settings.group.instagram');
         // The strip on the home page is served from a cached reel list. Saving
@@ -736,7 +726,7 @@ class HomepageController extends Controller
         $instagram->forgetLiveReels();
 
         if (! $instagram->configured()) {
-            return back()->with('success', 'Settings saved. Add an access token to connect an Instagram account.');
+            return back()->with('success', 'Settings saved. Set INSTAGRAM_ACCESS_TOKEN in .env on the server to connect an Instagram account.');
         }
 
         $result = $instagram->connect();
@@ -773,15 +763,6 @@ class HomepageController extends Controller
         $message = $parts === [] ? 'Nothing changed.' : implode(', ', $parts).'.';
 
         return back()->with($result['skipped'] > 0 ? 'warning' : 'success', 'Sync complete: '.$message);
-    }
-
-    public function refreshInstagramToken(InstagramReelService $instagram)
-    {
-        $result = $instagram->refreshToken();
-
-        return $result['ok']
-            ? back()->with('success', 'Token refreshed. It now runs until '.$result['expires_at'].'.')
-            : back()->with('error', $result['error']);
     }
 
     public function disconnectInstagram(InstagramReelService $instagram)

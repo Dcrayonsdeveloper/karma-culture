@@ -403,7 +403,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 // ordering bug that once ate /cart/remove-coupon.
                 Route::put('/about-reels/instagram', [HomepageController::class, 'updateInstagram'])->name('about-reels.instagram');
                 Route::post('/about-reels/instagram/sync', [HomepageController::class, 'syncInstagram'])->name('about-reels.instagram.sync');
-                Route::post('/about-reels/instagram/refresh-token', [HomepageController::class, 'refreshInstagramToken'])->name('about-reels.instagram.refresh');
                 Route::delete('/about-reels/instagram', [HomepageController::class, 'disconnectInstagram'])->name('about-reels.instagram.disconnect');
 
                 Route::put('/about-reels/{aboutReel}', [HomepageController::class, 'updateAboutReel'])->whereNumber('aboutReel')->name('about-reels.update');

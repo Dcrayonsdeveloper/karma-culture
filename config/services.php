@@ -56,11 +56,41 @@ return [
         'test_event_code' => env('FB_TEST_EVENT_CODE'),
     ],
 
+    // Credentials, never settings. Every one of these used to be typed into
+    // the admin panel and kept in the `settings` table, which put live payment
+    // and courier secrets in reach of anyone with an admin login and in every
+    // database dump. They are read from the environment only now, and
+    // {@see \App\Models\Setting::ENV_ONLY_KEYS} refuses to store them again.
+    'payu' => [
+        'key'  => env('PAYU_MERCHANT_KEY'),
+        'salt' => env('PAYU_MERCHANT_SALT'),
+        // Which PayU endpoint the checkout posts to. It belongs beside the
+        // key and salt rather than in the admin panel: the credentials are
+        // per-mode, so flipping this on its own only ever breaks payments.
+        'mode' => env('PAYU_MODE', 'test'),
+    ],
+
     // The tracking webhook can move an order to delivered/cancelled, so this
     // token is required - an unset value rejects every request rather than
     // leaving the endpoint open.
     'shiprocket' => [
         'webhook_token' => env('SHIPROCKET_WEBHOOK_TOKEN'),
+        // Either an API token on its own, or the email/password pair the
+        // service logs in with when no token is set.
+        'api_token' => env('SHIPROCKET_API_TOKEN'),
+        'email'     => env('SHIPROCKET_EMAIL'),
+        'password'  => env('SHIPROCKET_PASSWORD'),
+    ],
+
+    // Public identifiers rather than secrets - they are published in the page
+    // source - but they steer third-party tracking, so they are pinned to the
+    // deployment rather than left editable from a browser.
+    'gtm' => [
+        'id' => env('GOOGLE_TAG_MANAGER_ID'),
+    ],
+
+    'google' => [
+        'site_verification' => env('GOOGLE_SITE_VERIFICATION'),
     ],
 
     'meta' => [

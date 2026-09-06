@@ -101,11 +101,10 @@ class SettingController extends Controller
 
     public function updateShipping(Request $request): RedirectResponse
     {
+        // The Shiprocket API token, email and password are not accepted here
+        // any more: a courier login that can dispatch real shipments is read
+        // from .env, not typed into a browser. Everything left is operational.
         $validated = $request->validate([
-            'shiprocket_auth_mode'       => 'nullable|in:token,credentials',
-            'shiprocket_api_token'       => 'nullable|string|max:1000',
-            'shiprocket_email'           => 'nullable|email|max:255',
-            'shiprocket_password'        => 'nullable|string|max:255',
             'shiprocket_pickup_location' => 'nullable|string|max:255',
             'shiprocket_channel_id'      => 'nullable|string|max:50',
             'free_shipping_threshold'    => 'nullable|numeric|min:0',
@@ -117,18 +116,6 @@ class SettingController extends Controller
             'shipping_origin_state'      => 'nullable|string',
             'shipping_origin_zip'        => 'nullable|string|max:20',
         ]);
-
-        // Only one Shiprocket credential set can be in play: getToken() returns
-        // a stored API token if there is one and never looks at the email and
-        // password. Hiding the other panel with x-show still submitted its
-        // fields, so picking "Email & Password" left the old token in place and
-        // silently kept using it. Clear whichever set the admin did not choose.
-        if (($validated['shiprocket_auth_mode'] ?? null) === 'credentials') {
-            $validated['shiprocket_api_token'] = '';
-        } elseif (($validated['shiprocket_auth_mode'] ?? null) === 'token') {
-            $validated['shiprocket_email'] = '';
-            $validated['shiprocket_password'] = '';
-        }
 
         // Boolean toggles
         foreach (['shiprocket_enabled', 'free_shipping_enabled', 'flat_rate_enabled', 'local_pickup_enabled'] as $key) {
@@ -147,14 +134,6 @@ class SettingController extends Controller
             Cache::forget("setting.{$key}");
         }
         Cache::forget('settings.group.shipping');
-
-        // Blanking a credential to disconnect is as much a change as setting
-        // one, and so is switching auth mode - filled() alone missed both and
-        // left a working token cached for up to nine days.
-        if ($request->has(['shiprocket_api_token', 'shiprocket_email', 'shiprocket_password'])
-            || $request->filled('shiprocket_auth_mode')) {
-            \App\Services\ShiprocketService::clearToken();
-        }
 
         return back()->with('success', 'Shipping settings updated successfully.');
     }
@@ -220,10 +199,10 @@ class SettingController extends Controller
             'meta_description'                   => 'nullable|string|max:160',
             'meta_keywords'                      => 'nullable|string|max:255',
             'og_image'                           => 'nullable|url|max:500',
-            'google_analytics_id'                => ['nullable', 'string', 'regex:/^(G-[A-Z0-9]+)?$/i'],
-            'google_tag_manager_id'              => ['nullable', 'string', 'regex:/^(GTM-[A-Z0-9]+)?$/i'],
-            'facebook_pixel_id'                  => ['nullable', 'string', 'regex:/^[0-9]*$/'],
-            'google_search_console_verification' => ['nullable', 'string', 'max:200', 'regex:/^[A-Za-z0-9_=-]*$/'],
+            // The analytics, tag manager, pixel and site-verification IDs are
+            // not accepted here any more. They are published in the page source
+            // and steer third-party tracking on every visit, so they are pinned
+            // to the deployment in .env rather than editable from a browser.
             'twitter_site'                       => ['nullable', 'string', 'max:50', 'regex:/^@?[A-Za-z0-9_]*$/'],
             'robots_txt'                         => 'nullable|string|max:5000',
         ]);

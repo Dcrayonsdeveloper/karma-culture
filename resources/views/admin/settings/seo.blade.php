@@ -59,26 +59,20 @@
                 <div class="card">
                     <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;">
                         <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Analytics & Tracking</h2>
-                        <p style="font-size: 12px; color: #616161; margin: 0.125rem 0 0 0;">IDs are injected after cookie consent. Format is validated.</p>
+                        <p style="font-size: 12px; color: #616161; margin: 0.125rem 0 0 0;">IDs are injected after cookie consent.</p>
                     </div>
-                    <div style="padding: 1rem; display: flex; flex-direction: column; gap: 1rem;">
-                        <div>
-                            <label class="form-label">Google Analytics 4 ID</label>
-                            <input type="text" name="google_analytics_id" value="{{ old('google_analytics_id', $settings['google_analytics_id'] ?? '') }}" placeholder="G-XXXXXXXXXX" class="form-input" pattern="G-[A-Z0-9]+" title="Must be in format G-XXXXXXXXXX">
-                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Format: <code style="background: #f6f6f7; padding: 0.125rem 0.25rem; border-radius: 0.25rem; font-size: 12px;">G-XXXXXXXXXX</code></p>
-                        </div>
-
-                        <div>
-                            <label class="form-label">Google Tag Manager ID</label>
-                            <input type="text" name="google_tag_manager_id" value="{{ old('google_tag_manager_id', $settings['google_tag_manager_id'] ?? '') }}" placeholder="GTM-XXXXXXX" class="form-input" pattern="GTM-[A-Z0-9]+" title="Must be in format GTM-XXXXXXX">
-                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Format: <code style="background: #f6f6f7; padding: 0.125rem 0.25rem; border-radius: 0.25rem; font-size: 12px;">GTM-XXXXXXX</code></p>
-                        </div>
-
-                        <div>
-                            <label class="form-label">Facebook Pixel ID</label>
-                            <input type="text" name="facebook_pixel_id" value="{{ old('facebook_pixel_id', $settings['facebook_pixel_id'] ?? '') }}" placeholder="1234567890123456" class="form-input" pattern="[0-9]+" title="Pixel ID is numeric only">
-                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Numeric digits only</p>
-                        </div>
+                    <div style="padding: 1rem;">
+                        @include('admin.partials.env-managed', [
+                            'vars' => [
+                                'GA4_MEASUREMENT_ID'    => (string) config('services.ga4.measurement_id', '') !== '',
+                                'GOOGLE_TAG_MANAGER_ID' => (string) config('services.gtm.id', '') !== '',
+                                'FB_PIXEL_ID'           => (string) config('services.facebook.pixel_id', '') !== '',
+                            ],
+                            'configured' => (string) config('services.ga4.measurement_id', '') !== ''
+                                || (string) config('services.gtm.id', '') !== ''
+                                || (string) config('services.facebook.pixel_id', '') !== '',
+                            'help' => 'These load third-party scripts on every page, so they are pinned to the deployment rather than editable here.',
+                        ])
                     </div>
                 </div>
 
@@ -86,17 +80,13 @@
                 <div class="card">
                     <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;">
                         <h2 style="font-size: 13px; font-weight: 600; color: #303030; margin: 0;">Google Search Console</h2>
-                        <p style="font-size: 12px; color: #616161; margin: 0.125rem 0 0 0;">Paste only the <code style="background: #f6f6f7; padding: 0.125rem 0.25rem; border-radius: 0.25rem; font-size: 12px;">content</code> value from the verification meta tag</p>
+                        <p style="font-size: 12px; color: #616161; margin: 0.125rem 0 0 0;">The ownership meta tag is rendered from the server's configuration.</p>
                     </div>
                     <div style="padding: 1rem;">
-                        <label class="form-label">Verification Code</label>
-                        <input type="text" name="google_search_console_verification"
-                               value="{{ old('google_search_console_verification', $settings['google_search_console_verification'] ?? '') }}"
-                               placeholder="AbCdEfGhIjKlMnOpQrStUvWxYz1234567890-_="
-                               class="form-input" style="font-family: monospace; font-size: 13px;">
-                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">
-                            In Search Console &rarr; Settings &rarr; Ownership verification &rarr; HTML tag &rarr; copy only the <code style="background: #f6f6f7; padding: 0.125rem 0.25rem; border-radius: 0.25rem; font-size: 12px;">content="&hellip;"</code> value
-                        </p>
+                        @include('admin.partials.env-managed', [
+                            'vars' => ['GOOGLE_SITE_VERIFICATION' => (string) config('services.google.site_verification', '') !== ''],
+                            'help' => 'In Search Console → Settings → Ownership verification → HTML tag, copy only the content="..." value.',
+                        ])
                     </div>
                 </div>
 

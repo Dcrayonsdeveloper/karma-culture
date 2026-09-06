@@ -22,8 +22,10 @@ class ShiprocketService
      */
     private function getToken(): string
     {
-        // Direct API token (no login needed)
-        $apiToken = Setting::get('shiprocket_api_token');
+        // Direct API token (no login needed). From the environment, not the
+        // settings table - a courier login that can dispatch real shipments
+        // has no business being editable from the admin panel.
+        $apiToken = (string) config('services.shiprocket.api_token', '');
         if (!empty($apiToken)) {
             return $apiToken;
         }
@@ -31,8 +33,8 @@ class ShiprocketService
         // Fall back to email/password login (cached for 9 days - tokens expire in 10)
         return Cache::remember('shiprocket_token', 9 * 24 * 60 * 60, function () {
             $response = Http::post(self::BASE_URL . '/auth/login', [
-                'email'    => Setting::get('shiprocket_email'),
-                'password' => Setting::get('shiprocket_password'),
+                'email'    => config('services.shiprocket.email'),
+                'password' => config('services.shiprocket.password'),
             ]);
 
             if ($response->failed()) {

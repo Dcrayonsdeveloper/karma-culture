@@ -29,9 +29,12 @@ class AiChatService
 
     public static function apiKey(): string
     {
+        // Environment only. The settings table used to win over config, so an
+        // admin could paste a key in a browser and it would outrank the one
+        // deployed with the app - and then live in the database.
         return self::provider() === self::PROVIDER_GEMINI
-            ? (string) (Setting::get('gemini_api_key') ?: config('services.gemini.key'))
-            : (string) (Setting::get('anthropic_api_key') ?: config('services.anthropic.key'));
+            ? (string) config('services.gemini.key')
+            : (string) config('services.anthropic.key');
     }
 
     public static function model(): string

@@ -66,9 +66,12 @@ class CheckoutController extends Controller
         // always false - Cash on Delivery vanished from checkout the moment
         // PayU was configured, and no amount of toggling it in the admin
         // brought it back.
+        // payu_enabled stays an admin toggle - turning payments off is an
+        // operator's decision - but the credentials behind it come from the
+        // environment, so a key can never be typed in from a browser.
         $onlineReady = Setting::getBool('payu_enabled', false)
-            && Setting::get('payu_merchant_key', '') !== ''
-            && Setting::get('payu_merchant_salt', '') !== '';
+            && (string) config('services.payu.key', '') !== ''
+            && (string) config('services.payu.salt', '') !== '';
         $codEnabled = Setting::getBool('cod_enabled', true) || ! $onlineReady;
 
         return array_keys(array_filter(['cod' => $codEnabled, 'online' => $onlineReady]));

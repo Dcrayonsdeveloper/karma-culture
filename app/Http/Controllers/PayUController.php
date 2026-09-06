@@ -12,12 +12,20 @@ use Illuminate\Support\Facades\Log;
 
 class PayUController extends Controller
 {
+    /**
+     * The gateway credentials, from the environment.
+     *
+     * These were read out of the `settings` table, which meant the live
+     * merchant key and salt were editable from the admin panel and sat in
+     * every database dump. The salt signs the payment hash, so anyone who
+     * could read it could forge a success callback.
+     */
     private function getConfig(): array
     {
         return [
-            'key'  => Setting::get('payu_merchant_key', ''),
-            'salt' => Setting::get('payu_merchant_salt', ''),
-            'mode' => Setting::get('payu_mode', 'test'),
+            'key'  => (string) config('services.payu.key', ''),
+            'salt' => (string) config('services.payu.salt', ''),
+            'mode' => (string) config('services.payu.mode', 'test'),
         ];
     }
 

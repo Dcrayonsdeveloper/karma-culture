@@ -86,10 +86,12 @@ function cookieConsent() {
 
         loadAnalytics() {
             @php
-                // DB settings take priority; fall back to .env/config
-                $ga4Id   = \App\Models\Setting::get('google_analytics_id')   ?: config('services.ga4.measurement_id');
-                $gtmId   = \App\Models\Setting::get('google_tag_manager_id') ?: config('services.gtm.id');
-                $fbPixel = \App\Models\Setting::get('facebook_pixel_id')     ?: config('services.facebook.pixel_id');
+                // Configuration only. These used to prefer a settings row, which
+                // let a third-party tracking script be pointed somewhere else
+                // from a browser; they are pinned to the deployment now.
+                $ga4Id   = config('services.ga4.measurement_id');
+                $gtmId   = config('services.gtm.id');
+                $fbPixel = config('services.facebook.pixel_id');
                 // Sanitize - only allow safe identifier characters
                 $ga4Id   = preg_replace('/[^A-Z0-9\-]/i', '', (string) $ga4Id);
                 $gtmId   = preg_replace('/[^A-Z0-9\-]/i', '', (string) $gtmId);

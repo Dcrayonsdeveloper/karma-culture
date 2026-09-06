@@ -29,7 +29,7 @@
         $seoKeywords = \App\Models\Setting::get('meta_keywords');
         $seoOgImage  = \App\Models\Setting::get('og_image');
         $twitterSite = \App\Models\Setting::get('twitter_site');
-        $gscCode     = preg_replace('/[^A-Za-z0-9_=\-]/', '', (string) \App\Models\Setting::get('google_search_console_verification'));
+        $gscCode     = preg_replace('/[^A-Za-z0-9_=\-]/', '', (string) config('services.google.site_verification'));
     @endphp
     {{-- Fill only the gaps: a page that already set one of these keeps it. --}}
     @if($seoMetaDesc && ! str_contains($kkPageMeta, 'name="description"'))

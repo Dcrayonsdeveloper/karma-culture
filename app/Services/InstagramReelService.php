@@ -88,20 +88,14 @@ class InstagramReelService
      * already connected instead of waiting for somebody to open a form and
      * paste a credential into it.
      *
-     * The row is asked about with isSet() rather than read with get(), because
-     * get() folds a blank value into its default and the two mean opposite
-     * things here: no row at all is "nobody has configured this, use the
-     * environment", while a row that exists and is empty is Disconnect having
-     * been pressed - a decision the environment must not quietly reverse.
+     * The environment is the only source. This used to prefer a row in the
+     * settings table, which meant a working account token was pasted into the
+     * admin panel and then lived in the database - readable by any admin and
+     * present in every dump. INSTAGRAM_ACCESS_TOKEN in .env is now the whole
+     * story, and {@see \App\Models\Setting::ENV_ONLY_KEYS} refuses the row.
      */
     public function token(): ?string
     {
-        if (Setting::isSet(self::TOKEN_KEY)) {
-            $saved = trim((string) Setting::get(self::TOKEN_KEY, ''));
-
-            return $saved === '' ? null : $saved;
-        }
-
         $fromEnv = trim((string) config('services.instagram.access_token'));
 
         return $fromEnv === '' ? null : $fromEnv;
@@ -398,57 +392,14 @@ class InstagramReelService
         return ['ok' => true, 'added' => $added, 'updated' => $updated, 'removed' => $removed, 'skipped' => $skipped];
     }
 
-    /**
-     * Long-lived tokens last 60 days. This buys another 60.
-     *
-     * Worth knowing: Instagram refuses to refresh a token younger than 24
-     * hours, and one that has already expired cannot be refreshed at all - it
-     * has to be reissued by hand.
-     *
-     * @return array{ok:bool,expires_at?:string,error?:string}
+    /*
+     * refreshToken() lived here. It was removed with the move to .env: it can
+     * still ASK Instagram for a new token, but it may not store one, and
+     * showing a credential in the browser so it could be pasted elsewhere is
+     * the thing this change exists to stop. A token that runs out is replaced
+     * in INSTAGRAM_ACCESS_TOKEN on the server; the expiry date is still shown
+     * on the admin screen so it is not a surprise.
      */
-    public function refreshToken(): array
-    {
-        if (! $this->configured()) {
-            return ['ok' => false, 'error' => 'No Instagram access token is saved yet.'];
-        }
-
-        // ig_refresh_token is an Instagram-Login endpoint and there is no
-        // Facebook equivalent to fall back to: a Business or system-user token
-        // is reissued in Meta's own settings, not from here. Saying so beats
-        // relaying "Cannot parse access token", which reads like the saved
-        // token is broken when it is working perfectly well.
-        if ($this->usesFacebookLogin((string) $this->token())) {
-            return ['ok' => false, 'error' => 'This is a Facebook-Login token, which is not refreshed from here. System-user tokens are managed in Meta Business settings - reissue it there and paste the new one in above.'];
-        }
-
-        try {
-            $response = Http::timeout(20)->get(self::IG_LOGIN_BASE.'/refresh_access_token', [
-                'grant_type' => 'ig_refresh_token',
-                'access_token' => $this->token(),
-            ]);
-        } catch (\Throwable $e) {
-            return ['ok' => false, 'error' => 'Could not reach Instagram: '.$e->getMessage()];
-        }
-
-        if ($response->failed()) {
-            return ['ok' => false, 'error' => $this->readableApiError($response)];
-        }
-
-        $new = (string) $response->json('access_token', '');
-
-        if ($new === '') {
-            return ['ok' => false, 'error' => 'Instagram did not return a new token.'];
-        }
-
-        $expiresAt = now()->addSeconds((int) $response->json('expires_in', 60 * 24 * 3600));
-
-        Setting::set(self::TOKEN_KEY, $new, 'string', 'instagram');
-        Setting::set(self::TOKEN_EXPIRES_KEY, $expiresAt->toDateTimeString(), 'string', 'instagram');
-        Cache::forget('settings.group.instagram');
-
-        return ['ok' => true, 'expires_at' => $expiresAt->toDateTimeString()];
-    }
 
     /** Forget the token and drop every reel that came from Instagram. */
     public function disconnect(): int
@@ -461,7 +412,9 @@ class InstagramReelService
             $removed++;
         }
 
-        foreach ([self::TOKEN_KEY, self::USERNAME_KEY, self::SYNCED_AT_KEY, self::TOKEN_EXPIRES_KEY] as $key) {
+        // TOKEN_KEY is not in this list: there is no row to clear any more, and
+        // the token itself is only removed by taking it out of .env.
+        foreach ([self::USERNAME_KEY, self::SYNCED_AT_KEY, self::TOKEN_EXPIRES_KEY] as $key) {
             Setting::set($key, '', 'string', 'instagram');
         }
 

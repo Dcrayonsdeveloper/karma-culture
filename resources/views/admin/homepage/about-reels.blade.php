@@ -62,23 +62,21 @@
             <form action="{{ route('admin.homepage.about-reels.instagram') }}" method="POST" style="display: grid; gap: 0.75rem; grid-template-columns: 1fr; max-width: 640px;">
                 @csrf @method('PUT')
 
+                {{-- The token is no longer pasted here. It is a credential, and a
+                     credential typed into a browser ends up in the database and in
+                     every dump of it - so the account is connected by setting
+                     INSTAGRAM_ACCESS_TOKEN on the server instead. --}}
                 <div>
-                    <label for="ig-token" class="form-label" style="font-size: 12px;">Access token</label>
-                    {{-- The saved token is never rendered back. It is a credential:
-                         printing it into the page would put it in every browser
-                         cache and screen share that ever opens this screen. --}}
-                    <input type="password" name="access_token" id="ig-token" class="form-input" autocomplete="off"
-                           placeholder="{{ $ig['configured'] ? 'Saved - leave blank to keep it' : 'Paste the long-lived Instagram token' }}">
-                    <p style="font-size: 11px; color: #616161; margin-top: 0.25rem;">
-                        @if($ig['token_expires_at'])
-                            Expires {{ $ig['token_expires_at']->format('M d, Y') }}
-                            ({{ $ig['token_expires_at']->isPast() ? 'already expired - paste a new one' : $ig['token_expires_at']->diffForHumans() }}).
-                            An Instagram-Login token lasts 60 days and "Refresh token" below buys another 60, so it need never be reissued.
-                        @else
-                            An Instagram-Login token lasts 60 days and can be refreshed from here before it runs out.
-                        @endif
-                        A Meta Business or system-user token is reissued in Meta's own settings instead, not from here.
-                    </p>
+                    @include('admin.partials.env-managed', [
+                        'vars' => ['INSTAGRAM_ACCESS_TOKEN' => (bool) $ig['configured']],
+                        'help' => 'An Instagram-Login token lasts 60 days. When it runs out the strip stops updating until a new one is put in .env - a Meta Business or system-user token is reissued in Meta Business settings instead.',
+                    ])
+                    @if($ig['token_expires_at'])
+                        <p style="font-size: 11px; color: {{ $ig['token_expires_at']->isPast() ? '#b71c1c' : '#616161' }}; margin-top: 0.4rem;">
+                            Token expires {{ $ig['token_expires_at']->format('M d, Y') }}
+                            ({{ $ig['token_expires_at']->isPast() ? 'already expired - replace it in .env' : $ig['token_expires_at']->diffForHumans() }}).
+                        </p>
+                    @endif
                 </div>
 
                 <div>
@@ -101,11 +99,6 @@
                     <form action="{{ route('admin.homepage.about-reels.instagram.sync') }}" method="POST">
                         @csrf
                         <button type="submit" class="btn btn-primary btn-sm" style="font-size: 12px;">Sync reels now</button>
-                    </form>
-
-                    <form action="{{ route('admin.homepage.about-reels.instagram.refresh') }}" method="POST">
-                        @csrf
-                        <button type="submit" class="btn btn-secondary btn-sm" style="font-size: 12px;">Refresh token</button>
                     </form>
 
                     <form action="{{ route('admin.homepage.about-reels.instagram.disconnect') }}" method="POST"

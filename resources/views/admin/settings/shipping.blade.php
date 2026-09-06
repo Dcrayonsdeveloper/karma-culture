@@ -33,37 +33,17 @@
                             <div class="toggle-track"></div>
                         </label>
                     </div>
-                    <div style="padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;" x-show="enabled" x-collapse
-                         x-data="{ authMode: '{{ old('shiprocket_auth_mode', $settings['shiprocket_auth_mode'] ?? (!empty($settings['shiprocket_api_token'] ?? '') ? 'token' : 'credentials')) }}' }">
-                        <div>
-                            <label class="form-label">Authentication Method</label>
-                            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin-top: 0.25rem;">
-                                <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 13px; cursor: pointer;">
-                                    <input type="radio" name="shiprocket_auth_mode" value="token" x-model="authMode"> API Token
-                                </label>
-                                <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 13px; cursor: pointer;">
-                                    <input type="radio" name="shiprocket_auth_mode" value="credentials" x-model="authMode"> Email &amp; Password
-                                </label>
-                            </div>
-                        </div>
-
-                        <div x-show="authMode === 'token'" x-collapse>
-                            <label class="form-label">API Token <span style="color: #d72c0d;">*</span></label>
-                            <input type="password" name="shiprocket_api_token" value="{{ old('shiprocket_api_token', $settings['shiprocket_api_token'] ?? '') }}" class="form-input" placeholder="Paste your Shiprocket API token">
-                            <p style="font-size: 11px; color: #616161; margin-top: 2px;">Generate from Shiprocket → Settings → API → Create an API User</p>
-                        </div>
-
-                        <div x-show="authMode === 'credentials'" x-collapse style="display: flex; flex-direction: column; gap: 0.75rem;">
-                            <div>
-                                <label class="form-label">Email <span style="color: #d72c0d;">*</span></label>
-                                <input type="email" name="shiprocket_email" value="{{ old('shiprocket_email', $settings['shiprocket_email'] ?? '') }}" class="form-input" placeholder="your@email.com">
-                                <p style="font-size: 11px; color: #616161; margin-top: 2px;">Your Shiprocket account login email</p>
-                            </div>
-                            <div>
-                                <label class="form-label">Password <span style="color: #d72c0d;">*</span></label>
-                                <input type="password" name="shiprocket_password" value="{{ old('shiprocket_password', $settings['shiprocket_password'] ?? '') }}" class="form-input" placeholder="Enter password">
-                            </div>
-                        </div>
+                    <div style="padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;" x-show="enabled" x-collapse>
+                        @include('admin.partials.env-managed', [
+                            'vars' => [
+                                'SHIPROCKET_API_TOKEN' => (string) config('services.shiprocket.api_token', '') !== '',
+                                'SHIPROCKET_EMAIL'     => (string) config('services.shiprocket.email', '') !== '',
+                                'SHIPROCKET_PASSWORD'  => (string) config('services.shiprocket.password', '') !== '',
+                            ],
+                            'configured' => (string) config('services.shiprocket.api_token', '') !== ''
+                                || ((string) config('services.shiprocket.email', '') !== '' && (string) config('services.shiprocket.password', '') !== ''),
+                            'help' => 'Either set the API token on its own (Shiprocket → Settings → API → Create an API User), or the account email and password.',
+                        ])
 
                         <div>
                             <label class="form-label">Pickup Location</label>
