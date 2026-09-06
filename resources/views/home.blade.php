@@ -98,7 +98,7 @@
             .kk-btn-cream:hover { background: var(--kk-brown); color: var(--kk-cream); }
 
             /* Hero */
-            .kk-hero { position: relative; width: 100%; overflow: hidden; background: var(--kk-brown-darker); }
+            .kk-hero { position: relative; width: 100%; overflow: hidden; /* background: var(--kk-brown-darker); */ }
             /* The slide's box: one ratio per breakpoint, the same for every
                slide in the carousel, and never the media's own.
 
@@ -111,11 +111,25 @@
 
             /* Tile cards (Category / Aesthetics / Occasions) */
             .kk-tile { position: relative; display: block; overflow: hidden; border-radius: 4px; color: var(--kk-cream); text-decoration: none; background: var(--kk-cream-dark); aspect-ratio: 4/5; }
-            /* The tile is a .kk-media frame, so the size and the fit of the picture
-               come from there: a poster or an off-ratio shot is shown whole over a
-               blurred copy of itself instead of losing its edges to the 4/5 crop.
-               The zoom is aimed at the subject only - scaling the backdrop back down
-               would pull its blurred edge inside the frame. */
+            /* The tile is a .kk-media frame, but it opts out of that frame's fit,
+               the way .kk-hero-media does further down.
+
+               .kk-media contains its subject and fills the leftover margin with a
+               blurred copy of itself, which is right for a product shot that
+               arrives in whatever shape the supplier sent. A category tile is not
+               that: it is a fashion shot chosen for this rail, and the backdrop
+               only ever showed up as a soft halo around an off-ratio file. Cover
+               fills the 4/5 frame with the picture itself, so there is no margin
+               left to fill, no second copy of the image to fetch and decode, and
+               the blurred <img> is gone from the markup below.
+
+               Repeating .kk-media in the selector is what makes it stick: app.css's
+               `.kk-media > img:not(.kk-media__fill)` is (0,2,1), so a plain
+               `.kk-tile > img:not(...)` only ties it and would be left depending on
+               which stylesheet the page happens to emit last. (0,3,1) wins outright
+               - the same reasoning spelled out at .kk-hero-media below. */
+            .kk-media.kk-tile > img:not(.kk-media__fill),
+            .kk-media.kk-tile > video:not(.kk-media__fill) { object-fit: cover; }
             .kk-tile > img:not(.kk-media__fill),
             .kk-tile > video:not(.kk-media__fill) { transition: transform .5s ease; }
             .kk-tile:hover > img:not(.kk-media__fill),
@@ -1218,6 +1232,17 @@
             .kk-hero-link,
             .kk-hero-media { position: absolute; inset: 0; }
 
+            /* No ground colour under the hero. .kk-media paints cream and
+               .kk-media--dark paints it brown, which is right for a frame that
+               contains its subject and leaves margin to fill; this one crops edge
+               to edge (see below), so the colour was only ever a flash before the
+               banner painted.
+
+               (0,2,0) beats .kk-media--dark's (0,1,0), and :not(.is-broken) keeps
+               it clear of .kk-media.is-broken - equal specificity, and that rule
+               IS the designed surface for a banner that fails to load. */
+            .kk-media.kk-hero-media:not(.is-broken) { background: none; }
+
             /* The one frame in the store that crops. Everywhere else .kk-media shows
                its subject whole over a blurred copy of itself (resources/css/app.css),
                which is right for a product shot that arrives in whatever shape the
@@ -1463,12 +1488,13 @@
                     <div class="kk-catgrid__track" x-ref="track" @scroll.debounce.80ms="update()">
                     @foreach($mensKids as $i => $child)
                         <a href="{{ route('category.show', $child) }}" class="kk-tile kk-media">
-                            {{-- Media well: the subject is contained so a poster or a wide
-                                 shot keeps its edges, and the blurred copy behind it fills
-                                 the 4/5 tile. A file that 404s no longer leaves a flat
-                                 rectangle with the name pill floating over nothing - the
-                                 runtime marks the frame .is-broken and it gets the same
-                                 designed wash as a subcategory with no picture at all. --}}
+                            {{-- Media well: the picture is cropped to fill the 4/5 tile
+                                 (object-fit: cover, set on .kk-tile above), so it is the
+                                 only layer here - no blurred backdrop copy behind it. A
+                                 file that 404s still does not leave a flat rectangle with
+                                 the name pill floating over nothing: the runtime marks the
+                                 frame .is-broken and it gets the same designed wash as a
+                                 subcategory with no picture at all. --}}
                             @if($child->video_url)
                                 @php $tileVideo = str_starts_with($child->video_url, 'http') ? $child->video_url : asset_v($child->video_url); @endphp
                                 {{-- No blurred copy behind a tile video: these rails run up
@@ -1479,7 +1505,6 @@
                                 <video src="{{ $tileVideo }}" autoplay muted loop playsinline preload="metadata"></video>
                             @elseif($child->image_url)
                                 @php $tileImage = asset_v('storage/' . $child->image_url); @endphp
-                                <img class="kk-media__fill" src="{{ $tileImage }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
                                 <img src="{{ $tileImage }}" alt="{{ $child->name }}" loading="lazy">
                             @else
                                 <div class="w-full h-full" style="background: linear-gradient(135deg, {{ $mensTints[$i % count($mensTints)] }} 0%, var(--kk-brown-dark) 100%);"></div>
@@ -1524,7 +1549,6 @@
                                 <video src="{{ $tileVideo }}" autoplay muted loop playsinline preload="metadata"></video>
                             @elseif($child->image_url)
                                 @php $tileImage = asset_v('storage/' . $child->image_url); @endphp
-                                <img class="kk-media__fill" src="{{ $tileImage }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
                                 <img src="{{ $tileImage }}" alt="{{ $child->name }}" loading="lazy">
                             @else
                                 <div class="w-full h-full" style="background: linear-gradient(135deg, {{ $womensTints[$i % count($womensTints)] }} 0%, var(--kk-brown-dark) 100%);"></div>
@@ -1679,6 +1703,11 @@
             // The ?? is for a render that did not come through the controller -
             // an error page, a partial rendered in isolation - so the section
             // degrades to the stored clips instead of throwing on the @if below.
+            //
+            // DO NOT drop it back to a bare query. HomeController is what fetches
+            // the live reels; without the variable this line ignores them and the
+            // strip silently shows the stored clips instead, which is exactly how
+            // this regressed once already.
             $aboutReels = $aboutReels ?? \App\Models\AboutReel::active()->ordered()->get();
         @endphp
         @if($aboutVisible)
