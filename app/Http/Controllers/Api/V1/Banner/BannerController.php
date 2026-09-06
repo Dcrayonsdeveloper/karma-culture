@@ -44,19 +44,8 @@ class BannerController extends Controller
             ->when($filters['position'] ?? null, fn ($query, $position) => $query->position($position))
             ->orderBy('priority')
             ->get()
-            ->filter(fn (Banner $banner) => $banner->has_media);
-
-        // A hero is drawn as one carousel in one box, so which file a phone gets
-        // is decided across the whole hero rather than per banner - see
-        // Banner::heroFrames(). The website makes this call in its stylesheet;
-        // reading it here is what keeps the app and the site showing the same
-        // crop of the same campaign, which is the promise frameFor() makes.
-        $heroUsesPhoneBox = Banner::heroUsesPhoneBox(
-            $banners->where('position', 'hero')
-        );
-
-        $banners = $banners
-            ->map(fn (Banner $banner) => $this->payload($banner, $heroUsesPhoneBox))
+            ->filter(fn (Banner $banner) => $banner->has_media)
+            ->map(fn (Banner $banner) => $this->payload($banner))
             // Without this the filtered-out rows leave gaps in the keys and the
             // list encodes as a JSON object, which every typed client rejects.
             ->values();
@@ -77,11 +66,8 @@ class BannerController extends Controller
      *
      * @return array<string, mixed>
      */
-    private function payload(Banner $banner, bool $heroUsesPhoneBox): array
+    private function payload(Banner $banner): array
     {
-        $frames = $banner->heroFrames($banner->position === 'hero' ? $heroUsesPhoneBox : true);
-        $phoneBox = $heroUsesPhoneBox ? Banner::HERO_MOBILE_SIZE : Banner::HERO_DESKTOP_SIZE;
-
         return [
             'id' => $banner->id,
             'title' => $banner->title,
@@ -111,18 +97,8 @@ class BannerController extends Controller
             // native client that reimplemented the chain would drift from the
             // website the first time the order of preference changed; reading
             // these two keys, it cannot.
-            //
-            // For a hero that also means the carousel-wide box: a banner whose
-            // phone still cannot be shown uncropped is sent its desktop file for
-            // both screens, exactly as the website sends it.
-            ...$frames,
-
-            // And the box those frames are meant to be drawn in, so a client
-            // sizes its hero the way the stylesheet does instead of assuming
-            // HERO_MOBILE_SIZE and cropping what it is sent.
-            'phone_box' => $banner->position === 'hero'
-                ? ['width' => $phoneBox[0], 'height' => $phoneBox[1]]
-                : null,
+            'desktop' => $banner->frameFor('desktop'),
+            'mobile' => $banner->frameFor('mobile'),
         ];
     }
 }

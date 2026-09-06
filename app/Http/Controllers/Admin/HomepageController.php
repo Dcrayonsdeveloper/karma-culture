@@ -110,6 +110,7 @@ class HomepageController extends Controller
     {
         $settings = [
             'site_logo' => Setting::get('site_logo', ''),
+            'site_favicon' => Setting::get('site_favicon', ''),
             'site_name' => Setting::get('site_name', 'Karmaa Kulture'),
             'site_tagline' => Setting::get('site_tagline', 'Unlock Your Natural Beauty'),
             'site_description' => Setting::get('site_description', ''),
@@ -158,6 +159,7 @@ class HomepageController extends Controller
             'whatsapp_number' => V::mobile(required: false),
             'contact_address' => V::addressLine(required: false, max: 500),
             'site_logo' => V::image(required: false, maxKb: 2048, allowGif: false),
+            'site_favicon' => V::image(required: false, maxKb: 1024, allowGif: false),
         ];
 
         foreach (['facebook', 'instagram', 'twitter', 'linkedin', 'youtube', 'tiktok', 'pinterest'] as $network) {
@@ -197,6 +199,16 @@ class HomepageController extends Controller
 
             if ($previousLogo && $previousLogo !== $path && ! str_starts_with($previousLogo, 'http')) {
                 Storage::disk('public')->delete($previousLogo);
+            }
+        }
+
+        if ($request->hasFile('site_favicon')) {
+            $previousFavicon = Setting::get('site_favicon', '');
+            $path = $request->file('site_favicon')->store('branding', 'public');
+            Setting::set('site_favicon', $path, 'string', 'homepage');
+
+            if ($previousFavicon && $previousFavicon !== $path && ! str_starts_with($previousFavicon, 'http')) {
+                Storage::disk('public')->delete($previousFavicon);
             }
         }
 

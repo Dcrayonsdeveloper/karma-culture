@@ -116,7 +116,7 @@
     .pdp-wrapper { background: #EFE2CB; }
     .kk-pdp { display: grid; gap: 28px; padding: 24px 0 56px; }
     @media (min-width: 1024px) {
-        .kk-pdp { grid-template-columns: 1.2fr 1fr; gap: 56px; align-items: start; }
+        .kk-pdp { grid-template-columns: 45% 1fr; gap: 40px; align-items: start; }
     }
 
     /* ===== Gallery - thumbnail rail + main image ===== */
@@ -568,6 +568,8 @@
                                  x-show="currentImage === {{ $i }}" @if($i !== 0) x-cloak @endif>
                                 <img src="{{ $m['url'] }}" alt="{{ $product->name }}"
                                      data-fallback="{{ $noMediaFallback }}"
+                                     onerror="this.onerror=null;this.src='{{ $noMediaFallback }}';"
+                                     style="max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain;"
                                      sizes="(max-width: 1024px) 100vw, 50vw" decoding="async"
                                      loading="{{ $i === 0 ? 'eager' : 'lazy' }}" @if($i === 0) fetchpriority="high" @endif>
                                 {!! $mediaFallback !!}

@@ -251,6 +251,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
             Route::resource('blog-posts', BlogPostController::class)->except(['show']);
             Route::put('/blog-posts/{blogPost}/toggle-status', [BlogPostController::class, 'toggleStatus'])->name('blog-posts.toggle-status');
+            Route::post('/blog-posts/import', [BlogPostController::class, 'import'])->name('blog-posts.import');
+            Route::get('/blog-posts/template/download', [BlogPostController::class, 'downloadTemplate'])->name('blog-posts.template');
 
             Route::prefix('reviews')->name('reviews.')->group(function () {
                 Route::get('/', [ReviewController::class, 'index'])->name('index');

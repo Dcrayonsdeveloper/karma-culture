@@ -70,4 +70,8 @@ return [
         'whatsapp_phone_number_id' => env('META_WHATSAPP_PHONE_NUMBER_ID'),
     ],
 
+    'instagram' => [
+        'access_token' => env('INSTAGRAM_ACCESS_TOKEN'),
+    ],
+
 ];

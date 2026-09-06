@@ -102,60 +102,12 @@
             /* The slide's box: one ratio per breakpoint, the same for every
                slide in the carousel, and never the media's own.
 
-               A video-led slide used to opt out of this and take its height
-               from the file, so the hero stood 370px tall on the strip the
-               store ships with and 1008px on the clip beside it, lurching
-               between the two every six seconds - while an image slide, pinned
-               to the strip ratio, showed its picture small in the middle of a
-               blurred field. Both shapes now come from Banner's constants,
-               which is also what the admin screen recommends uploading, so
-               artwork at that size fills the box with nothing cropped at all;
-               anything else is centre-cropped to it - see .kk-hero-media in the
-               hero's own stylesheet further down the page. */
-            .kk-hero-slide {
-                position: relative; width: 100%; overflow: hidden;
-                aspect-ratio: {{ \App\Models\Banner::HERO_DESKTOP_SIZE[0] }} / {{ \App\Models\Banner::HERO_DESKTOP_SIZE[1] }};
-            }
-            @php
-                /* Which shape the phone box should be.
-                
-                   frameFor('mobile') falls back to the DESKTOP file when a banner
-                   carries no phone artwork of its own, and almost none do. So the
-                   3:2 phone box was not framing phone artwork at all - it was
-                   cropping a 3.85:1 strip down to 39% of its width, which is the
-                   banner arriving on a phone with both its ends cut off. The box
-                   has to follow the file that is actually drawn, not the device
-                   drawing it.
-                
-                   Still ONE value for the whole hero rather than one per slide:
-                   slides that size themselves individually are what made the
-                   carousel lurch as it advanced, and that stays fixed. The phone
-                   box only narrows to 3:2 when EVERY visible banner has its own
-                   phone artwork to fill it. If even one would fall back to its
-                   desktop file, the whole hero keeps the desktop shape - every
-                   slide is then drawn at the proportions of the file inside it,
-                   and nothing is cropped on either breakpoint.
-                
-                   The store that has added no banners at all lands here too: the
-                   clip it ships with is 1426x370, so it gets the desktop box and
-                   plays whole on a phone. */
-                $kkPhoneBox = \App\Models\Banner::heroPhoneBox($banners ?? collect());
-
-                /* And when that answer IS the desktop shape - the store with no
-                   banners, or any hero where some slide has no phone artwork -
-                   the override is not written at all, rather than restating the
-                   base rule under a media query. A phone then simply inherits
-                   the slide's own ratio. Anyone reading the computed styles in
-                   devtools sees one rule deciding the hero's shape instead of
-                   two identical ones, which is how the original 3:2 override
-                   went unnoticed for so long. */
-                $kkPhoneOverride = $kkPhoneBox !== \App\Models\Banner::HERO_DESKTOP_SIZE;
-            @endphp
-            @if($kkPhoneOverride)
-            @media (max-width: 767px) {
-                .kk-hero-slide { aspect-ratio: {{ $kkPhoneBox[0] }} / {{ $kkPhoneBox[1] }}; }
-            }
-            @endif
+               The slide's box now lives in app.css, keyed off a `has-mobile-media`
+               class this page puts on each slide: 16:9 for a banner that has only
+               desktop artwork, 3:4 on phones for one that carries its own. Each
+               slide is therefore drawn at the proportions of the file inside it,
+               which is what stops the banner arriving on a phone with its ends
+               cropped off - see .kk-hero-media further down for the fit. */
 
             /* Tile cards (Category / Aesthetics / Occasions) */
             .kk-tile { position: relative; display: block; overflow: hidden; border-radius: 4px; color: var(--kk-cream); text-decoration: none; background: var(--kk-cream-dark); aspect-ratio: 4/5; }
@@ -171,10 +123,10 @@
             /* Above the media, which the frame lifts to z-index 1. */
             .kk-tile-overlay { position: absolute; inset: 0; z-index: 2; background: linear-gradient(to top, rgba(45,24,16,.72) 0%, rgba(45,24,16,.15) 45%, transparent 70%); }
             .kk-tile-label { position: absolute; left: 0; right: 0; bottom: 18px; z-index: 2; text-align: center; }
-            .kk-tile-label .pill { display: inline-block; background: var(--kk-brown-dark); color: var(--kk-cream); padding: 8px 22px; border-radius: 999px; font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase; font-weight: 600; }
-            .kk-tile-label .kk-tile-pill-lg { padding: 12px 36px; font-size: 13px; letter-spacing: 0.32em; }
+            .kk-tile-label .pill { display: inline-block; background: var(--kk-brown-dark); color: var(--kk-cream); padding: 6px 18px; border-radius: 999px; font-size: 9px; letter-spacing: 0.28em; text-transform: uppercase; font-weight: 600; }
+            .kk-tile-label .kk-tile-pill-lg { padding: 10px 29px; font-size: 10px; letter-spacing: 0.32em; }
             .kk-tile-banner { aspect-ratio: 16/9; }
-            .kk-tile-gender { aspect-ratio: 3/4; }
+            .kk-tile-gender { aspect-ratio: 4/5; }
             @media (min-width: 768px) { .kk-tile-gender { aspect-ratio: 4/5; } }
 
             /* ===== Category grid - uniform equal-size cards (Men's) ===== */
@@ -757,6 +709,32 @@
             .kk-newsletter-form button { background: var(--kk-brown-dark); color: var(--kk-cream); padding: 10px 24px; border-radius: 999px; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 700; border: none; cursor: pointer; }
             .kk-newsletter-form button:hover { background: var(--kk-brown); }
 
+            /* Instagram Feed - Jikra style horizontal scroll */
+            .kk-instagram { padding: 48px 0; background: #faf9f7; }
+            .kk-instagram__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; padding: 0 16px; }
+            .kk-instagram__title { display: flex; align-items: center; gap: 12px; }
+            .kk-instagram__title svg { width: 32px; height: 32px; color: #E1306C; }
+            .kk-instagram__title h2 { font-family: var(--kk-display); font-size: 20px; color: var(--kk-text); margin: 0; }
+            .kk-instagram__title span { font-size: 14px; color: var(--kk-text-muted); font-weight: 500; }
+            .kk-instagram__viewall { font-size: 13px; color: var(--kk-text); text-decoration: none; display: flex; align-items: center; gap: 4px; }
+            .kk-instagram__viewall:hover { color: #E1306C; }
+            .kk-instagram__viewall svg { width: 16px; height: 16px; }
+            .kk-instagram__scroll { display: flex; gap: 12px; overflow-x: auto; padding: 0 16px 16px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+            .kk-instagram__scroll::-webkit-scrollbar { display: none; }
+            .kk-instagram__item { position: relative; flex-shrink: 0; width: 180px; aspect-ratio: 9/16; overflow: hidden; border-radius: 12px; background: var(--kk-cream-light); scroll-snap-align: start; }
+            .kk-instagram__item img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease; }
+            .kk-instagram__item:hover img { transform: scale(1.05); }
+            .kk-instagram__play { position: absolute; bottom: 12px; left: 12px; width: 36px; height: 36px; background: rgba(255,255,255,0.95); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+            .kk-instagram__play svg { width: 14px; height: 14px; color: #1f1109; margin-left: 2px; }
+            .kk-instagram__caption { position: absolute; bottom: 0; left: 0; right: 0; padding: 40px 12px 12px; background: linear-gradient(to top, rgba(0,0,0,0.7), transparent); color: #fff; font-size: 11px; line-height: 1.4; }
+            .kk-instagram__follow { display: inline-flex; align-items: center; gap: 8px; margin: 24px auto 0; padding: 12px 28px; background: linear-gradient(135deg, #833AB4, #E1306C, #F77737); color: #fff; border-radius: 999px; font-size: 13px; font-weight: 600; text-decoration: none; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+            .kk-instagram__follow:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(225,48,108,0.35); }
+            .kk-instagram__follow svg { width: 18px; height: 18px; }
+            @media (max-width: 768px) {
+                .kk-instagram__item { width: 150px; }
+                .kk-instagram__header h2 { font-size: 18px; }
+            }
+
             /* Section header (title + view all) shared */
             .kk-section-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 28px; gap: 16px; }
             .kk-section-header .left { display: flex; flex-direction: column; gap: 6px; }
@@ -904,10 +882,6 @@
             $heroBanners = ($banners ?? collect())->values();
             $heroName = $siteSettings['site_name'] ?? 'Karmaa Kulture';
             $heroCount = $heroBanners->count();
-            // The same question the stylesheet asked when it sized the phone box.
-            // If the hero is not drawing that box, no slide may serve artwork cut
-            // for it, or that artwork is what ends up cropped instead.
-            $heroUsesPhoneBox = \App\Models\Banner::heroUsesPhoneBox($heroBanners);
         @endphp
         <section class="kk-hero"
                  @if($heroCount > 1)
@@ -943,12 +917,15 @@
                             // fallback - is decided once, on the model, so the website
                             // and the API cannot reach different conclusions about what
                             // a phone should be sent.
-                            // Both screens' frames, decided on the model so the API
-                            // reaches the same answer - a slide cannot work this out
-                            // alone, because whether its own phone still can be shown
-                            // uncropped depends on the box, and the box is settled
-                            // across the whole carousel.
-                            ['desktop' => $kkDesktop, 'mobile' => $kkMobile] = $banner->heroFrames($heroUsesPhoneBox);
+                            // Straight from the model, per banner. The slide carries a
+                            // `has-mobile-media` class and app.css sizes it from that,
+                            // so each slide's box already matches the file this returns
+                            // - a banner with phone artwork gets a 3:4 box and its own
+                            // still, one without gets the 16:9 box and the desktop file.
+                            // Nothing to suppress, and frameFor stays the single answer
+                            // the API reads too.
+                            $kkDesktop = $banner->frameFor('desktop');
+                            $kkMobile = $banner->frameFor('mobile');
 
                             // The ordinary case: nothing phone-specific, so both screens
                             // resolve to the same file and the slide draws exactly one
@@ -991,7 +968,7 @@
                             // is a painted rectangle.
                             $kkHasCaption = $banner->title || $banner->subtitle || ($banner->button_text && $banner->link);
                         @endphp
-                        <div class="kk-hero-slide"
+                        <div class="kk-hero-slide{{ $banner->has_mobile_media ? ' has-mobile-media' : '' }}"
                              @if($heroCount > 1)
                                  {{-- x-show is applied by Alpine, which arrives as a
                                       deferred module - so until it boots, every slide is
@@ -1312,31 +1289,23 @@
             .kk-hero-caption--right-dark .kk-hero-btn { align-self: flex-end; }
             .kk-hero-caption--center-vignette .kk-hero-btn,
             .kk-hero-caption--full-dark .kk-hero-btn { align-self: center; }
-            /* The caption has to fit the box, and on a phone that box is now the
-               artwork's own shape rather than a 3:2 crop of it - a 3.85:1 strip
-               is 93px tall on a 360px screen. The caption is centred inside a
-               slide with `overflow: hidden`, so anything too tall used to be
-               clipped at BOTH ends: the top of the heading and the bottom of the
-               button, with nothing to scroll.
+            /* The caption sits inside a slide with `overflow: hidden`, and it is
+               centred, so anything taller than the box is clipped at BOTH ends -
+               the top of the heading as well as the bottom of the button. Packing
+               from the top means a caption that outgrows a short hero loses only
+               its tail, which is the half a shopper can do without.
 
-               Three changes make it fit rather than shrink the banner back down:
-               the title starts at 18px instead of 22px on phones (2 lines then
-               cost 38.9px, not 47.5px), it is capped at two lines, and the
-               column packs from the top so any remaining overflow can only ever
-               come off the bottom - never off the first line of the heading. */
+               No size clamping beyond that: the 16:9 box is 219px tall on a 390px
+               phone, which is room enough for the heading this was written for. */
             @media (max-width: 767px) {
                 .kk-hero-caption {
-                    padding: 10px 6vw 0; gap: 8px;
                     justify-content: flex-start;
-                    overflow: hidden;
-                }
-                .kk-hero-title {
-                    font-size: clamp(18px, 4.2vw, 52px);
-                    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+                    padding-top: 10px;
                     overflow: hidden;
                 }
             }
             @media (max-width: 640px) {
+                .kk-hero-caption { padding: 10px 6vw 0; gap: 8px; }
                 .kk-hero-sub { display: none; }
             }
 
@@ -2004,6 +1973,66 @@
                     @endif
                 </div>
                 @endif
+            </div>
+        </section>
+        @endif
+
+        {{-- ============================================
+             INSTAGRAM FEED
+             Shows recent posts from the Karmaa Kulture Instagram account.
+             Only renders if posts are available (token configured and API returns data).
+             Styled like Jikra - horizontal scroll with portrait 9:16 cards.
+             ============================================ --}}
+        @if(!empty($instagramPosts))
+        <section class="kk-instagram">
+            <div class="container mx-auto">
+                <div class="kk-instagram__header">
+                    <div class="kk-instagram__title">
+                        {{-- Instagram gradient icon --}}
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <defs>
+                                <linearGradient id="ig-gradient" x1="0%" y1="100%" x2="100%" y2="0%">
+                                    <stop offset="0%" style="stop-color:#FFDC80"/>
+                                    <stop offset="25%" style="stop-color:#F77737"/>
+                                    <stop offset="50%" style="stop-color:#E1306C"/>
+                                    <stop offset="75%" style="stop-color:#C13584"/>
+                                    <stop offset="100%" style="stop-color:#833AB4"/>
+                                </linearGradient>
+                            </defs>
+                            <rect x="2" y="2" width="20" height="20" rx="5" stroke="url(#ig-gradient)" stroke-width="2" fill="none"/>
+                            <circle cx="12" cy="12" r="4" stroke="url(#ig-gradient)" stroke-width="2" fill="none"/>
+                            <circle cx="17.5" cy="6.5" r="1.5" fill="url(#ig-gradient)"/>
+                        </svg>
+                        <div>
+                            <h2>Follow Us on Instagram</h2>
+                            <span>@karmaakulture</span>
+                        </div>
+                    </div>
+                    <a href="https://instagram.com/karmaakulture" target="_blank" rel="noopener noreferrer" class="kk-instagram__viewall">
+                        View All
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </a>
+                </div>
+                <div class="kk-instagram__scroll">
+                    @foreach($instagramPosts as $post)
+                    <a href="{{ $post['link'] }}" target="_blank" rel="noopener noreferrer" class="kk-instagram__item">
+                        <img src="{{ $post['image'] }}" alt="{{ Str::limit($post['caption'], 50) ?: 'Instagram post' }}" loading="lazy">
+                        {{-- Play button for video feel --}}
+                        <span class="kk-instagram__play">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                        </span>
+                        @if($post['caption'])
+                        <span class="kk-instagram__caption">{{ Str::limit($post['caption'], 60) }}</span>
+                        @endif
+                    </a>
+                    @endforeach
+                </div>
+                <div style="text-align: center;">
+                    <a href="https://instagram.com/karmaakulture" target="_blank" rel="noopener noreferrer" class="kk-instagram__follow">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                        Follow @karmaakulture
+                    </a>
+                </div>
             </div>
         </section>
         @endif

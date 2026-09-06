@@ -44,6 +44,16 @@
                         <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">JPG, PNG or WebP. Max 2MB. Recommended: PNG with transparent background, 200x60px</p>
                     </div>
                     <div>
+                        <label for="site-favicon" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Site Favicon</label>
+                        @if($settings['site_favicon'])
+                            <div style="margin-bottom: 0.5rem;">
+                                <img src="{{ asset_v('storage/' . $settings['site_favicon']) }}" alt="Current Favicon" style="height: 2rem; width: 2rem; object-fit: contain; border: 1px solid #e3e3e3; border-radius: 4px;">
+                            </div>
+                        @endif
+                        <input type="file" name="site_favicon" id="site-favicon" accept="image/jpeg,image/png,image/webp,image/x-icon" class="form-input">
+                        <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">PNG or ICO. Max 1MB. Recommended: Square image, 512x512px minimum</p>
+                    </div>
+                    <div>
                         <label for="site-name" class="form-label" style="font-size: 13px; font-weight: 500; color: #303030;">Site Name</label>
                         <input type="text" name="site_name" id="site-name" value="{{ old('site_name', $settings['site_name']) }}" required minlength="2" maxlength="100" class="form-input">
                     </div>

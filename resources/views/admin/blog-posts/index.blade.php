@@ -4,9 +4,57 @@
     <x-slot name="header">
         <div class="page-header">
             <h1>Blog posts</h1>
-            <a href="{{ route('admin.blog-posts.create') }}" class="btn btn-primary" style="font-size: 13px;">Create blog post</a>
+            <div style="display: flex; gap: 8px;">
+                <button type="button" onclick="document.getElementById('importModal').style.display='flex'" class="btn btn-secondary" style="font-size: 13px;">
+                    <svg style="width: 16px; height: 16px; margin-right: 4px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                    </svg>
+                    Import
+                </button>
+                <a href="{{ route('admin.blog-posts.create') }}" class="btn btn-primary" style="font-size: 13px;">Create blog post</a>
+            </div>
         </div>
     </x-slot>
+
+    {{-- Import Modal --}}
+    <div id="importModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;" onclick="if(event.target === this) this.style.display='none'">
+        <div style="background: #fff; border-radius: 12px; width: 100%; max-width: 480px; margin: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+            <div style="padding: 16px 20px; border-bottom: 1px solid #e3e3e3; display: flex; align-items: center; justify-content: space-between;">
+                <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #303030;">Import Blog Posts</h3>
+                <button type="button" onclick="document.getElementById('importModal').style.display='none'" style="background: none; border: none; cursor: pointer; padding: 4px; color: #616161;">
+                    <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <form action="{{ route('admin.blog-posts.import') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <div style="padding: 20px;">
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 6px;">CSV File</label>
+                        <input type="file" name="csv_file" accept=".csv,.txt" required
+                               style="width: 100%; padding: 8px 12px; font-size: 13px; border: 1px solid #c9cccf; border-radius: 8px; background: #fff;">
+                        <p style="margin: 6px 0 0; font-size: 12px; color: #616161;">Upload a CSV file with blog post data. Max 5MB.</p>
+                    </div>
+                    <div style="background: #f6f6f7; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                        <p style="margin: 0 0 8px; font-size: 13px; font-weight: 500; color: #303030;">CSV Format</p>
+                        <p style="margin: 0 0 8px; font-size: 12px; color: #616161;">Required columns: <strong>title</strong></p>
+                        <p style="margin: 0; font-size: 12px; color: #616161;">Optional: slug, excerpt, content, category, tags, meta_title, meta_description, is_published</p>
+                    </div>
+                    <a href="{{ route('admin.blog-posts.template') }}" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #005bd3; text-decoration: none;">
+                        <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        Download CSV Template
+                    </a>
+                </div>
+                <div style="padding: 12px 20px; border-top: 1px solid #e3e3e3; display: flex; justify-content: flex-end; gap: 8px; background: #fafafa; border-radius: 0 0 12px 12px;">
+                    <button type="button" onclick="document.getElementById('importModal').style.display='none'" class="btn btn-secondary" style="font-size: 13px;">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="font-size: 13px;">Import</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     {{-- Single card with tabs + search + table --}}
     <div class="card" style="overflow: hidden;">
