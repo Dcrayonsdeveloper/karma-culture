@@ -166,6 +166,10 @@
                                 <input type="file" name="images[]" multiple accept="image/jpeg,image/jpg,image/png,image/webp,image/gif" x-ref="galleryInput" style="display: none;" @change="handleGalleryFiles($event.target.files)">
                                 <p class="text-xs font-medium" style="color: #005bd3;">Add images</p>
                                 <p class="text-[11px] mt-0.5" style="color: #616161;">Up to 10 per save, JPG/PNG/WEBP/GIF, max 2MB each</p>
+                                {{-- Printed from the constant the storefront lays out with, so
+                                     the advice and the crop cannot drift apart. --}}
+                                @php $kkImgSize = \App\Models\Product::IMAGE_SIZE; @endphp
+                                <p class="text-[11px] mt-1" style="color: #616161;">Recommended {{ $kkImgSize[0] }} &times; {{ $kkImgSize[1] }} px (3:4 portrait). Images are cropped to fill this shape on the storefront, so keep the product away from the edges.</p>
                             </div>
                             <div class="flex-1 min-w-[45%] border border-dashed rounded-lg p-3 text-center cursor-pointer hover:border-neutral-400 transition-colors" style="border-color: #b5b5b5;"
                                  @click="$refs.videoInput.click()"

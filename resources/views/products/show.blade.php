@@ -120,22 +120,56 @@
     }
 
     /* ===== Gallery - thumbnail rail + main image ===== */
-    .kk-pdp__gallery { display: flex; gap: 14px; align-items: flex-start; }
+    .kk-pdp__gallery {
+        display: flex; gap: 14px; align-items: flex-start;
+        /* ONE height budget for the whole gallery, read by both the rail and the
+           main frame below. They used to carry two independent copies of the
+           same magic number, so changing one silently unaligned their bottom
+           edges. Spent on the frame's WIDTH, never its height - see .kk-pdp__main. */
+        --kk-pdp-frame-h: clamp(320px, calc(100vh - 180px), 620px);
+        /* And the gallery is exactly as wide as the rail plus the frame it
+           holds: 74px rail + 14px gap + the frame's own width cap. Without this
+           the frame's `margin-inline: auto` centres it in whatever track the
+           flex row was given and walks it away from the rail - 117px away in a
+           1.2fr cell on a 1920px screen, with the thumbnails left stranded
+           against the far edge. Sizing the box to its contents means the two
+           are adjacent at every width instead. */
+        max-width: calc(88px + var(--kk-pdp-frame-h) * 3 / 4);
+        margin-inline: auto;
+    }
+    /* A product with a single image renders no rail, so the 88px it reserves
+       would just become slack the frame floats around in.
+       Scoped to the widths where the rail sits BESIDE the image: below 641px the
+       gallery is a column and lifts its cap entirely, and this selector is
+       (0,2,0) against that rule's (0,1,0) - unscoped, it would win and re-cap
+       the column. */
+    @media (min-width: 641px) {
+        .kk-pdp__gallery:not(:has(.kk-pdp__thumbs)) {
+            max-width: calc(var(--kk-pdp-frame-h) * 3 / 4);
+        }
+    }
     .kk-pdp__thumbs {
         display: flex; flex-direction: column; gap: 10px;
-        /* cap to viewport so the (sticky) gallery never overflows the screen */
-        width: 74px; flex-shrink: 0; max-height: min(580px, calc(100vh - 80px)); overflow-y: auto;
+        /* Same budget as the image beside it, so the two stay flush at the bottom. */
+        width: 74px; flex-shrink: 0; max-height: var(--kk-pdp-frame-h); overflow-y: auto;
     }
     .kk-pdp__thumb {
         padding: 0; border: 1px solid #e3d2b3; border-radius: 8px; overflow: hidden;
         background: #fff; cursor: pointer; aspect-ratio: 3/4; transition: border-color .15s ease;
     }
-    /* Contained, so a thumbnail previews the same whole frame that clicking it
-       shows. :not() leaves the blurred .kk-media__fill backdrop on cover. */
-    .kk-pdp__thumb img:not(.kk-media__fill), .kk-pdp__thumb video { width: 100%; height: 100%; object-fit: contain; display: block; }
-    /* The shared 24px blur and 30px glyph are sized for a full card; across a
-       74px tile they flatten to one colour and crowd the frame. */
-    .kk-pdp__thumb .kk-media__fill { filter: blur(10px) saturate(1.2) brightness(.92); }
+    /* Covered, and at the same 3:4 as the main frame - so a thumbnail is a true
+       preview of what clicking it shows. It used to be contain against a 4/5
+       main image, so the rail advertised a different crop, and a different
+       shape, from the one the shopper got.
+
+       No `display` in here. This selector is (0,2,1), the same as app.css's
+       `.kk-media.is-broken > img { display: none }`, and this block renders
+       after app.css - so the `display: block` that used to sit in it won the
+       tie and un-hid the browser's broken-image glyph on a thumbnail that had
+       failed to load. The fit is all this rule was ever for; `display: block`
+       already arrives from app.css for every frame that is not broken. */
+    .kk-pdp__thumb img:not(.kk-media__fill), .kk-pdp__thumb video { width: 100%; height: 100%; object-fit: cover; }
+    /* The 30px glyph is sized for a full card and crowds a 74px tile. */
     .kk-pdp__thumb .kk-media__fallback svg { width: 20px; height: 20px; }
     .kk-pdp__thumb--video { position: relative; }
     /* z-index 2 keeps the badge above the subject, which .kk-media puts on 1. */
@@ -147,14 +181,39 @@
 
     .kk-pdp__main {
         position: relative; flex: 1; min-width: 0;
-        /* cap to viewport height so the pinned (sticky) image is never cut off */
-        aspect-ratio: 4/5; max-height: min(580px, calc(100vh - 80px));
+        aspect-ratio: 3/4;
+        /* The height budget, expressed as a WIDTH.
+        
+           `max-height` was the obvious way to write this and it was the bug: an
+           element cannot honour both `aspect-ratio: 4/5` and a max-height that
+           binds, so the box quietly stopped being 4:5 and became whatever the
+           cap left. On a 1268x623 window the frame computed 396 wide and 443
+           tall - 0.89, not 0.8 - so a contained shot sat letterboxed inside a
+           frame that was no longer the shape anything had been fitted to, and a
+           covered one would crop by an amount nothing could predict.
+        
+           Capping the WIDTH instead constrains exactly the same height through
+           the ratio - a 3:4 box 435px wide is 580px tall - and the ratio then
+           holds at every size, so the crop is always just the file's own excess.
+           Any change to the height budget goes in the multiplication, not into a
+           second competing constraint. */
+        max-width: calc(var(--kk-pdp-frame-h) * 3 / 4);
+        margin-inline: auto;
         border-radius: 10px; overflow: hidden; background: #fff; cursor: zoom-in;
     }
     /* One .kk-media frame per slide rather than one around the whole stack: the
        error handler marks the frame it finds, so a single missing file would
        otherwise blank out every other image in the gallery. */
+    /* The image slide is a <button>, because it opens the zoom - and the zoom is
+       the whole reason cropping to 3:4 is safe: it is object-fit: contain, so the
+       complete photograph is always one activation away. As a <div> with @click it
+       was reachable by mouse only, which left a keyboard or screen-reader shopper
+       with no route to the parts of the picture the crop removes. A <button> gets
+       Enter, Space and focus for free; these three properties take the UA chrome
+       back off. The video slide stays a plain div - it has its own controls. */
     .kk-pdp__slide { position: absolute; inset: 0; background: #fff; }
+    button.kk-pdp__slide { padding: 0; border: 0; font: inherit; width: 100%; text-align: inherit; }
+    button.kk-pdp__slide:focus-visible { outline: 2px solid #2d1810; outline-offset: 2px; }
     .kk-pdp__slide--video { background: #000; cursor: default; }
     .kk-pdp__counter {
         position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
@@ -174,15 +233,54 @@
     .kk-pdp__navbtn--prev { left: 10px; }
     .kk-pdp__navbtn--next { right: 10px; }
     @media (max-width: 640px) { .kk-pdp__navbtn { display: none; } }  /* mobile uses swipe */
+    /* Tablets keep the thumb rail beside the image, but the page is one column
+       there, so the gallery would otherwise stretch the full width of a 768px
+       page and leave the rail stranded against the far edge. Cap and centre the
+       rail-plus-image as one group. */
+    @media (min-width: 641px) and (max-width: 1023px) {
+        .kk-pdp__gallery {
+            /* Only the budget changes here - the base rule already sizes the box
+               to the rail plus the frame. No sticky in this band, so the budget
+               has only to leave the buy box reachable below the fold. */
+            /* Floored: a landscape phone is 641px+ wide, so it lands in this band
+               with only ~390px of height, and an unfloored budget shrank the frame
+               to 142px wide. Better to overflow the fold slightly on a screen that
+               is scrolled anyway than to serve a thumbnail. */
+            --kk-pdp-frame-h: clamp(280px, calc(100vh - 200px), 680px);
+            width: 100%;
+        }
+    }
+
     @media (max-width: 640px) {
         .kk-pdp__gallery { flex-direction: column-reverse; }
-        .kk-pdp__thumbs { flex-direction: row; width: 100%; max-height: none; overflow-x: auto; }
+        /* Capped to the frame's own width, not the column's: the frame is held
+           back by the height budget on a short screen, and a full-width rail
+           under a narrower image overhung it by ~24px a side on an iPhone. */
+        .kk-pdp__thumbs {
+            flex-direction: row; width: 100%; max-height: none; overflow-x: auto;
+            max-width: calc(var(--kk-pdp-frame-h) * 3 / 4); margin-inline: auto;
+        }
         .kk-pdp__thumb { width: 60px; flex-shrink: 0; }
-        /* flex:none + width:100% so aspect-ratio drives the height in the
-           column layout (flex:1 would collapse it to 0 height on mobile).
-           Cap to 45vh so the image stays compact on phones and the
-           title/price/size sit near the top of the screen. */
-        .kk-pdp__main { aspect-ratio: 3/4; max-height: 45vh; flex: none; width: 100%; }
+        /* flex:none + width:100% so the ratio drives the height in the column
+           layout (flex:1 would collapse it to 0 height on a phone).
+        
+           The height budget is a max-width here for the same reason as above -
+           the old `max-height: 45vh` against `aspect-ratio: 3/4` meant the frame
+           was not 3:4 on any phone it actually bound on. 62vh is chosen so the
+           width wins on an ordinary handset (a 390x844 phone fills the column
+           and the image is 56vh tall) and only a short screen is held back by
+           the height, where it gives up a little width rather than its shape. */
+        /* svh, not vh: vh is the TALLEST the viewport gets, so a frame sized in
+           vh is measured against a screen the shopper cannot see until the URL
+           bar scrolls away. The vh line stays first as the fallback. */
+        /* Column layout: the rail sits under the image, not beside it, so the
+           rail-plus-frame width cap does not apply and the gallery spans the
+           column. */
+        .kk-pdp__gallery { --kk-pdp-frame-h: 62vh; --kk-pdp-frame-h: 62svh; max-width: none; }
+        .kk-pdp__main {
+            aspect-ratio: 3/4; flex: none; width: 100%;
+            max-width: calc(var(--kk-pdp-frame-h) * 3 / 4);
+        }
     }
 
     /* ===== Info column - scrolls normally ===== */
@@ -419,20 +517,18 @@
                 @if(count($media) > 1)
                     <div class="kk-pdp__thumbs">
                         @foreach($media as $i => $m)
-                            <button type="button" class="kk-media kk-pdp__thumb {{ $m['type'] === 'video' ? 'kk-pdp__thumb--video' : '' }}"
+                            <button type="button" class="kk-media kk-media--cover kk-pdp__thumb {{ $m['type'] === 'video' ? 'kk-pdp__thumb--video' : '' }}"
                                     :class="currentImage === {{ $i }} ? 'is-active' : ''"
                                     @click="currentImage = {{ $i }}"
                                     aria-label="View media {{ $i + 1 }}">
                                 @if($m['type'] === 'video')
                                     @if($m['thumb'])
-                                        <img class="kk-media__fill" src="{{ $m['thumb'] }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
                                         <img src="{{ $m['thumb'] }}" alt="{{ $product->name }} - video {{ $i + 1 }}" loading="lazy" data-fallback="{{ $noMediaFallback }}">
                                     @else
                                         <video src="{{ $m['url'] }}#t=0.1" muted playsinline preload="metadata"></video>
                                     @endif
                                     <span class="kk-pdp__thumb-play" aria-hidden="true">&#9654;</span>
                                 @else
-                                    <img class="kk-media__fill" src="{{ $m['url'] }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
                                     <img src="{{ $m['url'] }}" alt="{{ $product->name }} - thumbnail {{ $i + 1 }}" loading="lazy" data-fallback="{{ $noMediaFallback }}">
                                 @endif
                                 {!! $mediaFallback !!}
@@ -454,20 +550,28 @@
                                 {!! $mediaFallback !!}
                             </div>
                         @else
-                            {{-- The whole photo, over a blurred copy of itself. A cropped hero
-                                 is the worst version of this bug: whatever the 4/5 frame cut
-                                 off is the one thing the shopper came here to look at. --}}
-                            <div class="kk-media kk-pdp__slide"
+                            {{-- The photo fills the 3:4 frame. Cropping here is safe in the
+                                 one place on the site where it is least obviously safe,
+                                 because this frame is the handle on the whole picture:
+                                 clicking it opens the zoom, which is object-fit: contain.
+                                 So the shopper sees a tidy portrait in the page and the
+                                 complete photograph on demand.
+                
+                                 No blurred backdrop: it has nothing to fill behind an
+                                 opaque cover, and it was a second full-size decode of the
+                                 largest image on the page - the one the browser measures
+                                 LCP against. --}}
+                            <button type="button"
+                                 class="kk-media kk-media--cover kk-pdp__slide"
                                  @click="showZoom = true"
+                                 aria-label="View {{ $product->name }} full size ({{ $i + 1 }} of {{ count($media) }})"
                                  x-show="currentImage === {{ $i }}" @if($i !== 0) x-cloak @endif>
-                                <img class="kk-media__fill" src="{{ $m['url'] }}" alt="" aria-hidden="true"
-                                     loading="{{ $i === 0 ? 'eager' : 'lazy' }}" decoding="async">
                                 <img src="{{ $m['url'] }}" alt="{{ $product->name }}"
                                      data-fallback="{{ $noMediaFallback }}"
                                      sizes="(max-width: 1024px) 100vw, 50vw" decoding="async"
                                      loading="{{ $i === 0 ? 'eager' : 'lazy' }}" @if($i === 0) fetchpriority="high" @endif>
                                 {!! $mediaFallback !!}
-                            </div>
+                            </button>
                         @endif
                     @endforeach
                     @if(count($media) > 1)

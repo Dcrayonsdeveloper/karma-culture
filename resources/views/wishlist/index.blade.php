@@ -21,7 +21,10 @@
             <div x-show="$store.wishlist.isLoading" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 <template x-for="i in 4" :key="i">
                     <div class="bg-white rounded-xl border border-neutral-100 overflow-hidden animate-pulse">
-                        <div class="aspect-[4/5] bg-neutral-200"></div>
+                        {{-- Same ratio as the real tile below. A skeleton in a
+                             different shape is a guaranteed layout jump the moment
+                             the fetch resolves. --}}
+                        <div class="aspect-[3/4] bg-neutral-200"></div>
                         <div class="p-3 space-y-2">
                             <div class="h-3 w-3/4 bg-neutral-200 rounded"></div>
                             <div class="h-3 w-1/3 bg-neutral-200 rounded"></div>
@@ -35,13 +38,12 @@
             <div x-show="!$store.wishlist.isLoading && $store.wishlist.items.length > 0" x-cloak class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 <template x-for="item in $store.wishlist.items" :key="item.id">
                     <div class="bg-white rounded-xl border border-neutral-100 overflow-hidden group flex flex-col">
-                        {{-- The tile stays 4:5 so the grid lines up, but the saved
-                             product is shown whole rather than cropped to that ratio -
-                             a wishlist is the one place the customer is checking they
-                             saved the right thing. The blurred copy behind it fills
-                             what contain leaves over. --}}
-                        <a :href="item.url" class="kk-media kk-media--zoom relative block aspect-[4/5] overflow-hidden">
-                            <img class="kk-media__fill" :src="item.image" alt="" aria-hidden="true" loading="lazy" decoding="async">
+                        {{-- 3:4 portrait, filled - the same tile the listing grid and
+                             the home page draw, so a saved product looks here exactly
+                             as it looked where it was saved from. Recognising it is the
+                             whole job of this page, and a tile that changed shape and
+                             framing between the two was working against that. --}}
+                        <a :href="item.url" class="kk-media kk-media--zoom kk-media--cover relative block aspect-[3/4] overflow-hidden">
                             <img :src="item.image" :alt="item.name" data-fallback="{{ $placeholder }}" loading="lazy" decoding="async">
                             <span class="kk-media__fallback" aria-hidden="true">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">

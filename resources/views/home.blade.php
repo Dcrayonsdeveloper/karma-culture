@@ -116,8 +116,33 @@
                 position: relative; width: 100%; overflow: hidden;
                 aspect-ratio: {{ \App\Models\Banner::HERO_DESKTOP_SIZE[0] }} / {{ \App\Models\Banner::HERO_DESKTOP_SIZE[1] }};
             }
+            @php
+                /* Which shape the phone box should be.
+                
+                   frameFor('mobile') falls back to the DESKTOP file when a banner
+                   carries no phone artwork of its own, and almost none do. So the
+                   3:2 phone box was not framing phone artwork at all - it was
+                   cropping a 3.85:1 strip down to 39% of its width, which is the
+                   banner arriving on a phone with both its ends cut off. The box
+                   has to follow the file that is actually drawn, not the device
+                   drawing it.
+                
+                   Still ONE value for the whole hero rather than one per slide:
+                   slides that size themselves individually are what made the
+                   carousel lurch as it advanced, and that stays fixed. The phone
+                   box only narrows to 3:2 when EVERY visible banner has its own
+                   phone artwork to fill it. If even one would fall back to its
+                   desktop file, the whole hero keeps the desktop shape - every
+                   slide is then drawn at the proportions of the file inside it,
+                   and nothing is cropped on either breakpoint.
+                
+                   The store that has added no banners at all lands here too: the
+                   clip it ships with is 1426x370, so it gets the desktop box and
+                   plays whole on a phone. */
+                $kkPhoneBox = \App\Models\Banner::heroPhoneBox($banners ?? collect());
+            @endphp
             @media (max-width: 767px) {
-                .kk-hero-slide { aspect-ratio: {{ \App\Models\Banner::HERO_MOBILE_SIZE[0] }} / {{ \App\Models\Banner::HERO_MOBILE_SIZE[1] }}; }
+                .kk-hero-slide { aspect-ratio: {{ $kkPhoneBox[0] }} / {{ $kkPhoneBox[1] }}; }
             }
 
             /* Tile cards (Category / Aesthetics / Occasions) */
@@ -448,11 +473,22 @@
             @media (max-width: 1024px) { .kk-product-grid { grid-template-columns: repeat(3, 1fr); } }
             @media (max-width: 640px)  { .kk-product-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
             .kk-product { background: var(--kk-cream-lighter); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; }
-            .kk-product__media { position: relative; aspect-ratio: 4/5; overflow: hidden; background: var(--kk-cream-dark); }
-            .kk-product__media img { width: 100%; height: 100%; object-fit: contain; display: block; transition: transform .5s; }
-            /* The backdrop is the one layer that still covers - filling the frame
-               around a contained shot is the whole point of it. */
-            .kk-product__media img.kk-media__fill { object-fit: cover; }
+            /* CURRENTLY UNUSED, like its twin in app.css - no view renders
+               `class="kk-product"`; the home rails below use the product-card
+               component instead. Kept in step with that twin at 3:4 all the
+               same, because two copies of one selector that disagree is how the
+               home page ends up drawing a different card from the shop the
+               moment either is revived. (.kk-product-grid, just above, IS live.)
+
+               Do not name a component in angle brackets anywhere in this file,
+               not even in a comment like this one. Blade's component compiler
+               runs over the raw text, so an x-something tag inside a style
+               block or a CSS comment still opens a component that never closes,
+               and the page then dies with "unexpected end of file, expecting
+               endif". artisan view:cache does NOT catch it - the broken PHP is
+               written out happily and only fails when the view is included. */
+            .kk-product__media { position: relative; aspect-ratio: 3/4; overflow: hidden; background: var(--kk-cream-dark); }
+            .kk-product__media img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s; }
             .kk-product:hover .kk-product__media img:not(.kk-media__fill) { transform: scale(1.03); }
             .kk-product__tag { position: absolute; top: 9px; left: 9px; background: var(--kk-brown-dark); color: var(--kk-cream); padding: 3px 8px; border-radius: 999px; font-size: 8px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; }
             .kk-product__discount { position: absolute; top: 9px; right: 9px; background: var(--kk-tan-dark); color: var(--kk-cream); padding: 3px 8px; border-radius: 999px; font-size: 9px; font-weight: 700; letter-spacing: 0.04em; }
@@ -856,6 +892,10 @@
             $heroBanners = ($banners ?? collect())->values();
             $heroName = $siteSettings['site_name'] ?? 'Karmaa Kulture';
             $heroCount = $heroBanners->count();
+            // The same question the stylesheet asked when it sized the phone box.
+            // If the hero is not drawing that box, no slide may serve artwork cut
+            // for it, or that artwork is what ends up cropped instead.
+            $heroUsesPhoneBox = \App\Models\Banner::heroUsesPhoneBox($heroBanners);
         @endphp
         <section class="kk-hero"
                  @if($heroCount > 1)
@@ -891,8 +931,12 @@
                             // fallback - is decided once, on the model, so the website
                             // and the API cannot reach different conclusions about what
                             // a phone should be sent.
-                            $kkDesktop = $banner->frameFor('desktop');
-                            $kkMobile = $banner->frameFor('mobile');
+                            // Both screens' frames, decided on the model so the API
+                            // reaches the same answer - a slide cannot work this out
+                            // alone, because whether its own phone still can be shown
+                            // uncropped depends on the box, and the box is settled
+                            // across the whole carousel.
+                            ['desktop' => $kkDesktop, 'mobile' => $kkMobile] = $banner->heroFrames($heroUsesPhoneBox);
 
                             // The ordinary case: nothing phone-specific, so both screens
                             // resolve to the same file and the slide draws exactly one
@@ -937,6 +981,16 @@
                         @endphp
                         <div class="kk-hero-slide"
                              @if($heroCount > 1)
+                                 {{-- x-show is applied by Alpine, which arrives as a
+                                      deferred module - so until it boots, every slide is
+                                      in flow and the hero paints at N times its height
+                                      before collapsing to one. On a 1920px screen with
+                                      three banners that is a ~1000px jump on the page's
+                                      largest element, on every single load. x-cloak is
+                                      already `display: none !important` in app.css and
+                                      Alpine removes it on init, so the first slide paints
+                                      alone and x-show takes over from there. --}}
+                                 @if($i > 0) x-cloak @endif
                                  x-show="current === {{ $i }}"
                                  x-transition:enter="kk-fade-enter" x-transition:enter-start="kk-fade-start"
                                  :aria-hidden="current !== {{ $i }}"
@@ -1135,12 +1189,20 @@
         <style>
             /* Full-bleed hero - span the entire viewport width regardless of
                any parent container, and clip any margin baked into the video. */
+            /* --kk-vw is the viewport width WITHOUT the scrollbar, published by
+               the layout (components/layouts/app.blade.php) for exactly this.
+               100vw includes the scrollbar, so on any desktop with a classic
+               one the hero was ~15px wider than the page and html's
+               overflow-x: clip shaved half of that off each edge - the banner
+               really was cropped, by 7.5px a side, on every Windows desktop.
+               The product page already reads this property; the hero, which the
+               layout's own comment names first, never did. */
             .kk-hero {
                 position: relative;
-                width: 100vw;
-                max-width: 100vw;
-                margin-left: calc(50% - 50vw);
-                margin-right: calc(50% - 50vw);
+                width: var(--kk-vw, 100vw);
+                max-width: var(--kk-vw, 100vw);
+                margin-left: calc(50% - var(--kk-vw, 100vw) / 2);
+                margin-right: calc(50% - var(--kk-vw, 100vw) / 2);
                 overflow: hidden;
             }
             .kk-hero-viewport { position: relative; }
@@ -1184,6 +1246,29 @@
                 object-position: center;
             }
 
+            /* An image banner puts its <img> inside a <picture>, so it is a
+               GRANDCHILD of the frame and the `>` above never reached it - and
+               neither did app.css's own `.kk-media > img`. The picture had no
+               rule at all: an inline box, with the img falling back to
+               preflight's `max-width: 100%; height: auto`, which on a replaced
+               element resolves to the file's intrinsic size. A 1426x370 banner
+               therefore painted at 1426x370 in the top-left corner of the slide
+               and left the rest of the box bare - 494px of empty brown down the
+               right of a 1920px screen, and on a phone a 101px strip at the top
+               of a 260px box. It only looked right between 768px and 1426px,
+               where the box and the file happen to be the same shape.
+
+               `position: absolute` blockifies the picture, so no `display` is
+               declared here: app.css's `.kk-media.is-broken > picture` is
+               (0,2,1) and must stay able to hide it. */
+            .kk-media.kk-hero-media > picture { position: absolute; inset: 0; z-index: 1; }
+            .kk-media.kk-hero-media > picture > img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                object-position: center;
+            }
+
             /* Only one breakpoint's frame is drawn, and only banners carrying media
                of their own for phones have two to choose between. */
             .kk-hero-media--mobile { display: none; }
@@ -1215,8 +1300,31 @@
             .kk-hero-caption--right-dark .kk-hero-btn { align-self: flex-end; }
             .kk-hero-caption--center-vignette .kk-hero-btn,
             .kk-hero-caption--full-dark .kk-hero-btn { align-self: center; }
+            /* The caption has to fit the box, and on a phone that box is now the
+               artwork's own shape rather than a 3:2 crop of it - a 3.85:1 strip
+               is 93px tall on a 360px screen. The caption is centred inside a
+               slide with `overflow: hidden`, so anything too tall used to be
+               clipped at BOTH ends: the top of the heading and the bottom of the
+               button, with nothing to scroll.
+
+               Three changes make it fit rather than shrink the banner back down:
+               the title starts at 18px instead of 22px on phones (2 lines then
+               cost 38.9px, not 47.5px), it is capped at two lines, and the
+               column packs from the top so any remaining overflow can only ever
+               come off the bottom - never off the first line of the heading. */
+            @media (max-width: 767px) {
+                .kk-hero-caption {
+                    padding: 10px 6vw 0; gap: 8px;
+                    justify-content: flex-start;
+                    overflow: hidden;
+                }
+                .kk-hero-title {
+                    font-size: clamp(18px, 4.2vw, 52px);
+                    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+                    overflow: hidden;
+                }
+            }
             @media (max-width: 640px) {
-                .kk-hero-caption { padding: 0 6vw; gap: 8px; }
                 .kk-hero-sub { display: none; }
             }
 

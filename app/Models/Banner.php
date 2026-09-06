@@ -295,6 +295,70 @@ class Banner extends Model
     }
 
     /**
+     * Whether the hero should draw its phone breakpoint at HERO_MOBILE_SIZE.
+     *
+     * frameFor('mobile') falls back to the desktop file for a banner that has
+     * no phone artwork of its own, and almost none do - so a 3:2 phone box was
+     * usually framing a 3.85:1 strip and cropping 61% of its width away. The
+     * box has to follow the file that will actually be drawn.
+     *
+     * It is one answer for the whole hero rather than one per slide, because a
+     * carousel whose slides each sized themselves is what made it lurch as it
+     * advanced. So the narrow box is taken only when EVERY visible banner has
+     * phone artwork to fill it; one slide without any keeps them all on the
+     * wide box, where each is drawn at its own file's proportions.
+     *
+     * The same answer must also decide whether phone artwork is SERVED at all:
+     * a banner that offered its own 3:2 still through <picture> while the hero
+     * had settled on the wide box would have that still cropped instead. The
+     * home page reads this for both, which is what keeps them agreeing.
+     */
+    public static function heroUsesPhoneBox(iterable $banners): bool
+    {
+        $banners = collect($banners);
+
+        return $banners->isNotEmpty()
+            && $banners->every(fn (self $banner) => $banner->has_mobile_media);
+    }
+
+    /**
+     * The shape the phone box is drawn at for a given hero.
+     *
+     * The admin screens print both constants as the sizes to upload; this is
+     * the one that phones actually get, which is not always the same thing.
+     */
+    public static function heroPhoneBox(iterable $banners): array
+    {
+        return static::heroUsesPhoneBox($banners) ? self::HERO_MOBILE_SIZE : self::HERO_DESKTOP_SIZE;
+    }
+
+    /**
+     * What one hero slide draws on each screen, given the hero it belongs to.
+     *
+     * frameFor() answers for a banner in isolation and is still the only place
+     * the fallback chain lives. This adds the one thing a slide cannot know by
+     * itself: a carousel draws every slide in ONE box, so when that box is the
+     * desktop shape - because some other banner has no phone artwork to fill a
+     * narrow one - reaching for this banner's own phone still would only get it
+     * cropped. The desktop file is then the right answer for both screens.
+     *
+     * It lives here, beside frameFor(), because the home page and the API both
+     * have to reach the same conclusion. The website deciding this inline was
+     * exactly the drift frameFor()'s own docblock promises cannot happen.
+     *
+     * @return array{desktop: ?array, mobile: ?array}
+     */
+    public function heroFrames(bool $usesPhoneBox): array
+    {
+        $desktop = $this->frameFor('desktop');
+
+        return [
+            'desktop' => $desktop,
+            'mobile' => $usesPhoneBox ? $this->frameFor('mobile') : $desktop,
+        ];
+    }
+
+    /**
      * What one breakpoint should actually draw, after the fallbacks.
      *
      * The two screens each have an order of preference, and they are not the

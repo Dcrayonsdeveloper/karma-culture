@@ -30,14 +30,17 @@
     {{-- Compact card for horizontal scrollable rows --}}
     <div {{ $attributes->merge(['class' => 'group shrink-0 w-full']) }}>
         <a href="{{ route('product.show', $product) }}" class="block relative">
-            {{-- Same square tile as before, but the shot is contained over a
-                 blurred copy of itself so nothing gets cropped away, and the
-                 placeholder is tried via data-fallback when the URL 404s. --}}
+            {{-- 3:4 portrait, the shape every product tile in a listing is drawn
+                 at, so a rail of these lines up with the listing grid it sits
+                 under. The shot fills it and the excess is cropped; the
+                 whole photo is one tap away on the product page, whose zoom is
+                 contain. The placeholder is tried via data-fallback when the
+                 URL 404s. --}}
             <x-media :src="$product->primary_image_url"
                      :alt="$product->name"
                      :fallback="$placeholderImage"
-                     zoom
-                     class="aspect-square bg-neutral-50 rounded-[20px] overflow-hidden mb-2" />
+                     zoom cover
+                     class="aspect-[3/4] bg-neutral-50 rounded-[20px] overflow-hidden mb-2" />
             @if($hasDiscount)
                 <span class="absolute top-2 left-2 bg-[#F8931D] text-white font-bold rounded-full text-[8px] w-8 h-8 flex items-center justify-center sm:w-auto sm:h-auto sm:text-[10px] sm:px-2 sm:py-0.5 sm:rounded-md">{{ round($discount) }}%<span class="hidden sm:inline">&nbsp;Off</span></span>
             @endif
@@ -125,18 +128,23 @@
     {{-- Full product card - MudKid style --}}
     <div {{ $attributes->merge(['class' => 'group card-product flex flex-col bg-white rounded-[20px] overflow-hidden']) }}>
         {{-- Image Section --}}
-        <div class="relative aspect-square overflow-hidden bg-neutral-50">
-            {{-- The square frame is kept so every card in a row stays the same
-                 height, but the shot inside it is contained over a blurred copy
-                 of itself - an off-ratio product photo is shown whole instead of
-                 having its edges cut off. The placeholder rides on data-fallback
-                 so a broken URL falls back once and then degrades to a designed
-                 frame rather than an empty rectangle. --}}
+        <div class="relative aspect-[3/4] overflow-hidden bg-neutral-50">
+            {{-- 3:4 portrait rather than the square this used to be. Clothing is
+                 photographed upright, so a square frame spent a third of every
+                 tile on floor and backdrop and showed the garment smaller than
+                 the card had room for; the taller frame is also what the rest of
+                 the site now draws, so a card looks the same wherever it appears.
+
+                 The shot fills the frame and the excess is cropped, which is what
+                 keeps a row of cards reading as one row. Nothing is lost for good:
+                 the product page's zoom is contain. The placeholder rides on
+                 data-fallback so a broken URL falls back once and then degrades to
+                 a designed frame rather than an empty rectangle. --}}
             <a href="{{ route('product.show', $product) }}" class="block h-full">
                 <x-media :src="$product->primary_image_url"
                          :alt="$product->name"
                          :fallback="$placeholderImage"
-                         zoom
+                         zoom cover
                          class="h-full" />
             </a>
 

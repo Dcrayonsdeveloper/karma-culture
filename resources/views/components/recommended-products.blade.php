@@ -12,14 +12,14 @@
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
         <template x-for="product in products" :key="product.id">
             <a :href="product.url" class="group block bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-3">
-                {{-- Media well: the square keeps every card in the row the same
-                     height, but the shot inside is contained, so a portrait or a
-                     wide product photo is shown whole instead of being cropped to
-                     the frame. The blurred copy behind it fills what contain
-                     leaves over, and a URL that 404s falls back once and then gets
-                     the frame's broken state rather than an empty rectangle. --}}
-                <div class="kk-media kk-media--zoom aspect-square overflow-hidden rounded-md mb-2">
-                    <img class="kk-media__fill" :src="product.image || '{{ $placeholder }}'" alt="" aria-hidden="true" loading="lazy" decoding="async">
+                {{-- Media well: 3:4 portrait, the shape every product tile on the
+                     site is drawn at, so this rail lines up with the listing grid
+                     and the cards above it. The shot fills the frame and the
+                     excess is cropped - the whole photo is one click away, since
+                     the product page's zoom is contain. A URL that 404s falls back
+                     once and then gets the frame's broken state rather than an
+                     empty rectangle. --}}
+                <div class="kk-media kk-media--zoom kk-media--cover aspect-[3/4] overflow-hidden rounded-md mb-2">
                     <img :src="product.image || '{{ $placeholder }}'" :alt="product.name" data-fallback="{{ $placeholder }}" loading="lazy" decoding="async">
                     <span class="kk-media__fallback" aria-hidden="true">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
