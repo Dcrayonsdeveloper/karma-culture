@@ -1821,13 +1821,20 @@
                      without the clips being laid down twice. --}}
                 <div class="kk-about-reels" x-data="kkAboutReels()"
                      style="--kk-reel-count: {{ $aboutReels->count() }};">
-                    {{-- No pause-on-hover. A phone has no hover, but a touch
-                         synthesises mouseenter and very often never sends the
-                         matching mouseleave - so a tap, or a finger dragged
-                         across the strip while scrolling the page, latched the
-                         strip stopped for good. focusin on a <video> did the
-                         same. The strip is decorative and runs one way, so
-                         there is nothing to pause for. --}}
+                    {{-- Pause-on-hover, for a mouse and nothing else.
+
+                         It was taken out once for a good reason: a phone has no
+                         hover, but a touch synthesises mouseenter and very often
+                         never sends the matching mouseleave, so a tap - or a
+                         finger dragged across the strip while scrolling the page
+                         - latched the strip stopped for good.
+
+                         So this listens for pointerenter/pointerleave and acts
+                         only on pointerType 'mouse', which a touch never claims
+                         to be, and the loop re-checks :hover every frame rather
+                         than trusting a flag. A missed leave event cannot latch
+                         anything: the moment the cursor is elsewhere the strip
+                         moves again on its own. --}}
                     <div class="kk-about-reels__track" x-ref="track">
                         @foreach($aboutReels as $aboutReel)
                             {{-- Admin-set clips of any ratio, so they are shown whole: a
@@ -1908,24 +1915,57 @@
                                     if (played && typeof played.catch === 'function') played.catch(() => {});
                                 };
 
-                                const kickAll = () => track.querySelectorAll('video').forEach(kick);
+                                /* Only what is on screen plays.
 
-                                // 'pause' does not bubble, hence the capture phase.
+                                   These clips come from Instagram and run to
+                                   several megabytes each. Asking a phone to fetch
+                                   and decode a whole line of them at once starves
+                                   every one of them: they stall on their poster
+                                   frame, and a strip of frozen posters is exactly
+                                   the "stops after one pass" this was meant to
+                                   fix. Two or three at a time it can sustain - and
+                                   those are the only ones anybody can see anyway.
+
+                                   The margin starts a reel before it reaches the
+                                   edge, so it is already running by the time it
+                                   slides into view rather than arriving frozen. */
+                                const io = new IntersectionObserver((entries) => {
+                                    entries.forEach(({ target, isIntersecting }) => {
+                                        target.dataset.kkVisible = isIntersecting ? '1' : '0';
+
+                                        if (isIntersecting) kick(target); else target.pause();
+                                    });
+                                }, { rootMargin: '30% 0px', threshold: 0.01 });
+
+                                const watchAll = () => track.querySelectorAll('video').forEach((video) => io.observe(video));
+
+                                /* Restart a visible clip the browser stopped on its
+                                   own - a decoder it needed elsewhere, a tab that
+                                   went away. Only a visible one: without that test
+                                   this would immediately undo the pause the observer
+                                   just performed, and the two would fight over every
+                                   clip in the line.
+
+                                   'pause' does not bubble, hence the capture phase. */
                                 track.addEventListener('pause', (event) => {
-                                    if (event.target instanceof HTMLVideoElement) kick(event.target);
+                                    const video = event.target;
+
+                                    if (video instanceof HTMLVideoElement && video.dataset.kkVisible === '1') kick(video);
                                 }, true);
 
+                                const kickVisible = () => track.querySelectorAll('video[data-kk-visible="1"]').forEach(kick);
+
                                 document.addEventListener('visibilitychange', () => {
-                                    if (!document.hidden) kickAll();
+                                    if (!document.hidden) kickVisible();
                                 });
 
                                 // iOS holds playback until the page has been touched
                                 // once, and refuses every play() before that.
-                                document.addEventListener('touchstart', kickAll, { once: true, passive: true });
+                                document.addEventListener('touchstart', kickVisible, { once: true, passive: true });
 
                                 // Before the early return below: a strip too short to
                                 // travel should still be playing its clips.
-                                kickAll();
+                                watchAll();
 
                                 if (track.scrollWidth <= strip.clientWidth) return;
 
@@ -1933,8 +1973,41 @@
                                     track.appendChild(reels[i % reels.length].cloneNode(true));
                                 }
 
-                                // The copies arrive stopped, so start them too.
-                                kickAll();
+                                // The copies arrive stopped and unwatched, so hand
+                                // them to the observer as well.
+                                watchAll();
+
+                                /* Held still while a mouse is over it.
+
+                                   Two independent guards, because the bug this
+                                   feature caused before was a strip that stopped
+                                   and never started again. pointerType is the
+                                   first: a touch reports 'touch' or 'pen' and is
+                                   ignored outright, so a phone can never enter
+                                   this state at all. The :hover re-check in the
+                                   loop is the second: it is derived from where
+                                   the cursor actually is rather than remembered,
+                                   so even a pointerleave that never arrives -
+                                   the element reflowing out from under the
+                                   cursor, a window losing focus mid-gesture -
+                                   only pauses the strip until the next frame.
+
+                                   The hover media query keeps the listeners off
+                                   touch-only devices entirely; the pointerType
+                                   test then covers the hybrid laptops that
+                                   report hover AND have a touchscreen. */
+                                let hovering = false;
+
+                                if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+                                    strip.addEventListener('pointerenter', (event) => {
+                                        if (event.pointerType === 'mouse') hovering = true;
+                                    });
+                                    strip.addEventListener('pointerleave', (event) => {
+                                        if (event.pointerType === 'mouse') hovering = false;
+                                    });
+                                    strip.addEventListener('pointercancel', () => { hovering = false; });
+                                    window.addEventListener('blur', () => { hovering = false; });
+                                }
 
                                 let x = 0;
                                 let last = null;
@@ -1945,7 +2018,14 @@
                                     const dt = last === null ? 0 : Math.min((now - last) / 1000, 0.05);
                                     last = now;
 
-                                    x -= 45 * dt;
+                                    // `last` is updated above whether or not the strip
+                                    // moves, so letting go does not hand the next frame
+                                    // the whole paused duration and jump the line.
+                                    // matches() is re-read rather than cached: it is
+                                    // what makes a missed pointerleave harmless.
+                                    if (!(hovering && strip.matches(':hover'))) {
+                                        x -= 45 * dt;
+                                    }
 
                                     const first = lead();
                                     // first > 0: see the guard on lead(). Recycling on
