@@ -1523,6 +1523,27 @@ a:focus-visible,
     padding-right: 1rem;
 }
 
+/* .container takes the width it is given, from the tablet breakpoint up.
+
+   Tailwind caps .container at every breakpoint - 640, 768, 1024, 1280, 1536 -
+   so a 917px window sat the whole page in a 768px column with a band of empty
+   ground down either side, and every wider screen did the same thing one step
+   later. The px-4 that every section already carries is what keeps the content
+   off the edge, so the cap was only ever deciding how much ground to waste.
+
+   One rule covers 768 and every breakpoint above it, and that is deliberate:
+   Tailwind's container rules live in @layer utilities, and unlayered CSS
+   outranks every layer whatever the source order, so this beats the 1024,
+   1280 and 1536 caps as well without restating any of them. Written as a
+   media query rather than a bare rule so the phone breakpoints - where a cap
+   below the viewport width does nothing anyway - are left exactly as they
+   were. */
+@media (min-width: 768px) {
+    .container {
+        max-width: 100%;
+    }
+}
+
 /* ========================================
    Aspect Ratio Utilities
    ======================================== */
