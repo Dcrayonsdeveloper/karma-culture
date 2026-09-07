@@ -218,7 +218,19 @@ class SendOrderNotification
             return;
         }
 
-        $this->notificationService->notify($user, 'refund_processed', [
+        // A credit refund is not "money is on its way back to your card" - it is
+        // a code the customer has to be given, and telling them the wrong one of
+        // those two things is the difference between them spending it and them
+        // waiting for a bank transfer that will never arrive.
+        $coupon = $return->refundCoupon;
+
+        $this->notificationService->notify($user, 'refund_processed', $coupon ? [
+            'title' => 'Store Credit Issued',
+            'content' => 'Your refund of ' . format_price($event->amount) . ' has been issued as store credit. Use code ' . $coupon->code . ' at checkout.',
+            'return_id' => $return->id,
+            'amount' => $event->amount,
+            'coupon_code' => $coupon->code,
+        ] : [
             'title' => 'Refund Processed',
             'content' => 'Your refund of ' . format_price($event->amount) . ' has been processed.',
             'return_id' => $return->id,

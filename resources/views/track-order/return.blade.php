@@ -73,14 +73,39 @@
                         @endforeach
                     </div>
 
-                    <div class="p-4 sm:p-5 border-t border-neutral-100 space-y-4">
+                    <div class="p-4 sm:p-5 border-t border-neutral-100 space-y-4"
+                         x-data="{ type: '{{ old('type', 'return') }}' }">
                         <div>
                             <label class="block text-[13px] font-medium text-neutral-700 mb-1.5">What would you like?</label>
-                            <select name="type" required
+                            <select name="type" required x-model="type"
                                     class="w-full px-3.5 py-2.5 text-sm border border-neutral-200 rounded-lg bg-white">
                                 <option value="return" @selected(old('type') === 'return')>Return &amp; refund</option>
                                 <option value="exchange" @selected(old('type') === 'exchange')>Exchange</option>
                             </select>
+                        </div>
+
+                        {{-- How the money comes back. Above the threshold the store
+                             decides, so the select offers the one honest answer and
+                             says why; the server re-derives it either way, so this
+                             markup is an explanation rather than the control. --}}
+                        @php $kkCouponOnly = \App\Models\OrderReturn::couponForced($order); @endphp
+                        <div x-show="type === 'return'">
+                            <label class="block text-[13px] font-medium text-neutral-700 mb-1.5">How should we refund you?</label>
+                            <select name="refund_preference"
+                                    class="w-full px-3.5 py-2.5 text-sm border border-neutral-200 rounded-lg bg-white"
+                                    @disabled($kkCouponOnly)>
+                                @unless($kkCouponOnly)
+                                    <option value="refund" @selected(old('refund_preference', 'refund') === 'refund')>Refund to original payment method</option>
+                                @endunless
+                                <option value="coupon" @selected($kkCouponOnly || old('refund_preference') === 'coupon')>Store coupon</option>
+                            </select>
+                            @if($kkCouponOnly)
+                                {{-- A disabled select posts nothing, so the value travels
+                                     in a hidden field. The server ignores both and applies
+                                     the threshold itself. --}}
+                                <input type="hidden" name="refund_preference" value="coupon">
+                                <p class="text-[12px] text-neutral-600 mt-1.5">Orders above {{ format_price(\App\Models\OrderReturn::couponThreshold()) }} are refunded as store credit.</p>
+                            @endif
                         </div>
 
                         <div>

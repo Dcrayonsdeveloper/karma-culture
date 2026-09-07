@@ -111,6 +111,8 @@ class SettingController extends Controller
             'free_shipping_threshold'    => 'nullable|numeric|min:0',
             'return_window_days'         => 'nullable|integer|min:0|max:365',
             'return_min_minutes'         => 'nullable|integer|min:0|max:10080',
+            'return_coupon_threshold'    => 'nullable|numeric|min:0|max:9999999.99',
+            'return_credit_validity_days' => 'nullable|integer|min:0|max:3650',
             'flat_rate_amount'           => 'nullable|numeric|min:0',
             'local_pickup_address'       => 'nullable|string|max:500',
             'shipping_origin_country'    => 'required|string|size:2',

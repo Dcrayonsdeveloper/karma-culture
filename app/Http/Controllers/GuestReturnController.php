@@ -60,6 +60,7 @@ class GuestReturnController extends Controller
 
         $validated = $request->validate([
             'type' => 'required|in:return,exchange',
+            'refund_preference' => 'nullable|in:refund,coupon',
             'reason' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
             'items' => 'required|array|min:1',
@@ -91,12 +92,22 @@ class GuestReturnController extends Controller
             }
         }
 
+        // Decided from the order the server loaded, exactly as the account form
+        // does it, so the threshold cannot be sidestepped by coming in through
+        // the guest route instead. See OrderReturn::couponForced().
+        $preference = match (true) {
+            $validated['type'] !== 'return'   => null,
+            OrderReturn::couponForced($order) => OrderReturn::PREFERENCE_COUPON,
+            default                           => $validated['refund_preference'] ?? OrderReturn::PREFERENCE_REFUND,
+        };
+
         $return = OrderReturn::create([
             'order_id' => $order->id,
             'user_id' => $order->user_id,   // null for a guest order
             'type' => $validated['type'],
             'reason' => $validated['reason'],
             'description' => $validated['description'] ?? null,
+            'refund_preference' => $preference,
             'status' => 'requested',
         ]);
 

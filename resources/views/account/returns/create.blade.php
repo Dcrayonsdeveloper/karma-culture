@@ -37,12 +37,17 @@
                     @else
                         <form action="{{ route('account.returns.store') }}" method="POST"
                               x-data="{
-                                  selectedOrder: '{{ old('order_id', '') }}',
+                                  selectedOrder: '{{ old('order_id', $preselectedOrder ?? '') }}',
                                   type: '{{ old('type', 'return') }}',
+                                  refundPreference: '{{ old('refund_preference', \App\Models\OrderReturn::PREFERENCE_REFUND) }}',
+                                  couponThreshold: {{ (float) $couponThreshold }},
                                   orders: {{ Js::from($orders->map(fn($o) => [
                                       'id' => $o->id,
                                       'order_number' => $o->order_number,
                                       'date' => $o->created_at->format('M d, Y'),
+                                      // The order total, which is what the coupon rule is
+                                      // weighed against - not the sum of the items ticked.
+                                      'total' => (float) $o->total,
                                       'items' => $o->items->map(fn($i) => [
                                           'id' => $i->id,
                                           'name' => $i->product->name ?? $i->product_name,
@@ -54,6 +59,23 @@
                                   selectedItems: [],
                                   get currentOrder() {
                                       return this.orders.find(o => o.id == this.selectedOrder) || null;
+                                  },
+                                  {{-- The same test the server applies in OrderReturn::couponForced():
+                                       strictly above the threshold, weighed against the order total.
+                                       Kept identical on purpose - if these two ever disagree, the
+                                       server wins and the customer sees a choice that was not
+                                       honoured. --}}
+                                  get couponForced() {
+                                      return !!this.currentOrder && this.currentOrder.total > this.couponThreshold;
+                                  },
+                                  {{-- What actually gets posted. A disabled radio submits nothing
+                                       and a hand-edited one submits anything, so the form sends a
+                                       single derived hidden field instead of the raw click. --}}
+                                  get effectivePreference() {
+                                      return this.couponForced ? 'coupon' : this.refundPreference;
+                                  },
+                                  money(amount) {
+                                      return '₹' + Number(amount).toLocaleString('en-IN', { maximumFractionDigits: 2 });
                                   },
                                   toggleItem(itemId) {
                                       const idx = this.selectedItems.findIndex(si => si.id === itemId);
@@ -157,10 +179,81 @@
                                 </div>
                             </div>
 
-                            {{-- Step 3: Reason --}}
-                            <div class="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+                            {{-- Step 3: How the money comes back.
+
+                                 Only asked for a return - an exchange is a replacement item, so
+                                 neither answer is true of it and the step hides itself rather
+                                 than offering a choice that would be ignored.
+
+                                 Above the threshold the choice is made for the customer. The
+                                 refund card is shown rather than removed, so the policy is
+                                 visible instead of the option merely being absent, and the
+                                 field that actually posts is derived from effectivePreference,
+                                 never from the click. --}}
+                            <div class="bg-white rounded-xl border border-neutral-200 overflow-hidden"
+                                 x-show="type === 'return'" x-cloak>
                                 <div class="px-5 py-3 border-b border-neutral-100 flex items-center gap-2">
                                     <span class="w-5 h-5 bg-[#F8931D] text-white text-[11px] font-bold rounded-full flex items-center justify-center">3</span>
+                                    <h2 class="text-sm font-bold text-neutral-900">Refund Preference</h2>
+                                </div>
+                                <div class="p-5">
+                                    <input type="hidden" name="refund_preference" :value="effectivePreference">
+
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {{-- Refund to source --}}
+                                        <label @click="if (!couponForced) refundPreference = 'refund'"
+                                               :class="couponForced
+                                                   ? 'border-neutral-200 bg-neutral-50 opacity-60 cursor-not-allowed'
+                                                   : (effectivePreference === 'refund'
+                                                       ? 'border-[#6F9CA2]/50 bg-[#6F9CA2]/5 ring-1 ring-[#6F9CA2]/30 cursor-pointer'
+                                                       : 'border-neutral-200 hover:border-neutral-300 cursor-pointer')"
+                                               class="flex items-center gap-3 p-3.5 rounded-lg border transition-all">
+                                            <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                                                 :class="!couponForced && effectivePreference === 'refund' ? 'bg-[#6F9CA2]/10 text-[#6F9CA2]' : 'bg-neutral-100 text-neutral-600'">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                                            </div>
+                                            <div class="min-w-0">
+                                                <p class="text-sm font-semibold text-neutral-900">Refund</p>
+                                                <p class="text-xs text-neutral-600">Back to your original payment method</p>
+                                            </div>
+                                        </label>
+
+                                        {{-- Store credit --}}
+                                        <label @click="if (!couponForced) refundPreference = 'coupon'"
+                                               :class="effectivePreference === 'coupon'
+                                                   ? 'border-[#6F9CA2]/50 bg-[#6F9CA2]/5 ring-1 ring-[#6F9CA2]/30'
+                                                   : 'border-neutral-200 hover:border-neutral-300'"
+                                               :style="couponForced ? 'cursor:default' : 'cursor:pointer'"
+                                               class="flex items-center gap-3 p-3.5 rounded-lg border transition-all">
+                                            <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                                                 :class="effectivePreference === 'coupon' ? 'bg-[#6F9CA2]/10 text-[#6F9CA2]' : 'bg-neutral-100 text-neutral-600'">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z"/></svg>
+                                            </div>
+                                            <div class="min-w-0">
+                                                <p class="text-sm font-semibold text-neutral-900">Store Coupon</p>
+                                                <p class="text-xs text-neutral-600">A credit code to spend on your next order</p>
+                                            </div>
+                                        </label>
+                                    </div>
+
+                                    {{-- Why the choice was taken away. Shown only when it was. --}}
+                                    <p x-show="couponForced" x-cloak
+                                       class="mt-3 flex items-start gap-2 text-xs text-neutral-700 bg-[#F8931D]/10 border border-[#F8931D]/30 rounded-lg px-3 py-2.5">
+                                        <svg class="w-4 h-4 shrink-0 mt-px text-[#F8931D]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        <span>Orders above <span x-text="money(couponThreshold)"></span> are refunded as store credit, so this one will be issued as a coupon.</span>
+                                    </p>
+
+                                    @error('refund_preference')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            {{-- Step 4: Reason --}}
+                            <div class="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+                                <div class="px-5 py-3 border-b border-neutral-100 flex items-center gap-2">
+                                    <span class="w-5 h-5 bg-[#F8931D] text-white text-[11px] font-bold rounded-full flex items-center justify-center"
+                                          x-text="type === 'return' ? '4' : '3'">4</span>
                                     <h2 class="text-sm font-bold text-neutral-900">Reason for Return</h2>
                                 </div>
                                 <div class="p-5 space-y-3">
@@ -188,10 +281,12 @@
                                 </div>
                             </div>
 
-                            {{-- Step 4: Select Items --}}
+                            {{-- Step 5: Select Items. Numbered from the step above, which is
+                                 only present for a return - an exchange has one step fewer. --}}
                             <div class="bg-white rounded-xl border border-neutral-200 overflow-hidden" x-show="currentOrder" x-cloak>
                                 <div class="px-5 py-3 border-b border-neutral-100 flex items-center gap-2">
-                                    <span class="w-5 h-5 bg-[#F8931D] text-white text-[11px] font-bold rounded-full flex items-center justify-center">4</span>
+                                    <span class="w-5 h-5 bg-[#F8931D] text-white text-[11px] font-bold rounded-full flex items-center justify-center"
+                                          x-text="type === 'return' ? '5' : '4'">5</span>
                                     <h2 class="text-sm font-bold text-neutral-900">Select Items to Return</h2>
                                 </div>
                                 <div class="p-5">

@@ -220,6 +220,22 @@
                         </div>
                     @endif
 
+                    {{-- What the customer asked for, while they are still waiting to
+                         get it. Without this the choice they made on the form - or
+                         the one the threshold made for them - vanished the moment
+                         they submitted, and the first they heard of store credit
+                         again was a coupon code in their inbox. --}}
+                    @if($return->status !== 'completed' && $return->preferenceLabel())
+                        <div class="bg-neutral-50 border border-neutral-200 rounded-xl mt-4 p-4">
+                            <p class="text-sm font-semibold text-neutral-800">
+                                {{ $return->wantsCoupon() ? 'To be refunded as store credit' : 'To be refunded to your original payment method' }}
+                            </p>
+                            @if($return->wantsCoupon())
+                                <p class="text-xs text-neutral-600 mt-1">Once this return is approved and processed we'll email you a single-use coupon code for the refund amount.</p>
+                            @endif
+                        </div>
+                    @endif
+
                     {{-- Refund Completed --}}
                     @if($return->status === 'completed' && (float) $return->refund_amount > 0)
                         <div class="bg-emerald-50 border border-emerald-200 rounded-xl mt-4 p-4">
@@ -230,12 +246,18 @@
                                     </svg>
                                 </div>
                                 <div class="min-w-0">
-                                    <p class="text-sm font-semibold text-emerald-800">Refund Processed</p>
+                                    <p class="text-sm font-semibold text-emerald-800">
+                                        {{ $return->refundCoupon ? 'Store Credit Issued' : 'Refund Processed' }}
+                                    </p>
                                     <p class="text-sm text-emerald-700 mt-0.5">
                                         <span class="font-bold">{{ format_price($return->refund_amount) }}</span>
-                                        has been refunded
-                                        @if($return->refund_method)
-                                            via {{ ucfirst($return->refund_method) }} payment method
+                                        @if($return->refundCoupon)
+                                            has been issued as store credit
+                                        @else
+                                            has been refunded
+                                            @if($return->refund_method)
+                                                via {{ ucfirst($return->refund_method) }} payment method
+                                            @endif
                                         @endif
                                         @if($return->completed_at)
                                             on {{ $return->completed_at->format('M d, Y') }}
@@ -243,6 +265,30 @@
                                     </p>
                                 </div>
                             </div>
+
+                            {{-- The code itself. This page is the durable copy: an
+                                 email can be lost, and there is nowhere else in the
+                                 account a customer could look it up. --}}
+                            @if($return->refundCoupon)
+                                <div class="mt-3 pt-3 border-t border-emerald-200">
+                                    <p class="text-xs text-emerald-700 mb-1.5">Use this code at checkout:</p>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <code class="text-sm font-bold tracking-wider bg-white border border-emerald-300 text-emerald-900 rounded-lg px-3 py-1.5">{{ $return->refundCoupon->code }}</code>
+                                        @if($return->refundCoupon->times_used > 0)
+                                            <span class="text-xs text-emerald-700">Already used</span>
+                                        @elseif($return->refundCoupon->expires_at)
+                                            <span class="text-xs text-emerald-700">Valid until {{ $return->refundCoupon->expires_at->format('d M Y') }}</span>
+                                        @endif
+                                    </div>
+                                    @if((float) $return->refundCoupon->min_order_amount > 0)
+                                        {{-- Stated plainly because it is the condition that
+                                             stops the credit being partly destroyed: a fixed
+                                             discount is capped at the basket total and the
+                                             remainder is not carried forward. --}}
+                                        <p class="text-xs text-emerald-700 mt-2">Applies to orders of {{ format_price($return->refundCoupon->min_order_amount) }} or more, so none of your credit is lost. It can be used once.</p>
+                                    @endif
+                                </div>
+                            @endif
                         </div>
                     @endif
                 </div>

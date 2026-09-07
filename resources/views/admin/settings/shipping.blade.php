@@ -106,6 +106,18 @@
                                    value="{{ old('return_min_minutes', $settings['return_min_minutes'] ?? 0) }}" class="form-input">
                             <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Minutes after delivery before a return can be raised. Set 0 to let customers return as soon as the order is delivered.</p>
                         </div>
+                        <div>
+                            <label class="form-label">Coupon-only above ({{ currency_symbol() }})</label>
+                            <input type="number" name="return_coupon_threshold" min="0" step="0.01"
+                                   value="{{ old('return_coupon_threshold', $settings['return_coupon_threshold'] ?? 2000) }}" class="form-input">
+                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Orders worth more than this are refunded as store credit only - the customer cannot choose money back. Compared against the order total, so an order worth exactly this much still leaves the choice open.</p>
+                        </div>
+                        <div>
+                            <label class="form-label">Store credit valid for (days)</label>
+                            <input type="number" name="return_credit_validity_days" min="0" max="3650"
+                                   value="{{ old('return_credit_validity_days', $settings['return_credit_validity_days'] ?? 365) }}" class="form-input">
+                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">How long an issued credit coupon stays usable. Set 0 for no expiry.</p>
+                        </div>
                     </div>
                 </div>
 

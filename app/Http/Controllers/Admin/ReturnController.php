@@ -7,8 +7,10 @@ use App\Events\ReturnRequested;
 use App\Http\Controllers\Controller;
 use App\Models\DeliveryPartner;
 use App\Models\OrderReturn;
+use App\Services\StoreCreditService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ReturnController extends Controller
@@ -49,7 +51,7 @@ class ReturnController extends Controller
 
     public function show(OrderReturn $return): View
     {
-        $return->load(['order', 'order.user', 'items.orderItem.product', 'pickupPartner.user']);
+        $return->load(['order', 'order.user', 'items.orderItem.product', 'pickupPartner.user', 'refundCoupon']);
 
         $activePartners = DeliveryPartner::with('user')->where('is_active', true)->get();
 
@@ -110,25 +112,67 @@ class ReturnController extends Controller
         return back()->with('success', 'Pickup partner removed');
     }
 
-    public function processRefund(Request $request, OrderReturn $return): RedirectResponse
+    public function processRefund(Request $request, OrderReturn $return, StoreCreditService $credit): RedirectResponse
     {
         $validated = $request->validate([
             'amount' => 'required|numeric|min:0',
-            'refund_method' => 'required|in:wallet,original,bank',
+            'refund_method' => 'required|in:wallet,original,bank,coupon',
             'notes' => 'nullable|string',
         ]);
 
-        $return->update([
-            'refund_amount' => $validated['amount'],
-            'refund_method' => $validated['refund_method'],
-            'description' => $validated['notes'] ? ($return->description ? $return->description . "\n\nRefund notes: " . $validated['notes'] : 'Refund notes: ' . $validated['notes']) : $return->description,
-            'status' => 'completed',
-            'completed_at' => now(),
-            'processed_by' => auth()->id(),
-        ]);
+        // The customer's stated preference wins over the posted field.
+        //
+        // Above the order threshold the store told them the money would come
+        // back as credit and gave them no other option, so paying it out to a
+        // card instead would quietly break the promise the form made. The
+        // single-option select on the admin screen is honesty about that, not
+        // the thing that enforces it - a stale form, or a hand-made POST, must
+        // reach the same answer.
+        $method = $return->wantsCoupon() ? 'coupon' : $validated['refund_method'];
 
+        // 'notes' is nullable, and a validated array only carries the keys that
+        // were actually sent - so reading it directly raised "Undefined array
+        // key" and turned any post without the field into a 500. The admin form
+        // always sends it, which is why the shop never saw this; anything else
+        // that refunds a return did.
+        $notes = trim((string) ($validated['notes'] ?? ''));
 
-        RefundProcessed::dispatch($return, (float) $validated['amount'], $validated['refund_method']);
+        $description = $notes === ''
+            ? $return->description
+            : ($return->description
+                ? $return->description."\n\nRefund notes: ".$notes
+                : 'Refund notes: '.$notes);
+
+        $coupon = null;
+
+        DB::transaction(function () use ($return, $validated, $method, $description, $credit, &$coupon) {
+            $return->update([
+                'refund_amount' => $validated['amount'],
+                'refund_method' => $method,
+                'description' => $description,
+                'status' => 'completed',
+                'completed_at' => now(),
+                'processed_by' => auth()->id(),
+            ]);
+
+            // Minted in the same transaction as the row that says the refund
+            // happened, so the shop can never record a completed credit refund
+            // with no credit behind it. issueFor() is idempotent, so a double
+            // submit re-uses the voucher rather than paying twice.
+            if ($method === 'coupon' && $validated['amount'] > 0) {
+                $coupon = $credit->issueFor($return, (float) $validated['amount']);
+            }
+        });
+
+        // Dispatched after the commit: the listeners mail the customer, and a
+        // message naming a coupon code that a rolled-back transaction never
+        // created would be worse than a late one.
+        RefundProcessed::dispatch($return->refresh(), (float) $validated['amount'], $method);
+
+        if ($coupon) {
+            return back()->with('success',
+                'Store credit of '.format_price($validated['amount']).' issued as coupon '.$coupon->code.'.');
+        }
 
         return back()->with('success', "Refund of " . format_price($validated['amount']) . " credited to customer's account");
     }
