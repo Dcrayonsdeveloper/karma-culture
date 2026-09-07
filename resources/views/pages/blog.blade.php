@@ -3,11 +3,11 @@
 
     @push('meta')
         <meta name="description" content="Read the latest articles, tips, and guides about kids' fashion, parenting, and style at {{ config('app.name') }} blog.">
-        <link rel="canonical" href="{{ url('/blog') }}">
+        <link rel="canonical" href="{{ route('blog') }}">
         <meta property="og:title" content="Blog - {{ config('app.name') }}">
         <meta property="og:description" content="Read the latest articles, tips, and guides about kids' fashion, parenting, and style at {{ config('app.name') }}.">
         <meta property="og:type" content="website">
-        <meta property="og:url" content="{{ url('/blog') }}">
+        <meta property="og:url" content="{{ route('blog') }}">
         <meta name="twitter:card" content="summary">
         <meta name="twitter:title" content="Blog - {{ config('app.name') }}">
         <meta name="twitter:description" content="Latest articles about kids' fashion, parenting, and style at {{ config('app.name') }}.">
