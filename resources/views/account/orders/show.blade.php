@@ -458,23 +458,24 @@
                                     <h3 class="text-sm font-semibold text-neutral-900 mb-3">Order Timeline</h3>
                                     <div class="relative">
                                         @php
-                                            // Every row in this card is something that has already happened, so none
-                                            // of them is drawn as "not reached": past events are outlined in their
-                                            // tone and the newest one is filled in, which is what moves the solid dot
-                                            // down the list as the order progresses. Cancelled and returned must not
-                                            // read as a green success, and an order that is still waiting - unpaid, or
-                                            // held by the fraud check - is amber rather than green.
+                                            // Every row here already happened, so none is drawn as "not reached": past
+                                            // events are outlined in their tone and the newest is filled in, so the solid
+                                            // dot marks the latest update instead of sitting on the oldest event forever.
+                                            // Cancelled and returned must not read as a green success. Nothing writes a
+                                            // pending or on_hold row today - checkout and the fraud check both set the
+                                            // column with a bare update() - so those two are defensive, covering the rest
+                                            // of the status enum. warning-700, not -500: #ebb000 is only 1.96:1 on white.
                                             $kkDotPast = [
                                                 'cancelled' => 'bg-white border-danger-500',
                                                 'returned'  => 'bg-white border-danger-500',
-                                                'pending'   => 'bg-white border-warning-500',
-                                                'on_hold'   => 'bg-white border-warning-500',
+                                                'pending'   => 'bg-white border-warning-700',
+                                                'on_hold'   => 'bg-white border-warning-700',
                                             ];
                                             $kkDotLatest = [
                                                 'cancelled' => 'bg-danger-500 border-danger-500',
                                                 'returned'  => 'bg-danger-500 border-danger-500',
-                                                'pending'   => 'bg-warning-500 border-warning-500',
-                                                'on_hold'   => 'bg-warning-500 border-warning-500',
+                                                'pending'   => 'bg-warning-700 border-warning-700',
+                                                'on_hold'   => 'bg-warning-700 border-warning-700',
                                             ];
                                             // The relation declares no ORDER BY, and cancelling writes two rows inside
                                             // one request that share created_at to the second, so break ties on the id.
