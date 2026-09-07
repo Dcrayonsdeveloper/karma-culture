@@ -21,7 +21,16 @@
             <div class="flex flex-col lg:flex-row gap-8 mt-4">
                 @include('account.partials.sidebar')
 
-                <div class="flex-1">
+                {{-- min-w-0 is load-bearing, not tidiness. A flex item defaults to
+                     min-width: auto, so this column could never shrink below the
+                     widest thing inside it - and that is the status-tab strip, whose
+                     eleven chips are 1100px across. From lg up, where the row turns
+                     into two columns, the column stayed 1104px wide instead of the
+                     ~680px the grid allows, pushed the row past the container, and
+                     body's overflow-x: clip cut the difference off: the order date,
+                     the total, Cancel and Buy Again were all off-screen on every
+                     desktop width. The tab strip already scrolls on its own. --}}
+                <div class="flex-1 min-w-0">
                     <div class="flex items-center justify-between mb-5">
                         <div>
                             <h1 class="text-xl font-bold text-neutral-900">My Orders</h1>
