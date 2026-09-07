@@ -23,7 +23,7 @@ class ReviewMediaUploader
             }
             $review->images()->create([
                 'media_type' => 'image',
-                'url' => $image->store('reviews', 'public'),
+                'url' => ImageWebp::store($image, 'reviews'),
                 'position' => $position++,
             ]);
         }

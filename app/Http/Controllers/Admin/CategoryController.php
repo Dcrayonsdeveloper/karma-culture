@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Rules\ValidationRules as V;
+use App\Support\ImageWebp;
 use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -112,7 +113,7 @@ class CategoryController extends Controller
         $validated['position'] = $validated['position'] ?? 0;
 
         if ($request->hasFile('image')) {
-            $validated['image_url'] = $request->file('image')->store('categories', 'public');
+            $validated['image_url'] = ImageWebp::store($request->file('image'), 'categories');
         }
 
         // Video: uploaded file takes precedence over pasted URL.
@@ -189,12 +190,16 @@ class CategoryController extends Controller
 
         if ($request->hasFile('image')) {
             if ($category->image_url) {
-                Storage::disk('public')->delete($category->image_url);
+                // Clears the WebP twin alongside the original, whichever of the
+                // pair the column happens to point at.
+                ImageWebp::delete($category->image_url);
             }
-            $validated['image_url'] = $request->file('image')->store('categories', 'public');
+            $validated['image_url'] = ImageWebp::store($request->file('image'), 'categories');
         } elseif ($request->boolean('remove_image')) {
             if ($category->image_url) {
-                Storage::disk('public')->delete($category->image_url);
+                // Clears the WebP twin alongside the original, whichever of the
+                // pair the column happens to point at.
+                ImageWebp::delete($category->image_url);
             }
             $validated['image_url'] = null;
         }

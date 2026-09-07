@@ -15,6 +15,7 @@ use App\Models\SizePreset;
 use App\Models\TexturePreset;
 use App\Rules\NoHtml;
 use App\Rules\ValidationRules as V;
+use App\Support\ImageWebp;
 use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -366,7 +367,7 @@ class ProductController extends Controller
 
         // Handle main image upload
         if ($request->hasFile('main_image')) {
-            $path = $request->file('main_image')->store('products', 'public');
+            $path = ImageWebp::store($request->file('main_image'), 'products');
             ProductImage::create([
                 'product_id' => $product->id,
                 'url' => '/storage/'.$path,
@@ -379,7 +380,7 @@ class ProductController extends Controller
         if ($request->hasFile('images')) {
             $startPosition = $product->images()->max('position') ?? 0;
             foreach ($request->file('images') as $index => $file) {
-                $path = $file->store('products', 'public');
+                $path = ImageWebp::store($file, 'products');
                 ProductImage::create([
                     'product_id' => $product->id,
                     'media_type' => 'image',
@@ -657,11 +658,11 @@ class ProductController extends Controller
             $oldPrimary = $product->images()->where('is_primary', true)->first();
             if ($oldPrimary) {
                 $storagePath = str_replace('/storage/', '', $oldPrimary->url);
-                Storage::disk('public')->delete($storagePath);
+                ImageWebp::delete($storagePath);
                 $oldPrimary->delete();
             }
 
-            $path = $request->file('main_image')->store('products', 'public');
+            $path = ImageWebp::store($request->file('main_image'), 'products');
             ProductImage::create([
                 'product_id' => $product->id,
                 'url' => '/storage/'.$path,
@@ -674,7 +675,7 @@ class ProductController extends Controller
         if ($request->hasFile('images')) {
             $maxPosition = $product->images()->max('position') ?? 0;
             foreach ($request->file('images') as $index => $file) {
-                $path = $file->store('products', 'public');
+                $path = ImageWebp::store($file, 'products');
                 ProductImage::create([
                     'product_id' => $product->id,
                     'media_type' => 'image',

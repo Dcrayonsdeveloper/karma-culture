@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductAplusImage;
 use App\Rules\ValidationRules as V;
+use App\Support\ImageWebp;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -33,7 +34,7 @@ class ProductAplusImageController extends Controller
         foreach ($request->file('images') as $file) {
             // Capture intrinsic dimensions so the storefront can reserve layout space (no CLS).
             $dimensions = @getimagesize($file->getPathname());
-            $path = $file->store('products/aplus', 'public');
+            $path = ImageWebp::store($file, 'products/aplus');
             $image = $product->aplusImages()->create([
                 'image_path' => $path,
                 'width' => $dimensions[0] ?? null,

@@ -7,6 +7,7 @@ use App\Models\Coupon;
 use App\Models\Setting;
 use App\Rules\ValidationRules as V;
 use App\Support\PopupSettings;
+use App\Support\ImageWebp;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -383,7 +384,7 @@ class SettingController extends Controller
             return null;
         }
 
-        $path = $request->file($key)->store('popups', 'public');
+        $path = ImageWebp::store($request->file($key), 'popups');
         $this->deletePopupImage($current);
 
         return $path;

@@ -13,6 +13,7 @@ use App\Models\ShopFilterExclusion;
 use App\Rules\ValidationRules as V;
 use App\Services\InstagramReelService;
 use App\Support\BannerMedia;
+use App\Support\ImageWebp;
 use App\Support\ShopFilterCatalogue;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -194,14 +195,18 @@ class HomepageController extends Controller
             // stay on the public disk, reachable by URL, with nothing pointing
             // at it - so the storage folder only ever grew.
             $previousLogo = Setting::get('site_logo', '');
-            $path = $request->file('site_logo')->store('branding', 'public');
+            $path = ImageWebp::store($request->file('site_logo'), 'branding');
             Setting::set('site_logo', $path, 'string', 'homepage');
 
             if ($previousLogo && $previousLogo !== $path && ! str_starts_with($previousLogo, 'http')) {
-                Storage::disk('public')->delete($previousLogo);
+                ImageWebp::delete($previousLogo);
             }
         }
 
+        // The favicon is deliberately NOT converted. Browsers ask for it by a
+        // fixed name and expect ICO or PNG; a WebP favicon is ignored by enough
+        // of them that the tab would simply lose its icon, which is a poor
+        // trade for a file measured in single-digit kilobytes.
         if ($request->hasFile('site_favicon')) {
             $previousFavicon = Setting::get('site_favicon', '');
             $path = $request->file('site_favicon')->store('branding', 'public');
@@ -532,9 +537,9 @@ class HomepageController extends Controller
 
         if ($request->hasFile('image')) {
             if ($section->image_url) {
-                Storage::disk('public')->delete($section->image_url);
+                ImageWebp::delete($section->image_url);
             }
-            $data['image_url'] = $request->file('image')->store('sections', 'public');
+            $data['image_url'] = ImageWebp::store($request->file('image'), 'sections');
         }
 
         $section->update($data);
@@ -873,7 +878,7 @@ class HomepageController extends Controller
         unset($data['image']);
 
         if ($request->hasFile('image')) {
-            $data['image_url'] = $request->file('image')->store('qualities', 'public');
+            $data['image_url'] = ImageWebp::store($request->file('image'), 'qualities');
         }
 
         $data['position'] = (Quality::max('position') ?? 0) + 1;
@@ -899,11 +904,11 @@ class HomepageController extends Controller
         // rather than left behind on disk.
         if ($request->hasFile('image')) {
             if ($quality->image_url) {
-                Storage::disk('public')->delete($quality->image_url);
+                ImageWebp::delete($quality->image_url);
             }
-            $data['image_url'] = $request->file('image')->store('qualities', 'public');
+            $data['image_url'] = ImageWebp::store($request->file('image'), 'qualities');
         } elseif ($request->boolean('remove_image') && $quality->image_url) {
-            Storage::disk('public')->delete($quality->image_url);
+            ImageWebp::delete($quality->image_url);
             $data['image_url'] = null;
         }
 

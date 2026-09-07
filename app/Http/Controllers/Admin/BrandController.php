@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Rules\ValidationRules as V;
+use App\Support\ImageWebp;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -39,7 +40,7 @@ class BrandController extends Controller
         $validated['slug'] = Str::slug($validated['name']);
 
         if ($request->hasFile('logo')) {
-            $validated['logo_url'] = $request->file('logo')->store('brands', 'public');
+            $validated['logo_url'] = ImageWebp::store($request->file('logo'), 'brands');
         }
 
         unset($validated['logo']);
@@ -67,7 +68,7 @@ class BrandController extends Controller
         $validated['slug'] = Str::slug($validated['name']);
 
         if ($request->hasFile('logo')) {
-            $validated['logo_url'] = $request->file('logo')->store('brands', 'public');
+            $validated['logo_url'] = ImageWebp::store($request->file('logo'), 'brands');
         }
 
         unset($validated['logo']);

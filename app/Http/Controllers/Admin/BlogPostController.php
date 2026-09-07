@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\BlogPost;
 use App\Rules\ValidationRules as V;
+use App\Support\ImageWebp;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -188,7 +189,7 @@ class BlogPostController extends Controller
         }
 
         if ($request->hasFile('featured_image')) {
-            $validated['featured_image'] = $request->file('featured_image')->store('blog', 'public');
+            $validated['featured_image'] = ImageWebp::store($request->file('featured_image'), 'blog');
         }
 
         BlogPost::create($validated);
@@ -217,9 +218,9 @@ class BlogPostController extends Controller
         if ($request->hasFile('featured_image')) {
             // Delete old image
             if ($blogPost->featured_image) {
-                Storage::disk('public')->delete($blogPost->featured_image);
+                ImageWebp::delete($blogPost->featured_image);
             }
-            $validated['featured_image'] = $request->file('featured_image')->store('blog', 'public');
+            $validated['featured_image'] = ImageWebp::store($request->file('featured_image'), 'blog');
         }
 
         $blogPost->update($validated);
