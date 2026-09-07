@@ -8,6 +8,7 @@ use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Customer;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductView;
 use App\Models\User;
@@ -412,28 +413,117 @@ class ReportController extends Controller
         return view('admin.reports.customers', compact('stats', 'topCustomers', 'growth', 'range'));
     }
 
+    /**
+     * The columns of the sales export.
+     *
+     * It used to be the same GROUP BY DATE the chart is drawn from - a date, an
+     * order count and a day's takings - which has nowhere to name a product or
+     * a customer, because by then both have been summed away. The shop exports
+     * this to see who bought what and to ring them about it, so a row is now an
+     * order line.
+     */
+    private const SALES_EXPORT_HEADERS = [
+        'Date',
+        'Order Number',
+        'Customer',
+        'Phone',
+        'Product',
+        'SKU',
+        'Variant',
+        'Quantity',
+        'Unit Price',
+        'Line Total',
+        'Order Total (once per order)',
+        'Status',
+        'Payment Method',
+        'Payment Status',
+    ];
+
+    /**
+     * The rows one order contributes to the sales export.
+     *
+     * Order-level figures print on the order's first line and are left blank on
+     * the rest of them, rather than being repeated onto every line: a two-item
+     * order repeating its total twice would make the Order Total column add up
+     * to more than the revenue on the report above, and the first thing anyone
+     * does with an exported column of money is sum it. Summing this one gives
+     * the report's revenue figure exactly.
+     */
+    private function salesRows(Order $order): array
+    {
+        // An order with no lines still happened and its total is inside the
+        // report's revenue, so it prints with the product columns empty rather
+        // than being dropped - otherwise the two figures quietly disagree.
+        $lines = $order->items->all() ?: [null];
+
+        $rows = [];
+
+        foreach ($lines as $index => $item) {
+            $rows[] = [
+                $order->created_at->format('Y-m-d H:i'),
+                $order->order_number,
+                $order->customer_name,
+                // Leading zeros and a +91 survive because fputcsv() quotes the
+                // field; what Excel then does with it is Excel's business.
+                $order->customer_phone,
+                $item?->product_name ?? '',
+                $item?->sku ?? '',
+                $item ? $this->variantLabel($item) : '',
+                $item?->quantity ?? '',
+                $item?->price ?? '',
+                $item?->total ?? '',
+                $index === 0 ? $order->total : '',
+                ucfirst(str_replace('_', ' ', (string) $order->status)),
+                strtoupper($order->payment_method),
+                ucfirst((string) $order->payment_status),
+            ];
+        }
+
+        return $rows;
+    }
+
+    /** The choices the customer made on this line, if it carries any. */
+    private function variantLabel(OrderItem $item): string
+    {
+        return $item->variant_name
+            ?: implode(' / ', array_filter([$item->size, $item->colour, $item->texture]));
+    }
+
+    /**
+     * Sales in the window, oldest first, one Eloquent row per order with its
+     * lines and its account attached - customer_name and customer_phone read
+     * both, and neither is worth a query per order.
+     */
+    private function salesQuery(ReportRange $range)
+    {
+        return Order::countsAsSale()
+            ->whereBetween('orders.created_at', [$range->start, $range->end])
+            ->with(['items', 'user'])
+            ->orderBy('orders.created_at')
+            ->orderBy('orders.id');
+    }
+
     public function export(Request $request, string $type): StreamedResponse
     {
         $range = $this->range($request);
-        [$startDate, $endDate] = [$range->start, $range->end];
         $soldInPeriod = $this->soldInPeriod($range);
 
         $filename = "{$type}_report_" . now()->format('Y-m-d') . '.csv';
 
-        return response()->streamDownload(function () use ($type, $startDate, $endDate, $soldInPeriod) {
+        return response()->streamDownload(function () use ($type, $range, $soldInPeriod) {
             $handle = fopen('php://output', 'w');
 
             switch ($type) {
                 case 'sales':
-                    fputcsv($handle, ['Date', 'Orders', 'Revenue']);
-                    Order::countsAsSale()
-                        ->whereBetween('orders.created_at', [$startDate, $endDate])
-                        ->selectRaw('DATE(created_at) as date, COUNT(*) as orders, SUM(total) as revenue')
-                        ->groupBy('date')
-                        ->orderBy('date')
-                        ->each(function ($row) use ($handle) {
-                            fputcsv($handle, [$row->date, $row->orders, $row->revenue]);
-                        });
+                    fputcsv($handle, self::SALES_EXPORT_HEADERS);
+                    // Streamed a chunk of orders at a time rather than collected
+                    // first: a year of a busy month is a lot of order lines, and
+                    // this response is already being written straight to the wire.
+                    $this->salesQuery($range)->each(function ($order) use ($handle) {
+                        foreach ($this->salesRows($order) as $row) {
+                            fputcsv($handle, $row);
+                        }
+                    });
                     break;
 
                 case 'products':
@@ -475,20 +565,15 @@ class ReportController extends Controller
     public function exportExcel(Request $request, string $type): StreamedResponse
     {
         $range = $this->range($request);
-        [$startDate, $endDate] = [$range->start, $range->end];
         $soldInPeriod = $this->soldInPeriod($range);
         $exportService = new ReportExportService();
 
         switch ($type) {
             case 'sales':
-                $headers = ['Date', 'Orders', 'Revenue'];
-                $rows = Order::countsAsSale()
-                    ->whereBetween('orders.created_at', [$startDate, $endDate])
-                    ->selectRaw('DATE(created_at) as date, COUNT(*) as orders, SUM(total) as revenue')
-                    ->groupBy('date')
-                    ->orderBy('date')
+                $headers = self::SALES_EXPORT_HEADERS;
+                $rows = $this->salesQuery($range)
                     ->get()
-                    ->map(fn ($row) => [$row->date, $row->orders, $row->revenue]);
+                    ->flatMap(fn ($order) => $this->salesRows($order));
                 break;
 
             case 'products':

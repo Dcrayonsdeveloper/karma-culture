@@ -320,6 +320,38 @@ class Order extends Model
     }
 
     /**
+     * Who this order is for, and the number to ring about it.
+     *
+     * Guest checkout leaves user_id null, so the account is not always there to
+     * ask - the address snapshot taken at checkout always is, and it carries
+     * the same name the order screens show. The phone deliberately prefers the
+     * order's own number over the account's: the customer can give a different
+     * one per delivery, and the one on the account may be an old handset or
+     * belong to whoever set the account up.
+     *
+     * Both were copy-pasted expressions in the admin order screen, the
+     * notification listener and the tracking lookup. They live here so the
+     * reports export cannot name a different person, or print a different
+     * number, than the order page the shop rings from.
+     */
+    public function getCustomerNameAttribute(): string
+    {
+        return trim((string) ($this->user?->full_name ?? ''))
+            ?: trim((string) data_get($this->shipping_address_snapshot, 'name'))
+            ?: 'Guest';
+    }
+
+    public function getCustomerPhoneAttribute(): string
+    {
+        return trim((string) (
+            data_get($this->shipping_address_snapshot, 'phone')
+                ?: data_get($this->metadata, 'guest_phone')
+                ?: data_get($this->billing_address_snapshot, 'phone')
+                ?: $this->user?->phone
+        ));
+    }
+
+    /**
      * How this order is being paid for. There is no such column - checkout
      * records it in metadata - but the tracking page and the fraud detail page
      * both read $order->payment_method, so without this they printed "Not

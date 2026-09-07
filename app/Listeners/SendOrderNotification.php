@@ -13,7 +13,6 @@ use App\Mail\OrderDelivered as OrderDeliveredMail;
 use App\Mail\OrderShipped as OrderShippedMail;
 use App\Mail\RefundProcessed as RefundProcessedMail;
 use App\Mail\ReturnApproved;
-use App\Models\Order;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Log;
 
@@ -45,7 +44,7 @@ class SendOrderNotification
             $this->notificationService->notifyAdmins(
                 'new_order',
                 'New Order',
-                "Order #{$order->order_number} placed for ".format_price($order->total).' by '.$this->customerName($order),
+                "Order #{$order->order_number} placed for ".format_price($order->total).' by '.$order->customer_name,
                 [
                     'order_id' => $order->id,
                     'order_number' => $order->order_number,
@@ -158,7 +157,7 @@ class SendOrderNotification
                 $this->notificationService->notifyAdmins(
                     'order_'.$event->newStatus,
                     $alert,
-                    "Order #{$order->order_number} is now {$event->newStatus} (".$this->customerName($order).').',
+                    "Order #{$order->order_number} is now {$event->newStatus} (".$order->customer_name.').',
                     ['order_id' => $order->id, 'order_number' => $order->order_number]
                 );
             } catch (\Throwable $e) {
@@ -225,19 +224,5 @@ class SendOrderNotification
             'return_id' => $return->id,
             'amount' => $event->amount,
         ], new RefundProcessedMail($return, $event->amount));
-    }
-
-    /**
-     * Who to name in the admin alert for an order.
-     *
-     * Guest checkout leaves user_id null, so the account is not always there to
-     * ask. The address snapshot taken at checkout always is, and it carries the
-     * same name the order screens already show.
-     */
-    private function customerName(Order $order): string
-    {
-        return trim((string) ($order->user?->full_name ?? ''))
-            ?: trim((string) ($order->shipping_address_snapshot['name'] ?? ''))
-            ?: 'Guest';
     }
 }
