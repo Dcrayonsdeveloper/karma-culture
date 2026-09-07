@@ -30,7 +30,8 @@ class SeedColourTextureImages extends Command
     protected $signature = 'products:colour-texture-images
         {product? : Product id or slug. Defaults to the first active product that has colours}
         {--clear : Remove images this command made before, instead of adding to them}
-        {--keep-existing : Leave the product\'s real photographs alone (default is to leave them alone too)}';
+        {--shades=3 : How many shades to photograph, 0 for all of them}
+        {--fabrics=2 : How many of its fabrics to photograph, 0 for all}';
 
     protected $description = 'Draw demo photos tagged by shade and fabric, so the product page gallery can be seen switching';
 
@@ -80,8 +81,14 @@ class SeedColourTextureImages extends Command
             return self::SUCCESS;
         }
 
-        $colours = $this->colours($product);
-        $textures = $this->textures($product);
+        /* Capped, because a bulk normalisation has left this catalogue's
+           products carrying the whole shade library - seven shades and five
+           fabrics each, which is 7 x (1 + 5) + 2 = 44 photographs for one
+           product. That is a slow page and a wall of thumbnails, and it
+           demonstrates nothing the first three shades do not. Pass --shades=0
+           --fabrics=0 to photograph the lot. */
+        $colours = $this->cap($this->colours($product), (int) $this->option('shades'));
+        $textures = $this->cap($this->textures($product), (int) $this->option('fabrics'));
 
         if ($colours === []) {
             $this->error('That product offers no colours, so there is nothing to tag a photo with.');
@@ -145,6 +152,19 @@ class SeedColourTextureImages extends Command
             ->whereNotNull('attributes')
             ->get()
             ->first(fn (Product $p) => $this->colours($p) !== []);
+    }
+
+    /**
+     * The first $limit of them, or all of them when $limit is 0 or less.
+     *
+     * @template T
+     *
+     * @param  array<int, T>  $values
+     * @return array<int, T>
+     */
+    private function cap(array $values, int $limit): array
+    {
+        return $limit > 0 ? array_slice($values, 0, $limit) : $values;
     }
 
     /** @return array<int, array{name: string, hex: string}> */
