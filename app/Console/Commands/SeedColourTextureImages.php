@@ -273,10 +273,17 @@ class SeedColourTextureImages extends Command
             return;
         }
 
-        // Which pattern a fabric gets is decided by its own name, so the same
-        // fabric always draws the same way across every product and run.
-        $style = crc32($key) % 4;
-        $step = 48;
+        /* Which pattern a fabric gets is decided by its own name, so the same
+           fabric always draws the same way on every product and every run.
+
+           The density is taken from a different part of the same hash as the
+           style, because with four styles alone two of a product's fabrics
+           collide often - "Linen" and "Cotton" did, and two frames identical
+           but for their caption make a poor demonstration of a feature whose
+           whole point is that the picture changes. */
+        $hash = crc32($key);
+        $style = $hash % 4;
+        $step = 28 + (intdiv($hash, 4) % 5) * 14;
 
         for ($i = -$height; $i < $width + $height; $i += $step) {
             match ($style) {
