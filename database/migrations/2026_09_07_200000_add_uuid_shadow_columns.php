@@ -59,6 +59,32 @@ return new class extends Migration
         // `sessions` keeps its own varchar key, but it stores a user's id, and that
         // one is converting - so the column travels with users or logins break.
         ['sessions', 'user_id', 'users'],
+        // Nominally polymorphic, but only ever a user here, so the target is not in
+        // doubt: `HasApiTokens` and `HasRoles` are both used by App\Models\User and
+        // by nothing else. Sanctum's guard loads $token->tokenable on every API
+        // request, so leaving this one behind would log every token holder out.
+        ['personal_access_tokens', 'tokenable_id', 'users'],
+        ['model_has_roles', 'model_id', 'users'],
+        ['model_has_permissions', 'model_id', 'users'],
+    ];
+
+    /**
+     * The genuinely ambiguous columns: an id whose parent table is chosen by a
+     * sibling `*_type` value. These get no shadow column here because the mapping
+     * cannot be settled without looking at the values actually present - and a
+     * wrong guess silently re-points live rows at the wrong record.
+     *
+     * `uuid:backfill` reports the distinct type values found in each so the mapping
+     * can be confirmed against real data before stage 2 handles them.
+     */
+    public const TYPE_KEYED_COLUMNS = [
+        ['audit_logs', 'subject_id', 'subject_type'],
+        ['seo_metadata', 'model_id', 'model_type'],
+        ['user_activities', 'model_id', 'model_type'],
+        ['pos_audit_log', 'entity_id', 'entity_type'],
+        ['inventory_movements', 'reference_id', 'reference_type'],
+        ['pos_cash_movements', 'reference_id', 'reference_type'],
+        ['messages', 'sender_id', 'sender_type'],
     ];
 
     public function up(): void

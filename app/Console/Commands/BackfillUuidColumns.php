@@ -24,8 +24,6 @@ class BackfillUuidColumns extends Command
 
     protected $description = 'Populate the shadow UUID key columns beside the integer primary keys';
 
-    /** Tables that already carry a public `uuid`, whose value is reused as the key. */
-    private array $existingUuidColumn = [];
 
     public function handle(): int
     {
@@ -56,11 +54,23 @@ class BackfillUuidColumns extends Command
     }
 
     /**
-     * A UUIDv7 carries a millisecond timestamp in its leading bits, so a row's uuid
-     * is generated from its own `created_at` where the table has one. Without that,
-     * every historical row would be stamped with the moment of the backfill and
-     * `orderBy('id')` - which today means "oldest first" and is what most listings
-     * in this app sort by - would come back in an arbitrary order after the swap.
+     * A UUIDv7 leads with a 48-bit millisecond timestamp, so each row's key is built
+     * from its own `created_at`. Stamping every historical row with the moment of the
+     * backfill instead would leave `orderBy('id')` - which most listings here sort by,
+     * and which today means "oldest first" - returning an arbitrary order after the
+     * swap.
+     *
+     * A timestamp alone is not enough. Rows written in the same millisecond would sort
+     * against each other on random bits, and seeders and imports write hundreds of rows
+     * per millisecond. So the 12 bits the spec leaves free directly after the version
+     * nibble are used as a counter, and keys are generated in `id` order: the result is
+     * strictly ascending, and `orderBy('id')` returns exactly the order it does today,
+     * row for row, rather than merely approximately.
+     *
+     * Note this deliberately does NOT reuse the public `uuid` column that a handful of
+     * tables already carry. Those are v4 - no timestamp, no order - and adopting them
+     * as the key scrambled all 18 products in testing. That column stays exactly where
+     * it is and keeps resolving, so nothing referring to it externally notices.
      */
     private function backfillKeys(string $table): void
     {
@@ -73,12 +83,15 @@ class BackfillUuidColumns extends Command
         }
 
         $hasCreatedAt = Schema::hasColumn($table, 'created_at');
-        $source = $this->reusableUuidColumn($table);
         $bar = $this->output->createProgressBar($pending);
         $bar->setFormat("  {$table}: %current%/%max% [%bar%] %elapsed%");
 
+        // Carried across chunks so the sequence stays ascending over the whole table.
+        $lastMs = 0;
+        $counter = 0;
+
         do {
-            $columns = array_filter(['id', 'uuid_pk', $source, $hasCreatedAt ? 'created_at' : null]);
+            $columns = array_filter(['id', $hasCreatedAt ? 'created_at' : null]);
 
             $rows = DB::table($table)
                 ->whereNull('uuid_pk')
@@ -90,20 +103,29 @@ class BackfillUuidColumns extends Command
                 break;
             }
 
-            DB::transaction(function () use ($rows, $table, $source, $hasCreatedAt) {
+            DB::transaction(function () use ($rows, $table, $hasCreatedAt, &$lastMs, &$counter) {
                 foreach ($rows as $row) {
-                    // Reuse the uuid this row is already known by rather than minting
-                    // a second identity for it: those values are in URLs and in other
-                    // people's systems, and the point of stage 3 is that they keep
-                    // resolving to the same row afterwards.
-                    $uuid = $source && ! empty($row->{$source}) && Str::isUuid($row->{$source})
-                        ? $row->{$source}
-                        : (string) Str::uuid7($hasCreatedAt && $row->created_at
-                            ? new \DateTimeImmutable($row->created_at)
-                            : null);
+                    $ms = $hasCreatedAt && $row->created_at
+                        ? (int) (new \DateTimeImmutable($row->created_at))->format('Uv')
+                        : $lastMs;
+
+                    if ($ms > $lastMs) {
+                        $lastMs = $ms;
+                        $counter = 0;
+                    } else {
+                        // Same millisecond, or a row whose created_at runs backwards
+                        // against its id. Keep climbing regardless; the counter is
+                        // what guarantees the order, not the clock.
+                        $counter++;
+
+                        if ($counter > 0xFFF) {
+                            $lastMs++;
+                            $counter = 0;
+                        }
+                    }
 
                     DB::table($table)->where('id', $row->id)->update([
-                        'uuid_pk' => $uuid,
+                        'uuid_pk' => $this->orderedUuid7($lastMs, $counter),
                         'legacy_id' => $row->id,
                     ]);
                 }
@@ -117,6 +139,24 @@ class BackfillUuidColumns extends Command
 
         // Rows that predate the `legacy_id` column being added still need it.
         DB::table($table)->whereNull('legacy_id')->update(['legacy_id' => DB::raw('id')]);
+    }
+
+    /**
+     * A UUIDv7 whose leading 60 bits are the millisecond and the sequence counter, so
+     * that string comparison between two of them is the same answer as comparing the
+     * integer keys they replace. The remaining 62 bits stay random, which is what keeps
+     * the value unguessable now that it is the public identifier for the row.
+     */
+    private function orderedUuid7(int $ms, int $counter): string
+    {
+        $hex = sprintf('%012x', $ms & 0xFFFFFFFFFFFF)   // 48-bit timestamp
+             .'7'.sprintf('%03x', $counter & 0xFFF)      // version + 12-bit counter
+             .dechex(random_int(8, 11))                  // RFC 4122 variant
+             .bin2hex(random_bytes(2)).substr(bin2hex(random_bytes(6)), 0, 11);
+
+        return sprintf('%s-%s-%s-%s-%s',
+            substr($hex, 0, 8), substr($hex, 8, 4), substr($hex, 12, 4),
+            substr($hex, 16, 4), substr($hex, 20, 12));
     }
 
     /**
@@ -182,6 +222,8 @@ class BackfillUuidColumns extends Command
             }
         }
 
+        $this->reportTypeKeyedColumns($migration);
+
         $this->newLine();
 
         if (empty($problems)) {
@@ -199,12 +241,46 @@ class BackfillUuidColumns extends Command
     }
 
     /**
-     * The public `uuid` column on the handful of tables that already have one.
+     * The columns this stage deliberately does not carry across: an id whose parent
+     * table is picked by a sibling `*_type` value.
+     *
+     * They are printed with the type values actually present, and the row count behind
+     * each, because that is the evidence needed to settle the mapping before stage 2
+     * moves them. An empty column needs no mapping at all, which is worth knowing -
+     * most of these are empty on production today, and a mapping nobody has to guess
+     * at is a mapping nobody can get wrong.
      */
-    private function reusableUuidColumn(string $table): ?string
+    private function reportTypeKeyedColumns($migration): void
     {
-        return $this->existingUuidColumn[$table] ??=
-            (Schema::hasColumn($table, 'uuid') ? 'uuid' : null);
+        $rows = [];
+
+        foreach ($migration::TYPE_KEYED_COLUMNS as [$table, $idColumn, $typeColumn]) {
+            if (! Schema::hasTable($table) || ! Schema::hasColumn($table, $typeColumn)) {
+                continue;
+            }
+
+            $present = DB::table($table)
+                ->whereNotNull($idColumn)
+                ->select($typeColumn, DB::raw('COUNT(*) AS n'))
+                ->groupBy($typeColumn)
+                ->pluck('n', $typeColumn);
+
+            $rows[] = [
+                "{$table}.{$idColumn}",
+                $typeColumn,
+                $present->isEmpty()
+                    ? '(no rows - nothing to map)'
+                    : $present->map(fn ($n, $t) => "{$t}={$n}")->implode(', '),
+            ];
+        }
+
+        if ($rows === []) {
+            return;
+        }
+
+        $this->newLine();
+        $this->components->info('Type-keyed columns, deferred to stage 2:');
+        $this->table(['column', 'keyed by', 'values present'], $rows);
     }
 
     /**
