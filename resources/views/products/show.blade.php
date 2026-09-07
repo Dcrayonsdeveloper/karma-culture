@@ -44,34 +44,80 @@
             . '<circle cx="8.5" cy="9.5" r="1.5"/>'
             . '<path d="M21 15l-5-5L5 20"/></svg></span>';
 
-        $media = $product->images->sortBy('position')->map(function ($img) use ($resolveUrl, $noMediaFallback) {
-            return [
-                'url'   => $resolveUrl($img->url) ?: $noMediaFallback,
-                'type'  => $img->media_type ?? 'image',
-                'thumb' => $img->thumbnail_url ? $resolveUrl($img->thumbnail_url) : null,
-                'main'  => (bool) $img->is_primary,
-            ];
-        })->values()->toArray();
-        if (empty($media)) {
-            $media = [['url' => $product->primary_image_url, 'type' => 'image', 'thumb' => null, 'main' => true]];
-        }
+        /* The sizes, colours and textures this product actually offers, read
+           through the one derivation the cart and the quick-add popup also use,
+           so this page can never offer a choice /cart/add then refuses.
+
+           Read up here, above the gallery, because the gallery now opens on the
+           selected colour: the pickers pre-select the first of each list, so the
+           very first paint is already a filtered one, and the server has to know
+           what was chosen before it can decide which frame leads. */
+        $kkOptions = \App\Support\ProductOptions::for($product);
+        $kkDefaultColour = $kkOptions->colourNames()->first();
+        $kkDefaultTexture = $kkOptions->textures->first();
 
         /* The gallery opens on whichever media the admin marked as main, rather
            than on whatever happens to sort first. Position still decides the
            order of the strip - the two are separate choices, and a main video
-           does not have to be dragged to the front to lead. */
-        $kkMainIndex = 0;
-        foreach ($media as $i => $m) {
-            if (! empty($m['main'])) {
-                $kkMainIndex = $i;
-                break;
-            }
-        }
+           does not have to be dragged to the front to lead.
+
+           Unless that photo is not one of this colour's. A tagged gallery leads
+           with the main frame only when the opening selection shows it, and with
+           the first frame that is shown otherwise - see App\Support\ProductGallery,
+           which is also where the browser's copy of the rule is described. */
+        $kkGallery = \App\Support\ProductGallery::for(
+            $product,
+            $resolveUrl,
+            $noMediaFallback,
+            $product->primary_image_url,
+            $kkDefaultColour,
+            $kkDefaultTexture,
+            $kkOptions->colourNames(),
+            $kkOptions->textures,
+        );
+
+        $media = $kkGallery->media;
+
+        // The frame the page opens on. Load-bearing well beyond which picture is
+        // on screen: exactly one slide is exempted from x-cloak and one carries
+        // loading="eager"/fetchpriority="high", and both of those are this frame.
+        // Pinning them to the main photo instead would cloak the opening frame of
+        // every tagged gallery and preload one nobody is looking at.
+        $kkLeadIndex = $kkGallery->initialIndex;
+
+        // Where the main media sits, which on a tagged gallery is a different
+        // question - the shopper may have to pick its colour to reach it.
+        $kkMainIndex = $kkGallery->mainIndex();
 
         // A main video plays by itself. Muted, because no autoplay policy allows
         // sound unprompted, and only this one - the rest of the gallery stays
         // quiet until it is asked for.
-        $kkMainIsVideo = ($media[$kkMainIndex]['type'] ?? 'image') === 'video';
+        $kkMainIsVideo = $kkGallery->mainIsVideo();
+
+        /* Has anybody tagged a photo on this product at all?
+
+           On the great majority of products - every one whose images predate the
+           tagging feature - nothing is tagged, nothing can ever be hidden, and
+           the gallery keeps its original behaviour exactly: the arrows step
+           through the whole strip, the counter counts all of it, every thumbnail
+           shows. The filtering path only switches on where it has something to
+           do, so an untagged product cannot be broken by it. */
+        $kkGalleryTagged = $kkGallery->isTagged();
+
+        /* What the shopper can actually step through on first paint, which is
+           not count($media) once photos are tagged.
+
+           Painted into the markup rather than left to the x-show bindings alone:
+           x-show runs when Alpine boots, so a gallery that only knew this in
+           JavaScript would render all nine frames and then be seen to collapse
+           to four. Every one of these is re-decided by Alpine a moment later -
+           this is only what the browser draws in the meantime. */
+        $kkVisible = $kkGallery->initialVisible($kkDefaultColour, $kkDefaultTexture);
+        $kkVisibleCount = count($kkVisible);
+        // "display: none" and not the x-cloak class: x-show sets this same
+        // property, so Alpine takes the attribute over cleanly on boot.
+        $kkHidden = fn (int $i) => in_array($i, $kkVisible, true) ? '' : 'display: none;';
+        $kkHideRail = $kkVisibleCount > 1 ? '' : 'display: none;';
         /* The hover magnifier works on photographs only - a video slide has its
            own controls and nothing to magnify - and the hint over the frame has
            to know which is which before the pointer arrives. */
@@ -198,7 +244,13 @@
        (0,2,0) against that rule's (0,1,0) - unscoped, it would win and re-cap
        the column. */
     @media (min-width: 641px) {
-        .kk-pdp__gallery:not(:has(.kk-pdp__thumbs)) {
+        /* The same slack, given back for the same reason, when the rail is
+           present but empty-handed: a chosen colour with a single photograph has
+           nothing to put in it. x-show only sets display:none, so
+           .kk-pdp__thumbs is still in the DOM and :has() still matches it -
+           hence a second selector rather than relying on the first. */
+        .kk-pdp__gallery:not(:has(.kk-pdp__thumbs)),
+        .kk-pdp__gallery.is-railless {
             max-width: calc(var(--kk-pdp-frame-h) * 3 / 4);
         }
     }
@@ -626,13 +678,24 @@
         <div class="kk-pdp">
 
             <!-- LEFT: Media gallery (images + videos) -->
-            <div class="kk-pdp__gallery">
+            {{-- Object syntax, not a ternary returning a string: Alpine removes a
+                 class an object binding evaluates false for whoever added it,
+                 which is what lets the server paint is-railless below and Alpine
+                 take it back off if it disagrees. --}}
+            <div class="kk-pdp__gallery @if($kkVisibleCount <= 1) is-railless @endif"
+                 :class="{ 'is-railless': visibleCount <= 1 }">
                 @if(count($media) > 1)
-                    <div class="kk-pdp__thumbs">
+                    {{-- The rail exists whenever the product has more than one piece of
+                         media, but a selected colour can leave only one of them on
+                         screen - so what is *shown* is a runtime question and what is
+                         *rendered* is not. x-show rather than a template, because the
+                         rail is also the thing the gallery reserves width for. --}}
+                    <div class="kk-pdp__thumbs" x-show="visibleCount > 1" style="{{ $kkHideRail }}">
                         @foreach($media as $i => $m)
                             <button type="button" class="kk-media kk-media--cover kk-pdp__thumb {{ $m['type'] === 'video' ? 'kk-pdp__thumb--video' : '' }}"
                                     :class="currentImage === {{ $i }} ? 'is-active' : ''"
                                     @click="currentImage = {{ $i }}"
+                                    x-show="isVisible({{ $i }})" style="{{ $kkHidden($i) }}"
                                     aria-label="View media {{ $i + 1 }}">
                                 @if($m['type'] === 'video')
                                     @if($m['thumb'])
@@ -655,7 +718,7 @@
                     @foreach($media as $i => $m)
                         @if($m['type'] === 'video')
                             <div class="kk-media kk-pdp__slide kk-pdp__slide--video"
-                                 x-show="currentImage === {{ $i }}" @if($i !== $kkMainIndex) x-cloak @endif>
+                                 x-show="currentImage === {{ $i }}" @if($i !== $kkLeadIndex) x-cloak @endif>
                                 {{-- The main video starts on its own. preload jumps from
                                      metadata to auto for that one alone: a clip that is
                                      about to play needs its first frames, and every other
@@ -663,7 +726,17 @@
                                 <video controls playsinline
                                        preload="{{ $m['main'] ? 'auto' : 'metadata' }}"
                                        data-kk-main="{{ $m['main'] ? '1' : '0' }}"
-                                       @if($m['main']) autoplay muted loop @endif
+                                       {{-- muted and loop belong to the main clip whenever it
+                                            plays; autoplay belongs to it only when it is also
+                                            the frame the page opens on. The browser honours
+                                            autoplay on load whatever x-show says, so a main
+                                            video tagged with a colour the page does not open
+                                            on would otherwise play, unseen, behind the
+                                            photograph the shopper is actually looking at.
+                                            Stepping back onto it still starts it - that is
+                                            pauseVideos(), which reads data-kk-main. --}}
+                                       @if($m['main']) muted loop @endif
+                                       @if($m['main'] && $i === $kkLeadIndex) autoplay @endif
                                        controlsList="nodownload noplaybackrate noremoteplayback" disablepictureinpicture
                                        @if($m['thumb']) poster="{{ $m['thumb'] }}" @endif>
                                     <source src="{{ $m['url'] }}">
@@ -687,7 +760,7 @@
                                  data-kk-slide="{{ $i }}"
                                  @click="showZoom = true"
                                  aria-label="View {{ $product->name }} full size ({{ $i + 1 }} of {{ count($media) }})"
-                                 x-show="currentImage === {{ $i }}" @if($i !== $kkMainIndex) x-cloak @endif>
+                                 x-show="currentImage === {{ $i }}" @if($i !== $kkLeadIndex) x-cloak @endif>
                                 {{-- No inline sizing. It used to carry
                                      width:auto; height:auto; object-fit:contain, which
                                      quietly cancelled the kk-media--cover class on the
@@ -703,20 +776,32 @@
                                      data-fallback="{{ $noMediaFallback }}"
                                      onerror="this.onerror=null;this.src='{{ $noMediaFallback }}';"
                                      sizes="(max-width: 1024px) 100vw, 50vw" decoding="async"
-                                     loading="{{ $i === 0 ? 'eager' : 'lazy' }}" @if($i === 0) fetchpriority="high" @endif>
+                                     {{-- The LCP candidate is the frame the page opens on, which
+                                          is index 0 only until a photograph is tagged with a
+                                          colour. Pinned to $kkLeadIndex so the browser races to
+                                          fetch the picture the shopper is looking at rather than
+                                          one three colours away. --}}
+                                     loading="{{ $i === $kkLeadIndex ? 'eager' : 'lazy' }}" @if($i === $kkLeadIndex) fetchpriority="high" @endif>
                                 {!! $mediaFallback !!}
                             </button>
                         @endif
                     @endforeach
                     @if(count($media) > 1)
                         {{-- Prev/next arrows (desktop) --}}
-                        <button type="button" class="kk-pdp__navbtn kk-pdp__navbtn--prev" @click.stop="prevImage()" aria-label="Previous">
+                        {{-- Hidden, not merely inert, when the chosen colour leaves a
+                             single photograph: an arrow that cannot go anywhere is
+                             worse than no arrow. --}}
+                        <button type="button" class="kk-pdp__navbtn kk-pdp__navbtn--prev" @click.stop="prevImage()" x-show="visibleCount > 1" style="{{ $kkHideRail }}" aria-label="Previous">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                         </button>
-                        <button type="button" class="kk-pdp__navbtn kk-pdp__navbtn--next" @click.stop="nextImage()" aria-label="Next">
+                        <button type="button" class="kk-pdp__navbtn kk-pdp__navbtn--next" @click.stop="nextImage()" x-show="visibleCount > 1" style="{{ $kkHideRail }}" aria-label="Next">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                         </button>
-                        <span class="kk-pdp__counter"><span x-text="currentImage + 1"></span> / {{ count($media) }}</span>
+                        {{-- "2 / 4" counts the photographs of the chosen colour, not every
+                             photograph on the product. Both halves are reactive: a counter
+                             reading 2 / 9 beside a strip of four is a bug report waiting to
+                             be filed. --}}
+                        <span class="kk-pdp__counter" x-show="visibleCount > 1" style="{{ $kkHideRail }}"><span x-text="currentPosition">{{ (int) array_search($kkLeadIndex, $kkVisible, true) + 1 }}</span> / <span x-text="visibleCount">{{ $kkVisibleCount }}</span></span>
                     @endif
                 </div>
             </div>
@@ -817,71 +902,33 @@
                 }
                 </style>
                 @php
-                    // Sizes, colours and per-size pricing all come from the product's own
-                    // "Sizes & pricing" rows in admin. One row = one buyable size, optionally
-                    // in a colour, with its own price. A product with no rows shows neither
-                    // selector, so non-apparel items stop offering sizes.
-                    $kkRows = $product->variants->where('is_active', true)->values();
+                    /* Sizes, colours and textures, from the same ProductOptions the
+                       gallery above was opened with - and the same one /cart/add
+                       validates against, so this page cannot offer a size, shade or
+                       fabric the cart then refuses.
 
-                    $kkSizes = $kkRows->pluck('name')->map(fn ($n) => trim((string) $n))->filter()->unique()->values();
-
-                    // Fallback for products still holding sizes as free text on the old
-                    // Size attribute (e.g. "CX   M   XL"), so each size still gets its own
-                    // button until the product is given proper size rows.
-                    if ($kkSizes->isEmpty()) {
-                        $kkSizes = collect($product->attributes ?? [])
-                            ->filter(fn ($v, $k) => \Illuminate\Support\Str::contains(\Illuminate\Support\Str::lower($k), 'size'))
-                            ->flatMap(fn ($v) => is_array($v) ? $v : preg_split('/[,\/|]+|\s{2,}/', (string) $v))
-                            ->map(fn ($v) => trim((string) $v))
-                            ->filter()
-                            ->unique()
-                            ->values();
-                    }
-
-                    // Colours are a product-level list set in its own admin section, so a
-                    // product can come in any colour without one size row per combination.
-                    $kkColourList = collect(data_get($product->attributes, 'Colours', []))
-                        ->map(fn ($c) => is_array($c)
-                            ? ['name' => trim((string) ($c['name'] ?? '')), 'hex' => $c['hex'] ?? null]
-                            : ['name' => trim((string) $c), 'hex' => null])
-                        ->filter(fn ($c) => $c['name'] !== '');
-
-                    // Fall back to colours stored on the size rows, so products set up
-                    // before colours moved out of that table still show their swatches.
-                    if ($kkColourList->isEmpty()) {
-                        $kkColourList = $kkRows
-                            ->map(fn ($v) => [
-                                'name' => trim((string) data_get($v->attributes, 'Colour', '')),
-                                'hex' => data_get($v->attributes, 'colour_hex'),
-                            ])
-                            ->filter(fn ($c) => $c['name'] !== '');
-                    }
-
-                    $kkColourList = $kkColourList->unique('name')->values();
-                    $kkColours = $kkColourList->pluck('name');
-                    $kkColourHex = $kkColourList->pluck('hex', 'name')->filter();
-
-                    // Textures are a product-level list too, but plain strings: there is no
-                    // swatch to carry, so nothing to store beside the name. The {name: ...}
-                    // shape is still accepted in case the attributes JSON was hand-edited.
-                    // No size-row fallback here - unlike colours, textures were never kept
-                    // on the variant rows, so there is nothing older to fall back to.
-                    $kkTextures = collect(data_get($product->attributes, 'Textures', []))
-                        ->map(fn ($t) => trim((string) (is_array($t) ? ($t['name'] ?? '') : $t)))
-                        ->filter(fn ($t) => $t !== '')
-                        ->unique()
-                        ->values();
+                       This block used to derive all of it again, inline, and that was
+                       a fourth copy of a derivation that already existed three times.
+                       It matters more than tidiness now: $kkDefaultColour is read at
+                       the top of this file to decide which photograph the gallery
+                       leads with, and read again down here to decide which swatch
+                       opens selected. Two derivations that drifted would put a tick on
+                       one colour and show the photograph of another. */
+                    $kkSizes = $kkOptions->sizes;
+                    $kkColours = $kkOptions->colourNames();
+                    $kkColourHex = $kkOptions->colourHex();
+                    $kkTextures = $kkOptions->textures;
 
                     // size => variant id. Selecting a size points the page at that row so
                     // the existing currentPrice/currentMrp getters show its price.
-                    $kkSizeVariant = $kkRows->reverse()->mapWithKeys(fn ($v) => [trim((string) $v->name) => $v->id])->filter(fn ($id, $n) => $n !== '');
+                    $kkSizeVariant = $kkOptions->sizeVariants;
 
                     // Open the page on a buyable choice: pre-select the first
                     // size and colour instead of leaving the customer to discover
-                    // an empty selector on their way to the cart.
+                    // an empty selector on their way to the cart. The colour and
+                    // texture were chosen at the top of the file, because the
+                    // gallery had to be built knowing them.
                     $kkDefaultSize = $kkSizes->first();
-                    $kkDefaultColour = $kkColours->first();
-                    $kkDefaultTexture = $kkTextures->first();
 
                     // The swatch for each of those names, from the Textures
                     // library. The product stores a name and only a name, so
@@ -2398,10 +2445,10 @@
             </button>
 
             @if(count($media) > 1)
-            <button type="button" class="kk-zoom__btn kk-zoom__nav kk-zoom__nav--prev" @click.stop="prevImage()" aria-label="Previous">
+            <button type="button" class="kk-zoom__btn kk-zoom__nav kk-zoom__nav--prev" @click.stop="prevImage()" x-show="visibleCount > 1" style="{{ $kkHideRail }}" aria-label="Previous">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
             </button>
-            <button type="button" class="kk-zoom__btn kk-zoom__nav kk-zoom__nav--next" @click.stop="nextImage()" aria-label="Next">
+            <button type="button" class="kk-zoom__btn kk-zoom__nav kk-zoom__nav--next" @click.stop="nextImage()" x-show="visibleCount > 1" style="{{ $kkHideRail }}" aria-label="Next">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </button>
             @endif
@@ -2431,8 +2478,8 @@
             </div>
 
             @if(count($media) > 1)
-            <div class="kk-zoom__counter">
-                <span x-text="(currentImage + 1) + ' / {{ count($media) }}'"></span>
+            <div class="kk-zoom__counter" x-show="visibleCount > 1" style="{{ $kkHideRail }}">
+                <span x-text="currentPosition + ' / ' + visibleCount"></span>
             </div>
             @endif
         </div>
@@ -2574,6 +2621,9 @@
                 // Pause any playing gallery/zoom video when the active item or zoom changes,
                 // so audio never keeps playing after the user navigates away.
                 this.$watch('currentImage', () => this.pauseVideos());
+                // The gallery answers the colour and texture pickers beside it.
+                this.$watch('selectedColor', () => this.kkFollowSelection());
+                this.$watch('selectedTexture', () => this.kkFollowSelection());
                 /* Arrows and thumbnails change the slide under a still pointer.
                    Keyed on zoomPt - the pointer being over the frame at all -
                    rather than on hoverZoom: stepping off a video slide onto a
@@ -2628,11 +2678,9 @@
             },
             onTouchEnd(e) {
                 if (this.touchStartX === null || e.target?.closest?.('video')) return;
-                if (this.imageCount < 2) return;
                 const dx = e.changedTouches[0].screenX - this.touchStartX;
                 if (Math.abs(dx) < 40) return;
-                if (dx < 0) this.currentImage = (this.currentImage + 1) % this.imageCount;
-                else this.currentImage = (this.currentImage - 1 + this.imageCount) % this.imageCount;
+                this.stepImage(dx < 0 ? 1 : -1);
             },
             /* ===== Hover magnifier ====================================
                Hovering the main photo puts a small box under the cursor
@@ -2728,8 +2776,98 @@
                 this.hoverZoom = true;
             },
 
-            nextImage() { if (this.imageCount > 1) this.currentImage = (this.currentImage + 1) % this.imageCount; },
-            prevImage() { if (this.imageCount > 1) this.currentImage = (this.currentImage - 1 + this.imageCount) % this.imageCount; },
+            nextImage() { this.stepImage(1); },
+            prevImage() { this.stepImage(-1); },
+
+            /* ===== Which frames belong to the chosen colour and fabric =========
+               The browser half of the rule. The server half is
+               App\Support\ProductGallery, which decides the same thing for the
+               first paint, before any of this has booted. The two are written to
+               read alike on purpose - change one and you must change the other,
+               and the way they would disagree is a flash of the wrong
+               photograph on load. ============================================ */
+
+            /* Trim, collapse inner whitespace, lower-case - the same
+               normalisation ShopFilterCatalogue::normaliseKey() applies on the
+               server, because the two sides are typed by different people on
+               different screens: the library says "Cotton" and a product's
+               attributes JSON may say "cotton". */
+            kkTag(value) {
+                const text = (value ?? '').toString().trim().replace(/\s+/g, ' ').toLowerCase();
+                return text === '' ? null : text;
+            },
+
+            /* An untagged frame is a shared one - the size chart, the fabric
+               close-up, the styling shot - and shows against every choice. A
+               tagged one shows only when the shopper has chosen that value, and
+               a frame carrying both tags needs both to agree: a photo of the
+               indigo linen is not a photo of the indigo cotton. */
+            kkMatches(index) {
+                const tag = this.mediaTags[index];
+                if (!tag) return true;
+                if (tag.colour !== null && tag.colour !== this.kkTag(this.selectedColor)) return false;
+                return tag.texture === null || tag.texture === this.kkTag(this.selectedTexture);
+            },
+
+            /* The frames on screen right now, as indices into the FULL media
+               list. currentImage stays an absolute index throughout: every
+               x-show, the thumbnail rail, mainIndex and the magnifier's
+               zoomableSlides are all written against the server-rendered order,
+               and re-indexing onto the filtered subset would mean rewriting
+               every one of them to agree.
+
+               Never empty. A selection that matches nothing falls back to the
+               whole strip, because a half-tagged product is the normal state of
+               a catalogue mid-way through being tagged, and a shopper who taps a
+               colour must not be answered with a blank frame. */
+            get visibleImages() {
+                const all = this.mediaTags.map((_, i) => i);
+                if (!this.galleryTagged) return all;
+                const shown = all.filter((i) => this.kkMatches(i));
+                return shown.length ? shown : all;
+            },
+
+            get visibleCount() { return this.visibleImages.length; },
+
+            // "2 / 4" counts within what is on screen, not within everything.
+            get currentPosition() {
+                const at = this.visibleImages.indexOf(this.currentImage);
+                return (at < 0 ? 0 : at) + 1;
+            },
+
+            isVisible(index) { return !this.galleryTagged || this.kkMatches(index); },
+
+            /* Arrows and swipes walk the frames on screen and wrap within them.
+               They used to step modulo the whole strip, which on a tagged
+               gallery lands on hidden slides: a shade with two photographs would
+               have been a nine-frame gallery that went blank seven times out of
+               nine. */
+            stepImage(direction) {
+                const shown = this.visibleImages;
+                if (shown.length < 2) return;
+                const at = shown.indexOf(this.currentImage);
+                const from = at < 0 ? 0 : at;
+                this.currentImage = shown[(from + direction + shown.length) % shown.length];
+            },
+
+            /* Follow the shopper's choice with the gallery.
+
+               A frame that actually SHOWS the new choice is preferred over one
+               that merely survives the filter: tapping Indigo while looking at
+               the shared size chart should show indigo, not leave the size chart
+               up on the grounds that it still technically matches. Only when the
+               new selection has no photograph of its own does the current frame
+               stand - and even then it is moved if it has been filtered out. */
+            kkFollowSelection() {
+                if (!this.galleryTagged) return;
+                const shown = this.visibleImages;
+                const showing = shown.find((i) => {
+                    const tag = this.mediaTags[i];
+                    return tag && (tag.colour !== null || tag.texture !== null);
+                });
+                if (showing !== undefined) { this.currentImage = showing; return; }
+                if (!shown.includes(this.currentImage)) this.currentImage = shown[0] ?? 0;
+            },
 
             selectAttribute(attrName, value) {
                 this.selectedAttributes[attrName] = value;

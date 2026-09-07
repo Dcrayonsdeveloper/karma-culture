@@ -236,6 +236,107 @@
                         @error('videos.*') <p class="form-error mt-2">{{ $message }}</p> @enderror
                     </div>
 
+                    @php
+                        // Which shade and which fabric each photo shows. Read straight
+                        // off the saved product: the colours a photo can be tagged with
+                        // are the ones already committed to the database, which is also
+                        // exactly the list the storefront's colour picker will offer.
+                        $kkSavedColours = collect(data_get($product->attributes, 'Colours', []))
+                            ->map(fn ($c) => trim((string) (is_array($c) ? ($c['name'] ?? '') : $c)))
+                            ->filter()
+                            ->unique()
+                            ->values();
+                        $kkSavedTextures = collect(data_get($product->attributes, 'Textures', []))
+                            ->map(fn ($t) => trim((string) (is_array($t) ? ($t['name'] ?? '') : $t)))
+                            ->filter()
+                            ->unique()
+                            ->values();
+
+                        // Only images are tagged, not videos: a clip is a clip of the
+                        // product, and hiding it because a shade was chosen loses the
+                        // one piece of media that shows the garment moving.
+                        $kkTaggable = $allMedia->where('media_type', '!=', 'video');
+                    @endphp
+
+                    @if($kkTaggable->isNotEmpty() && ($kkSavedColours->isNotEmpty() || $kkSavedTextures->isNotEmpty()))
+                    <!-- Which shade / fabric each photo shows -->
+                    <div class="card p-5" x-data="kkImageTags()"
+                         @kk-media-deleted.window="deletedIds = $event.detail"
+                         @kk-colours-changed.window="liveColours = $event.detail"
+                         @kk-textures-changed.window="liveTextures = $event.detail">
+                        <h2 class="text-[13px] font-semibold mb-1" style="color: #303030;">Photo shades &amp; fabrics</h2>
+                        <p class="text-xs mb-4" style="color: #616161;">
+                            Say which shade or fabric each photo actually shows, and the product page
+                            will change its gallery when a customer picks one. A photo left on
+                            <strong>Any</strong> is a shared shot &mdash; the size chart, a fabric
+                            close-up, a styling picture &mdash; and stays on screen whatever is
+                            chosen. Saved with the rest of the form.
+                        </p>
+
+                        {{-- Deliberately its own card and not a control on each tile in the
+                             grid above. That grid is a drag-to-reorder surface whose tiles
+                             are square crops, and two dropdowns do not fit in one without
+                             squeezing out the Make main button. Tagging is also the one
+                             job here an admin does to twenty photos in a row, which wants
+                             a list they can run down rather than a grid they hunt in. --}}
+                        <div class="space-y-2">
+                            @foreach($kkTaggable as $image)
+                                @php
+                                    $kkTagColour = old('image_tags.'.$image->id.'.colour', $image->colour);
+                                    $kkTagTexture = old('image_tags.'.$image->id.'.texture', $image->texture);
+                                @endphp
+                                <div class="flex items-center gap-3 py-2 rounded-lg" x-show="!deletedIds.includes({{ $image->id }})">
+                                    <div class="kk-media shrink-0 rounded overflow-hidden" style="width: 44px; height: 44px; border: 1px solid #e3e3e3;">
+                                        <img src="{{ $image->display_url }}" alt="{{ $image->alt_text }}"
+                                             onerror="this.closest('.kk-media').classList.add('is-broken')">
+                                    </div>
+
+                                    <div class="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="sr-only" for="image-colour-{{ $image->id }}">Shade shown in photo {{ $loop->iteration }}</label>
+                                            <select name="image_tags[{{ $image->id }}][colour]" id="image-colour-{{ $image->id }}"
+                                                    class="form-input form-select w-full text-[13px]">
+                                                <option value="">Any shade</option>
+                                                @foreach($kkSavedColours as $kkC)
+                                                    <option value="{{ $kkC }}" @selected(mb_strtolower(trim((string) $kkTagColour)) === mb_strtolower($kkC))>{{ $kkC }}</option>
+                                                @endforeach
+                                                {{-- A shade typed into the Colours card but not yet saved.
+                                                     Appended after the saved ones so it can never displace
+                                                     the option this photo is already set to. --}}
+                                                <template x-for="name in unsavedColours" :key="'c'+name">
+                                                    <option :value="name" x-text="name + ' (unsaved)'"></option>
+                                                </template>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="sr-only" for="image-texture-{{ $image->id }}">Fabric shown in photo {{ $loop->iteration }}</label>
+                                            <select name="image_tags[{{ $image->id }}][texture]" id="image-texture-{{ $image->id }}"
+                                                    class="form-input form-select w-full text-[13px]">
+                                                <option value="">Any fabric</option>
+                                                @foreach($kkSavedTextures as $kkT)
+                                                    <option value="{{ $kkT }}" @selected(mb_strtolower(trim((string) $kkTagTexture)) === mb_strtolower($kkT))>{{ $kkT }}</option>
+                                                @endforeach
+                                                <template x-for="name in unsavedTextures" :key="'t'+name">
+                                                    <option :value="name" x-text="name + ' (unsaved)'"></option>
+                                                </template>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        {{-- The array rule reports under `image_tags`, and the per-photo
+                             ones under a key holding an id, which no view can name up
+                             front - so the whole group is shown here rather than beside
+                             one dropdown. --}}
+                        @error('image_tags') <p class="form-error mt-2">{{ $message }}</p> @enderror
+                        @foreach($errors->get('image_tags.*') as $kkTagMessages)
+                            <p class="form-error mt-2">{{ $kkTagMessages[0] }}</p>
+                        @endforeach
+                    </div>
+                    @endif
+
                     <!-- Pricing -->
                     <div class="card p-5">
                         <h2 class="text-[13px] font-semibold mb-4" style="color: #303030;">Pricing</h2>
@@ -633,6 +734,35 @@
                         // colour - black included - registers as a change and marks the row as
                         // chosen. Until then the row posts no hex and nothing is saved for it.
                         const KK_UNPICKED_SWATCH = '#7f7f81';
+                        function kkImageTags() {
+                            return {
+                                // Mirrors imageManager's own list. The two cards are
+                                // siblings with no scope between them, so the delete
+                                // marks travel as a window event the way the mobile
+                                // buy buttons on the storefront do.
+                                deletedIds: [],
+                                liveColours: null,
+                                liveTextures: null,
+                                saved: @json($kkSavedColours ?? []),
+                                savedTextures: @json($kkSavedTextures ?? []),
+                                // Shades typed into the Colours card that are not in the
+                                // database yet. Offered so an admin adding a colour and
+                                // tagging a photo with it in one pass is not sent away to
+                                // save and come back - the controller accepts them because
+                                // the same request commits the colour itself.
+                                get unsavedColours() {
+                                    if (!this.liveColours) return [];
+                                    const known = this.saved.map((n) => n.trim().toLowerCase());
+                                    return this.liveColours.filter((n) => n && !known.includes(n.trim().toLowerCase()));
+                                },
+                                get unsavedTextures() {
+                                    if (!this.liveTextures) return [];
+                                    const known = this.savedTextures.map((n) => n.trim().toLowerCase());
+                                    return this.liveTextures.filter((n) => n && !known.includes(n.trim().toLowerCase()));
+                                },
+                            };
+                        }
+
                         function kkColours() {
                             return {
                                 seq: 0,
@@ -649,6 +779,13 @@
                                     }));
                                     // Colours come only from the library now - a product with
                                     // none opens empty and the admin adds them with "Pick from library".
+
+                                    // The photo-tagging card below offers these, so it has to
+                                    // hear about a colour the moment it is added rather than
+                                    // after the next save.
+                                    this.$watch('rows', (rows) => window.dispatchEvent(new CustomEvent(
+                                        'kk-colours-changed', { detail: rows.map((r) => (r.name || '').trim()).filter(Boolean) },
+                                    )));
                                 },
                                 add() { this.rows.push({ uid: ++this.seq, name: '', hex: KK_UNPICKED_SWATCH, picked: false }); },
                                 togglePicker() {
@@ -746,6 +883,12 @@
                                     // otherwise renumbers the rest and Alpine reuses the wrong
                                     // input for them.
                                     this.rows = (@json($kkTextureRows)).map(name => ({ uid: ++this.seq, name }));
+
+                                    // Same as the colours above: the photo-tagging card
+                                    // offers these and should not lag a save behind.
+                                    this.$watch('rows', (rows) => window.dispatchEvent(new CustomEvent(
+                                        'kk-textures-changed', { detail: rows.map((r) => (r.name || '').trim()).filter(Boolean) },
+                                    )));
                                 },
                                 add() { this.rows.push({ uid: ++this.seq, name: '' }); },
                                 togglePicker() {
@@ -1004,7 +1147,14 @@
                     reader.onload = (e) => { this.mainPreview = e.target.result; };
                     reader.readAsDataURL(file);
                 },
-                markForDelete(id) { if (!confirm('Remove this media item?')) return; this.deletedIds.push(id); },
+                markForDelete(id) {
+                    if (!confirm('Remove this media item?')) return;
+                    this.deletedIds.push(id);
+                    // The photo-tagging card lists the same media and has to drop the
+                    // row too, or the admin goes on choosing a shade for a photo they
+                    // have just deleted.
+                    window.dispatchEvent(new CustomEvent('kk-media-deleted', { detail: this.deletedIds.slice() }));
+                },
                 /* Saved on the spot, like the drag-to-reorder above it.
 
                    Deliberately not a field on the big form: the media grid

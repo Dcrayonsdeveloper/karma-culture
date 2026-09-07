@@ -10,6 +10,12 @@ class ProductImage extends Model
     protected $fillable = [
         'product_id',
         'variant_id',
+        // Which shade and which fabric this photo shows, by name. Null on both
+        // means a shared shot - the size chart, the fabric close-up, the
+        // styling picture - which the gallery shows against every choice.
+        // @see \App\Support\ProductGallery for the matching rule.
+        'colour',
+        'texture',
         'media_type',
         'url',
         'thumbnail_url',

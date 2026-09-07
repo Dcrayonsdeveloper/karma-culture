@@ -16,6 +16,7 @@ use App\Models\TexturePreset;
 use App\Rules\NoHtml;
 use App\Rules\ValidationRules as V;
 use App\Support\ImageWebp;
+use App\Support\ShopFilterCatalogue;
 use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -507,6 +508,13 @@ class ProductController extends Controller
             // Scoped to this product: `exists` alone would let a crafted request
             // delete another product's images.
             'delete_images.*' => ['integer', Rule::exists('product_images', 'id')->where('product_id', $product->id)],
+            // Which shade and which fabric each photo shows, keyed by image id.
+            // Values are checked against the colours and textures committed by
+            // THIS request further down rather than here, because the admin may
+            // be adding the colour and tagging a photo with it in one save.
+            'image_tags' => ['nullable', 'array', 'max:200'],
+            'image_tags.*.colour' => ['nullable', 'string', 'max:60'],
+            'image_tags.*.texture' => ['nullable', 'string', 'max:60'],
             'product_attributes' => ['nullable', 'array', 'max:50'],
             // A value may be a single string (text attributes) or an array of
             // checked values (size, colour, …) so one product can offer several.
@@ -600,6 +608,7 @@ class ProductController extends Controller
             $validated['images'],
             $validated['main_image'],
             $validated['delete_images'],
+            $validated['image_tags'],
             $validated['product_attributes'],
             $validated['colours'],
             $validated['textures'],
@@ -652,6 +661,11 @@ class ProductController extends Controller
             }
         }
 
+        // Which shade and which fabric each photo shows. After the deletions
+        // above on purpose: a tag written to a row this request is removing is
+        // work thrown away, and reading a deleted row back would resurrect it.
+        $this->syncImageTags($product, $request->input('image_tags', []), $colours, $textures);
+
         // Replace main image if new one uploaded
         if ($request->hasFile('main_image')) {
             // Delete old primary image
@@ -703,6 +717,83 @@ class ProductController extends Controller
 
         return redirect()->route('admin.products.edit', $product)
             ->with('success', 'Product updated successfully.');
+    }
+
+    /**
+     * Record which shade and which fabric each photo shows.
+     *
+     * Saved with the form rather than by an AJAX call per tile, which is what
+     * the drag-to-reorder and Make-main controls in the same card do. The
+     * difference is deliberate and it is about atomicity: a tag names a colour
+     * BY NAME, and the list of colours the product offers is itself only
+     * committed when this form is submitted. Tagging a photo "Indigo" in the
+     * same save that adds Indigo has to be one request, or the tag lands
+     * against a colour that does not exist yet and the photo goes dark.
+     *
+     * Which is also why the tags are checked here rather than in the rules
+     * above: the colours to check against are the ones this request just built,
+     * not the ones in the database a moment ago.
+     *
+     * A tag naming something the product does not offer is cleared rather than
+     * kept. It cannot be honoured - a tagged photo shows only when its tag is
+     * selected, so a tag no picker can produce would hide that photograph from
+     * the shop for good while it went on looking present in the admin grid.
+     * Clearing it turns the photo back into a shared one, which is the harmless
+     * reading.
+     *
+     * @param  array<int|string, array<string, string|null>>  $tags  image id => [colour, texture]
+     * @param  array<int, array{name: string, hex: string}>  $colours  as committed by this request
+     * @param  array<int, string>  $textures  as committed by this request
+     */
+    private function syncImageTags(Product $product, array $tags, array $colours, array $textures): void
+    {
+        if ($tags === []) {
+            return;
+        }
+
+        // Keyed by the normalised name and holding the name as the product
+        // spells it, so a tag typed "indigo" is stored the way the picker will
+        // offer it and the two match on sight as well as after normalising.
+        $canonical = function (array $names): array {
+            $map = [];
+
+            foreach ($names as $name) {
+                $key = ShopFilterCatalogue::normaliseKey((string) $name);
+
+                if ($key !== '') {
+                    $map[$key] = trim((string) $name);
+                }
+            }
+
+            return $map;
+        };
+
+        $offeredColours = $canonical(array_column($colours, 'name'));
+        $offeredTextures = $canonical($textures);
+
+        $ids = array_values(array_filter(array_map('intval', array_keys($tags))));
+
+        if ($ids === []) {
+            return;
+        }
+
+        // Scoped to this product, exactly as the delete_images rule is: without
+        // it a crafted request would retag another product's photographs.
+        $images = ProductImage::whereIn('id', $ids)
+            ->where('product_id', $product->id)
+            ->get();
+
+        foreach ($images as $image) {
+            $tag = $tags[$image->id] ?? $tags[(string) $image->id] ?? [];
+
+            $colour = ShopFilterCatalogue::normaliseKey((string) ($tag['colour'] ?? ''));
+            $texture = ShopFilterCatalogue::normaliseKey((string) ($tag['texture'] ?? ''));
+
+            $image->forceFill([
+                'colour' => $offeredColours[$colour] ?? null,
+                'texture' => $offeredTextures[$texture] ?? null,
+            ])->save();
+        }
     }
 
     /**
