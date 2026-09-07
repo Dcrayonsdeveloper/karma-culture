@@ -72,6 +72,15 @@
         // sound unprompted, and only this one - the rest of the gallery stays
         // quiet until it is asked for.
         $kkMainIsVideo = ($media[$kkMainIndex]['type'] ?? 'image') === 'video';
+        /* The hover magnifier works on photographs only - a video slide has its
+           own controls and nothing to magnify - and the hint over the frame has
+           to know which is which before the pointer arrives. */
+        $kkZoomableSlides = [];
+        foreach ($media as $i => $m) {
+            if (($m['type'] ?? 'image') !== 'video') {
+                $kkZoomableSlides[] = $i;
+            }
+        }
         // Backward-compat: keep $images (image URLs only) for any legacy references.
         $images = collect($media)->pluck('url')->toArray();
 
@@ -154,6 +163,10 @@
     /* ===== Gallery - thumbnail rail + main image ===== */
     .kk-pdp__gallery {
         display: flex; gap: 14px; align-items: flex-start;
+        /* The containing block for the hover magnifier panel, which sits
+           just outside this box. Sticky already positions it on desktop; this
+           is what holds the panel in place everywhere else. */
+        position: relative;
         /* This box is a GRID ITEM, and the `margin-inline: auto` below opts it
            out of stretching - auto margins make a grid item shrink-to-fit. It
            then sizes to its CONTENTS, and .kk-pdp__main has none to measure:
@@ -331,6 +344,69 @@
         }
     }
 
+    /* ===== Hover magnifier (desktop) ==================================
+       Hovering the main photo tracks a lens under the cursor and shows that
+       patch, magnified, in a panel beside the gallery - so the collar, a
+       seam or the weave can be read without leaving the page.
+
+       The panel is a SIBLING of .kk-pdp__main, not a child: the frame is
+       overflow:hidden so that it can crop to 3:4, and a child would be
+       clipped by the very rule that makes the crop work. It is placed
+       against the gallery, which is the positioned ancestor here (sticky
+       counts) - hence `position: relative` on the base rule for the widths
+       where sticky has not kicked in yet.
+
+       It covers the buy box while it is open. That is deliberate: it is the
+       only space on the row wide enough to be worth looking at, and
+       pointer-events:none hands every control back the instant the pointer
+       leaves the photo.
+
+       Idle state is `visibility`, never `display:none`: the size and
+       position of both boxes are written inline by the move handler, and a
+       display:none panel would still have had to be laid out before the
+       first frame of a hover could be drawn against it. */
+    .kk-pdp__lens {
+        position: absolute; z-index: 1; pointer-events: none;
+        border: 1px solid rgba(255,255,255,.85);
+        /* The spread ring dims everything the lens is NOT over. Clipped by
+           the frame's own overflow:hidden, so 9999px just means "the rest". */
+        box-shadow: 0 0 0 9999px rgba(31,17,9,.28), 0 0 0 1px rgba(45,24,16,.35) inset;
+        visibility: hidden;
+    }
+    .kk-pdp__zoompanel {
+        position: absolute; z-index: 6; pointer-events: none;
+        top: 0; left: calc(100% + 20px);
+        /* Overwritten inline with the frame's measured box, so the panel is
+           always the same shape as the photo it magnifies. These are only
+           what it occupies before the first hover. */
+        width: calc(var(--kk-pdp-frame-h) * 3 / 4); height: 100%;
+        background-color: #fff; background-repeat: no-repeat;
+        border: 1px solid #e3d4bb; border-radius: 10px;
+        box-shadow: 0 18px 44px rgba(45,24,16,.20);
+        visibility: hidden;
+    }
+    .kk-pdp__lens.is-on, .kk-pdp__zoompanel.is-on { visibility: visible; }
+    /* A hint, so the affordance is not invisible until discovered. Hidden
+       the moment the lens is up - by then the panel says it better. */
+    .kk-pdp__zoomhint {
+        position: absolute; z-index: 2; left: 50%; top: 12px; transform: translateX(-50%);
+        display: flex; align-items: center; gap: 6px;
+        background: rgba(31,17,9,.72); color: #efe2cb;
+        font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+        padding: 4px 10px; border-radius: 999px; pointer-events: none;
+        opacity: 0; transition: opacity .18s ease;
+    }
+    .kk-pdp__zoomhint svg { width: 12px; height: 12px; }
+    .kk-pdp__main:hover .kk-pdp__zoomhint { opacity: 1; }
+    .kk-pdp__main:hover .kk-pdp__zoomhint.is-off { opacity: 0; }
+    /* The magnifier is a pointer affordance: a touch screen has no hover to
+       follow, and below the two-column layout there is no room beside the
+       gallery to put the panel. Both keep the tap-to-open fullscreen zoom
+       that was always there. */
+    @media (max-width: 1023px), (hover: none), (pointer: coarse) {
+        .kk-pdp__lens, .kk-pdp__zoompanel, .kk-pdp__zoomhint { display: none; }
+    }
+
     /* ===== Info column - scrolls normally ===== */
     .kk-pdp__info { padding-top: 4px; }
 
@@ -355,6 +431,12 @@
         .kk-pdp__gallery {
             position: sticky;
             top: 24px;          /* gap from the top of the viewport while pinned (adjust to taste) */
+            /* Sticky makes this a stacking context whose z-index is auto, which
+               left the magnifier panel painting UNDER the texture swatches in
+               the buy box (position:relative; z-index:1). Lifting the whole
+               gallery one notch settles that without touching anything above
+               it - the header is 40, the fullscreen zoom 60. */
+            z-index: 5;
             align-self: start;  /* keep the cell its natural height so it can stick */
         }
     }
@@ -584,8 +666,9 @@
                         @endforeach
                     </div>
                 @endif
-                <div class="kk-pdp__main"
-                     @touchstart.passive="onTouchStart($event)" @touchend="onTouchEnd($event)">
+                <div class="kk-pdp__main" x-ref="pdpMain"
+                     @touchstart.passive="onTouchStart($event)" @touchend="onTouchEnd($event)"
+                     @mouseenter="zoomEnter($event)" @mousemove="zoomMove($event)" @mouseleave="zoomLeave()">
                     @foreach($media as $i => $m)
                         @if($m['type'] === 'video')
                             <div class="kk-media kk-pdp__slide kk-pdp__slide--video"
@@ -618,6 +701,7 @@
                                  LCP against. --}}
                             <button type="button"
                                  class="kk-media kk-media--cover kk-pdp__slide"
+                                 data-kk-slide="{{ $i }}"
                                  @click="showZoom = true"
                                  aria-label="View {{ $product->name }} full size ({{ $i + 1 }} of {{ count($media) }})"
                                  x-show="currentImage === {{ $i }}" @if($i !== $kkMainIndex) x-cloak @endif>
@@ -651,7 +735,24 @@
                         </button>
                         <span class="kk-pdp__counter"><span x-text="currentImage + 1"></span> / {{ count($media) }}</span>
                     @endif
+
+                    {{-- The lens the cursor drags around the photo. Sized and placed
+                         inline by zoomMove(), because both come out of a measurement
+                         of the frame that only the browser can do. --}}
+                    <div class="kk-pdp__lens" :class="hoverZoom ? 'is-on' : ''" :style="lensStyle" aria-hidden="true"></div>
+                    <div class="kk-pdp__zoomhint" x-show="zoomableSlides.includes(currentImage)"
+                         :class="hoverZoom ? 'is-off' : ''" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="M20 20l-3.5-3.5M11 8.5v5M8.5 11h5"/>
+                        </svg>
+                        Hover to zoom
+                    </div>
                 </div>
+
+                {{-- Outside .kk-pdp__main on purpose: that frame is overflow:hidden
+                     so it can crop to 3:4, and a panel inside it would be cropped
+                     away with everything else. --}}
+                <div class="kk-pdp__zoompanel" :class="hoverZoom ? 'is-on' : ''" :style="panelStyle" aria-hidden="true"></div>
             </div>
 
             <!-- RIGHT: Product info -->
@@ -2438,6 +2539,21 @@
             selectedAttributes: {},
             variants: @json($variantData),
             showZoom: false,
+            /* ---- Hover magnifier ----------------------------------------
+               hoverZoom is the single on/off both boxes bind to; the two style
+               objects are written by zoomDraw() from a measurement of the
+               frame, because the frame's size is a clamp() of the viewport and
+               nothing in CSS can hand that number to the panel. */
+            hoverZoom: false,
+            // How much larger the panel draws the photo than the frame does.
+            zoomFactor: 2.6,
+            zoomableSlides: @json($kkZoomableSlides),
+            lensStyle: {},
+            panelStyle: {},
+            // The last pointer position in viewport coordinates, kept so a
+            // change of slide - or a scroll under a still cursor - can redraw
+            // without waiting for the mouse to move again.
+            zoomPt: null,
             linkCopied: false,
             shareCopied: false,
             basePrice: {{ (float) $product->price }},
@@ -2474,7 +2590,17 @@
                 // Pause any playing gallery/zoom video when the active item or zoom changes,
                 // so audio never keeps playing after the user navigates away.
                 this.$watch('currentImage', () => this.pauseVideos());
+                // Arrows and thumbnails change the slide under a still pointer.
+                this.$watch('currentImage', () => { if (this.hoverZoom) this.zoomDraw(); });
+                /* The gallery is sticky, so the frame slides out from under a
+                   stationary cursor as the page scrolls. Redraw against the new
+                   rectangle - zoomDraw() drops the lens by itself once the
+                   pointer is no longer over the photo. */
+                window.addEventListener('scroll', () => { if (this.hoverZoom) this.zoomDraw(); }, { passive: true });
                 this.$watch('showZoom', (open) => {
+                    // The fullscreen viewer covers the frame, so the mouseleave
+                    // that would otherwise drop the lens never arrives.
+                    if (open) this.zoomLeave();
                     this.pauseVideos();
                     // Stop the page scrolling behind the fullscreen viewer (mobile especially).
                     document.body.style.overflow = open ? 'hidden' : '';
@@ -2520,6 +2646,96 @@
                 if (dx < 0) this.currentImage = (this.currentImage + 1) % this.imageCount;
                 else this.currentImage = (this.currentImage - 1 + this.imageCount) % this.imageCount;
             },
+            /* ===== Hover magnifier ====================================
+               A lens follows the cursor over the main photo while a panel
+               beside the gallery shows that patch at zoomFactor x, so a collar
+               or a weave can be read without opening anything. */
+
+            // Pointer, and room beside the gallery for the panel. The CSS hides
+            // both boxes on the same terms; this keeps the handlers from
+            // measuring anything on a phone.
+            zoomAvailable() {
+                return window.matchMedia('(min-width: 1024px) and (hover: hover) and (pointer: fine)').matches;
+            },
+
+            zoomEnter(e) {
+                if (this.showZoom || !this.zoomAvailable()) return;
+                this.zoomPt = { x: e.clientX, y: e.clientY };
+                this.zoomDraw();
+            },
+
+            zoomMove(e) {
+                if (this.showZoom || !this.zoomAvailable()) return;
+                this.zoomPt = { x: e.clientX, y: e.clientY };
+                this.zoomDraw();
+            },
+
+            zoomLeave() {
+                this.hoverZoom = false;
+                this.zoomPt = null;
+            },
+
+            /* The photo on the slide that is showing. The hidden slides are
+               still in the DOM, so the active one is found by index rather than
+               by asking which is visible. Null for a video, for a file that
+               404'd, and for one that has not decoded yet - naturalWidth is 0
+               until it has, and every measurement below divides by it. */
+            zoomImage() {
+                const frame = this.$refs.pdpMain;
+                if (!frame || !this.zoomableSlides.includes(this.currentImage)) return null;
+                const slide = frame.querySelector('[data-kk-slide="' + this.currentImage + '"]');
+                if (!slide || slide.classList.contains('is-broken')) return null;
+                const img = slide.querySelector('img');
+                return img && img.naturalWidth && img.naturalHeight ? img : null;
+            },
+
+            zoomDraw() {
+                const frame = this.$refs.pdpMain;
+                const pt = this.zoomPt;
+                const img = this.zoomImage();
+                if (!frame || !pt || !img || this.showZoom) { this.hoverZoom = false; return; }
+
+                const r = frame.getBoundingClientRect();
+                if (!r.width || !r.height) { this.hoverZoom = false; return; }
+
+                const x = pt.x - r.left, y = pt.y - r.top;
+                if (x < 0 || y < 0 || x > r.width || y > r.height) { this.hoverZoom = false; return; }
+
+                /* The frame is object-fit: cover, so what is on screen is a CROP
+                   of the file rather than the file. Repeat that crop here or the
+                   panel is off by exactly the amount cover threw away - on a
+                   square file in a 3:4 frame that is a quarter of the picture,
+                   and the lens would sit on the collar while the panel showed
+                   the shoulder. */
+                const nw = img.naturalWidth, nh = img.naturalHeight;
+                const scale = Math.max(r.width / nw, r.height / nh);
+                const dw = nw * scale, dh = nh * scale;                   // the photo as drawn
+                const ox = (r.width - dw) / 2, oy = (r.height - dh) / 2;  // <= 0, it overflows
+
+                /* The panel is given the frame's own box, so it is the same
+                   shape as the photo and the lens is simply the frame divided by
+                   the magnification. Clamped to the frame, so the panel is never
+                   asked for anything past the edge of the picture. */
+                const z = this.zoomFactor;
+                const lw = r.width / z, lh = r.height / z;
+                const lx = Math.max(0, Math.min(x - lw / 2, r.width - lw));
+                const ly = Math.max(0, Math.min(y - lh / 2, r.height - lh));
+
+                this.lensStyle = {
+                    width: lw + 'px', height: lh + 'px',
+                    left: lx + 'px', top: ly + 'px',
+                };
+                this.panelStyle = {
+                    width: r.width + 'px', height: r.height + 'px',
+                    'background-image': 'url("' + (img.currentSrc || img.src).replace(/"/g, '%22') + '")',
+                    'background-size': (dw * z) + 'px ' + (dh * z) + 'px',
+                    // The lens' top-left corner, expressed against the file's own
+                    // origin rather than the frame's, then magnified.
+                    'background-position': (-(lx - ox) * z) + 'px ' + (-(ly - oy) * z) + 'px',
+                };
+                this.hoverZoom = true;
+            },
+
             nextImage() { if (this.imageCount > 1) this.currentImage = (this.currentImage + 1) % this.imageCount; },
             prevImage() { if (this.imageCount > 1) this.currentImage = (this.currentImage - 1 + this.imageCount) % this.imageCount; },
 
