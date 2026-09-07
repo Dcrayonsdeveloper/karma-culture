@@ -1,8 +1,11 @@
 <x-layouts.app>
     <x-slot name="title">Wholesale - {{ config('app.name') }}</x-slot>
 
-    <!-- Hero Banner -->
-    <div style="background: linear-gradient(135deg, #6F9CA2 0%, #4A7A80 100%); color: #fff; padding: 4rem 1rem; text-align: center;">
+    {{-- Hero Banner. Flat #F8931D - the exact value the All Products header and
+         the category banner use, so this page opens like the rest of the shop.
+         It was the last two-tone header left on the storefront: a teal gradient
+         that belonged to no other page. --}}
+    <div style="background: #F8931D; color: #fff; padding: 4rem 1rem; text-align: center;">
         <div class="container mx-auto px-4" style="max-width: 640px;">
             <h1 style="font-size: 2rem; font-weight: 700; margin: 0 0 0.75rem;">Wholesale Program</h1>
             <p style="font-size: 1rem; opacity: 0.9; margin: 0 0 1.5rem; line-height: 1.6;">
@@ -10,7 +13,7 @@
                 Minimum order quantities apply.
             </p>
             <a href="#wholesale-form"
-               style="display: inline-block; background: #fff; color: #4A7A80; font-weight: 600; font-size: 14px; padding: 0.75rem 2rem; border-radius: 9999px; text-decoration: none;">
+               style="display: inline-block; background: #fff; color: #E07E0A; font-weight: 600; font-size: 14px; padding: 0.75rem 2rem; border-radius: 9999px; text-decoration: none;">
                 Enquire Now
             </a>
         </div>
