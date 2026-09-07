@@ -57,6 +57,16 @@ class RepointImagesToWebp extends Command
         ['texture_presets', 'image_path'],
         ['brands', 'logo_url'],
         ['testimonials', 'avatar_url'],
+
+        // These four hold nothing today, and are listed anyway. Their upload
+        // screens now write WebP, so without them a table would convert every
+        // NEW row while its existing rows stayed JPEG forever - the kind of
+        // asymmetry that is invisible until someone asks why one blog post is
+        // heavier than the rest.
+        ['blog_posts', 'featured_image'],
+        ['homepage_sections', 'image_url'],
+        ['about_reels', 'poster_path'],
+        ['review_images', 'thumbnail_url'],
     ];
 
     /**
@@ -73,7 +83,12 @@ class RepointImagesToWebp extends Command
      *   is not ours to do, and a claim may need the untouched original.
      * - seo_metadata.og_image : social scrapers handle WebP badly; an og:image
      *   that Facebook will not render costs more than the bytes it saves.
-     * - categories.icon, users.avatar_url : no rows carry a value.
+     * - users.avatar_url : an EXTERNAL url, validated as one in
+     *   Api/V1/Auth/ProfileController and rendered raw on the account
+     *   dashboard. Not a file on this disk at all.
+     * - categories.icon : no rows carry a value.
+     * - settings.site_logo : feeds the site-wide og:image. See the note beside
+     *   the upload in Admin/HomepageController.
      */
     private const SOURCES = ['jpg', 'jpeg', 'png', 'gif'];
 

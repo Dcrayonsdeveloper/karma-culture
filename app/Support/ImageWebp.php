@@ -95,6 +95,7 @@ class ImageWebp
     public static function twin(string $path, string $disk = 'public'): ?string
     {
         try {
+            $path = self::normalise($path);
             $storage = Storage::disk($disk);
             $source = $storage->path($path);
 
@@ -218,11 +219,16 @@ class ImageWebp
     }
 
     /**
-     * Remove a stored file and whichever sibling accompanies it.
+     * Remove a stored file, and the WebP twin made from it.
      *
-     * A column may point at either half of the pair, so both are cleared -
-     * otherwise deleting a product image that had been repointed at WebP would
-     * leave the JPEG behind forever.
+     * Deliberately only those two. The obvious generalisation - clear every
+     * sibling sharing the stem, so that deleting a repointed `x.webp` also
+     * takes the `x.jpg` it came from - is not safe here: nothing guarantees
+     * that `x.jpg` and `x.png` in one directory are the same picture, and
+     * ImportLocalProducts names files from whatever the supplier called them.
+     * Over-deleting destroys somebody's image; under-deleting leaves a stale
+     * original taking up disk. Only one of those is recoverable, so this errs
+     * toward leaving the orphan.
      *
      * Absolute URLs and web-root paths are left alone. The hero clip the shop
      * ships with was imported as `/images/...`, which is a real file in the
@@ -234,18 +240,28 @@ class ImageWebp
             return;
         }
 
+        $path = self::normalise($path);
         $storage = Storage::disk($disk);
         $storage->delete($path);
 
-        $stem = preg_replace('/\.[^.\/]+$/', '', $path);
+        $twin = self::keyFor($path);
 
-        foreach (array_merge(self::SOURCES, ['webp']) as $extension) {
-            $sibling = $stem.'.'.$extension;
-
-            if ($sibling !== $path) {
-                $storage->delete($sibling);
-            }
+        if ($twin !== $path) {
+            $storage->delete($twin);
         }
+    }
+
+    /**
+     * Strip a `storage/` prefix some columns carry.
+     *
+     * Those values are written for the browser, which reaches the disk through
+     * the public/storage symlink. Handed to the disk itself the prefix resolves
+     * to storage/app/public/storage/..., which exists nowhere, so the call
+     * silently does nothing - the worst kind of failure to debug.
+     */
+    private static function normalise(string $path): string
+    {
+        return ltrim(preg_replace('#^/?storage/#', '', $path), '/');
     }
 
     /** `products/x.jpg` -> `products/x.webp`. A sibling, so it moves with the original. */

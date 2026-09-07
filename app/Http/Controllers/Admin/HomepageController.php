@@ -194,8 +194,14 @@ class HomepageController extends Controller
             // Delete the file being replaced. Every logo ever uploaded used to
             // stay on the public disk, reachable by URL, with nothing pointing
             // at it - so the storage folder only ever grew.
+            // NOT converted, despite being an image. This setting is the
+            // site-wide og:image and twitter:image fallback for every page that
+            // does not set its own - see components/layouts/app.blade.php:45-52
+            // - and social scrapers handle WebP badly. seo_metadata.og_image is
+            // excluded from the WebP repoint for exactly this reason, and this
+            // is the column that actually feeds the tag.
             $previousLogo = Setting::get('site_logo', '');
-            $path = ImageWebp::store($request->file('site_logo'), 'branding');
+            $path = $request->file('site_logo')->store('branding', 'public');
             Setting::set('site_logo', $path, 'string', 'homepage');
 
             if ($previousLogo && $previousLogo !== $path && ! str_starts_with($previousLogo, 'http')) {
