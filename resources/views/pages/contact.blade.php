@@ -1,6 +1,19 @@
 <x-layouts.app>
     <x-slot name="title">Contact Us - {{ config('app.name') }}</x-slot>
 
+    {{-- The phone, email and address used to be typed into this page, so the
+         contact card, the tel:/mailto: links, the LocalBusiness schema and the
+         map all disagreed with the footer the moment anyone edited Online
+         Store > Site Settings. They read the same three settings the footer
+         does now, and an unset one hides its row rather than shipping a stale
+         number to shoppers and to Google. --}}
+    @php
+        $kkEmail   = trim((string) \App\Models\Setting::get('contact_email', ''));
+        $kkPhone   = trim((string) \App\Models\Setting::get('contact_phone', ''));
+        $kkAddress = trim((string) \App\Models\Setting::get('contact_address', ''));
+        $kkTel     = $kkPhone !== '' ? preg_replace('/[^0-9+]/', '', $kkPhone) : '';
+    @endphp
+
     @push('meta')
         <meta name="description" content="Get in touch with {{ config('app.name') }}. We're here to help with orders, returns, and any questions about kids' clothing.">
         <link rel="canonical" href="{{ url('/contact') }}">
@@ -14,25 +27,18 @@
 
         {{-- LocalBusiness Schema --}}
         <script type="application/ld+json">
-        {!! json_encode([
-            '@context' => 'https://schema.org',
+        {!! json_encode(array_filter([
+            '@@context' => 'https://schema.org',
             '@type' => 'ClothingStore',
             'name' => config('app.name'),
             'description' => "Kids' clothing store offering fashionable and comfortable outfits for children.",
             'url' => url('/'),
-            'telephone' => '+919311796900',
-            'email' => 'support@karmaakulture.com',
-            'address' => [
+            'telephone' => $kkTel,
+            'email' => $kkEmail,
+            'address' => $kkAddress === '' ? null : [
                 '@type' => 'PostalAddress',
-                'streetAddress' => 'D-12/140, Rohini Sector-7',
-                'addressLocality' => 'Delhi',
-                'postalCode' => '110085',
-                'addressCountry' => 'IN',
-            ],
-            'geo' => [
-                '@type' => 'GeoCoordinates',
-                'latitude' => 28.7041,
-                'longitude' => 77.1025,
+                'streetAddress' => $kkAddress,
+                'addressCountry' => config('app.country', 'IN'),
             ],
             'openingHoursSpecification' => [
                 [
@@ -54,7 +60,7 @@
                 \App\Models\Setting::get('social_twitter'),
                 \App\Models\Setting::get('social_linkedin'),
             ])),
-        ], JSON_HEX_TAG | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
+        ]), JSON_HEX_TAG | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
         </script>
     @endpush
 
@@ -123,7 +129,7 @@
                                        maxlength="20" inputmode="tel" pattern="[+\s()-]*(?:\d[+\s()-]*){10,15}"
                                        title="Enter a phone number with 10 to 15 digits. Spaces, brackets, hyphens and a leading + are fine."
                                        class="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#6F9CA2]/20 focus:border-[#6F9CA2] transition-all @error('phone') border-red-300 bg-red-50 @enderror"
-                                       placeholder="+91 93117 96900">
+                                       placeholder="+91 98765 43210">
                                 @error('phone')
                                     <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p>
                                 @enderror
@@ -168,6 +174,7 @@
 
                         <div class="space-y-4">
                             <!-- Address -->
+                            @if($kkAddress !== '')
                             <div class="flex items-start gap-3">
                                 <div class="w-9 h-9 bg-[#6F9CA2]/5 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
                                     <svg class="w-4.5 h-4.5 text-[#6F9CA2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,11 +184,13 @@
                                 </div>
                                 <div>
                                     <p class="text-sm font-medium text-neutral-900">Address</p>
-                                    <p class="text-[13px] text-neutral-600 leading-relaxed">D-12/140, Rohini Sector-7, Delhi 110085</p>
+                                    <p class="text-[13px] text-neutral-600 leading-relaxed">{{ $kkAddress }}</p>
                                 </div>
                             </div>
+                            @endif
 
                             <!-- Phone -->
+                            @if($kkPhone !== '')
                             <div class="flex items-start gap-3">
                                 <div class="w-9 h-9 bg-[#6F9CA2]/5 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
                                     <svg class="w-4.5 h-4.5 text-[#6F9CA2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -190,11 +199,13 @@
                                 </div>
                                 <div>
                                     <p class="text-sm font-medium text-neutral-900">Phone</p>
-                                    <a href="tel:+919311796900" class="text-[13px] text-[#6F9CA2] hover:text-[#5B878D] transition-colors">+91 93117 96900</a>
+                                    <a href="tel:{{ $kkTel }}" class="text-[13px] text-[#6F9CA2] hover:text-[#5B878D] transition-colors">{{ $kkPhone }}</a>
                                 </div>
                             </div>
+                            @endif
 
                             <!-- Email -->
+                            @if($kkEmail !== '')
                             <div class="flex items-start gap-3">
                                 <div class="w-9 h-9 bg-[#6F9CA2]/5 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
                                     <svg class="w-4.5 h-4.5 text-[#6F9CA2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -203,9 +214,10 @@
                                 </div>
                                 <div>
                                     <p class="text-sm font-medium text-neutral-900">Email</p>
-                                    <a href="mailto:support@karmaakulture.com" class="text-[13px] text-[#6F9CA2] hover:text-[#5B878D] transition-colors">support@karmaakulture.com</a>
+                                    <a href="mailto:{{ $kkEmail }}" class="text-[13px] text-[#6F9CA2] hover:text-[#5B878D] transition-colors">{{ $kkEmail }}</a>
                                 </div>
                             </div>
+                            @endif
 
                             <!-- Business Hours -->
                             <div class="flex items-start gap-3">
@@ -222,10 +234,16 @@
                         </div>
                     </div>
 
-                    <!-- Google Map -->
+                    {{-- Google Map. The old src was a hand-written `pb=` embed
+                         whose place id and coordinates were filler digits, so it
+                         never pointed at the shop. The `?q=&output=embed` form
+                         needs no API key and geocodes whatever address is saved
+                         under Site Settings, so the pin follows the setting. --}}
+                    @if($kkAddress !== '')
                     <div class="bg-white border border-neutral-100 rounded-xl overflow-hidden flex-1">
                         <iframe
-                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3499.123456789!2d77.1025!3d28.7041!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390d013e2d2075c1%3A0x2b5a4b2e8b8b8b8b!2sRohini+Sector+7%2C+Delhi+110085!5e0!3m2!1sen!2sin!4v1700000000000"
+                            src="https://www.google.com/maps?q={{ urlencode($kkAddress) }}&amp;output=embed"
+                            title="Map showing {{ config('app.name') }}"
                             width="100%"
                             height="280"
                             style="border:0;"
@@ -235,6 +253,7 @@
                             class="w-full h-full min-h-[280px] block">
                         </iframe>
                     </div>
+                    @endif
                 </div>
 
             </div>

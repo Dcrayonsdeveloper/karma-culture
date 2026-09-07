@@ -176,7 +176,7 @@ class ProductPricingFieldTest extends TestCase
             'description' => 'A shirt used to check the pricing rules.',
             'price' => 1500,
             'stock_quantity' => 3,
-            'category_id' => $this->category->id,
+            'category_ids' => [$this->category->id],
             // Both forms require a size and a colour, so a payload without them
             // fails before the pricing rules being checked here are reached.
             'variants' => [

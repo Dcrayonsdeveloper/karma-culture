@@ -315,7 +315,7 @@ class ProductCreateVariantTest extends TestCase
                 'price' => 999,
                 'mrp' => 1299,
                 'stock_quantity' => 5,
-                'category_id' => $this->category->id,
+                'category_ids' => [$this->category->id],
                 'variants' => [
                     ['name' => 'M-40', 'price' => 1099, 'mrp' => 1499, 'stock_quantity' => 6, 'sku' => 'CRT-M40', 'is_active' => 1],
                 ],
@@ -350,7 +350,7 @@ class ProductCreateVariantTest extends TestCase
                 'price' => 999,
                 'mrp' => 1299,
                 'stock_quantity' => 5,
-                'category_id' => $this->category->id,
+                'category_ids' => [$this->category->id],
                 // A size and a colour are required, so a payload without them is
                 // now a validation error rather than a saved product. Tests that
                 // care about either one override these.

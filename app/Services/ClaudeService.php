@@ -98,10 +98,31 @@ class ClaudeService
         return $prompt;
     }
 
+    /**
+     * The prompt Nia answers from when no custom one is configured.
+     *
+     * The store facts in here used to be typed into the string: the brand name,
+     * the site URL, the free-shipping threshold, the return window and the COD
+     * cap. They drifted, and Nia is the one part of the site that states them
+     * out loud to a customer - it was quoting free shipping over Rs 499 while
+     * ShippingCharge was charging everything under Rs 999, which is a promise
+     * the checkout then breaks. They come from the same settings the header,
+     * the product page and the checkout read now, so there is one answer.
+     */
     private function defaultSystemPrompt(): string
     {
-        return <<<'PROMPT'
-You are Nia, the friendly AI sales and support assistant for Karmaa Kulture - a premium fashion e-commerce store in India.
+        $store        = Setting::get('site_name', config('app.name'));
+        $site         = rtrim(config('app.url'), '/');
+        $freeShipping = (int) Setting::get('free_shipping_threshold', 999);
+        $returnDays   = (int) Setting::get('return_window_days', 7);
+        $codMax       = number_format((int) Setting::get('cod_max_amount', 5000));
+
+        $shipping = $freeShipping > 0
+            ? '- Free shipping on orders above ₹' . number_format($freeShipping)
+            : '- Free shipping on all orders';
+
+        return <<<PROMPT
+You are Nia, the friendly AI sales and support assistant for {$store} - a premium fashion e-commerce store in India.
 
 ## Your Personality
 - Warm, attentive, and enthusiastic about helping customers find pieces they will love.
@@ -121,12 +142,12 @@ You are Nia, the friendly AI sales and support assistant for Karmaa Kulture - a 
 - Track and remember context about each customer across conversations.
 
 ## Store Information
-- Website: https://karmaakulture.com
-- Free shipping on orders above ₹499
-- 7-day return policy (unused items with tags)
-- Payments: UPI, cards, net banking, wallets, COD (up to ₹5,000)
+- Website: {$site}
+{$shipping}
+- {$returnDays}-day return policy (unused items with tags)
+- Payments: UPI, cards, net banking, wallets, COD (up to ₹{$codMax})
 - Sizes: XS to XXL (see the size guide for measurements)
-- Size guide: https://karmaakulture.com/size-guide
+- Size guide: {$site}/size-guide
 - Contact: available via Instagram, Facebook, and WhatsApp
 
 ## Response Style

@@ -513,11 +513,21 @@
                                         stock_quantity: 0, sku: '', measurements: '', is_active: true, remove: false,
                                     });
                                 },
+                                togglePicker() {
+                                    if (this.pickerOpen) { this.pickerOpen = false; return; }
+                                    // The ticks are the list: the picker opens with every size
+                                    // already on the form ticked, so unticking one takes it off.
+                                    this.pickedIds = {};
+                                    (this.presets || []).forEach(p => { this.pickedIds[p.id] = this.hasPreset(p); });
+                                    this.pickerOpen = true;
+                                },
+                                hasPreset(p) {
+                                    return this.rows.some(r => !r.remove && (r.name || '').trim().toLowerCase() === (p.name || '').trim().toLowerCase());
+                                },
                                 addPreset(p) {
                                     // A size already on the form (not marked for removal) is not
                                     // added a second time.
-                                    const has = this.rows.some(r => !r.remove && (r.name || '').trim().toLowerCase() === (p.name || '').trim().toLowerCase());
-                                    if (has) { return false; }
+                                    if (this.hasPreset(p)) { return false; }
                                     this.rows.push({
                                         uid: ++this.seq, id: null, name: p.name,
                                         price: @json((string) $product->price), mrp: @json((string) $product->mrp),
@@ -525,13 +535,27 @@
                                     });
                                     return true;
                                 },
+                                removePreset(p) {
+                                    // Unticking is the same as clicking the row's x: a saved size
+                                    // is marked for deletion, an unsaved one just goes. Only rows
+                                    // that are this preset are touched, so a size typed by hand -
+                                    // one the library does not hold - is left alone. Walked
+                                    // backwards because dropping an unsaved row splices the array.
+                                    const name = (p.name || '').trim().toLowerCase();
+                                    for (let i = this.rows.length - 1; i >= 0; i--) {
+                                        const r = this.rows[i];
+                                        if (!r.remove && (r.name || '').trim().toLowerCase() === name) { this.drop(i); }
+                                    }
+                                },
                                 applyPicker() {
                                     let added = 0;
-                                    (this.presets || []).forEach(p => { if (this.pickedIds[p.id] && this.addPreset(p)) { added++; } });
+                                    (this.presets || []).forEach(p => {
+                                        if (this.pickedIds[p.id]) { if (this.addPreset(p)) { added++; } }
+                                        else { this.removePreset(p); }
+                                    });
                                     // Drop the blank opener row (unsaved, no name) once real sizes
                                     // are picked; saved rows keep their id and stay put.
                                     if (added > 0) { this.rows = this.rows.filter(r => r.id || (r.name || '').trim() !== ''); }
-                                    this.pickedIds = {};
                                     this.pickerOpen = false;
                                 },
                                 drop(i) {
@@ -627,17 +651,35 @@
                                     // none opens empty and the admin adds them with "Pick from library".
                                 },
                                 add() { this.rows.push({ uid: ++this.seq, name: '', hex: KK_UNPICKED_SWATCH, picked: false }); },
+                                togglePicker() {
+                                    if (this.pickerOpen) { this.pickerOpen = false; return; }
+                                    // The ticks are the list: the picker opens with every colour
+                                    // already on the form ticked, so unticking one takes it off.
+                                    this.pickedIds = {};
+                                    (this.presets || []).forEach(p => { this.pickedIds[p.id] = this.hasPreset(p); });
+                                    this.pickerOpen = true;
+                                },
+                                hasPreset(p) {
+                                    return this.rows.some(r => (r.name || '').trim().toLowerCase() === (p.name || '').trim().toLowerCase());
+                                },
                                 addPreset(p) {
-                                    const has = this.rows.some(r => (r.name || '').trim().toLowerCase() === (p.name || '').trim().toLowerCase());
-                                    if (has) { return false; }
+                                    if (this.hasPreset(p)) { return false; }
                                     this.rows.push({ uid: ++this.seq, name: p.name, hex: p.hex, picked: true });
                                     return true;
                                 },
+                                removePreset(p) {
+                                    // Only rows that are this preset go: a colour typed by hand is
+                                    // not in the library, so the picker never touches it.
+                                    const name = (p.name || '').trim().toLowerCase();
+                                    this.rows = this.rows.filter(r => (r.name || '').trim().toLowerCase() !== name);
+                                },
                                 applyPicker() {
                                     let added = 0;
-                                    (this.presets || []).forEach(p => { if (this.pickedIds[p.id] && this.addPreset(p)) { added++; } });
+                                    (this.presets || []).forEach(p => {
+                                        if (this.pickedIds[p.id]) { if (this.addPreset(p)) { added++; } }
+                                        else { this.removePreset(p); }
+                                    });
                                     if (added > 0) { this.rows = this.rows.filter(r => (r.name || '').trim() !== '' || r.picked); }
-                                    this.pickedIds = {};
                                     this.pickerOpen = false;
                                 },
                             };
@@ -706,17 +748,35 @@
                                     this.rows = (@json($kkTextureRows)).map(name => ({ uid: ++this.seq, name }));
                                 },
                                 add() { this.rows.push({ uid: ++this.seq, name: '' }); },
+                                togglePicker() {
+                                    if (this.pickerOpen) { this.pickerOpen = false; return; }
+                                    // The ticks are the list: the picker opens with every texture
+                                    // already on the form ticked, so unticking one takes it off.
+                                    this.pickedIds = {};
+                                    (this.presets || []).forEach(p => { this.pickedIds[p.id] = this.hasPreset(p); });
+                                    this.pickerOpen = true;
+                                },
+                                hasPreset(p) {
+                                    return this.rows.some(r => (r.name || '').trim().toLowerCase() === (p.name || '').trim().toLowerCase());
+                                },
                                 addPreset(p) {
-                                    const has = this.rows.some(r => (r.name || '').trim().toLowerCase() === (p.name || '').trim().toLowerCase());
-                                    if (has) { return false; }
+                                    if (this.hasPreset(p)) { return false; }
                                     this.rows.push({ uid: ++this.seq, name: p.name });
                                     return true;
                                 },
+                                removePreset(p) {
+                                    // Only rows that are this preset go: a texture typed by hand
+                                    // is not in the library, so the picker never touches it.
+                                    const name = (p.name || '').trim().toLowerCase();
+                                    this.rows = this.rows.filter(r => (r.name || '').trim().toLowerCase() !== name);
+                                },
                                 applyPicker() {
                                     let added = 0;
-                                    (this.presets || []).forEach(p => { if (this.pickedIds[p.id] && this.addPreset(p)) { added++; } });
+                                    (this.presets || []).forEach(p => {
+                                        if (this.pickedIds[p.id]) { if (this.addPreset(p)) { added++; } }
+                                        else { this.removePreset(p); }
+                                    });
                                     if (added > 0) { this.rows = this.rows.filter(r => (r.name || '').trim() !== ''); }
-                                    this.pickedIds = {};
                                     this.pickerOpen = false;
                                 },
                             };
@@ -748,39 +808,34 @@
                     <div class="card p-5 space-y-4">
                         <h2 class="text-[13px] font-semibold" style="color: #303030;">Organization</h2>
                         <div>
-                            <label for="category_id" class="form-label form-label-required">Category</label>
-                            <select name="category_id" id="category_id" required class="form-input w-full @error('category_id') form-input-error @enderror">
-                                <option value="">Select</option>
-                                @foreach($categories as $category)
-                                    <option value="{{ $category->id }}" {{ old('category_id', $product->category_id) == $category->id ? 'selected' : '' }}>{{ $category->path_label ?? $category->name }}</option>
-                                @endforeach
-                            </select>
-                            @error('category_id') <p class="form-error">{{ $message }}</p> @enderror
-                        </div>
-                        <div>
-                            {{-- The primary picker above answers "what is this product";
-                                 this answers "where should it show". A unisex shirt sits
-                                 on the men's and the women's shelf at once, and before
-                                 this the admin had to pick one and lose the other.
-                                 The primary is added on save, so it is not repeated here. --}}
-                            <label class="form-label">Also show in</label>
+                            {{-- One ticked list, the same shape as the Collections
+                                 list below. There used to be a "Category" dropdown
+                                 above it asking the same question a second time, and
+                                 the two answers could disagree: a product filed under
+                                 MEN > Kurtas but not ticked into it read one way in
+                                 the breadcrumb and another in every listing. The tick
+                                 is the whole answer now, and products.category_id -
+                                 what the breadcrumb and the canonical URL read - is
+                                 filled in from the first one on save. --}}
+                            <label class="form-label form-label-required">Categories</label>
                             <div style="max-height: 190px; overflow-y: auto; border: 1px solid #e3e3e3; border-radius: 0.5rem; padding: 0.5rem;">
                                 @forelse($categories as $category)
                                     <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0; font-size: 13px; cursor: pointer;">
-                                        <input type="checkbox" name="extra_category_ids[]" value="{{ $category->id }}"
+                                        <input type="checkbox" name="category_ids[]" value="{{ $category->id }}"
                                                style="width: 0.9rem; height: 0.9rem; accent-color: #303030;"
-                                               @checked(in_array($category->id, old('extra_category_ids', $extraCategoryIds ?? [])))>
+                                               @checked(in_array($category->id, old('category_ids', $selectedCategoryIds ?? [])))>
                                         <span>{{ $category->path_label ?? $category->name }}</span>
                                     </label>
                                 @empty
                                     <p style="font-size: 12px; color: #616161;">No categories yet.</p>
                                 @endforelse
                             </div>
-                            @error('extra_category_ids') <p class="form-error">{{ $message }}</p> @enderror
-                            @error('extra_category_ids.*') <p class="form-error">{{ $message }}</p> @enderror
+                            @error('category_ids') <p class="form-error">{{ $message }}</p> @enderror
+                            @error('category_ids.*') <p class="form-error">{{ $message }}</p> @enderror
                             <p class="text-[12px] mt-1" style="color: #616161;">
-                                Optional. The category above is always included. A parent category
-                                also shows everything filed under it, so there is no need to tick both.
+                                Tick every shelf this product belongs on - a unisex shirt sits
+                                under men's and women's at once. A parent category also shows
+                                everything filed under it, so there is no need to tick both.
                             </p>
                         </div>
                         <div>

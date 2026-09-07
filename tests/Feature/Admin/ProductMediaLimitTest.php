@@ -305,7 +305,7 @@ class ProductMediaLimitTest extends TestCase
             'description' => 'A shirt used to check the media limits.',
             'price' => 1500,
             'stock_quantity' => 3,
-            'category_id' => $this->category->id,
+            'category_ids' => [$this->category->id],
             // Both forms render these as <select>, so a real submission always
             // carries the keys. store() reads them with `?:` rather than `??`,
             // so omitting them raises "Undefined array key" and returns a 500.

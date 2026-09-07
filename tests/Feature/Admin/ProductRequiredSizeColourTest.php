@@ -310,7 +310,7 @@ class ProductRequiredSizeColourTest extends TestCase
             'price' => 999,
             'mrp' => 1299,
             'stock_quantity' => 5,
-            'category_id' => $this->category->id,
+            'category_ids' => [$this->category->id],
             'variants' => [
                 ['name' => 'M', 'price' => 999, 'stock_quantity' => 5, 'sku' => '', 'is_active' => 1],
             ],

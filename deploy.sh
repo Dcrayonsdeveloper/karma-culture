@@ -2,7 +2,8 @@
 #
 # Karmaa Kulture — production deploy
 #
-# Live site : https://palegreen-mouse-158092.hostingersite.com/
+# Live site : taken from APP_URL in .env (the Hostinger preview hostname below
+#             is the account's directory name, not the address shoppers use)
 # App root  : ~/domains/palegreen-mouse-158092.hostingersite.com/karmaa_culture
 # Server    : u322703740@167.88.41.35:65002 (Hostinger, shared account)
 #
@@ -23,7 +24,18 @@
 set -euo pipefail
 
 SSH_ALIAS="${1:-karmaakulture}"
-SITE_URL="https://palegreen-mouse-158092.hostingersite.com/"
+
+# The URL the post-deploy smoke check hits. It was pinned to the Hostinger
+# preview hostname, which stopped being the address anyone visits once the real
+# domain was pointed at the box - so the check could report HTTP 200 from a
+# hostname the shop no longer serves. Taken from APP_URL in the local .env,
+# which is the address the app itself believes it is at, and overridable for a
+# deploy that is verifying something else.
+SITE_URL="${SITE_URL:-$(sed -n 's/^APP_URL=//p' .env 2>/dev/null | tr -d '"'"'"'\r' | head -1)}"
+if [ -z "$SITE_URL" ]; then
+    echo "ERROR: no APP_URL in .env and no SITE_URL set - nothing to verify against." >&2
+    exit 1
+fi
 
 # --- local preflight -------------------------------------------------------
 

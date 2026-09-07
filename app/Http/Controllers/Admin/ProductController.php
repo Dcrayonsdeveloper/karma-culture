@@ -55,6 +55,7 @@ class ProductController extends Controller
     private const CHOICE_MESSAGES = [
         'variants.required' => 'Add at least one size - a product with no sizes gives a customer nothing to add to their cart.',
         'colours.required' => 'Add at least one colour - a product has to say which colours it comes in.',
+        'category_ids.required' => 'Tick at least one category - a product nobody filed shows up on no page in the shop.',
         'colours.*.name.required' => 'Name every colour, or remove the empty row.',
         'colours.*.hex.required' => 'Pick a swatch for every colour - one is no longer filled in for you.',
     ];
@@ -181,7 +182,7 @@ class ProductController extends Controller
     public function create(): View
     {
         $categories = Category::assignableOptions();
-        $extraCategoryIds = [];
+        $selectedCategoryIds = [];
         $collections = Category::system()->orderBy('position')->orderBy('name')->get();
         $selectedCollectionIds = [];
         $sellers = Seller::with('user')->orderBy('store_name')->get();
@@ -191,7 +192,7 @@ class ProductController extends Controller
 
         return view('admin.products.create', compact(
             'categories', 'sellers', 'brands', 'attributes',
-            'extraCategoryIds', 'collections', 'selectedCollectionIds',
+            'selectedCategoryIds', 'collections', 'selectedCollectionIds',
             'sizePresets', 'colourPresets', 'texturePresets'
         ));
     }
@@ -231,12 +232,18 @@ class ProductController extends Controller
             'mrp' => [...V::money(required: false), 'gte:price'],
             'cost_price' => V::money(required: false),
             'stock_quantity' => self::STOCK_RULES,
-            'category_id' => V::foreignId('categories'),
-
-            // The other shelves this product appears on. The primary above is
-            // added to them on save, so it never has to be ticked twice.
-            'extra_category_ids' => ['nullable', 'array', 'max:20'],
-            'extra_category_ids.*' => V::foreignId('categories'),
+            // Every shelf this product is filed on, ticked on one list -
+            // there is no separate primary dropdown any more, because it asked
+            // the same question twice and the answers could disagree.
+            // products.category_id is still filled in below: the breadcrumb,
+            // the canonical URL, coupon scoping and the reports all want one
+            // canonical answer.
+            'category_ids' => ['required', 'array', 'min:1', 'max:20'],
+            // Real categories only. A built-in listing is ticked on the
+            // Collections list below, and a product is never "a Bestseller"
+            // the way it is "a Kurta" - one filed there would break the
+            // breadcrumb the primary feeds.
+            'category_ids.*' => ['integer', 'min:1', Rule::exists('categories', 'id')->where('is_system', false)],
 
             'collection_ids' => ['nullable', 'array', 'max:20'],
             'collection_ids.*' => V::foreignId('categories'),
@@ -282,6 +289,7 @@ class ProductController extends Controller
         // key" and turned saving a product into a 500.
         $validated['seller_id'] = ($validated['seller_id'] ?? null) ?: null;
         $validated['brand_id'] = ($validated['brand_id'] ?? null) ?: null;
+        $validated['category_id'] = $this->primaryCategoryId($validated['category_ids']);
         // `mrp` column is NOT NULL - default it to price when the form omits it
         // (admin form currently only shows a single price field).
         $validated['mrp'] = $validated['mrp'] ?? $validated['price'];
@@ -410,19 +418,29 @@ class ProductController extends Controller
 
     public function edit(Product $product): View
     {
-        $categories = Category::assignableOptions($product->category_id);
         $sellers = Seller::with('user')->orderBy('store_name')->get();
         $brands = Brand::where('is_active', true)->orderBy('name')->get();
         $attributes = Attribute::with('values')->orderBy('name')->get();
         $product->load(['images', 'variants']);
 
-        // The primary is shown by its own picker, so it is not repeated in the
-        // "also show in" list - ticking it there would say nothing new.
-        $extraCategoryIds = $product->categories()
+        // The whole membership, primary included - one list of ticks is the
+        // only category picker now. The built-in listings are excluded because
+        // they are ticked on the Collections list, which is a different
+        // question. category_id is unioned in so a product whose pivot never
+        // got backfilled still shows the category it is filed under, rather
+        // than opening with nothing ticked and losing it on the next save.
+        $selectedCategoryIds = $product->categories()
+            ->where('categories.is_system', false)
             ->pluck('categories.id')
-            ->reject(fn ($id) => $id === $product->category_id)
+            ->push($product->category_id)
+            ->filter()
+            ->unique()
             ->values()
             ->all();
+
+        // Pass them all as keepers: a product filed on a parent keeps that
+        // tick even though parents are otherwise not offered.
+        $categories = Category::assignableOptions($selectedCategoryIds);
 
         $collections = Category::system()->orderBy('position')->orderBy('name')->get();
         $selectedCollectionIds = $product->collections()->pluck('categories.id')->all();
@@ -430,7 +448,7 @@ class ProductController extends Controller
 
         return view('admin.products.edit', compact(
             'product', 'categories', 'sellers', 'brands', 'attributes',
-            'extraCategoryIds', 'collections', 'selectedCollectionIds',
+            'selectedCategoryIds', 'collections', 'selectedCollectionIds',
             'sizePresets', 'colourPresets', 'texturePresets'
         ));
     }
@@ -450,12 +468,18 @@ class ProductController extends Controller
             'mrp' => [...V::money(required: false), 'gte:price'],
             'cost_price' => V::money(required: false),
             'stock_quantity' => self::STOCK_RULES,
-            'category_id' => V::foreignId('categories'),
-
-            // The other shelves this product appears on. The primary above is
-            // added to them on save, so it never has to be ticked twice.
-            'extra_category_ids' => ['nullable', 'array', 'max:20'],
-            'extra_category_ids.*' => V::foreignId('categories'),
+            // Every shelf this product is filed on, ticked on one list -
+            // there is no separate primary dropdown any more, because it asked
+            // the same question twice and the answers could disagree.
+            // products.category_id is still filled in below: the breadcrumb,
+            // the canonical URL, coupon scoping and the reports all want one
+            // canonical answer.
+            'category_ids' => ['required', 'array', 'min:1', 'max:20'],
+            // Real categories only. A built-in listing is ticked on the
+            // Collections list below, and a product is never "a Bestseller"
+            // the way it is "a Kurta" - one filed there would break the
+            // breadcrumb the primary feeds.
+            'category_ids.*' => ['integer', 'min:1', Rule::exists('categories', 'id')->where('is_system', false)],
 
             'collection_ids' => ['nullable', 'array', 'max:20'],
             'collection_ids.*' => V::foreignId('categories'),
@@ -518,6 +542,7 @@ class ProductController extends Controller
         // key" and turned saving a product into a 500.
         $validated['seller_id'] = ($validated['seller_id'] ?? null) ?: null;
         $validated['brand_id'] = ($validated['brand_id'] ?? null) ?: null;
+        $validated['category_id'] = $this->primaryCategoryId($validated['category_ids'], $product->category_id);
 
         // Save attributes as JSON
         $productAttributes = collect($request->input('product_attributes', []))
@@ -1040,20 +1065,43 @@ class ProductController extends Controller
     }
 
     /**
+     * The one category products.category_id keeps, taken from the ticked list.
+     *
+     * The form no longer asks for a primary separately - the admin ticks the
+     * shelves and that is the whole answer - but the breadcrumb, the canonical
+     * URL, coupon scoping and the reports still need a single category to name.
+     *
+     * The product's existing one wins whenever it is still ticked, so editing
+     * an unrelated field never quietly moves its breadcrumb. Otherwise the
+     * first tick is taken: checkboxes post in the order they are rendered, so
+     * that is the topmost of a list sorted by path.
+     *
+     * @param  array<int, mixed>  $categoryIds
+     */
+    private function primaryCategoryId(array $categoryIds, ?int $current = null): ?int
+    {
+        $ids = collect($categoryIds)->map(fn ($id) => (int) $id)->filter()->unique()->values();
+
+        if ($current && $ids->contains($current)) {
+            return $current;
+        }
+
+        return $ids->first();
+    }
+
+    /**
      * Put the product on every shelf the form ticked, and take it off the rest.
      *
      * The primary category is always included: it is the category the product
      * is filed under, and a listing that omitted it would contradict the
-     * breadcrumb. Product::booted() adds it too, for the write paths that never
-     * reach this form - this is belt and braces, and it keeps the sync here a
-     * complete statement of the membership rather than a partial one.
-     *
-     * Absent input means "no extra shelves", which is what an unticked set of
-     * checkboxes posts - so clearing them all really does clear them.
+     * breadcrumb. It is one of the ticks by construction now, but the saved
+     * hook on Product adds it too, for the write paths that never reach this
+     * form - this is belt and braces, and it keeps the sync here a complete
+     * statement of the membership rather than a partial one.
      */
     private function syncShelves(Product $product, Request $request): void
     {
-        $ids = collect($request->input('extra_category_ids', []))
+        $ids = collect($request->input('category_ids', []))
             ->map(fn ($id) => (int) $id)
             ->push((int) $product->category_id)
             ->filter()

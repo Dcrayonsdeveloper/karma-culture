@@ -65,7 +65,20 @@ return [
     |
     */
 
-    'timezone' => 'Asia/Kolkata',
+    'timezone' => env('APP_TIMEZONE', 'Asia/Kolkata'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Application Country
+    |--------------------------------------------------------------------------
+    |
+    | The ISO 3166-1 alpha-2 country the store trades from. Used for the
+    | addressCountry in the LocalBusiness schema on the contact page, which
+    | previously carried a country code written into the template.
+    |
+    */
+
+    'country' => env('APP_COUNTRY', 'IN'),
 
     /*
     |--------------------------------------------------------------------------
