@@ -139,8 +139,15 @@
                  The [&_table] / [&_th] / [&_td] rules below are not decoration. A table
                  had no styling here at all, and Tailwind's preflight zeroes cell padding
                  and collapses borders, so the size chart's five columns ran together into
-                 one unreadable string. [&_figure] is the scroll container on a narrow
-                 screen - CKEditor wraps every table it writes in <figure class="table">. --}}
+                 one unreadable string.
+
+                 [&_figure]:block is load-bearing, and the reason is a name collision.
+                 CKEditor wraps every table it writes in <figure class="table">, and
+                 "table" is also a Tailwind display utility - so the wrapper was picking
+                 up display:table and shrinking to its contents, which left the size
+                 chart at 438px in an 864px card with the rest of the row empty. Setting
+                 the display back beats .table on specificity without !important. The
+                 figure is also what scrolls sideways on a narrow screen. --}}
             @if($sections)
                 @foreach($sections as $section)
                     <div class="bg-white border border-neutral-100 rounded-xl p-5 sm:p-6 mb-4
@@ -153,7 +160,7 @@
                                 [&_a]:text-primary-600 [&_a]:underline [&_a]:underline-offset-2
                                 [&_strong]:font-semibold [&_strong]:text-neutral-800
                                 [&_blockquote]:border-l-4 [&_blockquote]:border-neutral-200 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-neutral-600
-                                [&_figure]:my-3 [&_figure]:overflow-x-auto
+                                [&_figure]:block [&_figure]:my-3 [&_figure]:overflow-x-auto
                                 [&_table]:w-full [&_table]:my-3 [&_table]:text-[13px]
                                 [&_th]:bg-neutral-50 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-neutral-700 [&_th]:whitespace-nowrap [&_th]:border-b [&_th]:border-neutral-200
                                 [&_td]:px-3 [&_td]:py-2 [&_td]:align-top [&_td]:text-neutral-600 [&_td]:whitespace-nowrap [&_td]:border-b [&_td]:border-neutral-100">

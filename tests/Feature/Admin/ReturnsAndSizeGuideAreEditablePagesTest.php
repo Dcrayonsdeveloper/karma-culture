@@ -130,6 +130,17 @@ class ReturnsAndSizeGuideAreEditablePagesTest extends TestCase
         }
 
         $this->assertStringContainsString('[&_td]:px-3', $html, 'The chart is rendering with no cell padding.');
+
+        // CKEditor names its table wrapper <figure class="table">, and "table"
+        // is also a Tailwind display utility - so without this the wrapper
+        // takes display:table, shrinks to its contents, and the chart sits at
+        // 438px in an 864px card. Nothing about the page looks broken enough
+        // to notice in a diff, which is why it is asserted here.
+        $this->assertStringContainsString(
+            '[&_figure]:block',
+            $html,
+            'The table wrapper will collapse onto Tailwind\'s .table utility and shrink-wrap.'
+        );
     }
 
     /**
