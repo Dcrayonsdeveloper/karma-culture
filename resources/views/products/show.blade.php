@@ -386,25 +386,12 @@
         visibility: hidden;
     }
     .kk-pdp__lens.is-on, .kk-pdp__zoompanel.is-on { visibility: visible; }
-    /* A hint, so the affordance is not invisible until discovered. Hidden
-       the moment the lens is up - by then the panel says it better. */
-    .kk-pdp__zoomhint {
-        position: absolute; z-index: 2; left: 50%; top: 12px; transform: translateX(-50%);
-        display: flex; align-items: center; gap: 6px;
-        background: rgba(31,17,9,.72); color: #efe2cb;
-        font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
-        padding: 4px 10px; border-radius: 999px; pointer-events: none;
-        opacity: 0; transition: opacity .18s ease;
-    }
-    .kk-pdp__zoomhint svg { width: 12px; height: 12px; }
-    .kk-pdp__main:hover .kk-pdp__zoomhint { opacity: 1; }
-    .kk-pdp__main:hover .kk-pdp__zoomhint.is-off { opacity: 0; }
     /* The magnifier is a pointer affordance: a touch screen has no hover to
        follow, and below the two-column layout there is no room beside the
        gallery to put the panel. Both keep the tap-to-open fullscreen zoom
        that was always there. */
     @media (max-width: 1023px), (hover: none), (pointer: coarse) {
-        .kk-pdp__lens, .kk-pdp__zoompanel, .kk-pdp__zoomhint { display: none; }
+        .kk-pdp__lens, .kk-pdp__zoompanel { display: none; }
     }
 
     /* ===== Info column - scrolls normally ===== */
@@ -740,13 +727,6 @@
                          inline by zoomMove(), because both come out of a measurement
                          of the frame that only the browser can do. --}}
                     <div class="kk-pdp__lens" :class="hoverZoom ? 'is-on' : ''" :style="lensStyle" aria-hidden="true"></div>
-                    <div class="kk-pdp__zoomhint" x-show="zoomableSlides.includes(currentImage)"
-                         :class="hoverZoom ? 'is-off' : ''" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="M20 20l-3.5-3.5M11 8.5v5M8.5 11h5"/>
-                        </svg>
-                        Hover to zoom
-                    </div>
                 </div>
 
                 {{-- Outside .kk-pdp__main on purpose: that frame is overflow:hidden
