@@ -395,7 +395,7 @@ class ListingFiltersTest extends TestCase
      */
     public function test_every_page_carries_the_header_filters_button(): void
     {
-        foreach (['/products', '/wishlist', '/brands'] as $url) {
+        foreach (['/products', '/wishlist', '/favourites', '/brands'] as $url) {
             $this->get($url)->assertOk()->assertSee('open-global-filters', false);
         }
 
@@ -410,6 +410,10 @@ class ListingFiltersTest extends TestCase
             ->assertSee('data-kk-filter-sidebar', false)
             ->assertSee('mobileOpen', false);
         $this->get('/wishlist')->assertOk()->assertDontSee('mobileOpen', false);
+        // Favourites is the wishlist's twin and has no listing behind it either,
+        // so it must answer the button the same way rather than drifting into
+        // rendering a sidebar of its own.
+        $this->get('/favourites')->assertOk()->assertDontSee('mobileOpen', false);
     }
 
     /**

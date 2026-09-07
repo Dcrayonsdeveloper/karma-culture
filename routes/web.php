@@ -232,8 +232,10 @@ Route::get('/wishlist', [App\Http\Controllers\WishlistController::class, 'index'
 // here safely - the cart carries the same constraint after exactly that bug
 // swallowed /cart/remove-coupon.
 Route::prefix('wishlist')->name('wishlist.')->group(function () {
-    // Product data for the favourited ids. Guest-accessible: it is what renders
-    // the wishlist page and the drawer, both of which answer for a guest.
+    // Product data for the saved ids. Readable without an account: it is what
+    // renders the wishlist page and the header badge, both of which answer for
+    // a signed-out visitor. Saving is what takes an account, and that gate is
+    // on the button - see kkRequireLogin in resources/js/app.js.
     Route::get('/items', [App\Http\Controllers\WishlistController::class, 'items'])->name('items');
 
     // Writing takes an account, same as the cart.
@@ -249,6 +251,24 @@ Route::prefix('wishlist')->name('wishlist.')->group(function () {
 // ?ids= list, so the shopper would be told their wishlist was empty rather than
 // sent to the right place. Safe to delete once no old bundle can be in a browser.
 Route::get('/wishlist-items', [App\Http\Controllers\WishlistController::class, 'items']);
+
+// Favourites. The wishlist's twin - a second saved list, kept apart so a
+// shopper can shortlist out of a long wishlist without emptying it. Same
+// shape throughout: the list is the kk_favourites cookie, the page is
+// rendered from it, and /favourites/items resolves ids to product data for
+// whatever the browser draws after the page has loaded.
+//
+// No write routes, because there is nothing to write: the wishlist's own
+// POST/DELETE keep a `wishlists` table that no storefront path ever reads.
+Route::get('/favourites', [App\Http\Controllers\FavouriteController::class, 'index'])->name('favourites');
+
+Route::prefix('favourites')->name('favourites.')->group(function () {
+    // Readable without an account, like the wishlist's: the page and the
+    // header badge both render for a signed-out visitor. Saving takes an
+    // account, the same as the wishlist - the gate is the button, because
+    // the list itself is a cookie and there is no write route to guard.
+    Route::get('/items', [App\Http\Controllers\FavouriteController::class, 'items'])->name('items');
+});
 
 // Guest Authentication Routes
 //

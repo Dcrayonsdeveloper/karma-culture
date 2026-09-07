@@ -409,6 +409,7 @@ class SettingController extends Controller
             'product_card_quick_view' => '1',
             'product_card_add_to_cart' => '1',
             'product_card_wishlist' => '1',
+            'product_card_favourites' => '1',
             'support_tickets_enabled' => '1',
         ];
 
@@ -423,7 +424,7 @@ class SettingController extends Controller
 
     public function updateProductCard(Request $request): RedirectResponse
     {
-        $productCardFields = ['product_card_quick_view', 'product_card_add_to_cart', 'product_card_wishlist'];
+        $productCardFields = ['product_card_quick_view', 'product_card_add_to_cart', 'product_card_wishlist', 'product_card_favourites'];
         foreach ($productCardFields as $key) {
             Setting::updateOrCreate(
                 ['key' => $key],

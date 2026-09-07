@@ -155,7 +155,7 @@ HTML,
 <ul>
     <li>Language and region preferences</li>
     <li>Recently viewed products</li>
-    <li>Wishlist between sessions</li>
+    <li>Wishlist and favourites between sessions</li>
 </ul>
 
 <h2>Analytics Cookies</h2>

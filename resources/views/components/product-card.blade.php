@@ -1,4 +1,4 @@
-@props(['product', 'showQuickView' => true, 'compact' => false, 'salePrice' => null, 'unitsLeft' => null, 'showWishlist' => null])
+@props(['product', 'showQuickView' => true, 'compact' => false, 'salePrice' => null, 'unitsLeft' => null, 'showWishlist' => null, 'showFavourites' => null])
 
 @php
     $discount = $product->discount_percentage ?? 0;
@@ -26,13 +26,17 @@
 
     // Read hover action settings (cached for 1hr by Setting::get)
     //
-    // The caller may insist, and /wishlist does: the heart is the only way to
-    // take something off that page, so a card there without one is a list
-    // nobody can empty. Everywhere else the admin setting still decides.
+    // The caller may insist, and each saved list's own page does: the heart is
+    // the only way to take something off /wishlist and the star the only way to
+    // take it off /favourites, so a card there without one is a list nobody can
+    // empty. Everywhere else the admin setting still decides - and each list
+    // insists only on its OWN button, so /wishlist does not override an admin
+    // who has turned the star off.
     $showWishlist = $showWishlist ?? \App\Models\Setting::get('product_card_wishlist', true);
+    $showFavourites = $showFavourites ?? \App\Models\Setting::get('product_card_favourites', true);
     $showAddToCart = \App\Models\Setting::get('product_card_add_to_cart', true);
     $showQuickViewBtn = $showQuickView && \App\Models\Setting::get('product_card_quick_view', true);
-    $hasHoverActions = $showWishlist || $showQuickViewBtn;
+    $hasHoverActions = $showWishlist || $showFavourites || $showQuickViewBtn;
 
     // Category-aware placeholder image
     $rootCatId = null;
@@ -211,16 +215,38 @@
                 @endif
             </div>
 
-            {{-- Top-right hover actions (Wishlist + Quick View) --}}
+            {{-- Top-right hover actions (Wishlist, Favourites + Quick View).
+
+                 The column is flex-col, so the star sits directly under the
+                 heart and the pair reads as one stack of save actions rather
+                 than two unrelated controls. Same size, same chrome, same focus
+                 ring - only the icon and the saved colour tell them apart, which
+                 is the whole point: they are the same gesture into two lists.
+
+                 aria-label rather than a title, and it names the list, because
+                 a screen reader otherwise announces two identical "save"
+                 buttons stacked on every tile in the grid. --}}
             @if($hasHoverActions)
                 <div class="absolute top-3 right-3 flex flex-col gap-1.5 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
                     @if($showWishlist)
                         <button @click="$store.wishlist.toggle({{ $product->id }})"
                                 class="w-10 h-10 bg-white rounded-full shadow-sm flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-[#6F9CA2] focus:ring-offset-1"
                                 :style="$store.wishlist.has({{ $product->id }}) ? 'color: #ef4444;' : 'color: #737373;'"
+                                :aria-pressed="$store.wishlist.has({{ $product->id }}) ? 'true' : 'false'"
                                 aria-label="Toggle wishlist">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                            </svg>
+                        </button>
+                    @endif
+                    @if($showFavourites)
+                        <button @click="$store.favourites.toggle({{ $product->id }})"
+                                class="w-10 h-10 bg-white rounded-full shadow-sm flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-[#6F9CA2] focus:ring-offset-1"
+                                :style="$store.favourites.has({{ $product->id }}) ? 'color: #b06d0f;' : 'color: #737373;'"
+                                :aria-pressed="$store.favourites.has({{ $product->id }}) ? 'true' : 'false'"
+                                aria-label="Toggle favourites">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/>
                             </svg>
                         </button>
                     @endif

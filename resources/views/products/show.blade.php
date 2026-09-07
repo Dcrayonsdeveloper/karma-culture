@@ -539,6 +539,20 @@
     .kk-pdp__wish svg { width: 18px; height: 18px; transition: transform .18s ease; }
     .kk-pdp__wish.is-saved { border-color: #dc362e; color: #dc362e; background: #fdecea; }
     .kk-pdp__wish.is-saved svg { transform: scale(1.08); }
+    /* The wishlist pill's twin, and deliberately the same pill: they are one
+       gesture into two lists, so only the icon and the saved colour differ -
+       the shop's amber against the wishlist's red, which tells them apart at a
+       glance without either label being read. */
+    .kk-pdp__fav {
+        display: inline-flex; align-items: center; gap: 9px; height: 44px;
+        background: #fff; border: 1px solid #c9b393; border-radius: 999px;
+        cursor: pointer; font-size: 13px; font-weight: 600; color: #2d1810;
+        padding: 0 20px; letter-spacing: 0.02em; transition: all .18s ease;
+    }
+    .kk-pdp__fav:hover { border-color: #2d1810; background: #f7eedb; }
+    .kk-pdp__fav svg { width: 18px; height: 18px; transition: transform .18s ease; }
+    .kk-pdp__fav.is-saved { border-color: #b06d0f; color: #b06d0f; background: #fdf4e6; }
+    .kk-pdp__fav.is-saved svg { transform: scale(1.08); }
     .kk-pdp__share {
         display: inline-flex; align-items: center; justify-content: center;
         width: 44px; height: 44px; flex-shrink: 0;
@@ -1001,9 +1015,22 @@
                     <div class="kk-pdp__actions">
                         <button type="button" class="kk-pdp__wish"
                                 :class="$store.wishlist.has({{ $product->id }}) ? 'is-saved' : ''"
+                                :aria-pressed="$store.wishlist.has({{ $product->id }}) ? 'true' : 'false'"
                                 @click="$store.wishlist.toggle({{ $product->id }})">
                             <svg :fill="$store.wishlist.has({{ $product->id }}) ? '#dc362e' : 'none'" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
                             <span x-text="$store.wishlist.has({{ $product->id }}) ? 'Saved to Wishlist' : 'Save to Wishlist'">Save to Wishlist</span>
+                        </button>
+                        {{-- Straight after the wishlist, so the two saved lists are
+                             offered together rather than one being the obvious
+                             action and the other hidden somewhere else on the page.
+                             The row is flex-wrap, so on a narrow column the pair
+                             wraps together instead of pushing Share off the end. --}}
+                        <button type="button" class="kk-pdp__fav"
+                                :class="$store.favourites.has({{ $product->id }}) ? 'is-saved' : ''"
+                                :aria-pressed="$store.favourites.has({{ $product->id }}) ? 'true' : 'false'"
+                                @click="$store.favourites.toggle({{ $product->id }})">
+                            <svg :fill="$store.favourites.has({{ $product->id }}) ? '#b06d0f' : 'none'" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/></svg>
+                            <span x-text="$store.favourites.has({{ $product->id }}) ? 'Saved to Favourites' : 'Save to Favourites'">Save to Favourites</span>
                         </button>
                         <button type="button" class="kk-pdp__share" :class="shareCopied ? 'kk-pdp__share-ok' : ''"
                                 @click="shareProduct()" aria-label="Share this product" title="Share">

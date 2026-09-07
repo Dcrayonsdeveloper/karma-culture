@@ -148,28 +148,31 @@ function kkRequireLogin(beforeLeaving) {
 }
 
 /**
- * The wishlist add a guest asked for, held across the login round-trip.
+ * The save a guest asked for, held across the login round-trip.
  *
  * Sending them to /login and back landed them on the same product with the item
- * still not favourited, because the add returns at the gate above before the id
- * is ever saved - so the click had to be made twice, and the second one looked
+ * still not saved, because the add returns at the gate above before the id is
+ * ever written - so the click had to be made twice, and the second one looked
  * like the first had failed.
  *
- * localStorage rather than the kk_wishlist cookie: the cookie is the list
- * itself, and writing to it here would favourite the item for a browser that
- * never signed in.
+ * localStorage rather than the list's own cookie: the cookie IS the list, and
+ * writing to it here would save the item for a browser that never signed in.
+ *
+ * Keyed per list, so a guest who pressed the star and then the heart on the way
+ * to the login page gets both back rather than whichever fired last.
  */
 const KK_PENDING_WISHLIST = 'kk_pending_wishlist';
+const KK_PENDING_FAVOURITES = 'kk_pending_favourites';
 
 // Long enough to read the login page, register, and confirm an email; short
 // enough that it is still the same errand. Without a limit, a shopper who
-// walked away from the login would find the item favourited days later, on
+// walked away from the login would find the item saved days later, on
 // whatever unrelated sign-in happened next.
-const KK_PENDING_WISHLIST_TTL = 30 * 60 * 1000;
+const KK_PENDING_SAVE_TTL = 30 * 60 * 1000;
 
-function kkStashWishlist(productId) {
+function kkStashPendingSave(key, productId) {
     try {
-        localStorage.setItem(KK_PENDING_WISHLIST, JSON.stringify({
+        localStorage.setItem(key, JSON.stringify({
             id: productId,
             at: Date.now(),
         }));
@@ -177,12 +180,12 @@ function kkStashWishlist(productId) {
 }
 
 /** Reads and clears in one go, so a failure cannot re-fire on every page load. */
-function kkTakePendingWishlist() {
+function kkTakePendingSave(key) {
     let held = null;
 
     try {
-        held = localStorage.getItem(KK_PENDING_WISHLIST);
-        localStorage.removeItem(KK_PENDING_WISHLIST);
+        held = localStorage.getItem(key);
+        localStorage.removeItem(key);
     } catch (e) {
         return null;
     }
@@ -192,7 +195,7 @@ function kkTakePendingWishlist() {
     try {
         const { id, at } = JSON.parse(held);
 
-        if (!id || !at || Date.now() - at > KK_PENDING_WISHLIST_TTL) return null;
+        if (!id || !at || Date.now() - at > KK_PENDING_SAVE_TTL) return null;
 
         return parseInt(id, 10) || null;
     } catch (e) {
@@ -205,9 +208,9 @@ function kkTakePendingWishlist() {
  * Where the shopper was standing when the login gate stopped them.
  *
  * The trip to /login and back is an ordinary navigation, so the browser starts
- * the returning page at the top. A shopper who favourited something half way
+ * the returning page at the top. A shopper who saved something half way
  * down a listing signed in and lost their place - the same errand
- * kkStashWishlist above exists to protect, one step further on.
+ * kkStashPendingSave above exists to protect, one step further on.
  *
  * It cannot ride along in `next`: that becomes url.intended server-side and is
  * deliberately kept to a bare path, so nothing but a path may go in it.
@@ -218,7 +221,7 @@ function kkTakePendingWishlist() {
  */
 const KK_RETURN_SCROLL = 'kk_return_scroll';
 
-// The window kkStashWishlist already uses: long enough to read the login page,
+// The window kkStashPendingSave already uses: long enough to read the login page,
 // register and confirm an email; short enough that it is still the same errand.
 const KK_RETURN_SCROLL_TTL = 30 * 60 * 1000;
 
@@ -235,7 +238,7 @@ function kkStashScroll() {
 /**
  * Put the page back where it was, if this is the page that was left.
  *
- * Deliberately NOT read-and-clear like kkTakePendingWishlist. This runs on
+ * Deliberately NOT read-and-clear like kkTakePendingSave. This runs on
  * every page, the login page included, and clearing it there would throw the
  * offset away one page before it is needed - which is the bug, not the fix. It
  * is cleared when it is used, or when it is too old to be the same errand.
@@ -690,106 +693,157 @@ Alpine.store('quickAdd', {
 });
 
 /**
- * Wishlist store
+ * Saved lists - the wishlist, and favourites beside it.
+ *
+ * Two lists, one implementation. They differ in a cookie name, an endpoint, a
+ * word in a toast and the icon a Blade template draws; everything a shopper
+ * would notice going wrong is shared, because it is the quiet parts that make
+ * these lists work - reading the cookie back before the store's own init() has
+ * run, saving the id before the fetch so a failed lookup cannot lose it,
+ * gating BOTH halves of the toggle on a login, and carrying an interrupted add
+ * across the trip to /login. A second hand-written copy of that is a second one
+ * to get subtly wrong, and the difference would surface as one list quietly
+ * behaving unlike its twin.
+ *
+ * Both are cookie-backed rather than server-side, so a guest has them too; see
+ * the matching encryptCookies(except:) list in bootstrap/app.php, without which
+ * the server reads an empty list and renders an empty page over a full one.
  */
-Alpine.store('wishlist', {
-    ids: [],            // product IDs — persisted in a browser COOKIE (works for guests)
-    items: [],          // product data for the drawer / wishlist page
-    isOpen: false,      // wishlist drawer (popup) open state
-    isLoading: false,
+function kkSavedList({ store, cookie, endpoint, pendingKey, addedToast, removedToast }) {
+    return {
+        ids: [],            // product IDs — persisted in a browser COOKIE (works for guests)
+        items: [],          // product data for the drawer / list page
+        isOpen: false,      // drawer (popup) open state
+        isLoading: false,
 
-    init() {
-        this.ids = this.readCookie();
-        if (this.ids.length) this.fetch();
+        init() {
+            this.ids = this.readCookie();
+            if (this.ids.length) this.fetch();
+        },
+
+        get count() {
+            return this.ids.length;
+        },
+
+        // ---- cookie persistence ----
+        readCookie() {
+            const m = document.cookie.match(new RegExp('(?:^|;\\s*)' + cookie + '=([^;]*)'));
+            if (!m) return [];
+            try {
+                return JSON.parse(decodeURIComponent(m[1])).map(n => parseInt(n, 10)).filter(Boolean);
+            } catch (e) {
+                return [];
+            }
+        },
+        saveCookie() {
+            const value = encodeURIComponent(JSON.stringify(this.ids));
+            document.cookie = cookie + '=' + value + '; path=/; max-age=' + (60 * 60 * 24 * 365) + '; SameSite=Lax';
+        },
+
+        has(productId) {
+            return this.ids.includes(parseInt(productId, 10));
+        },
+
+        async fetch() {
+            if (!this.ids.length) { this.items = []; return; }
+            this.isLoading = true;
+            try {
+                const res = await axios.get(endpoint, { params: { ids: this.ids.join(',') } });
+                const byId = {};
+                (res.data.items || []).forEach(p => byId[p.id] = p);
+                this.items = this.ids.map(id => byId[id]).filter(Boolean);
+            } catch (e) {
+                this.items = [];
+            } finally {
+                this.isLoading = false;
+            }
+        },
+
+        async toggle(productId) {
+            productId = parseInt(productId, 10);
+
+            // Both halves, not just adding: a list that takes an account to
+            // fill but not to empty is a list a signed-out browser can still
+            // quietly rearrange. Only the add is worth carrying across the
+            // login - a guest cannot have saved the item in the first place,
+            // so the intent behind the press is always "add this".
+            if (!kkRequireLogin(() => kkStashPendingSave(pendingKey, productId))) return;
+
+            if (this.has(productId)) {
+                this.remove(productId);
+            } else {
+                await this.add(productId);
+            }
+        },
+
+        async add(productId) {
+            productId = parseInt(productId, 10);
+
+            if (!kkRequireLogin(() => kkStashPendingSave(pendingKey, productId))) return;
+
+            if (this.has(productId)) return;
+
+            this.ids.push(productId);
+            this.saveCookie();
+            // Fetch first: the toast is cosmetic, and if it ever throws it must not
+            // stop the item's data loading — that left the id saved but the list
+            // page rendering as empty.
+            await this.fetch();
+            try { Alpine.store('toast').success(addedToast); } catch (e) {}
+        },
+
+        remove(productId) {
+            productId = parseInt(productId, 10);
+            this.ids = this.ids.filter(id => id !== productId);
+            this.items = this.items.filter(p => p.id !== productId);
+            this.saveCookie();
+            Alpine.store('toast').info(removedToast);
+        },
+
+        open() {
+            try { Alpine.store('cart').close(); } catch (e) {}
+            // ...and the other saved list, so two panels can never sit open over
+            // each other. Named rather than hard-coded to the twin, so a third
+            // list would be one entry in KK_SAVED_LISTS and nothing else.
+            KK_SAVED_LISTS.forEach((name) => {
+                if (name === store) return;
+                try { Alpine.store(name).close(); } catch (e) {}
+            });
+            this.isOpen = true;
+        },
+        close() { this.isOpen = false; },
+        // legacy alias
+        fetchRemote() { this.fetch(); }
+    };
+}
+
+// The lists themselves. One object each, and that object is the only place a
+// list is described: adding a third would be an entry here plus its cookie in
+// bootstrap/app.php, and nothing else in this file would change.
+const KK_SAVED_LIST_CONFIG = [
+    {
+        store: 'wishlist',
+        cookie: 'kk_wishlist',
+        endpoint: '/wishlist/items',
+        pendingKey: KK_PENDING_WISHLIST,
+        addedToast: 'Added to wishlist',
+        removedToast: 'Removed from wishlist',
     },
-
-    get count() {
-        return this.ids.length;
+    {
+        store: 'favourites',
+        cookie: 'kk_favourites',
+        endpoint: '/favourites/items',
+        pendingKey: KK_PENDING_FAVOURITES,
+        addedToast: 'Added to favourites',
+        removedToast: 'Removed from favourites',
     },
+];
 
-    // ---- cookie persistence ----
-    readCookie() {
-        const m = document.cookie.match(/(?:^|;\s*)kk_wishlist=([^;]*)/);
-        if (!m) return [];
-        try {
-            return JSON.parse(decodeURIComponent(m[1])).map(n => parseInt(n, 10)).filter(Boolean);
-        } catch (e) {
-            return [];
-        }
-    },
-    saveCookie() {
-        const value = encodeURIComponent(JSON.stringify(this.ids));
-        document.cookie = 'kk_wishlist=' + value + '; path=/; max-age=' + (60 * 60 * 24 * 365) + '; SameSite=Lax';
-    },
+// Derived, never written out a second time: a list that is registered but
+// missing from this array would be one its siblings' open() never closes.
+const KK_SAVED_LISTS = KK_SAVED_LIST_CONFIG.map((config) => config.store);
 
-    has(productId) {
-        return this.ids.includes(parseInt(productId, 10));
-    },
-
-    async fetch() {
-        if (!this.ids.length) { this.items = []; return; }
-        this.isLoading = true;
-        try {
-            const res = await axios.get('/wishlist/items', { params: { ids: this.ids.join(',') } });
-            const byId = {};
-            (res.data.items || []).forEach(p => byId[p.id] = p);
-            this.items = this.ids.map(id => byId[id]).filter(Boolean);
-        } catch (e) {
-            this.items = [];
-        } finally {
-            this.isLoading = false;
-        }
-    },
-
-    async toggle(productId) {
-        productId = parseInt(productId, 10);
-
-        // Both halves, not just adding: a wishlist that takes an account to
-        // fill but not to empty is a wishlist a signed-out browser can still
-        // quietly rearrange. Only the add is worth carrying across the login -
-        // a guest cannot have favourited the item in the first place, so the
-        // intent behind the press is always "add this".
-        if (!kkRequireLogin(() => kkStashWishlist(productId))) return;
-
-        if (this.has(productId)) {
-            this.remove(productId);
-        } else {
-            await this.add(productId);
-        }
-    },
-
-    async add(productId) {
-        productId = parseInt(productId, 10);
-
-        if (!kkRequireLogin(() => kkStashWishlist(productId))) return;
-
-        if (this.has(productId)) return;
-
-        this.ids.push(productId);
-        this.saveCookie();
-        // Fetch first: the toast is cosmetic, and if it ever throws it must not
-        // stop the item's data loading — that left the id saved but the wishlist
-        // page rendering as empty.
-        await this.fetch();
-        try { Alpine.store('toast').success('Added to wishlist'); } catch (e) {}
-    },
-
-    remove(productId) {
-        productId = parseInt(productId, 10);
-        this.ids = this.ids.filter(id => id !== productId);
-        this.items = this.items.filter(p => p.id !== productId);
-        this.saveCookie();
-        Alpine.store('toast').info('Removed from wishlist');
-    },
-
-    open() {
-        try { Alpine.store('cart').close(); } catch (e) {}
-        this.isOpen = true;
-    },
-    close() { this.isOpen = false; },
-    // legacy alias
-    fetchRemote() { this.fetch(); }
-});
+KK_SAVED_LIST_CONFIG.forEach((config) => Alpine.store(config.store, kkSavedList(config)));
 
 /**
  * Auth Modal store
@@ -1026,25 +1080,32 @@ function initStores() {
     // Always fetch cart (works for both guests and authenticated users)
     Alpine.store('cart').fetch();
 
-    // The wishlist lives in a cookie and works for guests too, so re-read it
-    // here as well as in the store's init(): whichever runs first wins, and a
+    // The saved lists live in cookies and work for guests too, so re-read them
+    // here as well as in each store's init(): whichever runs first wins, and a
     // signed-out shopper is no longer left with an empty list.
-    const wishlist = Alpine.store('wishlist');
-    wishlist.ids = wishlist.readCookie();
-    if (wishlist.ids.length) wishlist.fetch();
+    KK_SAVED_LIST_CONFIG.forEach(({ store }) => {
+        const list = Alpine.store(store);
+
+        list.ids = list.readCookie();
+        if (list.ids.length) list.fetch();
+    });
 
     // Back where the login gate interrupted them. Runs whatever the outcome:
     // a shopper who changed their mind on the login page and came back still
     // wants the listing where they left it.
     kkRestoreScroll();
 
-    // Finish the favourite that sent a guest to the login page. Reading it
-    // clears it, so an item can never be re-added on a later visit, and it is
-    // ignored outside its short window - see kkTakePendingWishlist.
+    // Finish the save that sent a guest to the login page - each list checked
+    // separately, because they could have pressed the heart and then the star
+    // before being stopped, and one errand must not swallow the other. Reading
+    // a key clears it, so an item can never be re-added on a later visit, and
+    // it is ignored outside its short window - see kkTakePendingSave.
     if (document.body.dataset.authenticated === 'true') {
-        const pending = kkTakePendingWishlist();
+        KK_SAVED_LIST_CONFIG.forEach(({ store, pendingKey }) => {
+            const pending = kkTakePendingSave(pendingKey);
 
-        if (pending) wishlist.add(pending);
+            if (pending) Alpine.store(store).add(pending);
+        });
     }
 }
 

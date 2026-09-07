@@ -97,7 +97,11 @@
                 <!-- Wallet Balance -->
 
                 <!-- Quick Actions -->
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-8">
+                {{-- Five tiles since favourites joined the wishlist, so the row is
+                     five wide from md up rather than four - at four, the fifth
+                     dropped alone onto a second row and read as a different
+                     section. Two up on a phone, as before. --}}
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4 mb-8">
                     <a href="{{ route('account.orders.index') }}" class="bg-white border border-neutral-100 rounded-xl p-4 text-center hover:border-primary-300 hover:shadow-sm transition-all group">
                         <svg class="w-7 h-7 mx-auto text-primary-500 mb-2 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
@@ -112,6 +116,14 @@
                              table, so the count has to come from the same Alpine store
                              the header badge uses or the two disagree on one screen. --}}
                         <span class="text-[13px] font-medium text-neutral-700">Wishlist (<span x-data x-text="$store.wishlist.count">0</span>)</span>
+                    </a>
+                    <a href="{{ route('favourites') }}" class="bg-white border border-neutral-100 rounded-xl p-4 text-center hover:border-primary-300 hover:shadow-sm transition-all group">
+                        <svg class="w-7 h-7 mx-auto text-primary-500 mb-2 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/>
+                        </svg>
+                        {{-- Same story as the wishlist beside it: a cookie, so the
+                             count is the Alpine store's and never a table's. --}}
+                        <span class="text-[13px] font-medium text-neutral-700">Favourites (<span x-data x-text="$store.favourites.count">0</span>)</span>
                     </a>
                     <a href="{{ route('account.addresses.index') }}" class="bg-white border border-neutral-100 rounded-xl p-4 text-center hover:border-primary-300 hover:shadow-sm transition-all group">
                         <svg class="w-7 h-7 mx-auto text-primary-500 mb-2 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
