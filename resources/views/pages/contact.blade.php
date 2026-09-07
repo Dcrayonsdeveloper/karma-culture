@@ -16,11 +16,11 @@
 
     @push('meta')
         <meta name="description" content="Get in touch with {{ config('app.name') }}. We're here to help with orders, returns, and any questions about kids' clothing.">
-        <link rel="canonical" href="{{ url('/contact') }}">
+        <link rel="canonical" href="{{ route('contact') }}">
         <meta property="og:title" content="Contact Us - {{ config('app.name') }}">
         <meta property="og:description" content="Get in touch with {{ config('app.name') }}. We're here to help with orders, returns, and any questions about kids' clothing.">
         <meta property="og:type" content="website">
-        <meta property="og:url" content="{{ url('/contact') }}">
+        <meta property="og:url" content="{{ route('contact') }}">
         <meta name="twitter:card" content="summary">
         <meta name="twitter:title" content="Contact Us - {{ config('app.name') }}">
         <meta name="twitter:description" content="Get in touch with {{ config('app.name') }}. We're here to help with orders, returns, and any questions.">

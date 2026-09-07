@@ -3,7 +3,7 @@
 
     @push('meta')
         <meta name="description" content="Kids' clothing size guide at {{ config('app.name') }}. Find the perfect fit for boys and girls with our sizing charts.">
-        <link rel="canonical" href="{{ url('/size-guide') }}">
+        <link rel="canonical" href="{{ route('size-guide') }}">
     @endpush
 
     <!-- Breadcrumb -->

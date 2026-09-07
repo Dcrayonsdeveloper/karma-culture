@@ -434,30 +434,58 @@ Route::middleware('auth')->group(function () {
 });
 
 // Track Order (Public with order number)
-Route::get('/track-order', [App\Http\Controllers\TrackOrderController::class, 'index'])->name('track-order');
-Route::post('/track-order', [App\Http\Controllers\TrackOrderController::class, 'track'])->middleware('throttle:10,1,track-order')->name('track-order.track');
+Route::get('/track-orders', [App\Http\Controllers\TrackOrderController::class, 'index'])->name('track-order');
+Route::post('/track-orders', [App\Http\Controllers\TrackOrderController::class, 'track'])->middleware('throttle:10,1,track-order')->name('track-order.track');
 
 // Guest return requests. Reachable only after the order has been verified on
 // the tracking page above, which records it in the session.
-Route::get('/track-order/{order}/return', [App\Http\Controllers\GuestReturnController::class, 'create'])->name('track-order.return');
-Route::post('/track-order/{order}/return', [App\Http\Controllers\GuestReturnController::class, 'store'])->middleware('throttle:5,1,guest-return')->name('track-order.return.store');
+Route::get('/track-orders/{order}/return', [App\Http\Controllers\GuestReturnController::class, 'create'])->name('track-order.return');
+Route::post('/track-orders/{order}/return', [App\Http\Controllers\GuestReturnController::class, 'store'])->middleware('throttle:5,1,guest-return')->name('track-order.return.store');
 
 // Static/CMS Pages
-Route::get('/about', [App\Http\Controllers\PageController::class, 'about'])->name('about');
-Route::get('/contact', [App\Http\Controllers\PageController::class, 'contact'])->name('contact');
-Route::post('/contact', [App\Http\Controllers\PageController::class, 'sendContact'])->middleware('throttle:5,1,contact')->name('contact.send');
-Route::get('/faq', [App\Http\Controllers\PageController::class, 'faq'])->name('faq');
-Route::get('/blog', [App\Http\Controllers\PageController::class, 'blog'])->name('blog');
-Route::get('/blog/{slug}', [App\Http\Controllers\PageController::class, 'blogShow'])->name('blog.show');
+Route::get('/abouts', [App\Http\Controllers\PageController::class, 'about'])->name('about');
+Route::get('/contacts', [App\Http\Controllers\PageController::class, 'contact'])->name('contact');
+Route::post('/contacts', [App\Http\Controllers\PageController::class, 'sendContact'])->middleware('throttle:5,1,contact')->name('contact.send');
+Route::get('/faqs', [App\Http\Controllers\PageController::class, 'faq'])->name('faq');
+Route::get('/blogs', [App\Http\Controllers\PageController::class, 'blog'])->name('blog');
+Route::get('/blogs/{slug}', [App\Http\Controllers\PageController::class, 'blogShow'])->name('blog.show');
 Route::get('/careers', [App\Http\Controllers\PageController::class, 'careers'])->name('careers');
-Route::get('/help', [App\Http\Controllers\PageController::class, 'help'])->name('help');
+Route::get('/helps', [App\Http\Controllers\PageController::class, 'help'])->name('help');
 Route::get('/returns-policy', [App\Http\Controllers\PageController::class, 'returns'])->name('returns');
-Route::get('/shipping', [App\Http\Controllers\PageController::class, 'shipping'])->name('shipping');
-Route::get('/size-guide', [App\Http\Controllers\PageController::class, 'sizeGuide'])->name('size-guide');
+Route::get('/shippings', [App\Http\Controllers\PageController::class, 'shipping'])->name('shipping');
+Route::get('/size-guides', [App\Http\Controllers\PageController::class, 'sizeGuide'])->name('size-guide');
 Route::get('/privacy-policy', [App\Http\Controllers\PageController::class, 'privacy'])->name('privacy');
 Route::get('/terms-of-service', [App\Http\Controllers\PageController::class, 'terms'])->name('terms');
 Route::get('/cookie-policy', [App\Http\Controllers\PageController::class, 'cookiePolicy'])->name('cookie-policy');
 Route::get('/gdpr', [App\Http\Controllers\PageController::class, 'gdpr'])->name('gdpr');
+
+// The static pages above were renamed to their plural form. Keep the old
+// singular paths answering 301 so existing inbound links, bookmarks and
+// already-indexed search results still resolve. The query string is carried
+// over, which matters for the filtered blog listing (?category=, ?search=).
+foreach ([
+    '/about' => '/abouts',
+    '/contact' => '/contacts',
+    '/faq' => '/faqs',
+    '/blog' => '/blogs',
+    '/help' => '/helps',
+    '/shipping' => '/shippings',
+    '/size-guide' => '/size-guides',
+    '/track-order' => '/track-orders',
+] as $legacy => $current) {
+    Route::get($legacy, function () use ($current) {
+        $query = request()->getQueryString();
+
+        return redirect($current . ($query ? '?' . $query : ''), 301);
+    });
+}
+
+Route::get('/blog/{slug}', fn (string $slug) => redirect('/blogs/' . $slug, 301));
+
+// 308 keeps the method and body, so a contact or tracking form still submitted
+// from an already-open page reaches the renamed endpoint instead of a 405.
+Route::post('/contact', fn () => redirect('/contacts', 308));
+Route::post('/track-order', fn () => redirect('/track-orders', 308));
 Route::get('/page/{page:slug}', [App\Http\Controllers\PageController::class, 'show'])->name('page.show');
 
 // Admin-made collections. Kept under its own prefix so a collection can never

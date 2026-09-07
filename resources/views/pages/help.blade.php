@@ -12,7 +12,7 @@
 
     @push('meta')
         <meta name="description" content="Need help? Visit the {{ config('app.name') }} help center for answers about orders, shipping, returns, and account management.">
-        <link rel="canonical" href="{{ url('/help') }}">
+        <link rel="canonical" href="{{ route('help') }}">
     @endpush
 
     <div class="bg-neutral-50 border-b border-neutral-100">
