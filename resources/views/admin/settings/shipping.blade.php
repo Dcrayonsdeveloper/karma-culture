@@ -101,10 +101,10 @@
                             <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Days after delivery a return can still be raised.</p>
                         </div>
                         <div>
-                            <label class="form-label">Wait before returning (hours)</label>
-                            <input type="number" name="return_min_hours" min="0" max="168"
-                                   value="{{ old('return_min_hours', $settings['return_min_hours'] ?? 0) }}" class="form-input">
-                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Set 0 to let customers return as soon as the order is delivered.</p>
+                            <label class="form-label">Wait before returning (minutes)</label>
+                            <input type="number" name="return_min_minutes" min="0" max="10080"
+                                   value="{{ old('return_min_minutes', $settings['return_min_minutes'] ?? 0) }}" class="form-input">
+                            <p style="font-size: 12px; color: #616161; margin-top: 0.25rem;">Minutes after delivery before a return can be raised. Set 0 to let customers return as soon as the order is delivered.</p>
                         </div>
                     </div>
                 </div>

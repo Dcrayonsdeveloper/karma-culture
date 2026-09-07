@@ -60,12 +60,12 @@ class ReturnController extends Controller
         })->pluck('order_item_id')->toArray();
 
         $returnWindowDays = (int) Setting::get('return_window_days', 7);
-        $returnMinHours = (int) Setting::get('return_min_hours', 24);
+        $returnMinMinutes = (int) Setting::get('return_min_minutes', 0);
 
         $orders = $request->user()->orders()
             ->where('status', 'delivered')
             ->where('delivered_at', '>=', now()->subDays($returnWindowDays))
-            ->where('delivered_at', '<=', now()->subHours($returnMinHours))
+            ->where('delivered_at', '<=', now()->subMinutes($returnMinMinutes))
             ->with('items.product:id,name,slug')
             ->get();
 
@@ -80,7 +80,7 @@ class ReturnController extends Controller
         return view('account.returns.create', [
             'orders' => $orders,
             'returnWindowDays' => $returnWindowDays,
-            'returnMinHours' => $returnMinHours,
+            'returnMinMinutes' => $returnMinMinutes,
             'reasons' => self::REASONS,
         ]);
     }

@@ -395,10 +395,10 @@ class Order extends Model
         }
 
         $windowDays = (int) Setting::get('return_window_days', 7);
-        $minHours   = (int) Setting::get('return_min_hours', 24);
+        $minMinutes = (int) Setting::get('return_min_minutes', 0);
 
         return $this->delivered_at->gte(now()->subDays($windowDays))
-            && $this->delivered_at->lte(now()->subHours($minHours));
+            && $this->delivered_at->lte(now()->subMinutes($minMinutes));
     }
 
     public function updateStatus(string $status, ?int $userId = null, ?string $comment = null): void

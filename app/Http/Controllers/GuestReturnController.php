@@ -140,10 +140,10 @@ class GuestReturnController extends Controller
         }
 
         $windowDays = (int) Setting::get('return_window_days', 7);
-        $minHours = (int) Setting::get('return_min_hours', 24);
+        $minMinutes = (int) Setting::get('return_min_minutes', 0);
 
         return $order->delivered_at->gte(now()->subDays($windowDays))
-            && $order->delivered_at->lte(now()->subHours($minHours));
+            && $order->delivered_at->lte(now()->subMinutes($minMinutes));
     }
 
     private function alreadyRequested(int $orderItemId): bool

@@ -110,7 +110,7 @@ class SettingController extends Controller
             'shiprocket_channel_id'      => 'nullable|string|max:50',
             'free_shipping_threshold'    => 'nullable|numeric|min:0',
             'return_window_days'         => 'nullable|integer|min:0|max:365',
-            'return_min_hours'           => 'nullable|integer|min:0|max:168',
+            'return_min_minutes'         => 'nullable|integer|min:0|max:10080',
             'flat_rate_amount'           => 'nullable|numeric|min:0',
             'local_pickup_address'       => 'nullable|string|max:500',
             'shipping_origin_country'    => 'required|string|size:2',
