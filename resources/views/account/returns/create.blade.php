@@ -22,7 +22,14 @@
                                 </svg>
                             </div>
                             <h3 class="text-base font-semibold text-neutral-900 mb-1">No eligible orders</h3>
-                            <p class="text-sm text-neutral-600 mb-5">You don't have any eligible orders. Returns are available {{ $returnMinHours }} hours after delivery, within a {{ $returnWindowDays }}-day window. Items already returned are excluded.</p>
+                            @php
+                                // A zero wait is a normal setting, and "available 0 minutes
+                                // after delivery" reads like a bug rather than a policy.
+                                $kkWaitNote = $returnMinMinutes > 0
+                                    ? $returnMinMinutes . ' ' . \Illuminate\Support\Str::plural('minute', $returnMinMinutes) . ' after delivery'
+                                    : 'as soon as an order is delivered';
+                            @endphp
+                            <p class="text-sm text-neutral-600 mb-5">You don't have any eligible orders. Returns are available {{ $kkWaitNote }}, within a {{ $returnWindowDays }}-day window. Items already returned are excluded.</p>
                             <a href="{{ route('account.orders.index') }}" class="inline-flex items-center gap-2 bg-[#F8931D] hover:bg-[#E07E0A] text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors">
                                 View Orders
                             </a>

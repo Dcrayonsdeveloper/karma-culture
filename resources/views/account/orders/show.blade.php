@@ -426,8 +426,8 @@
                                          returns existed at all. --}}
                                     @php
                                         $kkWindow = (int) \App\Models\Setting::get('return_window_days', 7);
-                                        $kkWait   = (int) \App\Models\Setting::get('return_min_hours', 0);
-                                        $kkOpensAt = $order->delivered_at->copy()->addHours($kkWait);
+                                        $kkWait   = (int) \App\Models\Setting::get('return_min_minutes', 0);
+                                        $kkOpensAt = $order->delivered_at->copy()->addMinutes($kkWait);
                                     @endphp
                                     <p class="text-[12px] text-neutral-500 text-center px-2">
                                         @if($kkOpensAt->isFuture())

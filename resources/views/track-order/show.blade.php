@@ -238,11 +238,11 @@
                  window; the form itself hides items already under a request. --}}
             @php
                 $kkWindowDays = (int) \App\Models\Setting::get('return_window_days', 7);
-                $kkMinHours   = (int) \App\Models\Setting::get('return_min_hours', 24);
+                $kkMinMinutes = (int) \App\Models\Setting::get('return_min_minutes', 0);
                 $kkCanReturn  = $order->status === 'delivered'
                     && $order->delivered_at
                     && $order->delivered_at->gte(now()->subDays($kkWindowDays))
-                    && $order->delivered_at->lte(now()->subHours($kkMinHours));
+                    && $order->delivered_at->lte(now()->subMinutes($kkMinMinutes));
             @endphp
             @if($kkCanReturn)
                 <div class="bg-white border border-neutral-100 rounded-xl p-5 mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
