@@ -165,6 +165,47 @@ class GalleryFollowsColourTest extends TestCase
         );
     }
 
+    public function test_a_shade_with_no_photographs_of_its_own_shows_the_whole_strip(): void
+    {
+        // Amber is first, so the page opens on it, and every photograph on the
+        // product is of the Indigo. Nothing matches - and the answer to that is
+        // the whole strip, not an empty frame with an empty rail beside it.
+        $product = $this->product([
+            'Colours' => [
+                ['name' => 'Amber', 'hex' => '#c98a2b'],
+                ['name' => 'Indigo', 'hex' => '#2b3a67'],
+            ],
+        ]);
+
+        $this->image($product, 1, 'Indigo', primary: true);
+        $this->image($product, 2, 'Indigo');
+        $this->image($product, 3, 'Indigo');
+
+        $html = $this->get(route('product.show', $product))->assertOk()->getContent();
+
+        // Every thumbnail is painted with no display:none, because the server's
+        // visibleIndices() falls back to all three.
+        $this->assertSame(
+            3,
+            substr_count($html, 'x-show="isVisible('),
+            'All three thumbnails are still rendered.'
+        );
+        $this->assertStringNotContainsString(
+            'x-show="isVisible(0)" style="display: none;"',
+            $html,
+            'The server must not hide a thumbnail the fallback rule says to show.'
+        );
+
+        // And the browser has to agree, or the rail is drawn and then emptied
+        // the moment Alpine boots. isVisible() reads the same list the arrows
+        // and the counter walk rather than re-deciding for itself.
+        $this->assertStringContainsString(
+            'isVisible(index) { return this.visibleImages.includes(index); }',
+            $html,
+            'isVisible() must answer from visibleImages - which carries the fallback - not from kkMatches(), which does not.'
+        );
+    }
+
     public function test_a_product_with_no_images_still_renders(): void
     {
         $product = $this->product([

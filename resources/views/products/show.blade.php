@@ -2846,7 +2846,19 @@
                 return (at < 0 ? 0 : at) + 1;
             },
 
-            isVisible(index) { return !this.galleryTagged || this.kkMatches(index); },
+            /* Asked by each thumbnail, and answered from the same list the
+               arrows and the counter walk - NOT by calling kkMatches() again.
+
+               The two are not the same question once the fallback is involved.
+               A product whose photographs are all tagged Indigo, opened on
+               Amber, matches nothing: visibleImages falls back to the whole
+               strip so the counter reads 1 / 3 and the arrows work, and a
+               kkMatches() of its own would have answered false for all three
+               and emptied the rail underneath them. The server paints the rail
+               from ProductGallery::visibleIndices(), which has the fallback, so
+               the thumbnails would have been drawn and then visibly vanished
+               the moment Alpine booted. */
+            isVisible(index) { return this.visibleImages.includes(index); },
 
             /* Arrows and swipes walk the frames on screen and wrap within them.
                They used to step modulo the whole strip, which on a tagged
