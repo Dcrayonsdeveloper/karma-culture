@@ -1115,6 +1115,128 @@
         }, true);
     </script>
 
+    {{-- Autoplaying media plays while it is on screen, and only then.
+
+         `autoplay` is a one-shot: it is honoured as the element loads and never
+         again, so a card that scrolls into view later - or one a filter, a
+         carousel or a quick view puts on the page afterwards - keeps its poster
+         and never moves. That is what a main-video product card looked like.
+
+         Doing it by hand also puts a ceiling on how many clips run at once.
+         Browsers cap concurrent hardware decoders, and past the cap a <video>
+         silently stops painting - a grid of twenty video-led tiles would be
+         exactly the blank tile x-media exists to prevent. The most-visible few
+         play; the rest hold a frame, which reads as a still rather than as
+         something broken.
+
+         Only <video data-kk-autoplay> is touched, which x-media puts on the
+         clips it was asked to autoplay - never the product gallery's <video
+         controls> or a customer's review clip. --}}
+    <script>
+        (function () {
+            if (!('IntersectionObserver' in window)) return;
+
+            // Enough for any row on screen at once, well short of the decoder
+            // cap that makes clips stop painting.
+            var MAX_PLAYING = 6;
+
+            var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+            var visible = new Map();
+
+            function play(v) {
+                if (!v.paused) return;
+                var p = v.play();
+                // Rejected whenever the browser declines - a policy, a decoder
+                // it has run out of, or the element leaving the page mid-call.
+                // The poster stays up; nothing else needs to happen.
+                if (p && p.catch) p.catch(function () {});
+            }
+
+            function pause(v) {
+                if (!v.paused) v.pause();
+            }
+
+            function sync() {
+                if (reduce.matches) {
+                    visible.forEach(function (_, v) { pause(v); });
+                    return;
+                }
+
+                // Most of the tile showing wins, so the row being read plays
+                // and the one half off the bottom of the screen waits.
+                var ranked = Array.from(visible.keys()).sort(function (a, b) {
+                    return visible.get(b) - visible.get(a);
+                });
+
+                ranked.forEach(function (v, i) {
+                    if (i < MAX_PLAYING) play(v); else pause(v);
+                });
+            }
+
+            var io = new IntersectionObserver(function (entries) {
+                entries.forEach(function (e) {
+                    if (e.isIntersecting) {
+                        visible.set(e.target, e.intersectionRatio);
+                    } else {
+                        visible.delete(e.target);
+                        pause(e.target);
+                    }
+                });
+                sync();
+            }, { threshold: [0, 0.25, 0.5, 0.75] });
+
+            function adopt(v) {
+                if (v.dataset.kkAutoplayBound) return;
+                v.dataset.kkAutoplayBound = '1';
+                // The attribute would otherwise start it behind the controller's
+                // back, which is the one case reduced motion cannot catch.
+                if (reduce.matches) v.removeAttribute('autoplay');
+                io.observe(v);
+            }
+
+            function scan(root) {
+                if (root.nodeType !== 1 && root.nodeType !== 9) return;
+                if (root.matches && root.matches('video[data-kk-autoplay]')) adopt(root);
+                var found = root.querySelectorAll('video[data-kk-autoplay]');
+                for (var i = 0; i < found.length; i++) adopt(found[i]);
+            }
+
+            function start() {
+                scan(document);
+
+                // Cards arrive after load as well: a quick view, a carousel that
+                // builds its slides, a filter that redraws the grid.
+                new MutationObserver(function (records) {
+                    records.forEach(function (r) {
+                        for (var i = 0; i < r.addedNodes.length; i++) scan(r.addedNodes[i]);
+                    });
+                }).observe(document.documentElement, { childList: true, subtree: true });
+
+                // A tab left in the background has its clips paused by the
+                // browser; coming back is not a scroll, so nothing would have
+                // asked them to start again.
+                document.addEventListener('visibilitychange', function () {
+                    if (!document.hidden) sync();
+                });
+
+                var onReduceChange = function () {
+                    if (reduce.matches) {
+                        visible.forEach(function (_, v) { v.removeAttribute('autoplay'); });
+                    }
+                    sync();
+                };
+                if (reduce.addEventListener) reduce.addEventListener('change', onReduceChange);
+                else if (reduce.addListener) reduce.addListener(onReduceChange);
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', start);
+            } else {
+                start();
+            }
+        })();
+    </script>
+
     {{-- Pages that @push('scripts') rendered nothing without this, and the
          failure is silent: the markup ships, the JS behind it never does. --}}
     @stack('scripts')
