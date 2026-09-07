@@ -51,6 +51,20 @@ class PageMenuPlacementTest extends TestCase
         ], $overrides);
     }
 
+    /**
+     * The page the test under way has just posted.
+     *
+     * This was `Page::firstOrFail()`, which held only while the table was
+     * guaranteed empty. It no longer is: a data migration writes the Returns
+     * Policy and Size Guide rows, and RefreshDatabase replays migrations - so
+     * the first row in the table is not the one under test, and every
+     * assertion here would have been made against the wrong page.
+     */
+    private function createdPage(): Page
+    {
+        return Page::where('slug', 'shipping-policy')->firstOrFail();
+    }
+
     public function test_a_page_can_be_placed_in_a_footer_column_as_it_is_created(): void
     {
         $this->post(route('admin.pages.store'), $this->payload(['nav_location' => 'footer_col3']))
@@ -63,7 +77,7 @@ class PageMenuPlacementTest extends TestCase
         $this->assertSame('Shipping Policy', $link->label);
         $this->assertSame('/page/shipping-policy', $link->url);
         $this->assertTrue($link->is_active);
-        $this->assertSame(Page::firstOrFail()->id, $link->page_id);
+        $this->assertSame($this->createdPage()->id, $link->page_id);
     }
 
     /**
@@ -90,7 +104,7 @@ class PageMenuPlacementTest extends TestCase
     public function test_changing_the_placement_moves_the_one_link_rather_than_adding_another(): void
     {
         $this->post(route('admin.pages.store'), $this->payload(['nav_location' => 'footer_col3']));
-        $page = Page::firstOrFail();
+        $page = $this->createdPage();
 
         $this->put(route('admin.pages.update', $page), $this->payload(['nav_location' => 'footer_col1']))
             ->assertSessionHasNoErrors();
@@ -102,7 +116,7 @@ class PageMenuPlacementTest extends TestCase
     public function test_clearing_the_placement_takes_the_link_out_of_the_menus(): void
     {
         $this->post(route('admin.pages.store'), $this->payload(['nav_location' => 'footer_col1']));
-        $page = Page::firstOrFail();
+        $page = $this->createdPage();
 
         $this->put(route('admin.pages.update', $page), $this->payload(['nav_location' => '']))
             ->assertSessionHasNoErrors();
@@ -117,7 +131,7 @@ class PageMenuPlacementTest extends TestCase
     public function test_renaming_the_slug_carries_the_link_with_it(): void
     {
         $this->post(route('admin.pages.store'), $this->payload(['nav_location' => 'footer_col3']));
-        $page = Page::firstOrFail();
+        $page = $this->createdPage();
 
         $this->put(route('admin.pages.update', $page), $this->payload([
             'slug' => 'delivery-policy',
@@ -140,7 +154,7 @@ class PageMenuPlacementTest extends TestCase
         $this->assertFalse(NavigationMenu::firstOrFail()->is_active);
         $this->assertCount(0, NavigationMenu::getByLocation('footer_col1'));
 
-        $page = Page::firstOrFail();
+        $page = $this->createdPage();
         $this->put(route('admin.pages.update', $page), $this->payload(['nav_location' => 'footer_col1']));
 
         $this->assertTrue(NavigationMenu::firstOrFail()->fresh()->is_active);
@@ -154,7 +168,7 @@ class PageMenuPlacementTest extends TestCase
     public function test_a_label_retyped_in_the_navigation_editor_is_not_overwritten(): void
     {
         $this->post(route('admin.pages.store'), $this->payload(['nav_location' => 'footer_col3']));
-        $page = Page::firstOrFail();
+        $page = $this->createdPage();
 
         NavigationMenu::firstOrFail()->update(['label' => 'Shipping']);
 
@@ -173,7 +187,7 @@ class PageMenuPlacementTest extends TestCase
     public function test_an_untouched_label_follows_the_page_title(): void
     {
         $this->post(route('admin.pages.store'), $this->payload(['nav_location' => 'footer_col3']));
-        $page = Page::firstOrFail();
+        $page = $this->createdPage();
 
         $this->put(route('admin.pages.update', $page), $this->payload([
             'title' => 'Delivery Policy',
@@ -187,7 +201,7 @@ class PageMenuPlacementTest extends TestCase
     {
         $this->post(route('admin.pages.store'), $this->payload(['nav_location' => 'footer_col1']));
 
-        $this->delete(route('admin.pages.destroy', Page::firstOrFail()));
+        $this->delete(route('admin.pages.destroy', $this->createdPage()));
 
         $this->assertDatabaseCount('navigation_menus', 0);
     }
@@ -199,7 +213,7 @@ class PageMenuPlacementTest extends TestCase
     public function test_a_hand_made_link_to_the_same_page_is_left_alone(): void
     {
         $this->post(route('admin.pages.store'), $this->payload(['nav_location' => 'footer_col3']));
-        $page = Page::firstOrFail();
+        $page = $this->createdPage();
 
         $handMade = NavigationMenu::create([
             'location' => 'header',
@@ -227,7 +241,7 @@ class PageMenuPlacementTest extends TestCase
     public function test_both_page_forms_offer_the_placement_field(): void
     {
         $this->post(route('admin.pages.store'), $this->payload(['nav_location' => 'footer_col3']));
-        $page = Page::firstOrFail();
+        $page = $this->createdPage();
 
         foreach (['create' => route('admin.pages.create'), 'edit' => route('admin.pages.edit', $page)] as $which => $url) {
             $html = $this->get($url)->assertOk()->getContent();
@@ -244,7 +258,7 @@ class PageMenuPlacementTest extends TestCase
     public function test_the_edit_form_preselects_the_current_placement(): void
     {
         $this->post(route('admin.pages.store'), $this->payload(['nav_location' => 'footer_col3']));
-        $page = Page::firstOrFail();
+        $page = $this->createdPage();
 
         $html = $this->get(route('admin.pages.edit', $page))->assertOk()->getContent();
 
