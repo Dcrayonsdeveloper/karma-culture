@@ -4,12 +4,14 @@ Everything a new developer needs, from `git clone` to shipping a change to the
 live site. Written against the repository as it actually is, not the generic
 Laravel version of these steps.
 
-> **The rest of `doc/` and `ssh/README.md` describe ForeverKids**, a different
-> site that happens to share the Hostinger account this project was copied
-> from. Their server paths will overwrite that site. For Karmaa Kulture, this
-> file and `deploy.sh` are the only authoritative sources.
+> The ForeverKids deployment documents this project was forked with - `deploy.sh`,
+> `doc/deployment-guide.md`, `doc/hostinger-deployment.md`, `ssh/DEPLOYMENT.md`
+> and `ssh/README.md` - have been removed. They described a Hostinger account
+> that no longer serves this site, and they carried a live database password in
+> plain text. This file is the authoritative source.
 
-**Live site:** https://palegreen-mouse-158092.hostingersite.com/
+**Live site:** https://karma.dcrayons.app
+**Repository:** AWS CodeCommit, `ap-south-1` (§2). GitHub is no longer used.
 
 ---
 
@@ -40,9 +42,14 @@ mysql --version
 ## 2. First-time setup
 
 ```bash
-git clone https://github.com/Dcrayonsdeveloper/karma-culture.git
-cd karma-culture
+git clone https://git-codecommit.ap-south-1.amazonaws.com/v1/repos/karma-kulture
+cd karma-kulture
 ```
+
+Authenticate with the CodeCommit HTTPS Git credentials issued to you in IAM -
+a username ending `-at-<account-id>` and its own password, separate from your
+console login. The GitHub repository this project used to live in is no longer
+maintained; do not push to it.
 
 **Create the two databases first** — the setup script migrates immediately and
 will fail without one, and the test suite needs its own:
@@ -167,14 +174,13 @@ Once the key is authorised, add this to `~/.ssh/config`:
 
 ```
 Host karmaakulture
-    HostName 167.88.41.35
-    Port 65002
-    User u322703740
-    IdentityFile ~/.ssh/id_ed25519
+    HostName 15.207.133.144
+    User ubuntu
+    IdentityFile ~/.ssh/your-karmaa-key.pem
     IdentitiesOnly yes
 ```
 
-Confirm it works — the deploy script will not run without it:
+Confirm it works:
 
 ```bash
 ssh karmaakulture 'echo connected'
@@ -182,38 +188,40 @@ ssh karmaakulture 'echo connected'
 
 ### Deploy
 
+There is no deploy script. `deploy.sh` was written for the Hostinger account and
+has been removed; it could not find the app under `/var/www` and failed before
+doing anything. Deploy by hand:
+
 ```bash
-git checkout main
-git pull
-./deploy.sh karmaakulture       # answer y at the confirmation prompt
+git push origin HEAD:main
+ssh karmaakulture 'cd /var/www/karmaakulture \
+    && git pull --ff-only \
+    && npm run build \
+    && php artisan migrate --force \
+    && php artisan optimize:clear'
 ```
 
-The script refuses to start unless **local `HEAD` equals `origin/main`**, so
-commit and push before deploying. Roughly five minutes; most of it is the asset
-build.
+Notes on each part:
 
-### What it actually does
-
-1. Verifies `HEAD == origin/main` and pins the deploy to that SHA
-2. Finds the app on the server by looking for a `.env` mentioning "karmaa" —
-   never by hard-coded path, because the account hosts several other live sites
-3. Backs up the production database to `~/backups/karmaa_db_<stamp>.sql.gz`
-4. Builds assets **locally** (`npm run build`) and ships `public/build`
-5. Server: `git reset --hard <deployed SHA>`, `composer install --no-dev`,
-   `php artisan migrate --force`
-6. Syncs `public/images` and the webroot `.htaccess`
-7. Rebuilds config/route/view caches, restarts the queue
-8. Curls the site and reports the HTTP status
-
-Note step 4: assets come from **your working tree**, while PHP comes from git.
-Deploy from a clean tree, or you ship JS/CSS built from unfinished local edits
-against a backend that does not have them.
+- **Assets build on the server.** Node 20 and `node_modules` are already there,
+  so nothing is uploaded — which also means you cannot ship JS built from
+  unfinished local edits.
+- **`composer install` only when `composer.lock` changed**, and it needs
+  `--ignore-platform-reqs`: `composer.json` pins `platform.php` to 8.4.11 while
+  the box runs PHP **8.3**. `php artisan` itself is fine on 8.3.
+- **Take a database backup first** if the deploy carries migrations. Nothing
+  does it for you any more:
+  `mysqldump -u <user> -p<pass> --single-transaction karmaakulture_db | gzip > ~/backup.sql.gz`
+- **Check the server tree is clean before pulling.** Code has historically been
+  rsynced onto this box by hand, so `git status` there is not always empty. A
+  pull onto a dirty tree conflicts; a `reset --hard` destroys whatever was
+  loose. Look first.
 
 ### After deploying
 
 ```bash
-curl -s -o /dev/null -w "%{http_code}\n" https://palegreen-mouse-158092.hostingersite.com/
-ssh karmaakulture 'cd ~/domains/palegreen-mouse-158092.hostingersite.com/karmaa_culture && git rev-parse --short HEAD'
+curl -s -o /dev/null -w "%{http_code}\n" https://karma.dcrayons.app/
+ssh karmaakulture 'cd /var/www/karmaakulture && git rev-parse --short HEAD'
 ```
 
 The second command should print the commit you just deployed.
@@ -222,19 +230,26 @@ The second command should print the commit you just deployed.
 
 ```bash
 # what the server logged (daily files, not laravel.log)
-ssh karmaakulture 'cd ~/domains/palegreen-mouse-158092.hostingersite.com/karmaa_culture \
+ssh karmaakulture 'cd /var/www/karmaakulture \
     && tail -c 4000 storage/logs/laravel-$(date +%Y-%m-%d).log'
+
+# nginx, for 502s and missing assets
+ssh karmaakulture 'sudo tail -50 /var/log/nginx/karma.dcrayons.app.error.log'
 ```
 
 To roll back: check out the last good commit on `main`, push it, and deploy
-again. Database backups from every deploy are in `~/backups/` on the server.
+again.
+
+> The box also hosts roughly twenty other sites on two vCPUs, sharing MySQL,
+> PostgreSQL and Redis. It is not yours alone — do not restart shared services.
 
 ---
 
 ## 6. Things that will bite you
 
-- **`doc/` and `ssh/README.md` are stale.** They document ForeverKids paths.
-  Deploying by following them writes to the wrong site.
+- **Most of `doc/` predates the move to AWS.** The deployment documents have
+  been removed, but the rest still describes the Hostinger layout in places.
+  Treat this file as authoritative for anything about servers or deploying.
 - **`composer install` on PHP 8.3 fails** with a platform error. It is the
   `config.platform` pin, not a missing extension — install 8.4.
 - **Tests drop tables.** `.env.testing` must name a throwaway schema.
