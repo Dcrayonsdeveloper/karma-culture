@@ -347,6 +347,14 @@
             </svg>
             Flash Sales
         </a>
+        <a href="{{ route('admin.festival-sales.index') }}"
+           class="admin-nav-item {{ request()->routeIs('admin.festival-sales.*') ? 'active' : '' }}">
+            <svg style="width: 18px; height: 18px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3l2.09 4.26L18.8 8l-3.4 3.32.8 4.68L12 13.77 7.8 16l.8-4.68L5.2 8l4.71-.74L12 3z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 20h14"/>
+            </svg>
+            Festival Sales
+        </a>
         <a href="{{ route('admin.banners.index') }}"
            class="admin-nav-item {{ request()->routeIs('admin.banners.*') ? 'active' : '' }}">
             <svg style="width: 18px; height: 18px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">

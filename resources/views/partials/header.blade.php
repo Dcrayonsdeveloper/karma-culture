@@ -146,7 +146,15 @@
                     </div>
 
                     <a href="{{ route('bestsellers') }}" class="px-2 xl:px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">Bestsellers</a>
-                    <a href="{{ route('deals') }}" class="px-2.5 py-2 text-[12px] text-kk-tan-dark hover:text-kk-brown font-semibold transition-colors tracking-widest uppercase whitespace-nowrap">Introductory Offer</a>
+                    {{-- Points at the running festival sale when there is one, and
+                         falls back to /deals when there is not, so the button is
+                         never a link to an empty page. The lookup is a cached
+                         array, not a query - see FestivalSale::liveSummary(). --}}
+                    @php $kkFestival = \App\Models\FestivalSale::liveSummary(); @endphp
+                    <a href="{{ $kkFestival ? route('festival-sale.show', $kkFestival['slug']) : route('deals') }}"
+                       class="px-2.5 py-2 text-[12px] text-kk-tan-dark hover:text-kk-brown font-semibold transition-colors tracking-widest uppercase whitespace-nowrap">
+                        {{ $kkFestival ? $kkFestival['name'] : 'Introductory Offer' }}
+                    </a>
                 </nav>
 
                 <style>
