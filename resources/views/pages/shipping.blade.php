@@ -3,7 +3,7 @@
 
     @push('meta')
         <meta name="description" content="Shipping information for {{ config('app.name') }}. Learn about delivery times, shipping costs, and tracking your kids' clothing orders.">
-        <link rel="canonical" href="{{ url('/shipping') }}">
+        <link rel="canonical" href="{{ route('shipping') }}">
     @endpush
 
     <!-- Breadcrumb -->

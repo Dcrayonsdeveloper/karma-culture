@@ -43,14 +43,14 @@ class SitemapController extends Controller
             ['url' => url('/new-arrivals'), 'freq' => 'daily', 'priority' => '0.9'],
             ['url' => url('/bestsellers'), 'freq' => 'daily', 'priority' => '0.9'],
             ['url' => url('/deals'), 'freq' => 'daily', 'priority' => '0.8'],
-            ['url' => url('/track-order'), 'freq' => 'monthly', 'priority' => '0.5'],
-            ['url' => url('/blog'), 'freq' => 'weekly', 'priority' => '0.7'],
-            ['url' => url('/about'), 'freq' => 'monthly', 'priority' => '0.5'],
-            ['url' => url('/contact'), 'freq' => 'monthly', 'priority' => '0.5'],
-            ['url' => url('/faq'), 'freq' => 'monthly', 'priority' => '0.4'],
-            ['url' => url('/shipping'), 'freq' => 'monthly', 'priority' => '0.4'],
+            ['url' => route('track-order'), 'freq' => 'monthly', 'priority' => '0.5'],
+            ['url' => route('blog'), 'freq' => 'weekly', 'priority' => '0.7'],
+            ['url' => route('about'), 'freq' => 'monthly', 'priority' => '0.5'],
+            ['url' => route('contact'), 'freq' => 'monthly', 'priority' => '0.5'],
+            ['url' => route('faq'), 'freq' => 'monthly', 'priority' => '0.4'],
+            ['url' => route('shipping'), 'freq' => 'monthly', 'priority' => '0.4'],
             ['url' => url('/returns-policy'), 'freq' => 'monthly', 'priority' => '0.4'],
-            ['url' => url('/size-guide'), 'freq' => 'monthly', 'priority' => '0.4'],
+            ['url' => route('size-guide'), 'freq' => 'monthly', 'priority' => '0.4'],
         ];
 
         foreach ($staticPages as $page) {

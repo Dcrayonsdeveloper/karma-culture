@@ -3,11 +3,11 @@
 
     @push('meta')
         <meta name="description" content="Frequently asked questions about {{ config('app.name') }}. Find answers about shipping, returns, sizing, orders, and more.">
-        <link rel="canonical" href="{{ url('/faq') }}">
+        <link rel="canonical" href="{{ route('faq') }}">
         <meta property="og:title" content="FAQ - {{ config('app.name') }}">
         <meta property="og:description" content="Frequently asked questions about {{ config('app.name') }}. Find answers about shipping, returns, sizing, orders, and more.">
         <meta property="og:type" content="website">
-        <meta property="og:url" content="{{ url('/faq') }}">
+        <meta property="og:url" content="{{ route('faq') }}">
         <meta name="twitter:card" content="summary">
         <meta name="twitter:title" content="FAQ - {{ config('app.name') }}">
         <meta name="twitter:description" content="Find answers about shipping, returns, sizing, orders, and more at {{ config('app.name') }}.">
