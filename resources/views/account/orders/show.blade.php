@@ -457,7 +457,30 @@
                                 <div class="bg-white rounded-xl border border-neutral-100 p-4">
                                     <h3 class="text-sm font-semibold text-neutral-900 mb-3">Order Timeline</h3>
                                     <div class="relative">
-                                        @foreach($order->statusHistory as $index => $history)
+                                        @php
+                                            // Every row in this card is something that has already happened, so none
+                                            // of them is drawn as "not reached": past events are outlined in their
+                                            // tone and the newest one is filled in, which is what moves the solid dot
+                                            // down the list as the order progresses. Cancelled and returned must not
+                                            // read as a green success, and an order that is still waiting - unpaid, or
+                                            // held by the fraud check - is amber rather than green.
+                                            $kkDotPast = [
+                                                'cancelled' => 'bg-white border-danger-500',
+                                                'returned'  => 'bg-white border-danger-500',
+                                                'pending'   => 'bg-white border-warning-500',
+                                                'on_hold'   => 'bg-white border-warning-500',
+                                            ];
+                                            $kkDotLatest = [
+                                                'cancelled' => 'bg-danger-500 border-danger-500',
+                                                'returned'  => 'bg-danger-500 border-danger-500',
+                                                'pending'   => 'bg-warning-500 border-warning-500',
+                                                'on_hold'   => 'bg-warning-500 border-warning-500',
+                                            ];
+                                            // The relation declares no ORDER BY, and cancelling writes two rows inside
+                                            // one request that share created_at to the second, so break ties on the id.
+                                            $kkHistory = $order->statusHistory->sortBy([['created_at', 'asc'], ['id', 'asc']]);
+                                        @endphp
+                                        @foreach($kkHistory as $history)
                                             <div class="flex gap-3 {{ !$loop->last ? 'pb-4' : '' }} relative">
                                                 <!-- Vertical Line -->
                                                 @if(!$loop->last)
@@ -465,7 +488,9 @@
                                                 @endif
                                                 <!-- Dot -->
                                                 <div class="w-3.75 h-3.75 rounded-full border-2 shrink-0 mt-0.5
-                                                    {{ $loop->first ? 'bg-primary-600 border-primary-600' : 'bg-white border-neutral-300' }}"></div>
+                                                    {{ $loop->last
+                                                        ? ($kkDotLatest[$history->status] ?? 'bg-success-500 border-success-500')
+                                                        : ($kkDotPast[$history->status] ?? 'bg-white border-success-500') }}"></div>
                                                 <div class="flex-1 min-w-0">
                                                     <p class="text-[13px] font-medium text-neutral-800">{{ str_replace('_', ' ', ucfirst($history->status)) }}</p>
                                                     @if($history->comment)
