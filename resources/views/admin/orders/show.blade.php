@@ -443,20 +443,18 @@
                     <h2 style="font-size: 13px; font-weight: 600; color: #303030;">Customer</h2>
                 </div>
                 <div style="padding: 1rem;">
-                    {{-- The number to ring about THIS order, which is the one given
-                         at checkout - not the one on the account, which may be an
+                    {{-- The number to ring about THIS order: the one given at
+                         checkout, ahead of the one on the account, which may be an
                          old handset or belong to whoever set the account up. The
                          customer can give a different number per delivery, so this
                          card shows the order's own rather than sending the shop off
-                         to the customer page to find one. --}}
-                    @php
-                        $kkOrderPhone = data_get($order->shipping_address_snapshot, 'phone')
-                            ?: data_get($order->metadata, 'guest_phone');
-                    @endphp
-                    @if($kkOrderPhone)
+                         to the customer page to find one. Order::customer_phone
+                         holds the precedence, so the sales export prints the same
+                         number this card is dialled from. --}}
+                    @if($order->customer_phone)
                         <div style="margin-bottom: 0.75rem;">
                             <p style="font-size: 11px; color: #616161; text-transform: uppercase; letter-spacing: 0.03em;">Contact for this order</p>
-                            <a href="tel:{{ $kkOrderPhone }}" style="font-size: 13px; font-weight: 500; color: #005bd3; overflow-wrap: anywhere;">{{ $kkOrderPhone }}</a>
+                            <a href="tel:{{ $order->customer_phone }}" style="font-size: 13px; font-weight: 500; color: #005bd3; overflow-wrap: anywhere;">{{ $order->customer_phone }}</a>
                         </div>
                     @endif
                     @if($order->user)
