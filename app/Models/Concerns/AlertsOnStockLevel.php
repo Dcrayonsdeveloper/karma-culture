@@ -39,10 +39,22 @@ trait AlertsOnStockLevel
                 return;
             }
 
+            // Cheapest questions first, because this runs on every stock write
+            // in the shop. Both of these decide the answer without touching the
+            // container or the database.
+            if (StockAlertService::$muted) {
+                return;
+            }
+
             $before = (int) $model->getOriginal('stock_quantity');
             $after = (int) $model->stock_quantity;
 
-            if ($before === $after) {
+            // Only a shelf that got SMALLER can have got worse: severity runs
+            // ok -> low -> out as the quantity falls, so a restock - or a
+            // no-op write - can never cross into a worse band. Returning here
+            // is what keeps a size's parent product from being fetched for
+            // every restocked row of an import.
+            if ($after >= $before) {
                 return;
             }
 
