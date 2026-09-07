@@ -82,6 +82,12 @@ class StockAlertService
      */
     public function variantChanged(ProductVariant $variant, int $before, int $after): void
     {
+        // Before the parent is fetched: a muted bulk run must not pay a query
+        // per row for an answer it has already decided to throw away.
+        if (self::$muted) {
+            return;
+        }
+
         // The parent is what carries the threshold and the name, and a variant
         // reached through decrement() during checkout has not loaded it. Only
         // the two columns are needed, so the row is not hydrated whole.
