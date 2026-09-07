@@ -77,11 +77,24 @@ class ReturnController extends Controller
         // Remove orders with no returnable items left
         $orders = $orders->filter(fn ($order) => $order->items->isNotEmpty());
 
+        // Every Request Return button on the site links here with ?order=,
+        // and the form has always ignored it - a customer who clicked from one
+        // specific order arrived at a list and had to find it again. Resolved
+        // against the eligible set rather than trusted, so an id that is not on
+        // this list (or not this customer's) simply selects nothing.
+        $preselectedOrder = $orders->firstWhere('id', $request->integer('order'))?->id;
+
         return view('account.returns.create', [
             'orders' => $orders,
             'returnWindowDays' => $returnWindowDays,
             'returnMinMinutes' => $returnMinMinutes,
             'reasons' => self::REASONS,
+            'preselectedOrder' => $preselectedOrder,
+            // The form needs the threshold itself, not just a per-order flag:
+            // the customer picks the order client-side, so the page has to be
+            // able to answer "is credit compulsory?" for whichever one they
+            // land on without a round trip.
+            'couponThreshold' => OrderReturn::couponThreshold(),
         ]);
     }
 
@@ -97,6 +110,11 @@ class ReturnController extends Controller
                 Rule::exists('orders', 'id')->where('user_id', $request->user()->id),
             ],
             'type' => V::option(self::TYPES),
+            // Only meaningful for a return; an exchange is a replacement item,
+            // so neither answer is true of it and the form does not ask. Not
+            // required even for a return, because the value posted is not the
+            // one that gets stored - see the override below.
+            'refund_preference' => ['nullable', Rule::in(array_keys(OrderReturn::PREFERENCES))],
             // Was a free string: now one of the reasons the select offers.
             'reason' => V::option(self::REASONS),
             // NoHtml, so a description later rendered in the admin queue or an
@@ -144,12 +162,27 @@ class ReturnController extends Controller
             return back()->withInput()->withErrors(['items' => 'One or more selected items already have a return request.']);
         }
 
+        // What the customer gets back. Decided here, from the order the server
+        // just loaded, rather than trusted from the request: disabling a radio
+        // stops a browser, not a hand-written POST, and the threshold is a
+        // policy about money. Above the line the answer is store credit no
+        // matter what was posted; at or below it, the posted choice stands and
+        // 'refund' is the fallback when nothing was sent.
+        //
+        // Null for an exchange, which is a replacement rather than money back.
+        $preference = match (true) {
+            $validated['type'] !== 'return'    => null,
+            OrderReturn::couponForced($order)  => OrderReturn::PREFERENCE_COUPON,
+            default                            => $validated['refund_preference'] ?? OrderReturn::PREFERENCE_REFUND,
+        };
+
         $return = OrderReturn::create([
             'order_id' => $validated['order_id'],
             'user_id' => $request->user()->id,
             'type' => $validated['type'],
             'reason' => $validated['reason'],
             'description' => $validated['description'] ?? null,
+            'refund_preference' => $preference,
             'status' => 'requested',
         ]);
 
@@ -198,7 +231,7 @@ class ReturnController extends Controller
             abort(403);
         }
 
-        $return->load(['order', 'items.orderItem.product:id,name,slug', 'pickupPartner.user']);
+        $return->load(['order', 'items.orderItem.product:id,name,slug', 'pickupPartner.user', 'refundCoupon']);
 
         return view('account.returns.show', compact('return'));
     }

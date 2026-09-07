@@ -181,12 +181,25 @@ class CheckoutController extends Controller
             return redirect()->route('cart.index')->with('error', 'Your cart is empty.');
         }
 
-        // Drop an applied coupon if it is no longer valid (guests don't get
-        // per-user checks, but expired/disabled coupons must not be honoured).
-        if ($cart->coupon && ! $cart->coupon->isValid()) {
+        // Drop an applied coupon if it is no longer valid, or if it belongs to
+        // somebody else.
+        //
+        // isValid() alone was not enough: it knows nothing about
+        // applicable_users, so a coupon addressed to one named customer stayed
+        // attached through checkout for anyone whose cart carried it - and a
+        // cart survives signing in and out. The ownership test is repeated here
+        // rather than left to the cart, because this is the last point before
+        // the money is committed, and a signed-out visitor can never be the
+        // named customer.
+        $kkNotTheirs = $cart->coupon
+            && ! empty($cart->coupon->applicable_users)
+            && ! ($request->user() && in_array($request->user()->id, $cart->coupon->applicable_users));
+
+        if ($cart->coupon && (! $cart->coupon->isValid() || $kkNotTheirs)) {
+            $kkCode = $cart->coupon->code;
             $cart->update(['coupon_id' => null, 'discount' => 0, 'total' => $cart->subtotal]);
             return redirect()->route('checkout.index')
-                ->with('error', 'Your coupon "' . $cart->coupon->code . '" is no longer valid and has been removed. Please review your order.');
+                ->with('error', 'Your coupon "' . $kkCode . '" is no longer valid and has been removed. Please review your order.');
         }
 
         $savedAddress = ! empty($validated['address_id']) && $request->user()

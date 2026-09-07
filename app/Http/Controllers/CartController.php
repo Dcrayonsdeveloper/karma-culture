@@ -476,6 +476,27 @@ class CartController extends Controller
             return back()->with('error', 'Invalid or expired coupon code.');
         }
 
+        // A coupon addressed to named customers may only be spent by one of
+        // them. Nothing on this path had ever checked applicable_users - the
+        // restriction was enforced only by Coupon::canBeUsedBy(), which the API
+        // checkout calls and this, the storefront route every shopper actually
+        // uses, did not. That made the column decorative: any code aimed at one
+        // person was redeemable by anyone who learned it. It mattered little
+        // while every coupon was a public promotion; store credit issued for a
+        // return is somebody's money, and it is issued this way.
+        //
+        // Deliberately answered the same way for a signed-out visitor, who
+        // cannot be the named customer either.
+        if (! empty($coupon->applicable_users)
+            && ! (auth()->check() && in_array(auth()->id(), $coupon->applicable_users))) {
+            $message = 'This coupon is not available on your account.';
+            if ($request->wantsJson()) {
+                return response()->json(['error' => $message], 422);
+            }
+
+            return back()->with('error', $message);
+        }
+
         // Check minimum order amount (not for BOGO - BOGO checks quantity instead)
         if ($coupon->type !== 'buy_x_get_y' && $coupon->min_order_amount && $cart->subtotal < $coupon->min_order_amount) {
             $message = 'This coupon requires a minimum order of '.format_price($coupon->min_order_amount);

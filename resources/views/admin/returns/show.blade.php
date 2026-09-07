@@ -67,10 +67,40 @@
                             <span style="font-weight: 500; color: #303030;">{{ $return->approved_at->format('M d, Y h:i A') }}</span>
                         </div>
                     @endif
+                    {{-- What the customer asked to be given back. Shown before the
+                         refund is processed as well as after, because it is the
+                         instruction the admin is meant to follow rather than a
+                         record of what was done. --}}
+                    @if($return->preferenceLabel())
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; font-size: 13px;">
+                            <span style="color: #616161;">Customer wants</span>
+                            <span style="font-weight: 500; color: #303030; text-align: right;">
+                                {{ $return->preferenceLabel() }}
+                                @if($return->wantsCoupon() && \App\Models\OrderReturn::couponForced($return->order))
+                                    <span style="display: inline-block; margin-left: 0.25rem; padding: 0.05rem 0.4rem; border-radius: 0.75rem; background: #fdf0d5; color: #8a5a00; font-size: 11px; font-weight: 600;">Required</span>
+                                @endif
+                            </span>
+                        </div>
+                    @endif
                     @if((float) $return->refund_amount > 0)
                         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
                             <span style="color: #616161;">Refund Amount</span>
                             <span style="font-weight: 600; color: #1a7a2e;">@price($return->refund_amount)</span>
+                        </div>
+                    @endif
+                    {{-- The Process Refund card hides itself once an amount is
+                         recorded, so without this the issued code would be
+                         unreadable the moment it was created. --}}
+                    @if($return->refundCoupon)
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; font-size: 13px;">
+                            <span style="color: #616161;">Credit Coupon</span>
+                            <span style="font-weight: 600; color: #303030; font-family: monospace;">{{ $return->refundCoupon->code }}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; font-size: 12px;">
+                            <span style="color: #616161;">Credit Status</span>
+                            <span style="color: #616161;">
+                                {{ $return->refundCoupon->times_used > 0 ? 'Redeemed' : 'Unused' }}@if($return->refundCoupon->expires_at), expires {{ $return->refundCoupon->expires_at->format('d M Y') }}@endif
+                            </span>
                         </div>
                     @endif
                     @if($return->completed_at)
@@ -179,12 +209,39 @@
                                 </div>
                                 <div>
                                     <label style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Refund Method</label>
-                                    <select name="refund_method" class="form-select" style="width: 100%;" required>
-                                        <option value="wallet">Store Credit (Wallet)</option>
-                                        <option value="original">Original Payment Method</option>
-                                        <option value="bank">Bank Transfer</option>
-                                    </select>
-                                    <p style="font-size: 12px; color: #616161; margin: 0.25rem 0 0 0;">Store credit will be added to customer's account balance</p>
+                                    @if($return->wantsCoupon())
+                                        {{-- The customer asked for - or was required to take - store
+                                             credit, so there is nothing to choose. The server enforces
+                                             this regardless of what is posted; the locked field is
+                                             here so the reason is visible rather than mysterious. --}}
+                                        <select name="refund_method" class="form-select" style="width: 100%;" required>
+                                            <option value="coupon">Store Coupon</option>
+                                        </select>
+                                        {{-- Blade only treats @if as a directive when the @ is not
+                                             preceded by a word character, so it cannot be glued to
+                                             the end of a sentence - the opening tag would stay
+                                             literal text while its @endif compiled, and the view
+                                             would 500. Hence the whole sentence either way. --}}
+                                        <p style="font-size: 12px; color: #616161; margin: 0.25rem 0 0 0;">
+                                            @if(\App\Models\OrderReturn::couponForced($return->order))
+                                                Store credit is required for this return: the order is above {{ format_price(\App\Models\OrderReturn::couponThreshold()) }}.
+                                            @else
+                                                The customer requested store credit.
+                                            @endif
+                                            Processing will issue a single-use coupon for the amount above and email it to them.
+                                        </p>
+                                    @else
+                                        <select name="refund_method" class="form-select" style="width: 100%;" required>
+                                            <option value="original">Original Payment Method</option>
+                                            <option value="bank">Bank Transfer</option>
+                                            <option value="coupon">Store Coupon</option>
+                                        </select>
+                                        {{-- 'Wallet' is deliberately gone: nothing in this application
+                                             keeps a balance, so picking it credited the customer
+                                             nothing at all while telling them it had. Store credit is
+                                             a real coupon now, which is the option that replaces it. --}}
+                                        <p style="font-size: 12px; color: #616161; margin: 0.25rem 0 0 0;">Store Coupon issues a single-use code for the amount above.</p>
+                                    @endif
                                 </div>
                                 <div>
                                     <label style="display: block; font-size: 13px; font-weight: 500; color: #303030; margin-bottom: 0.25rem;">Notes</label>

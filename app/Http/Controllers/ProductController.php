@@ -221,6 +221,17 @@ class ProductController extends Controller
                 $q->whereNull('expires_at')->orWhere('expires_at', '>=', now());
             })
             ->whereRaw('(usage_limit IS NULL OR times_used < usage_limit)')
+            // Personal codes are not offers. This grid is public and sorted by
+            // value, with a copy button - so a coupon belonging to one named
+            // customer would not merely appear on it, it would lead it. Store
+            // credit issued for a return is exactly that shape and is worth
+            // real money, so both the account-holder's copy (restricted with
+            // applicable_users) and a guest's (which has no account to name,
+            // and is found through the returns table instead) are excluded.
+            ->whereNull('applicable_users')
+            ->whereNotIn('id', function ($q) {
+                $q->select('refund_coupon_id')->from('returns')->whereNotNull('refund_coupon_id');
+            })
             ->orderByDesc('value')
             // Four fills the offers grid on the product page; the view filters
             // out any whose minimum spend this product cannot reach.

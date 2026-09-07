@@ -412,31 +412,10 @@
                                     </form>
                                 @endif
 
-                                @if($order->canBeReturned())
-                                    <a href="{{ route('account.returns.create', ['order' => $order->id]) }}"
-                                       class="flex items-center justify-center gap-2 w-full px-4 py-2.5 border border-neutral-200 text-neutral-700 text-[13px] font-medium rounded-lg hover:bg-neutral-50 hover:border-neutral-300 transition-all">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
-                                        </svg>
-                                        Request Return
-                                    </a>
-                                @elseif($order->status === 'delivered' && $order->delivered_at)
-                                    {{-- Delivered but still inside the waiting period, or past the
-                                         window. Showing nothing left the customer wondering whether
-                                         returns existed at all. --}}
-                                    @php
-                                        $kkWindow = (int) \App\Models\Setting::get('return_window_days', 7);
-                                        $kkWait   = (int) \App\Models\Setting::get('return_min_minutes', 0);
-                                        $kkOpensAt = $order->delivered_at->copy()->addMinutes($kkWait);
-                                    @endphp
-                                    <p class="text-[12px] text-neutral-500 text-center px-2">
-                                        @if($kkOpensAt->isFuture())
-                                            Returns open {{ $kkOpensAt->diffForHumans() }}.
-                                        @else
-                                            The {{ $kkWindow }}-day return window for this order has closed.
-                                        @endif
-                                    </p>
-                                @endif
+                                {{-- Button, live countdown or "window closed", decided by the
+                                     component. It replaces a frozen diffForHumans() sentence that
+                                     never ticked and a button that only appeared on reload. --}}
+                                <x-return-countdown :order="$order" />
 
                                 @if(in_array($order->status, ['delivered', 'completed']))
                                     <form action="{{ route('account.orders.reorder', $order) }}" method="POST">
