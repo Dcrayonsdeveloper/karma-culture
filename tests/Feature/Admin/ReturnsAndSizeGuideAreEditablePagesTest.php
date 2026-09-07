@@ -144,6 +144,51 @@ class ReturnsAndSizeGuideAreEditablePagesTest extends TestCase
     }
 
     /**
+     * The three measurement columns carry a diagram of what to measure. It is
+     * drawn by the template, not stored in the page body - CKEditor has no
+     * image plugin and would drop an <img> on the first admin save - so this
+     * checks the template still finds the headings to attach them to.
+     */
+    public function test_each_measurement_column_is_shown_with_its_diagram(): void
+    {
+        $html = $this->get('/size-guides')->assertOk()->getContent();
+
+        foreach (['Height (cm)', 'Chest (cm)', 'Waist (cm)'] as $heading) {
+            $this->assertMatchesRegularExpression(
+                '#<th[^>]*><span[^>]*>\s*<svg.*?</svg>\s*'.preg_quote($heading, '#').'#s',
+                $html,
+                "The {$heading} column lost its measurement diagram."
+            );
+        }
+
+        // The Size and Age columns are not measurements and get nothing.
+        $this->assertMatchesRegularExpression('#<th[^>]*>\s*Size\s*</th>#', $html);
+    }
+
+    /**
+     * The diagrams are attached to the rendered output, so they must not be a
+     * way for stored page copy to smuggle markup past the sanitiser.
+     */
+    public function test_the_diagrams_do_not_reopen_the_content_sanitiser(): void
+    {
+        $this->actingAsAdmin();
+        $page = Page::where('slug', 'size-guides')->firstOrFail();
+
+        $this->put(route('admin.pages.update', $page), [
+            'title' => $page->title,
+            'slug' => $page->slug,
+            'content' => '<h2>Chart</h2><table><thead><tr>'
+                .'<th>Height <script>alert(1)</script></th></tr></thead>'
+                .'<tbody><tr><td>1</td></tr></tbody></table>',
+            'is_published' => 1,
+        ])->assertSessionHasNoErrors();
+
+        $html = $this->get('/size-guides')->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('<script>alert(1)</script>', $html);
+    }
+
+    /**
      * The write allowlist and the render allowlist used to disagree, and
      * CKEditor writes italic as <i>, never <em>. So italicising a word saved
      * cleanly and then vanished from the page, with nothing to show why.

@@ -82,6 +82,48 @@
         $supportPhone = trim((string) \App\Models\Setting::get('contact_phone', ''));
         $supportTel   = $supportPhone !== '' ? preg_replace('/[^0-9+]/', '', $supportPhone) : '';
 
+        // A small diagram of the measurement each size-chart column asks for,
+        // shown beside its heading. They are drawn here rather than stored in
+        // the page body on purpose: the body is edited in CKEditor, which has
+        // no image plugin and would drop an <img> on the first save without
+        // saying so. This is decoration, like the page icon above, so it lives
+        // in the template where an admin cannot lose it.
+        //
+        // All three share one body outline and differ only in the measuring
+        // line - full height down the side, a band across the chest, a band
+        // at the waist - so the three columns are told apart at a glance.
+        $measureIcon = function (string $line): string {
+            return '<svg class="w-4 h-4 shrink-0 text-neutral-400" viewBox="0 0 24 24" fill="none" '
+                .'stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" '
+                .'aria-hidden="true">'
+                .'<circle cx="13" cy="4.5" r="2"/>'
+                .'<path d="M10 8.5h6l.8 5.5h-7.6z"/>'
+                .'<path d="M10.6 14v6.5M15.4 14v6.5"/>'
+                .$line
+                .'</svg>';
+        };
+
+        $measureIcons = [
+            'height' => $measureIcon('<path d="M4 3v18M2.4 4.6 4 3l1.6 1.6M2.4 19.4 4 21l1.6-1.6"/>'),
+            'chest'  => $measureIcon('<path d="M6.5 10.5h13M8 8.9 6.4 10.5 8 12.1M18 8.9l1.6 1.6-1.6 1.6"/>'),
+            'waist'  => $measureIcon('<path d="M6.5 13.6h13M8 12l-1.6 1.6L8 15.2M18 12l1.6 1.6-1.6 1.6"/>'),
+        ];
+
+        // Put the diagram in front of the heading it explains. Run over the
+        // sanitised HTML, so the SVG is ours rather than something the page
+        // body could have smuggled through. A renamed column simply misses
+        // out; nothing else in the table is touched.
+        $withMeasureIcons = function (string $html) use ($measureIcons): string {
+            return preg_replace_callback(
+                '#<th([^>]*)>\s*(Height|Chest|Waist)\b([^<]*)</th>#i',
+                function (array $m) use ($measureIcons): string {
+                    return '<th'.$m[1].'><span class="inline-flex items-center gap-1.5">'
+                        .$measureIcons[strtolower($m[2])].$m[2].$m[3].'</span></th>';
+                },
+                $html
+            ) ?? $html;
+        };
+
         // Split content into separate sections at every <h2> boundary
         $sections = [];
         if ($page->content) {
@@ -175,7 +217,7 @@
                              CKEditor's own wrapper around a table. <img> is the one tag still
                              deliberately left out - this editor has no image plugin, so
                              nothing it saves can contain one. --}}
-                        {!! safe_html($section, '<p><br><strong><b><em><i><u><ul><ol><li><h1><h2><h3><h4><h5><h6><a><span><div><figure><figcaption><table><tr><td><th><thead><tbody><blockquote><hr>') !!}
+                        {!! $withMeasureIcons(safe_html($section, '<p><br><strong><b><em><i><u><ul><ol><li><h1><h2><h3><h4><h5><h6><a><span><div><figure><figcaption><table><tr><td><th><thead><tbody><blockquote><hr>')) !!}
                     </div>
                 @endforeach
             @else
