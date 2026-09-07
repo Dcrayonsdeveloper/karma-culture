@@ -43,6 +43,7 @@ class NormaliseImageAspect extends Command
 {
     protected $signature = 'images:normalise-aspect
         {--category=kids : Slug of the category whose products are processed, descendants included}
+        {--all : Every product still on the site, whatever shelf it sits on}
         {--width=510 : Target width in pixels}
         {--height=680 : Target height in pixels}
         {--quality=80 : WebP quality for files stored as .webp}
@@ -90,38 +91,47 @@ class NormaliseImageAspect extends Command
             return Command::FAILURE;
         }
 
-        $slug = (string) $this->option('category');
-        $categoryIds = $this->categoryTree($slug);
-
-        if ($categoryIds === []) {
-            $this->error('No category with slug "'.$slug.'".');
-
-            return Command::FAILURE;
-        }
-
-        $this->info(sprintf(
-            'Category "%s" and its descendants: %d shelves (%s).',
-            $slug,
-            count($categoryIds),
-            implode(', ', $categoryIds)
-        ));
-
-        $productIds = $this->productsOn($categoryIds);
-
-        if ($productIds === []) {
-            $this->warn('No products on those shelves. Nothing to do.');
-
-            return Command::SUCCESS;
-        }
+        $everything = (bool) $this->option('all');
+        $productIds = [];
 
         // Videos keep their own shape - a poster frame is cropped by the
-        // player, not by us - so only stills are collected here.
-        $rows = ProductImage::whereIn('product_id', $productIds)
-            ->where('media_type', 'image')
-            ->get(['id', 'product_id', 'url']);
+        // player, not by us - so only stills are ever collected here.
+        $query = ProductImage::where('media_type', 'image');
+
+        if ($everything) {
+            $this->info('Every product still on the site, whatever shelf it sits on.');
+        } else {
+            $slug = (string) $this->option('category');
+            $categoryIds = $this->categoryTree($slug);
+
+            if ($categoryIds === []) {
+                $this->error('No category with slug "'.$slug.'".');
+
+                return Command::FAILURE;
+            }
+
+            $this->info(sprintf(
+                'Category "%s" and its descendants: %d shelves (%s).',
+                $slug,
+                count($categoryIds),
+                implode(', ', $categoryIds)
+            ));
+
+            $productIds = $this->productsOn($categoryIds);
+
+            if ($productIds === []) {
+                $this->warn('No products on those shelves. Nothing to do.');
+
+                return Command::SUCCESS;
+            }
+
+            $query->whereIn('product_id', $productIds);
+        }
+
+        $rows = $query->get(['id', 'product_id', 'url']);
 
         $root = rtrim(Storage::disk('public')->path(''), '/\\').'/';
-        $targets = [];
+        $paths = [];
         $offDisk = 0;
 
         foreach ($rows as $row) {
@@ -135,67 +145,49 @@ class NormaliseImageAspect extends Command
 
             // Two products can share one file. Keyed by path so it is read,
             // cropped and rewritten once.
-            $targets[$path] = true;
+            $paths[$path] = true;
         }
 
-        $targets = array_keys($targets);
-        sort($targets);
+        $paths = array_keys($paths);
+        sort($paths);
 
         $this->info(sprintf(
-            '%d products, %d stills, %d files on disk.%s',
-            count($productIds),
+            '%s, %d stills, %d files on disk.%s',
+            $everything ? $rows->pluck('product_id')->unique()->count().' products' : count($productIds).' products',
             $rows->count(),
-            count($targets),
+            count($paths),
             $offDisk > 0 ? ' '.$offDisk.' row(s) point off this disk and are left alone.' : ''
         ));
 
-        if ($targets === []) {
+        if ($paths === []) {
             return Command::SUCCESS;
         }
 
-        $shared = $this->sharedWithOtherProducts($targets, $productIds, $root);
+        if (! $everything) {
+            $shared = $this->sharedWithOtherProducts($paths, $productIds, $root);
 
-        if ($shared > 0) {
-            $this->warn($shared.' of those files are also used by products outside this category - they change there too.');
-        }
-
-        $limit = (int) $this->option('limit');
-
-        if ($limit > 0 && count($targets) > $limit) {
-            $targets = array_slice($targets, 0, $limit);
-            $this->warn('Limited to '.$limit.' file(s) - this is a partial run.');
+            if ($shared > 0) {
+                $this->warn($shared.' of those files are also used by products outside this category - they change there too.');
+            }
         }
 
         $dry = (bool) $this->option('dry-run');
         $quality = (int) $this->option('quality');
 
-        $this->info(sprintf(
-            '%s to %dx%d (%s).',
-            $dry ? 'Would normalise' : 'Normalising',
-            $targetWidth,
-            $targetHeight,
-            $this->ratioLabel($targetWidth, $targetHeight)
-        ));
+        // Measured up front, in one pass, so that a file already the right
+        // shape drops out HERE rather than inside the write loop. That is what
+        // makes --limit mean "the next N that still need work": a staged
+        // rollout over 7,000 files makes real progress on every run instead of
+        // spending each one re-deciding about the batch before it.
+        $this->line('Measuring '.count($paths).' file(s)...');
 
-        if (! $dry) {
-            $this->line('Originals are copied to '.$backupRoot.' first.');
-        }
-
-        $bar = $this->output->createProgressBar(count($targets));
-        $bar->start();
-
-        $done = 0;
+        $targets = [];
         $already = 0;
         $skipped = 0;
-        $failed = 0;
-        $before = 0;
-        $after = 0;
-        $problems = [];
         $shapes = [];
+        $problems = [];
 
-        foreach ($targets as $path) {
-            $bar->advance();
-
+        foreach ($paths as $path) {
             $info = @getimagesize($path);
 
             if ($info === false) {
@@ -231,6 +223,67 @@ class NormaliseImageAspect extends Command
 
                 continue;
             }
+
+            $targets[$path] = $info;
+        }
+
+        arsort($shapes);
+        $this->line(sprintf(
+            '%d distinct shape(s) on disk; %d file(s) already %dx%d.',
+            count($shapes),
+            $already,
+            $targetWidth,
+            $targetHeight
+        ));
+
+        foreach (array_slice($shapes, 0, 12, true) as $shape => $count) {
+            $this->line(sprintf('  %-14s %d', $shape, $count));
+        }
+
+        if ($targets === []) {
+            $this->newLine();
+            $this->info('Nothing left to normalise.');
+
+            return Command::SUCCESS;
+        }
+
+        $limit = (int) $this->option('limit');
+        $outstanding = count($targets);
+
+        if ($limit > 0 && $outstanding > $limit) {
+            $targets = array_slice($targets, 0, $limit, true);
+            $this->warn(sprintf(
+                'Limited to %d of %d outstanding file(s) - this is a partial run, %d will remain.',
+                $limit,
+                $outstanding,
+                $outstanding - $limit
+            ));
+        }
+
+        $this->newLine();
+
+        $this->info(sprintf(
+            '%s to %dx%d (%s).',
+            $dry ? 'Would normalise' : 'Normalising',
+            $targetWidth,
+            $targetHeight,
+            $this->ratioLabel($targetWidth, $targetHeight)
+        ));
+
+        if (! $dry) {
+            $this->line('Originals are copied to '.$backupRoot.' first.');
+        }
+
+        $bar = $this->output->createProgressBar(count($targets));
+        $bar->start();
+
+        $done = 0;
+        $failed = 0;
+        $before = 0;
+        $after = 0;
+
+        foreach ($targets as $path => $info) {
+            $bar->advance();
 
             $source = filesize($path);
 
@@ -282,14 +335,6 @@ class NormaliseImageAspect extends Command
         $bar->finish();
         $this->newLine(2);
 
-        arsort($shapes);
-        $this->line('Shapes found on disk:');
-
-        foreach (array_slice($shapes, 0, 12, true) as $shape => $count) {
-            $this->line(sprintf('  %-14s %d', $shape, $count));
-        }
-
-        $this->newLine();
         $this->table(['outcome', 'files'], [
             [$dry ? 'would normalise' : 'normalised in place', $done],
             ['already '.$targetWidth.'x'.$targetHeight, $already],
