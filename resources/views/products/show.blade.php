@@ -2570,8 +2570,12 @@
                 // Pause any playing gallery/zoom video when the active item or zoom changes,
                 // so audio never keeps playing after the user navigates away.
                 this.$watch('currentImage', () => this.pauseVideos());
-                // Arrows and thumbnails change the slide under a still pointer.
-                this.$watch('currentImage', () => { if (this.hoverZoom) this.zoomDraw(); });
+                /* Arrows and thumbnails change the slide under a still pointer.
+                   Keyed on zoomPt - the pointer being over the frame at all -
+                   rather than on hoverZoom: stepping off a video slide onto a
+                   photo is exactly the case where the panel is down and ought
+                   to come up, and hoverZoom would have refused to redraw it. */
+                this.$watch('currentImage', () => { if (this.zoomPt) this.zoomDraw(); });
                 /* The gallery is sticky, so the frame slides out from under a
                    stationary cursor as the page scrolls. Redraw against the new
                    rectangle - zoomDraw() drops the lens by itself once the
