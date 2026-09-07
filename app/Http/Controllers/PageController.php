@@ -211,9 +211,23 @@ class PageController extends Controller
         return view('pages.help');
     }
 
+    /**
+     * Both of these used to render a Blade file of their own, so a return
+     * window or a chest measurement could only be corrected by a deploy.
+     * They are `pages` rows now, edited under Online Store -> Pages, exactly
+     * like the four legal pages below.
+     *
+     * Each keeps its own method rather than sharing one: no controller action
+     * may answer from two different paths, and /page/{slug} already belongs to
+     * show(). Like privacy() and the rest they do not check is_published - a
+     * page linked from the footer of every page on the site is not something
+     * an unticked checkbox should quietly turn into a 404.
+     */
     public function returns(): View
     {
-        return view('pages.returns');
+        $page = Page::where('slug', 'returns-policy')->firstOrFail();
+
+        return view('pages.legal-page', compact('page'));
     }
 
     public function shipping(): View
@@ -223,7 +237,9 @@ class PageController extends Controller
 
     public function sizeGuide(): View
     {
-        return view('pages.size-guide');
+        $page = Page::where('slug', 'size-guides')->firstOrFail();
+
+        return view('pages.legal-page', compact('page'));
     }
 
     public function privacy(): View

@@ -49,7 +49,7 @@ class SitemapController extends Controller
             ['url' => route('contact'), 'freq' => 'monthly', 'priority' => '0.5'],
             ['url' => route('faq'), 'freq' => 'monthly', 'priority' => '0.4'],
             ['url' => route('shipping'), 'freq' => 'monthly', 'priority' => '0.4'],
-            ['url' => url('/returns-policy'), 'freq' => 'monthly', 'priority' => '0.4'],
+            ['url' => route('returns'), 'freq' => 'monthly', 'priority' => '0.4'],
             ['url' => route('size-guide'), 'freq' => 'monthly', 'priority' => '0.4'],
         ];
 
