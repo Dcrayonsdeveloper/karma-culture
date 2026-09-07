@@ -40,7 +40,9 @@
     </div>
 
     <!-- Header -->
-    <div class="bg-[#F8931D]">
+    {{-- The brand's brown, flat - the same block the category page uses, so a
+         listing header looks the same wherever it is opened from. --}}
+    <div class="bg-kk-brown-dark">
         <div class="container mx-auto px-4 py-6 md:py-8">
             {{-- A collection page reuses this listing whole, so the heading has
                  to come from the caller rather than being hard-wired to the shop. --}}
