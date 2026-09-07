@@ -476,6 +476,35 @@ class Product extends Model
     }
 
     /**
+     * The media row that leads the product - the one the product page opens on
+     * and the one a listing card shows.
+     *
+     * is_primary is the merchandiser's pick; position only orders the strip, so
+     * the first row leads solely when nobody has picked one. Kept in step with
+     * $kkMainIndex in products/show.blade.php, so a card and the product page
+     * cannot disagree about which media is the main one.
+     */
+    public function getPrimaryMediaAttribute(): ?ProductImage
+    {
+        return $this->images->firstWhere('is_primary', true) ?? $this->images->first();
+    }
+
+    /**
+     * The leading media when it is a video, else null.
+     *
+     * A card renders this as a playing clip and everything else as a still.
+     * primary_image_url stays a still for the same product - meta tags, the
+     * schema, cart lines and every other <img> on the site still need one, and
+     * it already prefers this video's poster - so the two agree either way.
+     */
+    public function getPrimaryVideoAttribute(): ?ProductImage
+    {
+        $main = $this->primary_media;
+
+        return ($main && $main->is_video && $main->url) ? $main : null;
+    }
+
+    /**
      * Public URL for the .glb 3D model (used by <model-viewer> and Android Scene Viewer).
      * Accepts: full http URL, absolute path ("/foo.glb"), or storage-relative path ("models/foo.glb").
      */
