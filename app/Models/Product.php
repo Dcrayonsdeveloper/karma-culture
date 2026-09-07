@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\AlertsOnStockLevel;
 use App\Models\Concerns\TracksWarehouseStock;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,7 +16,7 @@ use Spatie\Sluggable\SlugOptions;
 
 class Product extends Model
 {
-    use HasSlug, Searchable, SoftDeletes, TracksWarehouseStock;
+    use AlertsOnStockLevel, HasSlug, Searchable, SoftDeletes, TracksWarehouseStock;
 
     /**
      * The shape every product photo is drawn at, as [width, height] in pixels.

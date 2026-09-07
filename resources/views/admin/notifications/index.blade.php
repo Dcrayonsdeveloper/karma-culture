@@ -127,6 +127,20 @@
                                 </svg>
                             </div>
                             @break
+                        @case('product_low_stock')
+                            <div style="width: 2rem; height: 2rem; border-radius: 50%; background: #fff1e0; display: flex; align-items: center; justify-content: center;">
+                                <svg style="width: 1rem; height: 1rem; color: #b98900;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                                </svg>
+                            </div>
+                            @break
+                        @case('product_out_of_stock')
+                            <div style="width: 2rem; height: 2rem; border-radius: 50%; background: #ffe0db; display: flex; align-items: center; justify-content: center;">
+                                <svg style="width: 1rem; height: 1rem; color: #d72c0d;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-3.5l-1 2h-7l-1-2H4M4 4l16 16"/>
+                                </svg>
+                            </div>
+                            @break
                         @default
                             <div style="width: 2rem; height: 2rem; border-radius: 50%; background: #f1f1f1; display: flex; align-items: center; justify-content: center;">
                                 <svg style="width: 1rem; height: 1rem; color: #616161;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -212,6 +226,16 @@
                         <span data-icon="new_newsletter_subscriber" data-bg="#cdfee1" hidden>
                             <svg style="width: 1rem; height: 1rem; color: #1a7a2e; display: block;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/>
+                            </svg>
+                        </span>
+                        <span data-icon="product_low_stock" data-bg="#fff1e0" hidden>
+                            <svg style="width: 1rem; height: 1rem; color: #b98900; display: block;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                            </svg>
+                        </span>
+                        <span data-icon="product_out_of_stock" data-bg="#ffe0db" hidden>
+                            <svg style="width: 1rem; height: 1rem; color: #d72c0d; display: block;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-3.5l-1 2h-7l-1-2H4M4 4l16 16"/>
                             </svg>
                         </span>
                         <span data-icon="default" data-bg="#f1f1f1" hidden>

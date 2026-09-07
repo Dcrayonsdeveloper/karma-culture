@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Services\StockAlertService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -28,6 +29,15 @@ class ImportProductsFromExcel extends Command
     private const COL_BARCODE = 16;
 
     public function handle(): int
+    {
+        // A sheet rewrites the stock of every SKU it lists in one pass. Each of
+        // those is a shelf movement the admin bell would otherwise announce
+        // individually, to every admin - thousands of rows for one deliberate
+        // import nobody needs telling about.
+        return StockAlertService::muted(fn () => $this->import());
+    }
+
+    private function import(): int
     {
         $filePath = $this->argument('file');
         $dryRun = $this->option('dry-run');
