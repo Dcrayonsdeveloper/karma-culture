@@ -37,10 +37,20 @@
          three beside its sidebar. Below lg the sidebar is stacked away and both
          grids are full width, so the counts are the same there.
 
-         Each tile is wrapped rather than modified: the wrapper is what
-         disappears when the button on the card takes the product off the list,
-         so the grid closes up on the spot instead of leaving a hole until the
-         next page load.
+         x-show goes on the CARD, not on a wrapper around it. A wrapper looks
+         equivalent and is not: it becomes the grid item, and the card inside it
+         is then sized by its own content instead of stretching to the row. The
+         quick-add button is a square derived from the action bar's height
+         (`aspect-ratio: 1/1` on a stretched item), so against the wrong height
+         it resolved 42px wide inside a row that had reserved 17 - and the
+         shortcut sat on top of the View Product button by 17px. On the shop,
+         where the card IS the grid item, the same bar leaves an 8px gap.
+
+         Hiding the card itself also still closes the grid up on the spot when
+         the button takes the product off the list, which is all the wrapper was
+         ever there for. Safe because `flex flex-col` is a class: Alpine drops
+         the inline `display` it set when it reveals an element, so a card whose
+         layout lived in a style attribute would come back broken.
 
          Only THIS list's button is forced on - the one the shopper needs to
          empty the page they are standing on. The other list's button is left to
@@ -48,11 +58,10 @@
          it back on here. --}}
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
         @foreach($products as $product)
-            <div x-show="$store.{{ $listStore }}.has({{ $product->id }})">
-                <x-product-card :product="$product"
-                                :show-wishlist="$listStore === 'wishlist' ? true : null"
-                                :show-favourites="$listStore === 'favourites' ? true : null" />
-            </div>
+            <x-product-card :product="$product"
+                            x-show="$store.{{ $listStore }}.has({{ $product->id }})"
+                            :show-wishlist="$listStore === 'wishlist' ? true : null"
+                            :show-favourites="$listStore === 'favourites' ? true : null" />
         @endforeach
     </div>
 
