@@ -7,6 +7,7 @@ use App\Models\Enquiry;
 use App\Models\Notification;
 use App\Models\Order;
 use App\Models\OrderReturn;
+use App\Models\Product;
 use App\Models\Review;
 use App\Models\SupportTicket;
 use Illuminate\Http\JsonResponse;
@@ -39,6 +40,11 @@ class NotificationController extends Controller
         'new_enquiry' => ['enquiry_id', Enquiry::class, 'admin.enquiries.show'],
         'new_ticket' => ['ticket_id', SupportTicket::class, 'admin.support-tickets.show'],
         'ticket_customer_reply' => ['ticket_id', SupportTicket::class, 'admin.support-tickets.show'],
+        // A shelf alert opens the product it is about, sizes included: the
+        // product form is where the stock is edited, and a size has no page of
+        // its own. Both carry product_id for exactly this reason.
+        'product_low_stock' => ['product_id', Product::class, 'admin.products.edit'],
+        'product_out_of_stock' => ['product_id', Product::class, 'admin.products.edit'],
     ];
 
     public function index(): View

@@ -120,7 +120,9 @@
             new_ticket: 'new_ticket',
             ticket_customer_reply: 'new_ticket',
             new_review: 'new_review',
-            new_newsletter_subscriber: 'new_newsletter_subscriber'
+            new_newsletter_subscriber: 'new_newsletter_subscriber',
+            product_low_stock: 'product_low_stock',
+            product_out_of_stock: 'product_out_of_stock'
         };
 
         var timerId = null;

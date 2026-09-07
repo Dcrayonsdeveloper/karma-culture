@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\AlertsOnStockLevel;
 use App\Models\Concerns\TracksWarehouseStock;
 use App\Support\ShopFilterCatalogue;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +12,7 @@ use Illuminate\Support\Facades\Cache;
 
 class ProductVariant extends Model
 {
-    use TracksWarehouseStock;
+    use AlertsOnStockLevel, TracksWarehouseStock;
 
     protected static function booted(): void
     {

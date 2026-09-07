@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
+use App\Services\StockAlertService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -71,6 +72,15 @@ class ProductImportController extends Controller
      * Import selected products
      */
     public function importProducts(Request $request)
+    {
+        // Every product this creates arrives with a stock figure, and the
+        // Shopify variants under it with their own. Announcing each one on the
+        // admin bell would bury it under the import the admin just triggered
+        // and is already watching.
+        return StockAlertService::muted(fn () => $this->runImport($request));
+    }
+
+    private function runImport(Request $request)
     {
         $request->validate([
             'products' => 'required|array',

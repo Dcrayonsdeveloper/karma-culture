@@ -145,7 +145,7 @@
                            class="block px-4 py-3 hover:bg-neutral-50 transition-colors"
                            style="border-bottom: 1px solid #f5f5f5;{{ $notification->is_read ? '' : ' background: #f7fbfb;' }}">
                             <div class="flex items-start gap-3">
-                                <div style="width: 2rem; height: 2rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; {{ $notification->type === 'new_enquiry' ? 'background:#e8f5f5;' : ($notification->type === 'new_ticket' ? 'background:#f3e8ff;' : 'background:#f5f5f5;') }}">
+                                <div style="width: 2rem; height: 2rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; {{ match($notification->type) { 'new_enquiry' => 'background:#e8f5f5;', 'new_ticket' => 'background:#f3e8ff;', 'product_low_stock' => 'background:#fff1e0;', 'product_out_of_stock' => 'background:#ffe0db;', default => 'background:#f5f5f5;' } }}">
                                     @if($notification->type === 'new_enquiry')
                                         <svg style="width: 1rem; height: 1rem; color: #6F9CA2;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
@@ -153,6 +153,14 @@
                                     @elseif($notification->type === 'new_ticket')
                                         <svg style="width: 1rem; height: 1rem; color: #8b5cf6;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
+                                        </svg>
+                                    @elseif($notification->type === 'product_low_stock')
+                                        <svg style="width: 1rem; height: 1rem; color: #b98900;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                                        </svg>
+                                    @elseif($notification->type === 'product_out_of_stock')
+                                        <svg style="width: 1rem; height: 1rem; color: #d72c0d;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-3.5l-1 2h-7l-1-2H4M4 4l16 16"/>
                                         </svg>
                                     @else
                                         <svg style="width: 1rem; height: 1rem; color: #999;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -206,6 +214,16 @@
                                     <span data-icon="new_ticket" data-bg="#f3e8ff" hidden>
                                         <svg style="width: 1rem; height: 1rem; color: #8b5cf6; display: block;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
+                                        </svg>
+                                    </span>
+                                    <span data-icon="product_low_stock" data-bg="#fff1e0" hidden>
+                                        <svg style="width: 1rem; height: 1rem; color: #b98900; display: block;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                                        </svg>
+                                    </span>
+                                    <span data-icon="product_out_of_stock" data-bg="#ffe0db" hidden>
+                                        <svg style="width: 1rem; height: 1rem; color: #d72c0d; display: block;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-3.5l-1 2h-7l-1-2H4M4 4l16 16"/>
                                         </svg>
                                     </span>
                                     <span data-icon="default" data-bg="#f5f5f5" hidden>
