@@ -26,6 +26,18 @@ class SizePreset extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        // The size rail is derived and cached for six hours, and it reads this
+        // table to decide which sizes it offers and in what order - so an edit
+        // here has to retire that cache the way a product save does, exactly as
+        // TexturePreset already does for its swatches. Without this, a deleted
+        // size stayed on the rail: nothing bumped the version, so the shop went
+        // on serving the answer it had cached while the size still existed.
+        static::saved(fn () => ProductVariant::bumpFilterCache());
+        static::deleted(fn () => ProductVariant::bumpFilterCache());
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);

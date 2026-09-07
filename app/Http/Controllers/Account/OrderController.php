@@ -120,7 +120,7 @@ class OrderController extends Controller
     {
         abort_if($order->user_id !== $request->user()->id, 403);
 
-        $order->load('items.product');
+        $order->load(['items.product', 'items.variant']);
 
         $cart = Cart::firstOrCreate(
             ['user_id' => $request->user()->id],
@@ -132,6 +132,18 @@ class OrderController extends Controller
 
         foreach ($order->items as $item) {
             if (!$item->product || !$item->product->isInStock() || !$item->product->is_active) {
+                $unavailable[] = $item->product_name;
+                continue;
+            }
+
+            // The size this was bought in may since have been retired from the
+            // catalogue, which deletes the variant row and leaves this pointer
+            // dangling. Copying it into the basket either poisons the basket -
+            // the cart and checkout both read $item->variant->stock_quantity -
+            // or, with the pointer dropped, quietly resells a size the shop no
+            // longer offers, at the product's own price. Every other door into
+            // the cart validates exists:product_variants,id; this one did not.
+            if ($item->variant_id && !$item->variant) {
                 $unavailable[] = $item->product_name;
                 continue;
             }
