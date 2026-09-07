@@ -43,17 +43,22 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
 
-        // kk_wishlist is written and read by JavaScript, so it arrives as plain
-        // text and the default decryption throws it away - the server saw no
-        // wishlist at all. Excepted so /wishlist can read the same list the
-        // browser holds and render it with the real product card, rather than
+        // The two saved lists - the wishlist and favourites - are written and
+        // read by JavaScript, so they arrive as plain text and the default
+        // decryption throws them away: the server saw no list at all. Excepted
+        // so /wishlist and /favourites can read the same lists the browser
+        // holds and render them with the real product card, rather than
         // shipping ids to the client and having it draw a second card of its
         // own that drifts from every other tile on the site.
         //
-        // Nothing is given away by leaving it in the clear: it holds product
-        // ids and nothing else, and the browser already keeps it unencrypted
-        // because its own code has to read it.
-        $middleware->encryptCookies(except: ['kk_wishlist']);
+        // Nothing is given away by leaving them in the clear: they hold product
+        // ids and nothing else, and the browser already keeps them unencrypted
+        // because its own code has to read them.
+        //
+        // Both names must be here. Adding a saved list and forgetting this line
+        // fails silently and only server-side - the heart or star still works,
+        // the badge still counts, and only the page renders as empty.
+        $middleware->encryptCookies(except: ['kk_wishlist', 'kk_favourites']);
 
         // ContentSecurityPolicy is deliberately NOT registered yet.
         //

@@ -176,6 +176,7 @@ Complete every item below before launching the ForeverKids e-commerce platform t
   - [ ] Register -> Browse -> Purchase -> View Order History
   - [ ] Search -> Filter -> Add to Cart
   - [ ] Wishlist add/remove
+  - [ ] Favourites add/remove (the star, below the heart on a card and beside it in the header)
 - [ ] Mobile responsive layout has been verified on:
   - [ ] iPhone (Safari)
   - [ ] Android (Chrome)

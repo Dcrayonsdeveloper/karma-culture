@@ -139,7 +139,7 @@ HTML,
 <p>Required for the Site to function - shopping cart, checkout, login session, and CSRF protection. The Site cannot work properly without these and they cannot be disabled.</p>
 
 <h3>Functional Cookies</h3>
-<p>Remember choices like language, currency, recently viewed products, and wishlist contents so you don't have to set them on every visit.</p>
+<p>Remember choices like language, currency, recently viewed products, and your wishlist and favourites so you don't have to set them on every visit.</p>
 
 <h3>Analytics Cookies</h3>
 <p>Help us understand which pages are popular, where visitors come from, and how the site performs. We use providers like Google Analytics in aggregated, anonymised form.</p>

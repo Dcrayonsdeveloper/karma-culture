@@ -136,21 +136,56 @@ class SignInBeforeCartAndWishlistTest extends TestCase
     {
         $js = file_get_contents(resource_path('js/app.js'));
 
+        // The signature is matched loosely because the guard takes an optional
+        // callback now - what is being pinned is that it reads the flag the
+        // layout renders on <body>, not its argument list. Pinning the exact
+        // zero-argument signature is what left this assertion quietly failing
+        // once the callback was added.
         $this->assertMatchesRegularExpression(
-            '/function kkRequireLogin\(\)\s*\{\s*if \(document\.body\.dataset\.authenticated === .true.\) return true;/',
+            '/function kkRequireLogin\([^)]*\)\s*\{\s*if \(document\.body\.dataset\.authenticated === .true.\) return true;/',
             $js,
             'The guard reads the flag the layout renders on <body>.'
         );
 
-        // Cart add and both halves of the wishlist toggle.
+        // Cart add, and both halves of a saved list's toggle. Counted as call
+        // sites rather than as buttons: the wishlist and favourites share one
+        // store implementation, so these two sites gate all four controls.
         $this->assertGreaterThanOrEqual(
-            3,
-            substr_count($js, 'kkRequireLogin()'),
+            4,
+            preg_match_all('/kkRequireLogin\(/', $js),
             'Every entry point has to gate, or the one that does not is the way around it.'
+        );
+
+        // The saved-list store gates BOTH halves - a list that takes an account
+        // to fill but not to empty is one a signed-out browser can rearrange.
+        $this->assertSame(
+            2,
+            preg_match_all('/kkRequireLogin\(\(\) => kkStashPendingSave\(/', $js),
+            'Both the toggle and the add have to gate, and both have to stash.'
         );
 
         // And the stale-tab case, where the flag says signed in and the server
         // disagrees.
         $this->assertStringContainsString('error.response.status === 401', $js);
+    }
+
+    /**
+     * Favourites is the wishlist's twin, so a guest must not be able to fill it
+     * either. There is no server route to gate - the list is a cookie - so the
+     * gate is the button, and this asserts it is the same one.
+     */
+    public function test_a_guest_cannot_fill_the_favourites_list_either(): void
+    {
+        $js = file_get_contents(resource_path('js/app.js'));
+
+        // One factory, two lists: the gate cannot be present for one and absent
+        // for the other, because there is only one copy of it.
+        $this->assertStringContainsString("store: 'wishlist',", $js);
+        $this->assertStringContainsString("store: 'favourites',", $js);
+        $this->assertSame(
+            1,
+            preg_match_all('/function kkSavedList\(/', $js),
+            'Both saved lists have to come out of the one factory, or they will drift.'
+        );
     }
 }
