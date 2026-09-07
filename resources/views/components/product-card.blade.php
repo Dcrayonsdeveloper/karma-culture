@@ -45,6 +45,12 @@
         15 => asset_v('images/placeholder-baby.svg'),
         default => asset_v('images/placeholder-boys.svg'),
     };
+
+    // A product whose main media is a video leads with the clip itself rather
+    // than with its poster - the still was all a card could show while the tile
+    // was an <img>, and a merchandiser who makes a video the main media is
+    // asking for the movement. Everything else is a photograph as before.
+    $mainVideo = $product->primary_video;
 @endphp
 
 @if($compact)
@@ -57,11 +63,22 @@
                  whole photo is one tap away on the product page, whose zoom is
                  contain. The placeholder is tried via data-fallback when the
                  URL 404s. --}}
-            <x-media :src="$product->primary_image_url"
-                     :alt="$product->name"
-                     :fallback="$placeholderImage"
-                     zoom cover
-                     class="aspect-[3/4] bg-neutral-50 rounded-[20px] overflow-hidden mb-2" />
+            @if($mainVideo)
+                {{-- The poster is the frame the merchandiser chose, so it stands
+                     in until the clip has enough of itself to paint. --}}
+                <x-media video
+                         :src="$mainVideo->display_url"
+                         :poster="$mainVideo->display_thumbnail"
+                         :alt="$product->name"
+                         zoom cover
+                         class="aspect-[3/4] bg-neutral-50 rounded-[20px] overflow-hidden mb-2" />
+            @else
+                <x-media :src="$product->primary_image_url"
+                         :alt="$product->name"
+                         :fallback="$placeholderImage"
+                         zoom cover
+                         class="aspect-[3/4] bg-neutral-50 rounded-[20px] overflow-hidden mb-2" />
+            @endif
             @if($showWas)
                 <span class="absolute top-2 left-2 bg-[#F8931D] text-white font-bold rounded-full text-[8px] w-8 h-8 flex items-center justify-center sm:w-auto sm:h-auto sm:text-[10px] sm:px-2 sm:py-0.5 sm:rounded-md">{{ $cardCut }}%<span class="hidden sm:inline">&nbsp;Off</span></span>
             @endif
@@ -168,11 +185,23 @@
                  data-fallback so a broken URL falls back once and then degrades to
                  a designed frame rather than an empty rectangle. --}}
             <a href="{{ route('product.show', $product) }}" class="block h-full">
-                <x-media :src="$product->primary_image_url"
-                         :alt="$product->name"
-                         :fallback="$placeholderImage"
-                         zoom cover
-                         class="h-full" />
+                @if($mainVideo)
+                    {{-- The poster is the frame the merchandiser chose, so it
+                         stands in until the clip has enough of itself to
+                         paint. --}}
+                    <x-media video
+                             :src="$mainVideo->display_url"
+                             :poster="$mainVideo->display_thumbnail"
+                             :alt="$product->name"
+                             zoom cover
+                             class="h-full" />
+                @else
+                    <x-media :src="$product->primary_image_url"
+                             :alt="$product->name"
+                             :fallback="$placeholderImage"
+                             zoom cover
+                             class="h-full" />
+                @endif
             </a>
 
             {{-- Top-left badges --}}

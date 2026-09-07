@@ -65,8 +65,18 @@
         @endunless
 
         @if($video)
-            <video muted playsinline loop @if($autoplay) autoplay @endif
+            {{-- data-kk-autoplay hands the clip to the controller in the layout.
+                 The attribute on its own is not enough: `autoplay` fires once,
+                 on load, so a tile scrolled into view later - or one a filter or
+                 a quick view adds afterwards - never starts at all, and a page
+                 that starts every clip at once walks into the concurrent-decoder
+                 cap and leaves tiles frozen. The controller plays what is on
+                 screen and pauses the rest; the attribute stays as the no-JS
+                 path. --}}
+            <video muted playsinline loop
+                   @if($autoplay) autoplay data-kk-autoplay @endif
                    preload="metadata"
+                   @if($alt) aria-label="{{ $alt }}" @endif
                    @if($poster) poster="{{ $poster }}" @endif
                    @if($fallback) data-fallback="{{ $fallback }}" @endif
                    src="{{ $src }}"></video>
