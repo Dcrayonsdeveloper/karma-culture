@@ -327,26 +327,46 @@
     }
 
     /* ===== Hover magnifier (desktop) ==================================
-       The frame magnifies in place. Nothing opens, nothing is drawn beside
-       the gallery and nothing covers the buy box - the photo itself scales
-       up under the cursor and .kk-pdp__main's overflow:hidden crops away
-       everything the frame no longer has room for.
+       A loupe: a small box that rides the cursor across the product photo
+       and shows the patch underneath it, magnified. Nothing else moves - the
+       photo stays the size it was, the thumbnails stay put, and the buy box
+       is never covered by anything bigger than the box itself.
 
-       The whole trick is transform-origin. Setting it to the point under the
-       pointer makes that point the fixed point of the scale, so whatever the
-       shopper is looking at stays exactly where it is while the rest grows
-       out from under it - no arithmetic against the object-fit: cover crop,
-       and no way for the picture to slide out of its own frame (scaling
-       about any point inside the box always leaves the box covered).
+       position: fixed, not absolute, for two reasons. The loupe has to be
+       free to hang past the edge of the photo when the cursor is near one,
+       and .kk-pdp__main is overflow:hidden so that it can crop to 3:4 -
+       anything positioned inside it gets sliced off at that border. Fixed
+       also means the pointer's own viewport coordinates place the box
+       directly, with no chain of offset parents to unwind. (Fixed elements
+       are not clipped by an ancestor's overflow; only a transform, filter or
+       contain on an ancestor would capture one, and nothing on this page
+       does that.)
 
-       There is no rule here to turn any of this on: the transform, its
-       origin and the will-change hint are all written inline by zoomDraw()
-       and cleared by zoomReset(), because every one of them is a live
-       measurement of where the pointer is.
+       z-index 50 clears the sticky site header (40) and stays under the
+       fullscreen viewer (60), which replaces the loupe rather than sharing
+       the screen with it.
 
-       Deliberately no transition on transform either - the photo has to
-       track the cursor exactly, and easing it makes the picture lag behind
-       the pointer. */
+       Size is repeated inline from loupeSize so the two can never drift; the
+       rest - where the box sits and which part of which photo it shows - is
+       a live measurement of the pointer, so zoomDraw() writes it. No
+       transition on any of it: the box has to track the cursor exactly, and
+       easing it makes the loupe swim behind the pointer. */
+    .kk-pdp__loupe {
+        position: fixed; z-index: 50; pointer-events: none;
+        width: 220px; height: 220px;
+        border-radius: 14px;
+        border: 2px solid rgba(255,255,255,.92);
+        box-shadow: 0 0 0 1px rgba(45,24,16,.30), 0 12px 30px rgba(31,17,9,.34);
+        background-color: #fff; background-repeat: no-repeat;
+        visibility: hidden;
+    }
+    .kk-pdp__loupe.is-on { visibility: visible; }
+    /* A finger has no hover for the loupe to ride, and the one-column layout
+       leaves nowhere for it to sit. Touch keeps the tap-to-open fullscreen
+       viewer, which is the zoom that suits a phone. Guarded in JS as well. */
+    @media (max-width: 1023px), (hover: none), (pointer: coarse) {
+        .kk-pdp__loupe { display: none; }
+    }
 
     /* ===== Info column - scrolls normally ===== */
     .kk-pdp__info { padding-top: 4px; }
@@ -2320,6 +2340,11 @@
         {{-- purchaseNotif() is registered in resources/js/app.js (reliable init) --}}
         @endif
 
+        {{-- The loupe. Page-level rather than inside the gallery because it is
+             position:fixed and deliberately allowed to overhang the photo it is
+             magnifying - see the CSS above. --}}
+        <div class="kk-pdp__loupe" :class="hoverZoom ? 'is-on' : ''" :style="loupeStyle" aria-hidden="true"></div>
+
         <!-- ===== IMAGE ZOOM MODAL ===== -->
         <div x-show="showZoom" x-cloak class="kk-zoom"
              @click="showZoom = false"
@@ -2458,12 +2483,15 @@
             variants: @json($variantData),
             showZoom: false,
             /* ---- Hover magnifier ------------------------------------------
-               hoverZoom only records that the frame is currently magnified, so
-               a scroll knows whether it has anything to redraw. The zoom itself
-               is an inline transform on the photo - see zoomDraw(). */
+               hoverZoom is whether the loupe is up; loupeStyle is everything
+               about it that depends on where the pointer is. */
             hoverZoom: false,
-            // How much larger the frame draws the photo while hovered.
+            // How much larger the loupe draws the photo than the page does.
             zoomFactor: 2.5,
+            // The side of the box, in CSS px. Repeated in .kk-pdp__loupe, and
+            // written back inline on every draw so the two cannot drift apart.
+            loupeSize: 220,
+            loupeStyle: {},
             zoomableSlides: @json($kkZoomableSlides),
             // The last pointer position in viewport coordinates, kept so a
             // change of slide - or a scroll under a still cursor - can redraw
@@ -2566,9 +2594,9 @@
                 else this.currentImage = (this.currentImage - 1 + this.imageCount) % this.imageCount;
             },
             /* ===== Hover magnifier ====================================
-               Hovering the main photo scales it up around the point under the
-               cursor, inside the frame it already occupies, so a collar or a
-               weave can be read without anything opening over the page. */
+               Hovering the main photo puts a small box under the cursor
+               showing just the patch beneath it, magnified, so a collar or a
+               weave can be read without the page moving at all. */
 
             // A pointer that can hover, on the two-column layout. A touch screen
             // has no hover to follow and keeps the tap-to-open fullscreen
@@ -2592,20 +2620,6 @@
             zoomLeave() {
                 this.hoverZoom = false;
                 this.zoomPt = null;
-                this.zoomReset();
-            },
-
-            /* Every slide, not just the one showing: stepping to the next photo
-               while magnified would otherwise leave the one behind it scaled,
-               and it would still be scaled when the shopper came back to it. */
-            zoomReset() {
-                const frame = this.$refs.pdpMain;
-                if (!frame) return;
-                frame.querySelectorAll('[data-kk-slide] img').forEach((img) => {
-                    img.style.transform = '';
-                    img.style.transformOrigin = '';
-                    img.style.willChange = '';
-                });
             },
 
             /* The photo on the slide that is showing. The hidden slides are
@@ -2637,14 +2651,39 @@
                 // stationary cursor as the page scrolls.
                 if (x < 0 || y < 0 || x > r.width || y > r.height) { this.zoomLeave(); return; }
 
-                /* Scale about the pointer. That point is the fixed point of the
-                   transform, so the detail under the cursor does not move while
-                   everything else grows away from it - which is also why none of
-                   the object-fit: cover geometry has to be worked out here. */
-                this.zoomReset();
-                img.style.transformOrigin = x + 'px ' + y + 'px';
-                img.style.transform = 'scale(' + this.zoomFactor + ')';
-                img.style.willChange = 'transform';
+                /* The frame is object-fit: cover, so what is on screen is a CROP
+                   of the file rather than the file. Redo that fit here, or the
+                   loupe is off by exactly the amount the crop threw away - on a
+                   square file in a 3:4 frame that is a quarter of the picture,
+                   enough to point at the collar and show the shoulder. */
+                const nw = img.naturalWidth, nh = img.naturalHeight;
+                const fit = Math.max(r.width / nw, r.height / nh);
+                const dw = nw * fit, dh = nh * fit;                       // as drawn
+                const ox = (r.width - dw) / 2, oy = (r.height - dh) / 2;  // <= 0, it overflows
+
+                const size = this.loupeSize, z = this.zoomFactor;
+                const bw = dw * z, bh = dh * z;
+
+                /* Put the hovered point in the middle of the box, then pull the
+                   photo back inside it so the box is never part empty at an
+                   edge. Near a border the magnified point drifts off centre by
+                   up to half a box - much less jarring than a loupe with the
+                   page showing through one side of it. */
+                const bx = Math.min(0, Math.max(size - bw, size / 2 - (x - ox) * z));
+                const by = Math.min(0, Math.max(size - bh, size / 2 - (y - oy) * z));
+
+                /* And keep the box itself on screen. Only the box moves; what
+                   it shows is keyed to the pointer, not to where it ends up. */
+                const left = Math.min(Math.max(8, pt.x - size / 2), window.innerWidth - size - 8);
+                const top = Math.min(Math.max(8, pt.y - size / 2), window.innerHeight - size - 8);
+
+                this.loupeStyle = {
+                    width: size + 'px', height: size + 'px',
+                    left: left + 'px', top: top + 'px',
+                    'background-image': 'url("' + (img.currentSrc || img.src).replace(/"/g, '%22') + '")',
+                    'background-size': bw + 'px ' + bh + 'px',
+                    'background-position': bx + 'px ' + by + 'px',
+                };
                 this.hoverZoom = true;
             },
 
