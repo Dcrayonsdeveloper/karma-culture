@@ -2552,8 +2552,19 @@
 
     function productPage() {
         return {
-            currentImage: {{ $kkMainIndex }},
+            currentImage: {{ $kkLeadIndex }},
             imageCount: {{ count($media) }},
+            /* The shade and fabric each frame shows, in media order, already
+               normalised by ProductGallery so both sides of the comparison were
+               prepared by the same code. Tags only - the pictures themselves are
+               in the HTML above, and sending their urls again as JSON would put
+               every photograph on this page into the document twice. */
+            mediaTags: @json($kkGallery->tags()),
+            /* Whether anybody has tagged a photo on this product at all. False on
+               every product whose images predate tagging, and the whole filtering
+               path short-circuits to "show everything" when it is - so an
+               untagged gallery keeps precisely the behaviour it has today. */
+            galleryTagged: {{ $kkGalleryTagged ? 'true' : 'false' }},
             // Which slide leads, so coming back to it can start it playing again.
             mainIndex: {{ $kkMainIndex }},
             mainIsVideo: {{ $kkMainIsVideo ? 'true' : 'false' }},

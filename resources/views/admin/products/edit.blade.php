@@ -237,20 +237,26 @@
                     </div>
 
                     @php
-                        // Which shade and which fabric each photo shows. Read straight
-                        // off the saved product: the colours a photo can be tagged with
-                        // are the ones already committed to the database, which is also
-                        // exactly the list the storefront's colour picker will offer.
-                        $kkSavedColours = collect(data_get($product->attributes, 'Colours', []))
-                            ->map(fn ($c) => trim((string) (is_array($c) ? ($c['name'] ?? '') : $c)))
+                        /* Which shade and which fabric each photo can be told it shows.
+
+                           old() first, exactly as the Colours and Textures cards
+                           themselves do, and this is not symmetry for its own sake. A
+                           save that bounces on some unrelated field - a mistyped HSN
+                           code, say - comes back with the admin's input, and the
+                           per-photo dropdowns below are repopulated from
+                           old('image_tags.<id>.colour'). Read only from the database
+                           here, a shade the admin added in that same submission would
+                           have no <option> to be selected: the browser would fall back
+                           to the first one, "Any shade", and the tag they chose would
+                           be quietly gone by the time they fixed the HSN and saved. */
+                        $kkNames = fn ($rows) => collect($rows)
+                            ->map(fn ($v) => trim((string) (is_array($v) ? ($v['name'] ?? '') : $v)))
                             ->filter()
-                            ->unique()
+                            ->unique(fn (string $n) => mb_strtolower($n))
                             ->values();
-                        $kkSavedTextures = collect(data_get($product->attributes, 'Textures', []))
-                            ->map(fn ($t) => trim((string) (is_array($t) ? ($t['name'] ?? '') : $t)))
-                            ->filter()
-                            ->unique()
-                            ->values();
+
+                        $kkSavedColours = $kkNames(old('colours', data_get($product->attributes, 'Colours', [])));
+                        $kkSavedTextures = $kkNames(old('textures', data_get($product->attributes, 'Textures', [])));
 
                         // Only images are tagged, not videos: a clip is a clip of the
                         // product, and hiding it because a shade was chosen loses the

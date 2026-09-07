@@ -234,6 +234,44 @@ class ProductImageTagTest extends TestCase
             ->assertSee('image_tags['.$image->id.'][texture]', false);
     }
 
+    public function test_a_bounced_save_keeps_offering_a_shade_that_was_added_in_it(): void
+    {
+        // The save fails on something else entirely - a mistyped HSN code - and
+        // comes back with the admin's input. The shade they added in that same
+        // submission is not in the database yet, so if the dropdowns were built
+        // from the database alone there would be no option to be selected, the
+        // browser would fall back to "Any shade", and the tag would be gone by
+        // the time they fixed the HSN and saved again.
+        $product = $this->product();
+        $image = $this->image($product);
+
+        $this->actingAs($this->admin(), 'admin')
+            ->from(route('admin.products.edit', $product))
+            ->put(route('admin.products.update', $product), $this->payload([
+                'hsn_code' => '12',
+                'colours' => [
+                    ['name' => 'Indigo', 'hex' => '#2b3a67'],
+                    ['name' => 'Rust', 'hex' => '#b7410e'],
+                ],
+                'textures' => ['Linen', 'Khadi'],
+                'image_tags' => [$image->id => ['colour' => 'Rust', 'texture' => 'Khadi']],
+            ]))
+            ->assertSessionHasErrors('hsn_code')
+            ->assertRedirect(route('admin.products.edit', $product));
+
+        $html = $this->actingAs($this->admin(), 'admin')
+            ->get(route('admin.products.edit', $product))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString(
+            '<option value="Rust" selected>Rust</option>',
+            $html,
+            'The shade added in the bounced save must still be offered, and still be the one selected, or fixing the unrelated field silently drops the tag.'
+        );
+        $this->assertStringContainsString('<option value="Khadi" selected>Khadi</option>', $html);
+    }
+
     public function test_the_dropdowns_stay_away_when_the_product_offers_no_choices(): void
     {
         $product = $this->product();
