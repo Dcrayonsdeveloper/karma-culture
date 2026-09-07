@@ -133,6 +133,20 @@
     <style>
     .pdp-wrapper { background: #EFE2CB; }
     .kk-pdp { display: grid; gap: 28px; padding: 24px 0 56px; }
+    /* A grid item's `min-width` defaults to auto, which means its MIN-CONTENT
+       width can push the track wider than the grid box itself - and one of the
+       controls stacked in the info column does exactly that. On a 430px phone
+       the container's content box is 398px (430 less the 16px px-4 pad a side),
+       but the single mobile track measured 410px, so the gallery overhung the
+       right gutter by 12px. <html> is overflow-x: clip, so there was no
+       scrollbar to reveal it - the page just looked like it had a 16px pad down
+       the left and none down the right, and the product image rendered 410px
+       wide instead of 398px.
+
+       Nothing in this grid wants to be sized by its own content: the gallery is
+       driven by the height budget below and the info column is ordinary flow
+       text. So both are allowed to shrink back to their track. */
+    .kk-pdp > * { min-width: 0; }
     @media (min-width: 1024px) {
         .kk-pdp { grid-template-columns: 45% 1fr; gap: 40px; align-items: start; }
     }
