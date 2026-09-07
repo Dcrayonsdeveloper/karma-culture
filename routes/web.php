@@ -142,6 +142,7 @@ Route::get('/products/filters', [App\Http\Controllers\ProductController::class, 
 // repoint_legacy_storefront_links / repoint_shop_links_at_products migrations.
 Route::get('/deals', [App\Http\Controllers\DealsController::class, 'index'])->name('deals');
 Route::get('/flash-sale/{flashSale:slug}', [App\Http\Controllers\FlashSaleController::class, 'show'])->name('flash-sale.show');
+Route::get('/festival-sale/{festivalSale:slug}', [App\Http\Controllers\FestivalSaleController::class, 'show'])->name('festival-sale.show');
 Route::get('/new-arrivals', [App\Http\Controllers\ProductController::class, 'newArrivals'])->name('new-arrivals');
 Route::get('/bestsellers', [App\Http\Controllers\ProductController::class, 'bestsellers'])->name('bestsellers');
 Route::get('/wholesale', [App\Http\Controllers\WholesaleController::class, 'index'])->name('wholesale');

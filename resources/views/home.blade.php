@@ -1466,6 +1466,55 @@
         @endif
 
         {{-- ============================================
+             FESTIVAL SALE BANNER
+             Sits directly under the hero, because a festival offer is the
+             reason the shopper opened the page and burying it under six
+             category rails is the same as not running it. The whole banner is
+             the link - the artwork carries its own call to action, so a button
+             drawn over it would compete with the lettering already there.
+             ============================================ --}}
+        @if(!empty($festivalSale))
+        <section class="kk-festival-banner">
+            <div class="container mx-auto px-4">
+                <a href="{{ route('festival-sale.show', $festivalSale) }}"
+                   class="kk-festival-banner__link"
+                   aria-label="{{ $festivalSale->name }} - shop the sale">
+                    <picture>
+                        @if($festivalSale->banner_mobile_path)
+                            <source media="(max-width: 640px)" srcset="{{ $festivalSale->bannerMobileUrl() }}">
+                        @endif
+                        <img src="{{ $festivalSale->bannerUrl() }}"
+                             alt="{{ $festivalSale->name }}"
+                             class="kk-festival-banner__img"
+                             loading="lazy" decoding="async">
+                    </picture>
+                </a>
+            </div>
+        </section>
+        <style>
+            .kk-festival-banner { padding: 1.5rem 0 0; }
+            .kk-festival-banner__link {
+                display: block;
+                border-radius: 20px;
+                overflow: hidden;
+                transition: transform .25s ease, box-shadow .25s ease;
+            }
+            .kk-festival-banner__link:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 12px 28px rgba(45, 24, 16, .16);
+            }
+            /* No fixed height and no crop: festival artwork is designed as one
+               picture and cropping it to a band cuts the lettering off, which
+               is usually the whole design. */
+            .kk-festival-banner__img { display: block; width: 100%; height: auto; }
+            @media (prefers-reduced-motion: reduce) {
+                .kk-festival-banner__link { transition: none; }
+                .kk-festival-banner__link:hover { transform: none; }
+            }
+        </style>
+        @endif
+
+        {{-- ============================================
              SHOP BY CATEGORY - bento mosaics per gender
              ============================================ --}}
         @php

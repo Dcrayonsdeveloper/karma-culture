@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\CurrencyController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EnquiryController;
+use App\Http\Controllers\Admin\FestivalSaleController;
 use App\Http\Controllers\Admin\FlashSaleController;
 use App\Http\Controllers\Admin\FraudController;
 use App\Http\Controllers\Admin\HomepageController;
@@ -227,6 +228,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::middleware('admin.section:marketing')->group(function () {
             Route::resource('coupons', CouponController::class)->except(['show']);
             Route::resource('flash-sales', FlashSaleController::class)->except(['show']);
+            // Declared ahead of the resource so `toggle` is not swallowed by
+            // `festival-sales/{festivalSale}` as a slug. Its own route because
+            // the edit form posts the whole record, and a row-level switch sent
+            // through update() would blank every field the button does not carry.
+            Route::put('/festival-sales/{festivalSale}/toggle', [FestivalSaleController::class, 'toggle'])->name('festival-sales.toggle');
+            Route::resource('festival-sales', FestivalSaleController::class)->except(['show']);
             // Declared ahead of the resource, so `reorder` is not swallowed by
             // `banners/{banner}` as a banner id.
             Route::post('/banners/reorder', [BannerController::class, 'reorder'])->name('banners.reorder');

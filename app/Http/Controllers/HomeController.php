@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Banner;
 use App\Models\Category;
+use App\Models\FestivalSale;
 use App\Models\FlashSale;
 use App\Models\HomepageSection;
 use App\Models\Product;
@@ -151,7 +152,17 @@ class HomeController extends Controller
         // the controller can explain.
         $aboutReels = $reelService->stripReels();
 
+        // The running festival sale, for the banner above the category rails.
+        // Its products already carry their discounted price - the sale wrote it
+        // into the catalogue - so the rails below need nothing special.
+        $festivalSale = FestivalSale::live();
+
+        if ($festivalSale && ! ($festivalSale->show_on_home && $festivalSale->bannerUrl())) {
+            $festivalSale = null;
+        }
+
         return view('home', compact(
+            'festivalSale',
             'featuredProducts',
             'newArrivals',
             'bestsellers',
