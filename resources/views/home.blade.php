@@ -907,7 +907,14 @@
             // the fallback for a store that has not added a banner yet.
             $heroBanners = ($banners ?? collect())->values();
             $heroName = $siteSettings['site_name'] ?? 'Karmaa Kulture';
-            $heroCount = $heroBanners->count();
+
+            // A running festival sale leads the hero. It is the reason the
+            // shopper opened the page, so it takes slide 0 and the admin's own
+            // banners shift along behind it - which is also why every index
+            // below is $slideIndex rather than the loop's $i.
+            $festivalHero = (! empty($festivalSale) && $festivalSale->bannerUrl()) ? $festivalSale : null;
+            $heroOffset = $festivalHero ? 1 : 0;
+            $heroCount = $heroBanners->count() + $heroOffset;
         @endphp
         <section class="kk-hero"
                  @if($heroCount > 1)
@@ -932,8 +939,49 @@
                  @endif>
             @if($heroCount)
                 <div class="kk-hero-viewport">
+                    @if($festivalHero)
+                        {{-- Slide 0. Drawn from the sale's own artwork rather than
+                             through Banner::frameFor(), because a festival sale is
+                             not a banners row - it carries one desktop image and an
+                             optional phone one, which <picture> chooses between
+                             natively. No x-cloak and no lazy loading: this is the
+                             page's largest paint whenever a sale is running. --}}
+                        <div class="kk-hero-slide"
+                             @if($heroCount > 1)
+                                 x-show="current === 0"
+                                 x-transition:enter="kk-fade-enter" x-transition:enter-start="kk-fade-start"
+                                 :aria-hidden="current !== 0"
+                             @endif
+                             role="group" aria-roledescription="slide"
+                             aria-label="1 of {{ $heroCount }}">
+                            <a href="{{ route('festival-sale.show', $festivalHero) }}" class="kk-hero-link"
+                               aria-label="{{ $festivalHero->name }} - shop the sale">
+                                <div class="kk-media kk-media--dark kk-hero-media">
+                                    <picture>
+                                        @if($festivalHero->banner_mobile_path)
+                                            <source media="(max-width: 767px)" srcset="{{ $festivalHero->bannerMobileUrl() }}">
+                                        @endif
+                                        <img src="{{ $festivalHero->bannerUrl() }}"
+                                             alt="{{ $festivalHero->name }}"
+                                             fetchpriority="high" decoding="async">
+                                    </picture>
+                                    <span class="kk-media__fallback" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                            <rect x="3" y="4" width="18" height="16" rx="2"/>
+                                            <circle cx="8.5" cy="9.5" r="1.5"/>
+                                            <path d="M21 15l-5-5L5 20"/>
+                                        </svg>
+                                    </span>
+                                </div>
+                            </a>
+                        </div>
+                    @endif
                     @foreach($heroBanners as $i => $banner)
                         @php
+                            // Where this banner sits once the festival slide, if
+                            // there is one, has taken slide 0.
+                            $slideIndex = $i + $heroOffset;
+
                             // A banner may carry a video, an image or both, and may
                             // answer differently per breakpoint: the desktop hero is a
                             // wide strip, while a phone gives the slide a 3:2 box that a
@@ -1005,13 +1053,13 @@
                                       already `display: none !important` in app.css and
                                       Alpine removes it on init, so the first slide paints
                                       alone and x-show takes over from there. --}}
-                                 @if($i > 0) x-cloak @endif
-                                 x-show="current === {{ $i }}"
+                                 @if($slideIndex > 0) x-cloak @endif
+                                 x-show="current === {{ $slideIndex }}"
                                  x-transition:enter="kk-fade-enter" x-transition:enter-start="kk-fade-start"
-                                 :aria-hidden="current !== {{ $i }}"
+                                 :aria-hidden="current !== {{ $slideIndex }}"
                              @endif
                              role="group" aria-roledescription="slide"
-                             aria-label="{{ $i + 1 }} of {{ $heroCount }}">
+                             aria-label="{{ $slideIndex + 1 }} of {{ $heroCount }}">
 
                             {{-- The link used to be honoured for image banners only, so a
                                  video banner's Link URL was collected, stored and ignored.
@@ -1045,7 +1093,7 @@
                                     @if($kkDesktop['kind'] === 'video')
                                         <video src="{{ $kkDesktop['src'] }}"
                                                @if($kkDesktop['poster']) poster="{{ $kkDesktop['poster'] }}" @endif
-                                               autoplay muted loop playsinline preload="{{ $i === 0 ? 'auto' : 'metadata' }}"
+                                               autoplay muted loop playsinline preload="{{ $slideIndex === 0 ? 'auto' : 'metadata' }}"
                                                aria-label="{{ $kkAlt ?: $heroName }} hero video"></video>
                                     @else
                                         <picture>
@@ -1067,7 +1115,7 @@
                                             <img src="{{ $kkDesktop['src'] }}"
                                                  width="{{ $kkDeskW }}" height="{{ $kkDeskH }}"
                                                  @if($kkAlt === '') alt="" aria-hidden="true" @else alt="{{ $kkAlt }}" @endif
-                                                 @if($i === 0) fetchpriority="high" @else loading="lazy" @endif
+                                                 @if($slideIndex === 0) fetchpriority="high" @else loading="lazy" @endif
                                                  decoding="async">
                                         </picture>
                                     @endif
@@ -1091,12 +1139,12 @@
                                         @if($frame['kind'] === 'video')
                                             <video data-kk-for="{{ $frame['device'] }}" data-kk-src="{{ $frame['src'] }}"
                                                    @if($frame['poster']) data-kk-poster="{{ $frame['poster'] }}" @endif
-                                                   autoplay muted loop playsinline preload="{{ $i === 0 ? 'auto' : 'metadata' }}"
+                                                   autoplay muted loop playsinline preload="{{ $slideIndex === 0 ? 'auto' : 'metadata' }}"
                                                    aria-label="{{ $kkAlt ?: $heroName }} hero video"></video>
                                         @else
                                             <img data-kk-for="{{ $frame['device'] }}" data-kk-src="{{ $frame['src'] }}"
                                                  @if($kkAlt === '') alt="" aria-hidden="true" @else alt="{{ $kkAlt }}" @endif
-                                                 @if($i === 0) fetchpriority="high" @else loading="lazy" @endif
+                                                 @if($slideIndex === 0) fetchpriority="high" @else loading="lazy" @endif
                                                  decoding="async">
                                         @endif
                                         <span class="kk-media__fallback" aria-hidden="true">
@@ -1143,11 +1191,11 @@
                         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </button>
                     <div class="kk-hero-dots" role="tablist" aria-label="Choose slide">
-                        @foreach($heroBanners as $i => $banner)
-                            <button type="button" class="kk-hero-dot" :class="current === {{ $i }} && 'is-active'"
-                                    @click="go({{ $i }})" role="tab" :aria-selected="current === {{ $i }}"
-                                    aria-label="Slide {{ $i + 1 }}"></button>
-                        @endforeach
+                        @for($d = 0; $d < $heroCount; $d++)
+                            <button type="button" class="kk-hero-dot" :class="current === {{ $d }} && 'is-active'"
+                                    @click="go({{ $d }})" role="tab" :aria-selected="current === {{ $d }}"
+                                    aria-label="Slide {{ $d + 1 }}"></button>
+                        @endfor
                     </div>
                 @endif
 
@@ -1463,55 +1511,6 @@
                     };
                 }
             </script>
-        @endif
-
-        {{-- ============================================
-             FESTIVAL SALE BANNER
-             Sits directly under the hero, because a festival offer is the
-             reason the shopper opened the page and burying it under six
-             category rails is the same as not running it. The whole banner is
-             the link - the artwork carries its own call to action, so a button
-             drawn over it would compete with the lettering already there.
-             ============================================ --}}
-        @if(!empty($festivalSale))
-        <section class="kk-festival-banner">
-            <div class="container mx-auto px-4">
-                <a href="{{ route('festival-sale.show', $festivalSale) }}"
-                   class="kk-festival-banner__link"
-                   aria-label="{{ $festivalSale->name }} - shop the sale">
-                    <picture>
-                        @if($festivalSale->banner_mobile_path)
-                            <source media="(max-width: 640px)" srcset="{{ $festivalSale->bannerMobileUrl() }}">
-                        @endif
-                        <img src="{{ $festivalSale->bannerUrl() }}"
-                             alt="{{ $festivalSale->name }}"
-                             class="kk-festival-banner__img"
-                             loading="lazy" decoding="async">
-                    </picture>
-                </a>
-            </div>
-        </section>
-        <style>
-            .kk-festival-banner { padding: 1.5rem 0 0; }
-            .kk-festival-banner__link {
-                display: block;
-                border-radius: 20px;
-                overflow: hidden;
-                transition: transform .25s ease, box-shadow .25s ease;
-            }
-            .kk-festival-banner__link:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 12px 28px rgba(45, 24, 16, .16);
-            }
-            /* No fixed height and no crop: festival artwork is designed as one
-               picture and cropping it to a band cuts the lettering off, which
-               is usually the whole design. */
-            .kk-festival-banner__img { display: block; width: 100%; height: auto; }
-            @media (prefers-reduced-motion: reduce) {
-                .kk-festival-banner__link { transition: none; }
-                .kk-festival-banner__link:hover { transform: none; }
-            }
-        </style>
         @endif
 
         {{-- ============================================

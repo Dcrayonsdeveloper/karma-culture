@@ -2,30 +2,16 @@
     /**
      * Shared by create and edit.
      *
-     * $festivalSale is null on create. $selectableProducts is every live
-     * product; $selectedIds is what is ticked (old input wins, so a failed
-     * validation does not lose the admin's selection).
+     * $festivalSale is null on create. $pickerProducts and $pickerCategories are
+     * built by the controller; $selectedIds is what is ticked (old input wins,
+     * so a failed validation does not lose the admin's selection).
      */
     $sale = $festivalSale ?? null;
-
-    $pickerRows = $selectableProducts->map(fn ($p) => [
-        'id' => (int) $p->id,
-        'name' => (string) $p->name,
-        'sku' => (string) ($p->sku ?? ''),
-        'price' => (float) $p->price,
-        'img' => $p->thumbnail
-            ? (str_starts_with($p->thumbnail, 'http')
-                ? $p->thumbnail
-                : (str_starts_with($p->thumbnail, '/')
-                    ? asset_v(ltrim($p->thumbnail, '/'))
-                    : asset_v('storage/'.$p->thumbnail)))
-            : asset_v('images/no-product-image.svg'),
-    ])->values();
 
     $currentPercent = old('discount_percent', $sale->discount_percent ?? '');
 @endphp
 
-<div x-data="festivalSalePicker(@js($pickerRows), @js(array_values($selectedIds)), '{{ $currentPercent }}')">
+<div x-data="festivalSalePicker(@js($pickerProducts), @js(array_values($selectedIds)), '{{ $currentPercent }}')">
 
     <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; align-items: start;">
 
@@ -104,11 +90,28 @@
 
                 <div style="display: flex; gap: 0.5rem; margin: 0.875rem 0; flex-wrap: wrap;">
                     <input type="search" x-model="query" @input="page = 1"
-                           class="form-input" style="flex: 1 1 220px; font-size: 13px;"
+                           class="form-input" style="flex: 1 1 200px; font-size: 13px;"
                            placeholder="Search by name or SKU..." aria-label="Search products">
+
+                    {{-- Picking a parent category matches everything filed under
+                         its children too: each product carries its whole ancestor
+                         chain, so "Men's" finds a shirt filed under Men's > Shirts
+                         without this control knowing the tree exists. --}}
+                    <select x-model.number="category" @change="page = 1"
+                            class="form-select" style="flex: 0 1 220px; font-size: 13px;"
+                            aria-label="Filter products by category">
+                        <option value="0">All categories</option>
+                        @foreach($pickerCategories as $option)
+                            <option value="{{ $option['id'] }}">{{ $option['label'] }} ({{ $option['count'] }})</option>
+                        @endforeach
+                    </select>
+
                     <button type="button" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;"
                             @click="selectAllShown()"
                             x-text="'Select these ' + visible.length"></button>
+                    <button type="button" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;"
+                            @click="clearShown()" x-show="shownSelectedCount > 0" x-cloak
+                            x-text="'Deselect these ' + shownSelectedCount"></button>
                     <button type="button" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;"
                             @click="clearAll()" x-show="selected.length > 0" x-cloak>Clear all</button>
                 </div>
@@ -126,7 +129,7 @@
                 <div class="fest-picker-scroll">
                     <template x-if="visible.length === 0">
                         <p style="font-size: 13px; color: #616161; padding: 1rem; margin: 0;">
-                            No products match "<span x-text="query"></span>".
+                            No products match this search and category.
                         </p>
                     </template>
 
@@ -356,6 +359,7 @@
             rows: rows,
             selected: (initial || []).map(Number),
             query: '',
+            category: 0,
             percent: initialPercent,
 
             // How many tiles are in the DOM at once. The catalogue can run to
@@ -366,18 +370,32 @@
 
             get visible() {
                 const q = this.query.trim().toLowerCase();
+                const cat = Number(this.category) || 0;
 
-                if (!q) {
+                if (!q && !cat) {
                     return this.rows;
                 }
 
-                return this.rows.filter(p =>
-                    p.name.toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q)
-                );
+                return this.rows.filter(p => {
+                    // cats is the category's own id plus every ancestor, so a
+                    // parent category matches its children's products too.
+                    if (cat && !(p.cats || []).includes(cat)) { return false; }
+                    if (!q) { return true; }
+
+                    return p.name.toLowerCase().includes(q)
+                        || (p.sku || '').toLowerCase().includes(q);
+                });
             },
 
             get paged() {
                 return this.visible.slice(0, this.perPage * this.page);
+            },
+
+            // How much of the current filter is already ticked - what the
+            // "Deselect these N" button acts on, so narrowing to a category and
+            // dropping just that category is one click rather than N.
+            get shownSelectedCount() {
+                return this.visible.reduce((n, p) => n + (this.selected.includes(p.id) ? 1 : 0), 0);
             },
 
             isPicked(id) { return this.selected.includes(id); },
@@ -391,6 +409,11 @@
                 for (const p of this.visible) {
                     if (!this.selected.includes(p.id)) { this.selected.push(p.id); }
                 }
+            },
+
+            clearShown() {
+                const shown = new Set(this.visible.map(p => p.id));
+                this.selected = this.selected.filter(id => !shown.has(id));
             },
 
             clearAll() { this.selected = []; },

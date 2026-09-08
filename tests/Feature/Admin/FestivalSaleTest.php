@@ -457,9 +457,17 @@ class FestivalSaleTest extends TestCase
             ->assertSee('0 products in this sale');
     }
 
-    public function test_the_header_points_at_the_live_sale(): void
+    /**
+     * The festival link sits BESIDE "Introductory Offer", never in place of it.
+     * They are two different promotions, and a shopper who came looking for the
+     * introductory pricing should not find the festival wearing its name.
+     */
+    public function test_the_header_shows_the_festival_link_beside_the_introductory_offer(): void
     {
-        $this->get('/')->assertOk()->assertSee('Introductory Offer');
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('Introductory Offer')
+            ->assertDontSee('Diwali Dhamaka');
 
         $sale = FestivalSale::create([
             'name' => 'Diwali Dhamaka', 'slug' => 'diwali-dhamaka',
@@ -468,7 +476,81 @@ class FestivalSaleTest extends TestCase
 
         $this->get('/')
             ->assertOk()
+            ->assertSee('Introductory Offer')
+            ->assertSee(route('deals'), false)
             ->assertSee(route('festival-sale.show', $sale), false)
             ->assertSee('Diwali Dhamaka');
+    }
+
+    /**
+     * The banner leads the hero carousel rather than sitting in a strip below
+     * it, so a festival is the first thing the page shows.
+     */
+    public function test_the_banner_leads_the_hero_on_the_home_page(): void
+    {
+        Storage::fake('public');
+
+        $product = $this->makeProduct();
+
+        $this->admin()->post(route('admin.festival-sales.store'), $this->payload([
+            'name' => 'Diwali Hero Sale',
+            'products' => [$product->id],
+            'banner' => UploadedFile::fake()->image('diwali-hero.jpg', 1600, 500),
+        ]))->assertRedirect();
+
+        $sale = FestivalSale::firstOrFail();
+
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('kk-hero-slide', false)
+            ->assertSee($sale->bannerUrl(), false)
+            ->assertSee(route('festival-sale.show', $sale), false);
+    }
+
+    /** With show_on_home off, the sale runs but the hero does not carry it. */
+    public function test_the_hero_banner_respects_the_show_on_home_switch(): void
+    {
+        Storage::fake('public');
+
+        $this->admin()->post(route('admin.festival-sales.store'), $this->payload([
+            'name' => 'Quiet Sale',
+            'show_on_home' => '0',
+            'banner' => UploadedFile::fake()->image('quiet.jpg', 1600, 500),
+        ]))->assertRedirect();
+
+        $sale = FestivalSale::firstOrFail();
+
+        $this->get('/')->assertOk()->assertDontSee($sale->bannerUrl(), false);
+    }
+
+    /**
+     * The picker's category filter. Products carry their whole ancestor chain,
+     * so picking a parent category matches everything filed under its children.
+     */
+    public function test_the_product_picker_offers_a_category_filter(): void
+    {
+        $parent = Category::firstOrCreate(['slug' => 'menswear'], ['name' => 'Menswear', 'is_active' => true]);
+        $child = Category::firstOrCreate(
+            ['slug' => 'mens-kurtas'],
+            ['name' => 'Mens Kurtas', 'is_active' => true, 'parent_id' => $parent->id],
+        );
+
+        $product = $this->makeProduct(['name' => 'Chain Test Kurta', 'category_id' => $child->id]);
+
+        $html = $this->admin()
+            ->get(route('admin.festival-sales.create'))
+            ->assertOk()
+            ->assertSee('All categories')
+            ->assertSee('Menswear')
+            ->assertSee('Mens Kurtas')
+            ->getContent();
+
+        // The tile must carry BOTH the child and the parent, or filtering by
+        // the parent would miss it.
+        $this->assertMatchesRegularExpression(
+            '/\\\\u0022id\\\\u0022:'.$product->id.',.{0,400}?\\\\u0022cats\\\\u0022:\[[^\]]*'.$parent->id.'[^\]]*\]/s',
+            $html,
+            'The picker row should carry the product\'s full category ancestor chain.'
+        );
     }
 }

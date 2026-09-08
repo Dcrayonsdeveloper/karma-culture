@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\FestivalSale;
 use App\Models\Product;
 use App\Models\ProductImage;
@@ -49,8 +50,7 @@ class FestivalSaleController extends Controller
 
     public function create(): View
     {
-        return view('admin.festival-sales.create', [
-            'selectableProducts' => $this->selectableProducts(),
+        return view('admin.festival-sales.create', $this->pickerData() + [
             'selectedIds' => collect(old('products', []))->map('intval')->all(),
         ]);
     }
@@ -59,9 +59,8 @@ class FestivalSaleController extends Controller
     {
         $festivalSale->load('products:id');
 
-        return view('admin.festival-sales.edit', [
+        return view('admin.festival-sales.edit', $this->pickerData() + [
             'festivalSale' => $festivalSale,
-            'selectableProducts' => $this->selectableProducts(),
             'selectedIds' => old('products') !== null
                 ? collect(old('products'))->map('intval')->all()
                 : $festivalSale->products->pluck('id')->all(),
@@ -274,11 +273,102 @@ class FestivalSaleController extends Controller
      * using it here would render an empty picker on production while every test
      * passed - the same trap DealsController documents at the top of index().
      */
+    /**
+     * Everything the picker needs: the tiles, and the category list above them.
+     *
+     * Both are built here rather than in the template because the tile rows are
+     * JSON handed to Alpine, and a Blade file is the wrong place to be resolving
+     * 1,231 image URLs and walking a category tree.
+     *
+     * @return array{pickerProducts: array<int, array<string, mixed>>, pickerCategories: array<int, array<string, mixed>>}
+     */
+    private function pickerData(): array
+    {
+        $products = $this->selectableProducts();
+
+        // id => the category's own id plus every ancestor, from Category::$path
+        // ("1/5/12"). Giving each product its whole chain is what lets picking a
+        // root category match everything filed under its children, without the
+        // template knowing anything about the tree.
+        $categories = Category::query()
+            ->where('is_active', true)
+            ->orderBy('level')
+            ->orderBy('position')
+            ->orderBy('name')
+            ->get(['id', 'name', 'parent_id', 'path', 'level']);
+
+        $chains = [];
+
+        foreach ($categories as $category) {
+            $chains[$category->id] = array_values(array_filter(array_map(
+                'intval',
+                explode('/', (string) $category->path)
+            )));
+        }
+
+        $rows = [];
+        $counts = [];
+
+        foreach ($products as $product) {
+            $chain = $chains[$product->category_id] ?? [];
+
+            foreach ($chain as $id) {
+                $counts[$id] = ($counts[$id] ?? 0) + 1;
+            }
+
+            $rows[] = [
+                'id' => (int) $product->id,
+                'name' => (string) $product->name,
+                'sku' => (string) ($product->sku ?? ''),
+                'price' => (float) $product->price,
+                'img' => $this->thumbnailUrl($product->thumbnail),
+                'cats' => $chain,
+            ];
+        }
+
+        // Only categories that actually hold something, indented so the tree is
+        // still readable in a flat <select>.
+        $options = [];
+
+        foreach ($categories as $category) {
+            if (($counts[$category->id] ?? 0) === 0) {
+                continue;
+            }
+
+            $options[] = [
+                'id' => (int) $category->id,
+                'label' => str_repeat('— ', max(0, (int) $category->level)).$category->name,
+                'count' => $counts[$category->id],
+            ];
+        }
+
+        return ['pickerProducts' => $rows, 'pickerCategories' => $options];
+    }
+
+    /**
+     * The three shapes a stored image path comes in, same as Product's own
+     * accessor: an absolute URL, a web-root path, or a key on the public disk.
+     */
+    private function thumbnailUrl(?string $path): string
+    {
+        if (! $path) {
+            return asset_v('images/no-product-image.svg');
+        }
+
+        if (str_starts_with($path, 'http')) {
+            return $path;
+        }
+
+        return str_starts_with($path, '/')
+            ? asset_v(ltrim($path, '/'))
+            : asset_v('storage/'.$path);
+    }
+
     private function selectableProducts()
     {
         return Product::query()
             ->where('is_active', true)
-            ->select(['id', 'name', 'sku', 'price', 'mrp'])
+            ->select(['id', 'name', 'sku', 'price', 'mrp', 'category_id'])
             // A correlated subquery rather than an eager load. `with(['images'
             // => fn ($q) => $q->limit(1)])` reads as one-image-per-product and
             // is not - the limit applies to the whole eager query, so it
