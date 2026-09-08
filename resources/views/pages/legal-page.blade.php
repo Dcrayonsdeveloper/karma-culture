@@ -92,21 +92,31 @@
         // All three share one body outline and differ only in the measuring
         // line - full height down the side, a band across the chest, a band
         // at the waist - so the three columns are told apart at a glance.
+        // The body is deliberately a head and a plain rounded torso, with no
+        // arms or legs. A first attempt drew the full figure and the chest and
+        // waist icons came out indistinguishable at 18px - the limbs read as
+        // the measuring band, and the two bands were only two pixels apart.
+        // Stripped back, the band is the only horizontal line in the glyph and
+        // sits in the top or the bottom third, which is the whole difference
+        // between the two columns.
         $measureIcon = function (string $line): string {
-            return '<svg class="w-4 h-4 shrink-0 text-neutral-400" viewBox="0 0 24 24" fill="none" '
+            // Plain w-5/h-5 rather than an arbitrary size: these class names
+            // live inside a PHP string, and Tailwind's scanner does not pick
+            // an arbitrary value like w-[18px] out of one - it compiled to
+            // nothing and the icons came out unsized.
+            return '<svg class="w-5 h-5 shrink-0 text-neutral-500" viewBox="0 0 24 24" fill="none" '
                 .'stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" '
                 .'aria-hidden="true">'
-                .'<circle cx="13" cy="4.5" r="2"/>'
-                .'<path d="M10 8.5h6l.8 5.5h-7.6z"/>'
-                .'<path d="M10.6 14v6.5M15.4 14v6.5"/>'
+                .'<circle cx="12" cy="4" r="2.2"/>'
+                .'<rect x="8.5" y="8.5" width="7" height="11" rx="2.5"/>'
                 .$line
                 .'</svg>';
         };
 
         $measureIcons = [
-            'height' => $measureIcon('<path d="M4 3v18M2.4 4.6 4 3l1.6 1.6M2.4 19.4 4 21l1.6-1.6"/>'),
-            'chest'  => $measureIcon('<path d="M6.5 10.5h13M8 8.9 6.4 10.5 8 12.1M18 8.9l1.6 1.6-1.6 1.6"/>'),
-            'waist'  => $measureIcon('<path d="M6.5 13.6h13M8 12l-1.6 1.6L8 15.2M18 12l1.6 1.6-1.6 1.6"/>'),
+            'height' => $measureIcon('<path d="M3.5 2v20M1.9 3.6 3.5 2l1.6 1.6M1.9 20.4 3.5 22l1.6-1.6"/>'),
+            'chest'  => $measureIcon('<path d="M6 11.5h12M7.4 10.1 6 11.5l1.4 1.4M16.6 10.1 18 11.5l-1.4 1.4"/>'),
+            'waist'  => $measureIcon('<path d="M6 17h12M7.4 15.6 6 17l1.4 1.4M16.6 15.6 18 17l-1.4 1.4"/>'),
         ];
 
         // Put the diagram in front of the heading it explains. Run over the
