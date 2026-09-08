@@ -2605,6 +2605,11 @@
             // written back inline on every draw so the two cannot drift apart.
             loupeSize: 220,
             loupeStyle: {},
+            // How far around a prev/next arrow the loupe stands down, in CSS
+            // px. About the width of an arrow itself, so the button clears
+            // while the pointer is still on its way there rather than on top
+            // of it - see overNav().
+            navGuard: 32,
             zoomableSlides: @json($kkZoomableSlides),
             // The last pointer position in viewport coordinates, kept so a
             // change of slide - or a scroll under a still cursor - can redraw
@@ -2659,8 +2664,13 @@
                 /* The gallery is sticky, so the frame slides out from under a
                    stationary cursor as the page scrolls. Redraw against the new
                    rectangle - zoomDraw() lets the photo back down by itself
-                   once the pointer is no longer over it. */
-                window.addEventListener('scroll', () => { if (this.hoverZoom) this.zoomDraw(); }, { passive: true });
+                   once the pointer is no longer over it.
+                   Keyed on zoomPt rather than hoverZoom for the same reason as
+                   the watcher: the loupe is also down while the pointer rests
+                   at an arrow, and scrolling can carry that arrow out from
+                   under it - which should bring the loupe back, not strand it
+                   down until the mouse moves. */
+                window.addEventListener('scroll', () => { if (this.zoomPt) this.zoomDraw(); }, { passive: true });
                 this.$watch('showZoom', (open) => {
                     // The fullscreen viewer covers the frame, so the mouseleave
                     // that would otherwise drop the lens never arrives.
@@ -2751,6 +2761,32 @@
                 return img && img.naturalWidth && img.naturalHeight ? img : null;
             },
 
+            /* The prev/next arrows sit ON the photograph, and the loupe is
+               drawn over the top of them - so walking the cursor towards an
+               arrow used to bury the very thing it was walking towards, and
+               the shopper aimed at a button they could no longer see. Within
+               navGuard px of one, the loupe stands down.
+
+               Measured off the buttons themselves rather than off the
+               left: 10px / right: 10px in the stylesheet, so a moved or
+               resized arrow brings its own dead zone with it. x-show hides an
+               arrow with display:none when the chosen colour leaves a single
+               photograph, and the narrow-screen media query does the same; a
+               hidden button measures 0x0 at the viewport origin, so the size
+               test skips it rather than parking a dead zone in the corner of
+               the page. */
+            overNav(pt) {
+                const frame = this.$refs.pdpMain;
+                if (!frame) return false;
+                const g = this.navGuard;
+                return Array.from(frame.querySelectorAll('.kk-pdp__navbtn')).some((btn) => {
+                    const b = btn.getBoundingClientRect();
+                    return b.width && b.height
+                        && pt.x >= b.left - g && pt.x <= b.right + g
+                        && pt.y >= b.top - g && pt.y <= b.bottom + g;
+                });
+            },
+
             zoomDraw() {
                 const frame = this.$refs.pdpMain;
                 const pt = this.zoomPt;
@@ -2765,6 +2801,14 @@
                 // the gallery is sticky, so the frame slides out from under a
                 // stationary cursor as the page scrolls.
                 if (x < 0 || y < 0 || x > r.width || y > r.height) { this.zoomLeave(); return; }
+
+                /* At an arrow, put the loupe away but keep zoomPt: the pointer
+                   really is still over the frame, and holding on to it is what
+                   lets the next mousemove - or the redraw that follows the
+                   click's change of slide - bring the loupe straight back as
+                   the cursor walks away. zoomLeave() would drop it and leave
+                   the photo un-magnified until the pointer re-entered. */
+                if (this.overNav(pt)) { this.hoverZoom = false; return; }
 
                 /* The frame is object-fit: cover, so what is on screen is a CROP
                    of the file rather than the file. Redo that fit here, or the
