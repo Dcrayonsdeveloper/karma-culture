@@ -194,10 +194,10 @@
     --breakpoint-lg: 1024px;
     /* The header's own switch between its desktop layout and its phone one.
        It is not lg, because the header stops fitting before lg lets go of it:
-       at 1024-1154px the six nav links, the search bar and seven icons are all
+       at 1024-1169px the six nav links, the search bar and seven icons are all
        still being asked to share one row, and the links slide under the search
        bar. Everything else on the site keeps using lg. */
-    --breakpoint-hdr: 1155px;
+    --breakpoint-hdr: 1170px;
     --breakpoint-xl: 1280px;
     --breakpoint-2xl: 1536px;
 }
