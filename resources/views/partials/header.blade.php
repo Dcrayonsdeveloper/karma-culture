@@ -147,32 +147,66 @@
 
                     <a href="{{ route('bestsellers') }}" class="px-2 xl:px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">Bestsellers</a>
                     <a href="{{ route('deals') }}" class="px-2.5 py-2 text-[12px] text-kk-tan-dark hover:text-kk-brown font-semibold transition-colors tracking-widest uppercase whitespace-nowrap">Introductory Offer</a>
-                    {{-- The running festival sale sits BESIDE the introductory
-                         offer rather than in place of it: they are two different
-                         promotions and a shopper who came looking for one should
-                         not find the other wearing its name. Drawn only while a
-                         sale is live, so the nav is never a link to an empty
-                         page. The lookup is a cached array, not a query - see
-                         FestivalSale::liveSummary(). --}}
-                    @php $kkFestival = \App\Models\FestivalSale::liveSummary(); @endphp
-                    @if($kkFestival)
-                        <a href="{{ route('festival-sale.show', $kkFestival['slug']) }}"
-                           class="kk-festival-nav px-2.5 py-2 text-[12px] font-semibold transition-colors tracking-widest uppercase whitespace-nowrap">
-                            {{ $kkFestival['name'] }}
-                        </a>
+                    {{-- Sale: every running festival sale, in a menu built like
+                         the Categories one beside it.
+
+                         It sits BESIDE "Introductory Offer" rather than in place
+                         of it: they are two different promotions and a shopper
+                         who came looking for one should not find the other
+                         wearing its name.
+
+                         A menu rather than a link because more than one sale can
+                         be live at once. This used to draw the single most
+                         recently saved one, so a shop running a Diwali sale and a
+                         clearance advertised one of them and left the other
+                         reachable only by typing its URL. Drawn only while at
+                         least one is live, so the nav is never a way into an
+                         empty page. The lookup is a cached array, not a query -
+                         see FestivalSale::liveSummaries(). --}}
+                    @php $kkFestivals = \App\Models\FestivalSale::liveSummaries(); @endphp
+                    @if($kkFestivals)
+                        <div class="kk-mega"
+                             x-data="{ open: false, closeT: null }"
+                             @mouseenter="clearTimeout(closeT); open = true"
+                             @mouseleave="closeT = setTimeout(() => open = false, 120)">
+                            <button type="button" @click="open = !open"
+                                    :aria-expanded="open ? 'true' : 'false'"
+                                    class="kk-festival-nav px-2.5 py-2 text-[12px] font-semibold transition-colors tracking-widest uppercase whitespace-nowrap inline-flex items-center gap-1 cursor-pointer border-0">
+                                Sale
+                                <svg class="w-3 h-3 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </button>
+                            <div x-cloak x-show="open"
+                                 x-transition:enter="transition ease-out duration-200"
+                                 x-transition:enter-start="opacity-0 -translate-y-1"
+                                 x-transition:enter-end="opacity-100 translate-y-0"
+                                 x-transition:leave="transition ease-in duration-150"
+                                 x-transition:leave-start="opacity-100"
+                                 x-transition:leave-end="opacity-0"
+                                 class="kk-dd">
+                                <div class="kk-dd__label">Live sales</div>
+                                @foreach($kkFestivals as $kkFestival)
+                                    <a href="{{ route('festival-sale.show', $kkFestival['slug']) }}" class="kk-dd__item">{{ $kkFestival['name'] }}</a>
+                                @endforeach
+                            </div>
+                        </div>
                     @endif
                 </nav>
 
                 <style>
-                    /* The festival link sits next to "Introductory Offer", so it
+                    /* The Sale menu sits next to "Introductory Offer", so it
                        needs to read as the louder of the two without becoming a
                        button in a row of text links. A tinted pill in the sale's
                        own orange does that at 12px where a colour change alone
-                       would not. */
+                       would not.
+
+                       Declared after Tailwind's stylesheet, which is what lets
+                       the background survive the browser's own button reset -
+                       the trigger is a <button> now that it opens a menu. */
                     .kk-festival-nav {
                         color: #B06D0F;
                         background: #FDF1E0;
                         border-radius: 999px;
+                        font-family: inherit;
                     }
                     .kk-festival-nav:hover { color: #fff; background: #F8931D; }
 

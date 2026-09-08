@@ -152,17 +152,17 @@ class HomeController extends Controller
         // the controller can explain.
         $aboutReels = $reelService->stripReels();
 
-        // The running festival sale, for the banner above the category rails.
-        // Its products already carry their discounted price - the sale wrote it
-        // into the catalogue - so the rails below need nothing special.
-        $festivalSale = FestivalSale::live();
-
-        if ($festivalSale && ! ($festivalSale->show_on_home && $festivalSale->bannerUrl())) {
-            $festivalSale = null;
-        }
+        // Every running festival sale that has a banner and is set to show
+        // here, for the slides that lead the hero. All of them, not the most
+        // recently saved one: two sales can run at once, and the home page used
+        // to advertise whichever was touched last while the other went unseen.
+        //
+        // Their products already carry their discounted price - the sale wrote
+        // it into the catalogue - so the rails below need nothing special.
+        $festivalSales = FestivalSale::liveForHome();
 
         return view('home', compact(
-            'festivalSale',
+            'festivalSales',
             'featuredProducts',
             'newArrivals',
             'bestsellers',

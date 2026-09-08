@@ -483,6 +483,89 @@ class FestivalSaleTest extends TestCase
     }
 
     /**
+     * The Sale menu lists EVERY live sale, not the most recently saved one.
+     *
+     * Two sales can run at once - the service refuses to let two of them own
+     * the same product, not to let two of them exist - and the header used to
+     * point at whichever was touched last, so the other one was reachable only
+     * by typing its URL.
+     */
+    public function test_the_sale_menu_lists_every_live_sale(): void
+    {
+        $diwali = FestivalSale::create([
+            'name' => 'Diwali Dhamaka', 'slug' => 'diwali-dhamaka',
+            'discount_percent' => 30, 'is_active' => true,
+        ]);
+
+        $clearance = FestivalSale::create([
+            'name' => 'Monsoon Clearance', 'slug' => 'monsoon-clearance',
+            'discount_percent' => 15, 'is_active' => true,
+        ]);
+
+        $draft = FestivalSale::create([
+            'name' => 'Holi Preview', 'slug' => 'holi-preview',
+            'discount_percent' => 10, 'is_active' => false,
+        ]);
+
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('Diwali Dhamaka')
+            ->assertSee(route('festival-sale.show', $diwali), false)
+            ->assertSee('Monsoon Clearance')
+            ->assertSee(route('festival-sale.show', $clearance), false)
+            // A sale an admin has not switched on has no page to open, so it
+            // must not be in the menu.
+            ->assertDontSee('Holi Preview')
+            ->assertDontSee(route('festival-sale.show', $draft), false);
+    }
+
+    /** No live sale, no Sale menu - the nav is never a way into an empty page. */
+    public function test_the_sale_menu_is_absent_when_nothing_is_running(): void
+    {
+        FestivalSale::create([
+            'name' => 'Ended Sale', 'slug' => 'ended-sale',
+            'discount_percent' => 20, 'is_active' => false,
+        ]);
+
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('Introductory Offer')
+            ->assertDontSee('Ended Sale')
+            // Not the pill's CSS class - that lives in a <style> block the
+            // header always emits. The absence that matters is that no
+            // festival-sale URL is anywhere on the page.
+            ->assertDontSee(url('/festival-sale'), false);
+    }
+
+    /**
+     * Every live sale's artwork reaches the hero, not just the newest one's.
+     */
+    public function test_the_hero_carries_a_slide_for_each_live_sale(): void
+    {
+        Storage::fake('public');
+
+        $this->admin()->post(route('admin.festival-sales.store'), $this->payload([
+            'name' => 'Diwali Hero Sale',
+            'banner' => UploadedFile::fake()->image('diwali-hero.jpg', 1600, 500),
+        ]))->assertRedirect();
+
+        $this->admin()->post(route('admin.festival-sales.store'), $this->payload([
+            'name' => 'Clearance Hero Sale',
+            'banner' => UploadedFile::fake()->image('clearance-hero.jpg', 1600, 500),
+        ]))->assertRedirect();
+
+        $sales = FestivalSale::orderBy('id')->get();
+        $this->assertCount(2, $sales);
+
+        $page = $this->get('/')->assertOk();
+
+        foreach ($sales as $sale) {
+            $page->assertSee($sale->bannerUrl(), false)
+                ->assertSee(route('festival-sale.show', $sale), false);
+        }
+    }
+
+    /**
      * The banner leads the hero carousel rather than sitting in a strip below
      * it, so a festival is the first thing the page shows.
      */

@@ -908,12 +908,15 @@
             $heroBanners = ($banners ?? collect())->values();
             $heroName = $siteSettings['site_name'] ?? 'Karmaa Kulture';
 
-            // A running festival sale leads the hero. It is the reason the
-            // shopper opened the page, so it takes slide 0 and the admin's own
-            // banners shift along behind it - which is also why every index
-            // below is $slideIndex rather than the loop's $i.
-            $festivalHero = (! empty($festivalSale) && $festivalSale->bannerUrl()) ? $festivalSale : null;
-            $heroOffset = $festivalHero ? 1 : 0;
+            // Running festival sales lead the hero. They are the reason the
+            // shopper opened the page, so they take the first slides and the
+            // admin's own banners shift along behind them - which is also why
+            // every index below is $slideIndex rather than the loop's $i.
+            //
+            // All of them, most recently switched on first. This was one sale,
+            // so a second live sale's artwork never reached the page.
+            $festivalHeroes = ($festivalSales ?? collect())->values();
+            $heroOffset = $festivalHeroes->count();
             $heroCount = $heroBanners->count() + $heroOffset;
         @endphp
         <section class="kk-hero"
@@ -939,21 +942,28 @@
                  @endif>
             @if($heroCount)
                 <div class="kk-hero-viewport">
-                    @if($festivalHero)
-                        {{-- Slide 0. Drawn from the sale's own artwork rather than
-                             through Banner::frameFor(), because a festival sale is
-                             not a banners row - it carries one desktop image and an
-                             optional phone one, which <picture> chooses between
-                             natively. No x-cloak and no lazy loading: this is the
-                             page's largest paint whenever a sale is running. --}}
+                    @foreach($festivalHeroes as $festivalIndex => $festivalHero)
+                        {{-- The leading slides. Drawn from each sale's own artwork
+                             rather than through Banner::frameFor(), because a
+                             festival sale is not a banners row - it carries one
+                             desktop image and an optional phone one, which
+                             <picture> chooses between natively.
+
+                             Slide 0 gets no x-cloak and no lazy loading: it is the
+                             page's largest paint whenever a sale is running. The
+                             rest are cloaked and lazy on the same reasoning as the
+                             banner slides below - until Alpine boots every slide is
+                             in flow, and an uncloaked second slide doubles the
+                             height of the page's largest element on every load. --}}
                         <div class="kk-hero-slide"
                              @if($heroCount > 1)
-                                 x-show="current === 0"
+                                 @if($festivalIndex > 0) x-cloak @endif
+                                 x-show="current === {{ $festivalIndex }}"
                                  x-transition:enter="kk-fade-enter" x-transition:enter-start="kk-fade-start"
-                                 :aria-hidden="current !== 0"
+                                 :aria-hidden="current !== {{ $festivalIndex }}"
                              @endif
                              role="group" aria-roledescription="slide"
-                             aria-label="1 of {{ $heroCount }}">
+                             aria-label="{{ $festivalIndex + 1 }} of {{ $heroCount }}">
                             <a href="{{ route('festival-sale.show', $festivalHero) }}" class="kk-hero-link"
                                aria-label="{{ $festivalHero->name }} - shop the sale">
                                 <div class="kk-media kk-media--dark kk-hero-media">
@@ -963,7 +973,8 @@
                                         @endif
                                         <img src="{{ $festivalHero->bannerUrl() }}"
                                              alt="{{ $festivalHero->name }}"
-                                             fetchpriority="high" decoding="async">
+                                             @if($festivalIndex === 0) fetchpriority="high" @else loading="lazy" @endif
+                                             decoding="async">
                                     </picture>
                                     <span class="kk-media__fallback" aria-hidden="true">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -975,7 +986,7 @@
                                 </div>
                             </a>
                         </div>
-                    @endif
+                    @endforeach
                     @foreach($heroBanners as $i => $banner)
                         @php
                             // Where this banner sits once the festival slide, if

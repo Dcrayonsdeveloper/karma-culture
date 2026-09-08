@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -24,7 +25,10 @@ class FestivalSale extends Model
     /** How long the header may go on believing there is (or is not) a live sale. */
     private const LIVE_CACHE_TTL = 60;
 
-    private const LIVE_CACHE_KEY = 'kk_festival_sale_live';
+    /** The single-sale key this cache used before the header listed them all. */
+    private const LEGACY_LIVE_CACHE_KEY = 'kk_festival_sale_live';
+
+    private const LIVE_CACHE_KEY = 'kk_festival_sales_live';
 
     protected $fillable = [
         'name',
@@ -58,35 +62,56 @@ class FestivalSale extends Model
     public static function forgetLive(): void
     {
         Cache::forget(self::LIVE_CACHE_KEY);
+        // Left over on any box deployed before the header listed every sale.
+        // Nothing reads it any more; forgetting it keeps a rollback honest.
+        Cache::forget(self::LEGACY_LIVE_CACHE_KEY);
     }
 
     /**
-     * The bare facts about the running sale, or null - id, slug and name.
+     * The bare facts about every running sale - id, slug and name apiece.
      *
-     * More than one row can be flagged active - the service refuses to let two
-     * of them own the same product, not to let only one exist - so "the" live
-     * sale is the most recently updated one. That is the one an admin has just
-     * switched on, which is the one they expect the header to point at.
+     * Every active row, not one of them. More than one sale can be live at a
+     * time (the service refuses to let two of them own the same PRODUCT, not
+     * to let two of them exist), and the header used to point at whichever was
+     * saved last, so a shop running a Diwali sale and a clearance had one of
+     * them reachable only by typing its URL. They are all listed now, in the
+     * "Sale" menu, which is why this returns a list.
      *
-     * Cached as an array rather than as a model because the header asks for it
-     * on every page load and only ever wants the slug. Miss or hit, that is
-     * then zero queries rather than one.
+     * Most recently updated first: the sale an admin has just switched on is
+     * the one they expect to see at the top of the menu.
      *
-     * @return array{id: int, slug: string, name: string}|null
+     * Cached as arrays rather than as models because the header asks for this
+     * on every page load and only ever wants the slug and the name. Miss or
+     * hit, that is then zero queries rather than one.
+     *
+     * @return array<int, array{id: int, slug: string, name: string}>
      */
-    public static function liveSummary(): ?array
+    public static function liveSummaries(): array
     {
-        $row = Cache::remember(
+        return Cache::remember(
             self::LIVE_CACHE_KEY,
             self::LIVE_CACHE_TTL,
             fn () => self::query()
                 ->where('is_active', true)
                 ->latest('updated_at')
-                ->first(['id', 'slug', 'name'])
-                ?->only(['id', 'slug', 'name']) ?? []
+                ->get(['id', 'slug', 'name'])
+                ->map(fn (self $sale) => $sale->only(['id', 'slug', 'name']))
+                ->all()
         );
+    }
 
-        return $row === [] ? null : $row;
+    /**
+     * The most recently switched-on sale, or null.
+     *
+     * Still here because plenty of callers want "a" live sale rather than all
+     * of them, and it is the head of the same cached list - so asking for it
+     * costs nothing that {@see liveSummaries()} has not already paid.
+     *
+     * @return array{id: int, slug: string, name: string}|null
+     */
+    public static function liveSummary(): ?array
+    {
+        return self::liveSummaries()[0] ?? null;
     }
 
     /** The slug the "Introductory Offer" button points at, or null. */
@@ -101,6 +126,29 @@ class FestivalSale extends Model
         $id = self::liveSummary()['id'] ?? null;
 
         return $id ? self::find($id) : null;
+    }
+
+    /**
+     * The running sales the home page hero should carry, in menu order.
+     *
+     * A sale earns a hero slide by being live, having its "show on the home
+     * page" switch on, and having artwork to show; the ones that fail the
+     * last two still appear in the header's Sale menu, which is the point of
+     * the switch. Not cached - unlike the summaries above this is whole
+     * models, and it is one query on one page rather than on every page.
+     *
+     * @return Collection<int, self>
+     */
+    public static function liveForHome(): Collection
+    {
+        return self::query()
+            ->where('is_active', true)
+            ->where('show_on_home', true)
+            ->whereNotNull('banner_path')
+            ->latest('updated_at')
+            ->get()
+            ->filter(fn (self $sale) => (bool) $sale->bannerUrl())
+            ->values();
     }
 
     public function products(): BelongsToMany

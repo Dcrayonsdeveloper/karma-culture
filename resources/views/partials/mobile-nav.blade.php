@@ -129,28 +129,49 @@
                     Introductory Offer
                 </a>
 
-                {{-- The running festival sale, beside the introductory offer and
-                     never in place of it - the same pair, in the same order, that
-                     the desktop nav draws. The drawer had no link to it at all, so
-                     a live sale was unreachable from a phone except through the
-                     home page hero.
+                {{-- Sale: every running festival sale, expanding in place the way
+                     a category with children does further down this drawer. It
+                     sits beside the introductory offer and never in place of it -
+                     the same pair, in the same order, that the desktop nav draws.
 
-                     Cached array rather than a query, and drawn only while a sale
-                     is live so the drawer is never a link to an empty page - see
-                     FestivalSale::liveSummary(). The colour is inline rather than a
-                     Tailwind utility: it is the one place in this file that needs
-                     the sale's orange, and a class used nowhere else would not be
-                     in any CSS build already made. --}}
-                @php $kkFestival = \App\Models\FestivalSale::liveSummary(); @endphp
-                @if($kkFestival)
-                    <a href="{{ route('festival-sale.show', $kkFestival['slug']) }}"
-                       class="flex items-center gap-3 px-4 py-3 text-sm font-semibold hover:bg-neutral-50"
-                       style="color: #B06D0F;">
-                        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
-                        </svg>
-                        {{ $kkFestival['name'] }}
-                    </a>
+                     A group rather than a single link because more than one sale
+                     can be live at once, and the drawer used to offer only the
+                     most recently saved one.
+
+                     Cached array rather than a query, and drawn only while at
+                     least one sale is live so the drawer is never a way into an
+                     empty page - see FestivalSale::liveSummaries(). The colour is
+                     inline rather than a Tailwind utility: it is the one place in
+                     this file that needs the sale's orange, and a class used
+                     nowhere else would not be in any CSS build already made. --}}
+                @php $kkFestivals = \App\Models\FestivalSale::liveSummaries(); @endphp
+                @if($kkFestivals)
+                    <div x-data="{ expanded: false }">
+                        <button @click="expanded = !expanded"
+                                :aria-expanded="expanded ? 'true' : 'false'"
+                                class="flex items-center justify-between w-full px-4 py-3 text-sm font-semibold hover:bg-neutral-50 transition-colors"
+                                style="color: #B06D0F;">
+                            <span class="flex items-center gap-3">
+                                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
+                                </svg>
+                                Sale
+                            </span>
+                            <svg class="w-4 h-4 shrink-0 transition-transform duration-200" :class="expanded && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div x-show="expanded" x-collapse>
+                            <div class="bg-neutral-50/50 py-1">
+                                @foreach($kkFestivals as $kkFestival)
+                                    <a href="{{ route('festival-sale.show', $kkFestival['slug']) }}"
+                                       class="block pl-12 pr-4 py-2.5 text-sm text-neutral-600 hover:text-[#2D1810] hover:bg-neutral-100/50">
+                                        {{ $kkFestival['name'] }}
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
                 @endif
 
                 <!-- Categories Section -->
