@@ -139,7 +139,8 @@
                                 // actually drawing. A sale given only phone
                                 // artwork fails it, because bannerUrl() is the
                                 // desktop file and that is what the check reads.
-                                $kkOnHome = (int) $festivalHeroId === (int) $kkSale->id
+                                $kkOnHome = $kkSale->is_active
+                                    && (int) $festivalHeroId === (int) $kkSale->id
                                     && $kkSale->show_on_home
                                     && $kkSale->bannerUrl();
 
@@ -203,9 +204,13 @@
                                      being in the hero are different questions, and
                                      only one sale wins the hero. --}}
                                 <td style="padding: 0.625rem 1rem;">
-                                    <span style="display: inline-block; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 12px; font-weight: 500; {{ $kkStateStyles['live'] }}">Live</span>
+                                    <span style="display: inline-block; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 12px; font-weight: 500; {{ $kkSale->is_active ? $kkStateStyles['live'] : $kkStateStyles['hidden'] }}">
+                                        {{ $kkSale->is_active ? 'Live' : 'Hidden' }}
+                                    </span>
                                     <div style="font-size: 12px; color: #616161; margin-top: 0.15rem;">
-                                        @if($kkOnHome)
+                                        @if(! $kkSale->is_active)
+                                            The sale is switched off
+                                        @elseif($kkOnHome)
                                             Leads the home hero
                                         @elseif(! $kkSale->show_on_home)
                                             Sale page only &mdash; &ldquo;Show on home&rdquo; is off
@@ -233,8 +238,10 @@
                                     <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem;">
                                         <a href="{{ route('admin.festival-sales.edit', $kkSale) }}" style="display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 0.25rem; color: #005bd3; font-size: 12px; font-weight: 500; text-decoration: none;"
                                            onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Edit sale</a>
-                                        <a href="{{ route('festival-sale.show', $kkSale) }}" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 0.25rem; color: #005bd3; font-size: 12px; font-weight: 500; text-decoration: none;"
-                                           onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">View</a>
+                                        @if($kkSale->is_active)
+                                            <a href="{{ route('festival-sale.show', $kkSale) }}" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 0.25rem; color: #005bd3; font-size: 12px; font-weight: 500; text-decoration: none;"
+                                               onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">View</a>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>

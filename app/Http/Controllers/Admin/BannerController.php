@@ -106,7 +106,7 @@ class BannerController extends Controller
     }
 
     /**
-     * The artwork belonging to the festival sales that are running right now.
+     * The artwork belonging to every festival sale that carries some.
      *
      * A festival sale carries its banner in its own two columns rather than as
      * a banners row, and the home page draws it as slide 0 of the very hero
@@ -120,7 +120,13 @@ class BannerController extends Controller
      * two records of one image free to drift apart - so these rows are
      * read-only and send an admin to the sale that owns them.
      *
-     * Three things suppress them, all for the same reason: they would be
+     * Switched-off sales are listed too, marked as such, exactly the way this
+     * screen already lists a hidden or expired banner rather than dropping it.
+     * Running-only was the first cut and it read as a bug: the sale on
+     * production had artwork and was switched off, so the fix for "my festival
+     * banner is missing from this page" left the page just as empty.
+     *
+     * Three things do suppress them, all for the same reason - they would be
      * answering a question the page is not asking. The bin holds deleted
      * banners and a sale cannot be in it; filtering to any placement but the
      * hero is asking about somewhere these do not appear; and page two of a
@@ -135,11 +141,12 @@ class BannerController extends Controller
         }
 
         return FestivalSale::query()
-            ->active()
             // Either column counts. A sale given only phone artwork still shows
             // it to every phone, and leaving it off this list would hide the
             // one banner a mobile-first shop is most likely to have uploaded.
             ->where(fn ($query) => $query->whereNotNull('banner_path')->orWhereNotNull('banner_mobile_path'))
+            // The ones a shopper can actually see first, then most recent.
+            ->orderByDesc('is_active')
             ->latest('updated_at')
             ->get();
     }

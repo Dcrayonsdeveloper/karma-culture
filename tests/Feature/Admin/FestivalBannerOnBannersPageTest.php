@@ -18,8 +18,9 @@ use Tests\TestCase;
  * and absent from the one screen that lists what the shop is showing, with no
  * way back to it but remembering which sale owned it.
  *
- * These pin both halves of the fix: that a running sale's banner is listed, and
- * that it is only ever LISTED. Mirroring one into a banners row would put the
+ * These pin both halves of the fix: that a sale's banner is listed, with the
+ * State column carrying whether a shopper can actually see it, and that it is
+ * only ever LISTED. Mirroring one into a banners row would put the
  * same picture in the hero twice and leave two records of one image free to
  * drift apart, so the count in the table must stay where it was.
  */
@@ -89,16 +90,28 @@ class FestivalBannerOnBannersPageTest extends TestCase
         $this->assertSame(0, Banner::withTrashed()->count(), 'A festival banner is shown, never copied into the banners table.');
     }
 
-    public function test_a_switched_off_sale_is_not_listed(): void
+    /**
+     * A switched-off sale is listed as hidden, not dropped.
+     *
+     * Running-only was the first cut of this and it read as a bug: the sale on
+     * production had artwork and was switched off, so the fix for "my festival
+     * banner is missing from this page" left the page just as empty. This
+     * screen already lists a hidden or an expired banner beside a live one and
+     * lets the State column carry the difference; these follow the same rule.
+     */
+    public function test_a_switched_off_sale_is_listed_as_hidden(): void
     {
         $this->sale(['name' => 'Old Holi Sale', 'slug' => 'old-holi-sale', 'is_active' => false]);
 
         $this->admin()->get(route('admin.banners.index'))
             ->assertOk()
-            ->assertDontSee('Old Holi Sale');
+            ->assertSee('Old Holi Sale')
+            ->assertSee('The sale is switched off')
+            // Off is off: it cannot also be claiming the home hero.
+            ->assertDontSee('Leads the home hero');
     }
 
-    public function test_a_running_sale_with_no_artwork_is_not_listed(): void
+    public function test_a_sale_with_no_artwork_is_not_listed(): void
     {
         $this->sale([
             'name' => 'Bannerless Sale',
