@@ -51,7 +51,16 @@
                     </div>
 
                     <!-- Media -->
-                    <div class="card p-5" x-data="imageUploader()">
+                    {{-- The component sits on this wrapper rather than on the Media
+                         card itself, so the shades-and-fabrics card below can read
+                         galleryPreviews - the files picked but not yet uploaded - and
+                         offer a dropdown for each one. Alpine scopes chain down, so a
+                         sibling card inside this wrapper sees them; a sibling outside
+                         it would not, and tagging would have to wait for a save.
+                         space-y-4 because the column spaces its cards that way and a
+                         plain wrapper would otherwise close the gap between these two. --}}
+                    <div class="space-y-4" x-data="imageUploader()">
+                    <div class="card p-5">
                         <h2 class="text-[13px] font-semibold mb-4" style="color: #303030;">Media</h2>
 
                         <!-- Main image upload -->
@@ -170,6 +179,9 @@
                         @error('videos') <p class="form-error mt-2">{{ $message }}</p> @enderror
                         @error('videos.*') <p class="form-error mt-2">{{ $message }}</p> @enderror
                     </div>
+
+                    @include('admin.products.partials.photo-tags', ['kkOnCreate' => true])
+                    </div>{{-- /media component wrapper --}}
 
                     <!-- Pricing -->
                     <div class="card p-5">
@@ -482,6 +494,11 @@
                             return {
                                 seq: 0,
                                 rows: [],
+                                kkAnnounce() {
+                                    window.dispatchEvent(new CustomEvent('kk-colours-changed', {
+                                        detail: this.rows.map((r) => (r.name || '').trim()).filter(Boolean),
+                                    }));
+                                },
                                 // "Pick from library" state - a picked colour comes in already
                                 // swatched, so its row counts as chosen and posts its hex.
                                 presets: @json($colourPresets ?? []),
@@ -494,6 +511,15 @@
                                         picked: !!c.hex,
                                         hex: c.hex || KK_UNPICKED_SWATCH,
                                     }));
+
+                                    /* The photo-tagging card offers these, so it has to hear
+                                       about a shade the moment it is added rather than after
+                                       the next save. Announced once now AND on every change:
+                                       $watch does not fire for the initial value, so a form
+                                       redisplayed with old() input would otherwise offer no
+                                       shades at all until one was touched. */
+                                    this.kkAnnounce();
+                                    this.$watch('rows', () => this.kkAnnounce());
                                     // Colours come only from the library now - the section opens
                                     // empty and the admin adds them with "Pick from library".
                                 },
@@ -588,6 +614,11 @@
                             return {
                                 seq: 0,
                                 rows: [],
+                                kkAnnounce() {
+                                    window.dispatchEvent(new CustomEvent('kk-textures-changed', {
+                                        detail: this.rows.map((r) => (r.name || '').trim()).filter(Boolean),
+                                    }));
+                                },
                                 presets: @json($texturePresets ?? []),
                                 pickerOpen: false,
                                 pickedIds: {},
@@ -596,6 +627,10 @@
                                     // otherwise renumbers the rest and Alpine reuses the wrong
                                     // input for them.
                                     this.rows = (@json($kkTextureRows)).map(name => ({ uid: ++this.seq, name }));
+
+                                    // Same as the shades above: announced now and on change.
+                                    this.kkAnnounce();
+                                    this.$watch('rows', () => this.kkAnnounce());
                                 },
                                 add() { this.rows.push({ uid: ++this.seq, name: '' }); },
                                 togglePicker() {

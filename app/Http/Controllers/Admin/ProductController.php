@@ -260,6 +260,13 @@ class ProductController extends Controller
             'images.*' => V::image(maxKb: 2048, allowGif: true),
             'videos' => ['nullable', 'array', 'max:5'],
             'videos.*' => self::VIDEO_RULES,
+            // Which shade and which fabric each photo BEING UPLOADED shows,
+            // keyed by its position in images[] - plus "main" for main_image,
+            // which is posted on its own and so has no index. Checked against
+            // the colours this same request commits, further down.
+            'new_image_tags' => ['nullable', 'array', 'max:20'],
+            'new_image_tags.*.colour' => ['nullable', 'string', 'max:60'],
+            'new_image_tags.*.texture' => ['nullable', 'string', 'max:60'],
             'product_attributes' => ['nullable', 'array', 'max:50'],
             // A value may be a single string (text attributes) or an array of
             // checked values (size, colour, …) so one product can offer several.
@@ -353,6 +360,7 @@ class ProductController extends Controller
             $validated['images'],
             $validated['videos'],
             $validated['main_image'],
+            $validated['new_image_tags'],
             $validated['product_attributes'],
             $validated['colours'],
             $validated['textures'],
@@ -366,6 +374,10 @@ class ProductController extends Controller
             $this->syncVariants($product, $variantsData);
         }
 
+        // What the admin said each photo they are uploading shows. Resolved
+        // once, against the colours and textures THIS request just committed.
+        $newTags = $this->newImageTags($request, $colours, $textures);
+
         // Handle main image upload
         if ($request->hasFile('main_image')) {
             $path = ImageWebp::store($request->file('main_image'), 'products');
@@ -374,7 +386,7 @@ class ProductController extends Controller
                 'url' => '/storage/'.$path,
                 'is_primary' => true,
                 'position' => 0,
-            ]);
+            ] + $newTags('main'));
         }
 
         // Handle gallery image uploads
@@ -388,7 +400,7 @@ class ProductController extends Controller
                     'url' => '/storage/'.$path,
                     'is_primary' => false,
                     'position' => $startPosition + $index + 1,
-                ]);
+                ] + $newTags($index));
             }
         }
 
@@ -515,6 +527,13 @@ class ProductController extends Controller
             'image_tags' => ['nullable', 'array', 'max:200'],
             'image_tags.*.colour' => ['nullable', 'string', 'max:60'],
             'image_tags.*.texture' => ['nullable', 'string', 'max:60'],
+            // Which shade and which fabric each photo BEING UPLOADED shows,
+            // keyed by its position in images[] - plus "main" for main_image,
+            // which is posted on its own and so has no index. Checked against
+            // the colours this same request commits, further down.
+            'new_image_tags' => ['nullable', 'array', 'max:20'],
+            'new_image_tags.*.colour' => ['nullable', 'string', 'max:60'],
+            'new_image_tags.*.texture' => ['nullable', 'string', 'max:60'],
             'product_attributes' => ['nullable', 'array', 'max:50'],
             // A value may be a single string (text attributes) or an array of
             // checked values (size, colour, …) so one product can offer several.
@@ -609,6 +628,7 @@ class ProductController extends Controller
             $validated['main_image'],
             $validated['delete_images'],
             $validated['image_tags'],
+            $validated['new_image_tags'],
             $validated['product_attributes'],
             $validated['colours'],
             $validated['textures'],
@@ -666,6 +686,10 @@ class ProductController extends Controller
         // work thrown away, and reading a deleted row back would resurrect it.
         $this->syncImageTags($product, $request->input('image_tags', []), $colours, $textures);
 
+        // And the same for the photos being uploaded by this request, which have
+        // no id yet and so are tagged by their position in images[] instead.
+        $newTags = $this->newImageTags($request, $colours, $textures);
+
         // Replace main image if new one uploaded
         if ($request->hasFile('main_image')) {
             // Delete old primary image
@@ -682,7 +706,7 @@ class ProductController extends Controller
                 'url' => '/storage/'.$path,
                 'is_primary' => true,
                 'position' => 0,
-            ]);
+            ] + $newTags('main'));
         }
 
         // Upload new gallery images
@@ -696,7 +720,7 @@ class ProductController extends Controller
                     'url' => '/storage/'.$path,
                     'is_primary' => false,
                     'position' => $maxPosition + $index + 1,
-                ]);
+                ] + $newTags($index));
             }
         }
 
@@ -717,6 +741,67 @@ class ProductController extends Controller
 
         return redirect()->route('admin.products.edit', $product)
             ->with('success', 'Product updated successfully.');
+    }
+
+    /**
+     * The tags for photos this request is uploading, ready to merge into each row.
+     *
+     * Returns a closure rather than an array because the caller is mid-loop over
+     * the uploaded files and wants the answer per key - "main" for main_image,
+     * and the file's index in images[] for the rest. Both come back as a
+     * ['colour' => ?string, 'texture' => ?string] pair, so a caller can write
+     * `ProductImage::create([...] + $newTags($index))` and a photo with nothing
+     * said about it contributes two nulls rather than a special case.
+     *
+     * The index is why the admin form keeps its tags ON the preview objects:
+     * removing a picked file splices the preview and the file together, so what
+     * arrives here is always the same order the dropdowns were showing.
+     *
+     * Names are canonicalised against the colours and textures THIS request
+     * committed, and anything else is dropped - the same rule and the same
+     * reasons as {@see syncImageTags()}, which does this for photos that already
+     * have a row.
+     *
+     * @param  array<int, array{name: string, hex: string}>  $colours
+     * @param  array<int, string>  $textures
+     * @return callable(int|string): array{colour: ?string, texture: ?string}
+     */
+    private function newImageTags(Request $request, array $colours, array $textures): callable
+    {
+        $tags = $request->input('new_image_tags', []);
+        $tags = is_array($tags) ? $tags : [];
+
+        $canonical = function (array $names): array {
+            $map = [];
+
+            foreach ($names as $name) {
+                $key = ShopFilterCatalogue::normaliseKey((string) $name);
+
+                if ($key !== '') {
+                    $map[$key] = trim((string) $name);
+                }
+            }
+
+            return $map;
+        };
+
+        $offeredColours = $canonical(array_column($colours, 'name'));
+        $offeredTextures = $canonical($textures);
+
+        return function (int|string $key) use ($tags, $offeredColours, $offeredTextures): array {
+            // A crafted payload can put anything under a key, including a string
+            // where an array belongs, so nothing here may assume the shape.
+            $tag = $tags[$key] ?? $tags[(string) $key] ?? [];
+            $tag = is_array($tag) ? $tag : [];
+
+            $colour = ShopFilterCatalogue::normaliseKey((string) ($tag['colour'] ?? ''));
+            $texture = ShopFilterCatalogue::normaliseKey((string) ($tag['texture'] ?? ''));
+
+            return [
+                'colour' => $offeredColours[$colour] ?? null,
+                'texture' => $offeredTextures[$texture] ?? null,
+            ];
+        };
     }
 
     /**

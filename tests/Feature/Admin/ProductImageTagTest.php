@@ -8,6 +8,8 @@ use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -219,6 +221,121 @@ class ProductImageTagTest extends TestCase
             $strangersImage->colour,
             'The tag write is scoped to the product being edited, exactly as the delete_images rule is - without it a crafted request retags another product\'s photographs.'
         );
+    }
+
+    public function test_a_photo_can_be_tagged_as_it_is_uploaded_on_create(): void
+    {
+        // The whole point of this pass: an admin creating a product used to have
+        // to save it, reopen it, and only then say which shade each photograph
+        // showed - because until the save there were no image rows to tag. The
+        // form now tags them by their position in images[] instead.
+        Storage::fake('public');
+
+        $this->actingAs($this->admin(), 'admin')
+            ->post(route('admin.products.store'), $this->payload([
+                'sku' => 'KURTI-NEW',
+                'slug' => 'block-print-kurti-new',
+                'main_image' => UploadedFile::fake()->image('main.jpg'),
+                'images' => [
+                    UploadedFile::fake()->image('one.jpg'),
+                    UploadedFile::fake()->image('two.jpg'),
+                ],
+                'new_image_tags' => [
+                    'main' => ['colour' => 'Indigo', 'texture' => ''],
+                    0 => ['colour' => '', 'texture' => 'Linen'],
+                    1 => ['colour' => 'Indigo', 'texture' => 'Linen'],
+                ],
+            ]))
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
+
+        $product = Product::where('sku', 'KURTI-NEW')->firstOrFail();
+        $images = $product->images()->orderBy('position')->get();
+
+        $this->assertCount(3, $images, 'The main image and both gallery images are saved.');
+
+        $main = $images->firstWhere('is_primary', true);
+        $this->assertSame('Indigo', $main->colour);
+        $this->assertNull($main->texture);
+
+        $gallery = $images->where('is_primary', false)->values();
+        $this->assertNull($gallery[0]->colour, 'The first gallery photo was left on "Any shade".');
+        $this->assertSame('Linen', $gallery[0]->texture);
+        $this->assertSame('Indigo', $gallery[1]->colour);
+        $this->assertSame('Linen', $gallery[1]->texture);
+    }
+
+    public function test_an_upload_tag_naming_something_the_product_does_not_offer_is_dropped(): void
+    {
+        Storage::fake('public');
+
+        $this->actingAs($this->admin(), 'admin')
+            ->post(route('admin.products.store'), $this->payload([
+                'sku' => 'KURTI-MOSS',
+                'slug' => 'block-print-kurti-moss',
+                'images' => [UploadedFile::fake()->image('one.jpg')],
+                'new_image_tags' => [0 => ['colour' => 'Moss', 'texture' => '']],
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $image = Product::where('sku', 'KURTI-MOSS')->firstOrFail()->images()->first();
+
+        $this->assertNull(
+            $image->colour,
+            'Same rule as a saved photo: a tag no picker can produce would hide that photograph from the shop for good.'
+        );
+    }
+
+    public function test_a_malformed_upload_tag_does_not_break_the_save(): void
+    {
+        // The key is whatever the request says it is, so nothing downstream may
+        // assume there is an array under it, or that it names a file that exists.
+        Storage::fake('public');
+
+        $this->actingAs($this->admin(), 'admin')
+            ->post(route('admin.products.store'), $this->payload([
+                'sku' => 'KURTI-ODD',
+                'slug' => 'block-print-kurti-odd',
+                'images' => [UploadedFile::fake()->image('one.jpg')],
+                'new_image_tags' => ['99' => ['colour' => 'Indigo', 'texture' => '']],
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $image = Product::where('sku', 'KURTI-ODD')->firstOrFail()->images()->first();
+
+        $this->assertNull($image->colour, 'A tag whose index matches no uploaded file is simply not applied.');
+    }
+
+    public function test_the_create_form_offers_the_tagging_card_before_anything_is_saved(): void
+    {
+        $html = $this->actingAs($this->admin(), 'admin')
+            ->get(route('admin.products.create'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('kkNewPhotoTags(', $html);
+        $this->assertStringContainsString('new_image_tags[main][colour]', $html);
+        $this->assertStringContainsString("'new_image_tags[' + index + '][colour]'", $html);
+        $this->assertStringContainsString(
+            'hasChoices && (mainPreview || galleryPreviews.length)',
+            $html,
+            'The card appears as soon as there is a photo to tag and a shade or fabric to tag it with - no save in between.'
+        );
+    }
+
+    public function test_the_edit_form_offers_the_same_card_for_newly_added_photos(): void
+    {
+        $product = $this->product();
+        $this->image($product);
+
+        $html = $this->actingAs($this->admin(), 'admin')
+            ->get(route('admin.products.edit', $product))
+            ->assertOk()
+            ->getContent();
+
+        // Both: the saved photos keyed by id, and the newly picked ones by index.
+        $this->assertStringContainsString('name="image_tags[', $html);
+        $this->assertStringContainsString("'new_image_tags[' + index + '][colour]'", $html);
     }
 
     public function test_the_edit_form_offers_a_dropdown_per_photo(): void

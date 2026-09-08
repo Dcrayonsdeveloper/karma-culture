@@ -60,11 +60,18 @@
                     </div>
 
                     <!-- Media (images + videos, drag to reorder) -->
-                    <div class="card p-5" x-data="imageManager(
+                    {{-- The component sits on this wrapper, not on the card, so the
+                         card below can read galleryPreviews - the files picked but
+                         not yet uploaded - and offer a dropdown for each. Alpine
+                         scopes chain down; a sibling outside the wrapper would see
+                         nothing and those photos could only be tagged after a save
+                         and a reopen, which is the whole thing this fixes. --}}
+                    <div class="space-y-4" x-data="imageManager(
                         '{{ route('admin.products.images.reorder', $product) }}',
                         '{{ route('admin.products.images.primary', [$product, 0]) }}',
                         {{ (int) (optional($product->images->firstWhere('is_primary', true))->id ?? 0) }}
                     )">
+                    <div class="card p-5">
                         <h2 class="text-[13px] font-semibold mb-1" style="color: #303030;">Media</h2>
                         <p class="text-xs mb-3" style="color: #616161;">Images &amp; videos. <strong>Drag tiles to reorder</strong> (saved instantly). The tile marked "Main" leads the product - press <strong>Make main</strong> on any tile, image or video.</p>
 
@@ -235,6 +242,9 @@
                         @error('videos') <p class="form-error mt-2">{{ $message }}</p> @enderror
                         @error('videos.*') <p class="form-error mt-2">{{ $message }}</p> @enderror
                     </div>
+
+                    @include('admin.products.partials.photo-tags', ['kkOnCreate' => false])
+                    </div>{{-- /media component wrapper --}}
 
                     @php
                         /* Which shade and which fabric each photo can be told it shows.
@@ -773,6 +783,11 @@
                             return {
                                 seq: 0,
                                 rows: [],
+                                kkAnnounce() {
+                                    window.dispatchEvent(new CustomEvent('kk-colours-changed', {
+                                        detail: this.rows.map((r) => (r.name || '').trim()).filter(Boolean),
+                                    }));
+                                },
                                 presets: @json($colourPresets ?? []),
                                 pickerOpen: false,
                                 pickedIds: {},
@@ -786,12 +801,15 @@
                                     // Colours come only from the library now - a product with
                                     // none opens empty and the admin adds them with "Pick from library".
 
-                                    // The photo-tagging card below offers these, so it has to
-                                    // hear about a colour the moment it is added rather than
-                                    // after the next save.
-                                    this.$watch('rows', (rows) => window.dispatchEvent(new CustomEvent(
-                                        'kk-colours-changed', { detail: rows.map((r) => (r.name || '').trim()).filter(Boolean) },
-                                    )));
+                                    /* The photo-tagging cards offer these, so they have to hear
+                                       about a colour the moment it is added rather than after the
+                                       next save. Announced once now AND on every change: $watch
+                                       does not fire for the initial value, and the card for newly
+                                       picked photos has no server-rendered options to fall back
+                                       on - it would offer an empty list until a colour was
+                                       touched. */
+                                    this.kkAnnounce();
+                                    this.$watch('rows', () => this.kkAnnounce());
                                 },
                                 add() { this.rows.push({ uid: ++this.seq, name: '', hex: KK_UNPICKED_SWATCH, picked: false }); },
                                 togglePicker() {
@@ -881,6 +899,11 @@
                             return {
                                 seq: 0,
                                 rows: [],
+                                kkAnnounce() {
+                                    window.dispatchEvent(new CustomEvent('kk-textures-changed', {
+                                        detail: this.rows.map((r) => (r.name || '').trim()).filter(Boolean),
+                                    }));
+                                },
                                 presets: @json($texturePresets ?? []),
                                 pickerOpen: false,
                                 pickedIds: {},
@@ -890,11 +913,9 @@
                                     // input for them.
                                     this.rows = (@json($kkTextureRows)).map(name => ({ uid: ++this.seq, name }));
 
-                                    // Same as the colours above: the photo-tagging card
-                                    // offers these and should not lag a save behind.
-                                    this.$watch('rows', (rows) => window.dispatchEvent(new CustomEvent(
-                                        'kk-textures-changed', { detail: rows.map((r) => (r.name || '').trim()).filter(Boolean) },
-                                    )));
+                                    // Same as the colours above: announced now and on change.
+                                    this.kkAnnounce();
+                                    this.$watch('rows', () => this.kkAnnounce());
                                 },
                                 add() { this.rows.push({ uid: ++this.seq, name: '' }); },
                                 togglePicker() {
