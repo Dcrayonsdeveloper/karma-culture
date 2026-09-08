@@ -323,6 +323,20 @@ class ProductImageTagTest extends TestCase
         );
     }
 
+    public function test_swapping_the_main_photo_clears_the_tag_chosen_for_the_old_one(): void
+    {
+        // A gallery row's tag rides on its preview object and leaves with the
+        // picture. The main image's cannot - it is posted on its own - so
+        // replacing the main photo would otherwise save the shade chosen for
+        // the one before it against a different photograph.
+        $html = $this->actingAs($this->admin(), 'admin')
+            ->get(route('admin.products.create'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString("this.\$watch('mainPreview'", $html);
+    }
+
     public function test_the_edit_form_offers_the_same_card_for_newly_added_photos(): void
     {
         $product = $this->product();

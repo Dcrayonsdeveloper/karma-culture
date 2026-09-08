@@ -122,9 +122,23 @@
         return {
             colours: seedColours || [],
             textures: seedTextures || [],
-            // The main image is posted on its own, so its tag is held here rather
-            // than on a preview object.
+            /* The main image is posted on its own, so its tag is held here
+               rather than on a preview object - which means it does not get
+               thrown away with its picture the way a gallery row's does.
+
+               Hence the watcher: swapping the main photo for a different one
+               leaves mainPreview set the whole time, so the row is never torn
+               down and a shade chosen for the photo before it would have been
+               saved against the new one. It is a different photograph, so it
+               starts with nothing said about it. (mainPreview resolves from the
+               media component's scope, which this card sits inside.) */
             main: { colour: '', texture: '' },
+            init() {
+                this.$watch('mainPreview', () => {
+                    this.main.colour = '';
+                    this.main.texture = '';
+                });
+            },
             // Nothing to say about a photo until the product offers a shade or a
             // fabric to say it with, so the card stays out of the way until then.
             get hasChoices() {
