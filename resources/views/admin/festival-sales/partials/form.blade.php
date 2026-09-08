@@ -162,12 +162,23 @@
                     </div>
                 </div>
 
-                {{-- What actually posts. Driven by `selected` rather than by the
-                     checkboxes, so a product ticked and then filtered out of
-                     view by a search is still submitted. --}}
-                <template x-for="id in selected" :key="'f-' + id">
-                    <input type="hidden" name="products[]" :value="id">
-                </template>
+                {{-- What actually posts: ONE field holding the whole selection,
+                     not one hidden input per product.
+
+                     PHP's max_input_vars is 1000 and a sale can hold every
+                     product in the catalogue. A `products[]` input per tick put
+                     a 995-product sale at ~1010 fields, and PHP does not warn
+                     when it goes over - it silently drops the tail. The tail
+                     here is everything after the picker in DOM order: the Live
+                     switch, "Show banner on home page" and the banner upload. So
+                     ticking a box, saving, and finding it unticked was not a
+                     checkbox bug at all; the field never arrived, and
+                     $request->boolean() reads a missing key as false.
+
+                     Driven by `selected` rather than by the checkboxes, so a
+                     product ticked and then filtered out of view by a search or
+                     a category is still submitted. --}}
+                <input type="hidden" name="product_ids" :value="selected.join(',')">
             </div>
         </div>
 

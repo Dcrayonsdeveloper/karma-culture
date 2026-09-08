@@ -51,7 +51,7 @@ class FestivalSaleController extends Controller
     public function create(): View
     {
         return view('admin.festival-sales.create', $this->pickerData() + [
-            'selectedIds' => collect(old('products', []))->map('intval')->all(),
+            'selectedIds' => $this->oldSelection() ?? [],
         ]);
     }
 
@@ -61,10 +61,30 @@ class FestivalSaleController extends Controller
 
         return view('admin.festival-sales.edit', $this->pickerData() + [
             'festivalSale' => $festivalSale,
-            'selectedIds' => old('products') !== null
-                ? collect(old('products'))->map('intval')->all()
-                : $festivalSale->products->pluck('id')->all(),
+            'selectedIds' => $this->oldSelection() ?? $festivalSale->products->pluck('id')->all(),
         ]);
+    }
+
+    /**
+     * What the admin had ticked when a save bounced on validation, or null when
+     * this is a fresh form. Null and "nothing ticked" are different answers: an
+     * empty selection must survive a failed save rather than reverting to what
+     * the sale held before.
+     *
+     * @return array<int, int>|null
+     */
+    private function oldSelection(): ?array
+    {
+        $raw = old('product_ids');
+
+        if ($raw === null) {
+            return null;
+        }
+
+        return array_values(array_unique(array_filter(array_map(
+            'intval',
+            explode(',', (string) $raw)
+        ))));
     }
 
     public function store(Request $request): RedirectResponse
@@ -90,7 +110,7 @@ class FestivalSaleController extends Controller
 
         $sale->save();
 
-        $report = $this->sales->sync($sale, $validated['products'] ?? []);
+        $report = $this->sales->sync($sale, $this->pickedProductIds($request));
 
         return redirect()
             ->route('admin.festival-sales.edit', $sale)
@@ -132,7 +152,7 @@ class FestivalSaleController extends Controller
 
         $festivalSale->save();
 
-        $report = $this->sales->sync($festivalSale, $validated['products'] ?? []);
+        $report = $this->sales->sync($festivalSale, $this->pickedProductIds($request));
 
         return redirect()
             ->route('admin.festival-sales.edit', $festivalSale)
@@ -217,9 +237,40 @@ class FestivalSaleController extends Controller
             'remove_banner_mobile' => V::boolean(),
             'is_active' => V::boolean(),
             'show_on_home' => V::boolean(),
-            'products' => ['nullable', 'array', 'max:2000'],
-            'products.*' => ['integer', 'exists:products,id'],
+            // A comma-separated list, not products[]. See the note in the form
+            // partial: one input per product overran PHP's max_input_vars and
+            // silently dropped every field after the picker. Validating the ids
+            // one by one with `exists` would also have been 995 queries; they
+            // are checked in a single whereIn by pickedProductIds() instead.
+            'product_ids' => ['nullable', 'string', 'max:24000'],
         ];
+    }
+
+    /**
+     * The ticked products, as ids that actually exist.
+     *
+     * One whereIn rather than an `exists` rule per id: a sale can hold the whole
+     * catalogue, and per-id validation would be a query each. Anything unknown
+     * is dropped rather than failing the save - a product deleted while the form
+     * was open should not cost the admin the rest of their selection.
+     *
+     * @return array<int, int>
+     */
+    private function pickedProductIds(Request $request): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map(
+            'intval',
+            explode(',', (string) $request->input('product_ids', ''))
+        ))));
+
+        if ($ids === []) {
+            return [];
+        }
+
+        return Product::whereIn('id', array_slice($ids, 0, 2000))
+            ->pluck('id')
+            ->map('intval')
+            ->all();
     }
 
     /**
@@ -231,7 +282,6 @@ class FestivalSaleController extends Controller
             'discount_percent.required' => 'Enter the discount percentage for this sale.',
             'discount_percent.min' => 'A festival sale has to take at least 1% off.',
             'discount_percent.max' => 'A discount over 95% is almost certainly a typo.',
-            'products.max' => 'A single sale can hold at most 2,000 products.',
         ] + V::imageMessages('banner', BannerMedia::MAX_IMAGE_KB)
           + V::imageMessages('banner_mobile', BannerMedia::MAX_IMAGE_KB);
     }
