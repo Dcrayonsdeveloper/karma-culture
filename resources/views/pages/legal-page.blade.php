@@ -116,7 +116,9 @@
         $measureIcons = [
             'height' => $measureIcon('<path d="M3.5 2v20M1.9 3.6 3.5 2l1.6 1.6M1.9 20.4 3.5 22l1.6-1.6"/>'),
             'chest'  => $measureIcon('<path d="M6 11.5h12M7.4 10.1 6 11.5l1.4 1.4M16.6 10.1 18 11.5l-1.4 1.4"/>'),
-            'waist'  => $measureIcon('<path d="M6 17h12M7.4 15.6 6 17l1.4 1.4M16.6 15.6 18 17l-1.4 1.4"/>'),
+            // Kept clear of the torso's foot: sitting on it, the band read as
+            // a stand rather than as a measurement.
+            'waist'  => $measureIcon('<path d="M6 15.8h12M7.4 14.4 6 15.8l1.4 1.4M16.6 14.4 18 15.8l-1.4 1.4"/>'),
         ];
 
         // Put the diagram in front of the heading it explains. Run over the
