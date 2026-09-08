@@ -23,12 +23,35 @@ use Illuminate\Support\Facades\DB;
  * admin who edits a product's price during a sale keeps their edit; the sale
  * ending does not silently undo their work.
  *
- * Nothing in here is scheduled. There is no cron and no queue worker on the
- * production host, so a sale starts when an admin switches it on and stops
- * when they switch it off, and both are synchronous.
+ * Nothing in here is scheduled. A sale starts when an admin switches it on and
+ * stops when they switch it off, and both are synchronous - which is only
+ * viable because the writes are batched. Row by row, through the models, a sale
+ * over the full 1,231-product catalogue took over ten minutes and would have
+ * been a gateway timeout on the Save button; the catalogue is 8,000 variants
+ * deep and Product::save() carries slug machinery that has no business running
+ * because a price changed. So the run decides everything in memory and leaves
+ * through {@see flush()} in a few dozen statements instead of ~27,000.
  */
 class FestivalSaleService
 {
+    /** How many rows go into one CASE statement. */
+    private const CHUNK = 200;
+
+    /** @var array<int, array{price: float, mrp: float|null}> product id => new figures */
+    private array $productPrices = [];
+
+    /** @var array<int, array{price: float|null, mrp: float|null}> variant id => new figures */
+    private array $variantPrices = [];
+
+    /** @var array<int, array<string, mixed>> product id => festival_sale_products row */
+    private array $pivotRows = [];
+
+    /** @var array<int, array<string, mixed>> variant id => snapshot row */
+    private array $snapshotRows = [];
+
+    /** @var array<int, int> variant ids whose snapshot has been consumed */
+    private array $snapshotDeletes = [];
+
     /**
      * Point a sale at exactly this set of products, then make the catalogue
      * agree with the sale's current on/off state.
@@ -41,6 +64,7 @@ class FestivalSaleService
         $productIds = array_values(array_unique(array_map('intval', $productIds)));
 
         $result = DB::transaction(function () use ($sale, $productIds) {
+            $this->reset();
             $sale->load('products.variants');
 
             // Products dropped from the list give their prices back first,
@@ -53,24 +77,37 @@ class FestivalSaleService
 
             foreach ($dropped as $product) {
                 $reverted += $this->revertProduct($sale, $product) ? 1 : 0;
-                $sale->products()->detach($product->id);
+            }
+
+            // Flushed before the detach, or the pivot resets queued above would
+            // be written to rows that no longer exist.
+            $this->flush($sale);
+
+            if ($dropped->isNotEmpty()) {
+                $sale->products()->detach($dropped->pluck('id')->all());
             }
 
             // Newly ticked products join with no snapshot: they are members,
             // not yet discounted. reconcile() below decides whether that
             // changes, based on whether the sale is live.
             $existing = $sale->products()->pluck('products.id')->all();
+            $new = array_values(array_diff($productIds, $existing));
 
-            foreach (array_diff($productIds, $existing) as $id) {
-                $sale->products()->attach($id, [
+            if ($new !== []) {
+                $now = now();
+                DB::table('festival_sale_products')->insert(array_map(fn ($id) => [
+                    'festival_sale_id' => $sale->id,
+                    'product_id' => $id,
                     'original_price' => null,
                     'original_mrp' => null,
                     'sale_price' => null,
                     'applied_at' => null,
-                ]);
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ], $new));
             }
 
-            $outcome = $this->reconcile($sale, bumpCaches: false);
+            $outcome = $this->reconcileRows($sale);
             $outcome['reverted'] += $reverted;
 
             return $outcome;
@@ -94,15 +131,41 @@ class FestivalSaleService
     {
         // Nested inside sync()'s transaction when it is called from there,
         // which Laravel handles as a savepoint. On its own - the Start/End
-        // switch - it is the outermost one, and it needs to be: a run that dies
+        // switch - it is the outermost one, and it needs to be: a run that died
         // halfway would otherwise leave half a catalogue discounted.
-        $result = DB::transaction(fn () => $this->reconcileRows($sale));
+        $result = DB::transaction(function () use ($sale) {
+            $this->reset();
+
+            return $this->reconcileRows($sale);
+        });
 
         if ($bumpCaches) {
             $this->bumpCaches();
         }
 
         return $result;
+    }
+
+    /** Put every product this sale touched back, and forget it did. */
+    public function revertAll(FestivalSale $sale): int
+    {
+        $reverted = DB::transaction(function () use ($sale) {
+            $this->reset();
+            $sale->load('products.variants');
+            $count = 0;
+
+            foreach ($sale->products as $product) {
+                $count += $this->revertProduct($sale, $product) ? 1 : 0;
+            }
+
+            $this->flush($sale);
+
+            return $count;
+        });
+
+        $this->bumpCaches();
+
+        return $reverted;
     }
 
     /**
@@ -142,9 +205,12 @@ class FestivalSaleService
                     continue;
                 }
 
+                // revertProduct restores the model IN MEMORY as well as queuing
+                // the write, so the apply below computes from the original
+                // price. Re-reading from the database here instead would find
+                // the discounted figure - nothing has been written yet - and
+                // take the new percentage off it, compounding the sale.
                 $this->revertProduct($sale, $product);
-                $product->refresh();
-                $product->load('variants');
             }
 
             $outcome = $this->applyProduct($sale, $product, $claimed);
@@ -155,6 +221,8 @@ class FestivalSaleService
                 $skipped[$product->id] = $outcome;
             }
         }
+
+        $this->flush($sale);
 
         return ['applied' => $applied, 'reverted' => $reverted, 'skipped' => $skipped];
     }
@@ -177,38 +245,6 @@ class FestivalSaleService
             ->where('festival_sales.is_active', true)
             ->pluck('festival_sales.name', 'festival_sale_products.product_id')
             ->all();
-    }
-
-    /** Put every product this sale touched back, and forget it did. */
-    public function revertAll(FestivalSale $sale): int
-    {
-        $reverted = DB::transaction(function () use ($sale) {
-            $sale->load('products.variants');
-            $count = 0;
-
-            foreach ($sale->products as $product) {
-                $count += $this->revertProduct($sale, $product) ? 1 : 0;
-            }
-
-            return $count;
-        });
-
-        $this->bumpCaches();
-
-        return $reverted;
-    }
-
-    /**
-     * One bump for a whole run rather than one per product.
-     *
-     * The derived filter rails are cached for six hours behind kk_filter_ver,
-     * and a sale that does not retire them goes on advertising yesterday's
-     * price bands on the home page.
-     */
-    private function bumpCaches(): void
-    {
-        ProductVariant::bumpFilterCache();
-        FestivalSale::forgetLive();
     }
 
     /**
@@ -235,32 +271,24 @@ class FestivalSaleService
             return 'the discount would not lower its price';
         }
 
-        $originalMrp = $product->mrp;
+        $originalMrp = $product->mrp === null ? null : (float) $product->mrp;
 
         // The strike-through price the whole storefront derives its "% off"
-        // badge from is mrp. A product priced at its mrp - or with none at all -
-        // would go on sale and show no saving, so the pre-sale price becomes
-        // the mrp for the duration and is put back with everything else.
-        $mrpNeedsRaising = $originalMrp === null || (float) $originalMrp < $base;
+        // badge from is mrp. A product priced AT or above its mrp would go on
+        // sale and show no saving, so the pre-sale price stands in as the mrp
+        // for the duration and is put back with everything else.
+        $newMrp = ($originalMrp === null || $originalMrp < $base) ? $base : $originalMrp;
 
         $product->price = $salePrice;
+        $product->mrp = $newMrp;
+        $this->productPrices[$product->id] = ['price' => $salePrice, 'mrp' => $newMrp];
 
-        if ($mrpNeedsRaising) {
-            $product->mrp = $base;
-        }
-
-        // Quietly: Product::saved() bumps the filter cache and re-syncs the
-        // category pivot on every save. Neither is wanted once per product in a
-        // loop over a few hundred of them; the cache is bumped once by the
-        // caller instead.
-        $product->saveQuietly();
-
-        $sale->products()->updateExistingPivot($product->id, [
+        $this->pivotRows[$product->id] = [
             'original_price' => $base,
             'original_mrp' => $originalMrp,
             'sale_price' => $salePrice,
             'applied_at' => now(),
-        ]);
+        ];
 
         $this->applyVariants($sale, $product);
 
@@ -293,25 +321,18 @@ class FestivalSaleService
                 continue;
             }
 
-            $originalMrp = $variant->mrp;
+            $originalMrp = $variant->mrp === null ? null : (float) $variant->mrp;
+            $newMrp = ($originalMrp === null || $originalMrp < $base) ? $base : $originalMrp;
+
             $variant->price = $salePrice;
+            $variant->mrp = $newMrp;
+            $this->variantPrices[$variant->id] = ['price' => $salePrice, 'mrp' => $newMrp];
 
-            if ($originalMrp === null || (float) $originalMrp < $base) {
-                $variant->mrp = $base;
-            }
-
-            // Quietly for the same reason as the product: ProductVariant::saved
-            // bumps the filter cache, and this loop would bump it once a size.
-            $variant->saveQuietly();
-
-            $sale->variantPrices()->updateOrCreate(
-                ['product_variant_id' => $variant->id],
-                [
-                    'original_price' => $base,
-                    'original_mrp' => $originalMrp,
-                    'sale_price' => $salePrice,
-                ]
-            );
+            $this->snapshotRows[$variant->id] = [
+                'original_price' => $base,
+                'original_mrp' => $originalMrp,
+                'sale_price' => $salePrice,
+            ];
         }
     }
 
@@ -331,28 +352,34 @@ class FestivalSaleService
         }
 
         if ($this->same((float) $product->price, (float) $pivot->sale_price)) {
-            $product->price = (float) $pivot->original_price;
+            $originalPrice = (float) $pivot->original_price;
+            $mrp = $product->mrp === null ? null : (float) $product->mrp;
 
             // The mrp only moves back if this sale is what raised it - and only
             // to a real figure. products.mrp is NOT NULL (unlike the variants'),
             // so there is no "put the null back" case here and writing one would
             // be an integrity error rather than a restore.
-            if ($pivot->original_mrp !== null
-                && $this->same((float) $product->mrp, (float) $pivot->original_price)) {
-                $product->mrp = (float) $pivot->original_mrp;
+            if ($pivot->original_mrp !== null && $this->same((float) $mrp, $originalPrice)) {
+                $mrp = (float) $pivot->original_mrp;
             }
 
-            $product->saveQuietly();
+            $product->price = $originalPrice;
+            $product->mrp = $mrp;
+            $this->productPrices[$product->id] = ['price' => $originalPrice, 'mrp' => $mrp];
         }
 
         $this->revertVariants($sale, $product);
 
-        $sale->products()->updateExistingPivot($product->id, [
+        $this->pivotRows[$product->id] = [
             'original_price' => null,
             'original_mrp' => null,
             'sale_price' => null,
             'applied_at' => null,
-        ]);
+        ];
+
+        // The in-memory pivot has to agree, or reconcileRows would still see
+        // this product as applied when it re-reads it in the same pass.
+        $pivot->applied_at = null;
 
         return true;
     }
@@ -378,21 +405,148 @@ class FestivalSaleService
             }
 
             if ($this->same((float) $variant->price, (float) $snapshot->sale_price)) {
-                $variant->price = $snapshot->original_price === null
-                    ? null
-                    : (float) $snapshot->original_price;
+                $price = $snapshot->original_price === null ? null : (float) $snapshot->original_price;
+                $mrp = $variant->mrp === null ? null : (float) $variant->mrp;
 
                 if ($snapshot->original_mrp === null) {
-                    $variant->mrp = null;
-                } elseif ($this->same((float) $variant->mrp, (float) $snapshot->original_price)) {
-                    $variant->mrp = (float) $snapshot->original_mrp;
+                    $mrp = null;
+                } elseif ($price !== null && $this->same((float) $mrp, $price)) {
+                    $mrp = (float) $snapshot->original_mrp;
                 }
 
-                $variant->saveQuietly();
+                $variant->price = $price;
+                $variant->mrp = $mrp;
+                $this->variantPrices[$variant->id] = ['price' => $price, 'mrp' => $mrp];
             }
 
-            $snapshot->delete();
+            $this->snapshotDeletes[] = $variant->id;
+            unset($this->snapshotRows[$variant->id]);
         }
+    }
+
+    /** Everything the run decided, in a few dozen statements. */
+    private function flush(FestivalSale $sale): void
+    {
+        $this->bulkPrices('products', $this->productPrices);
+        $this->bulkPrices('product_variants', $this->variantPrices);
+
+        if ($this->snapshotDeletes !== []) {
+            foreach (array_chunk(array_unique($this->snapshotDeletes), self::CHUNK) as $chunk) {
+                DB::table('festival_sale_variant_prices')
+                    ->where('festival_sale_id', $sale->id)
+                    ->whereIn('product_variant_id', $chunk)
+                    ->delete();
+            }
+        }
+
+        $now = now();
+
+        if ($this->snapshotRows !== []) {
+            $rows = [];
+
+            foreach ($this->snapshotRows as $variantId => $row) {
+                $rows[] = $row + [
+                    'festival_sale_id' => $sale->id,
+                    'product_variant_id' => $variantId,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+
+            foreach (array_chunk($rows, self::CHUNK) as $chunk) {
+                DB::table('festival_sale_variant_prices')->upsert(
+                    $chunk,
+                    ['festival_sale_id', 'product_variant_id'],
+                    ['original_price', 'original_mrp', 'sale_price', 'updated_at'],
+                );
+            }
+        }
+
+        if ($this->pivotRows !== []) {
+            $rows = [];
+
+            foreach ($this->pivotRows as $productId => $row) {
+                $rows[] = $row + [
+                    'festival_sale_id' => $sale->id,
+                    'product_id' => $productId,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+
+            foreach (array_chunk($rows, self::CHUNK) as $chunk) {
+                DB::table('festival_sale_products')->upsert(
+                    $chunk,
+                    ['festival_sale_id', 'product_id'],
+                    ['original_price', 'original_mrp', 'sale_price', 'applied_at', 'updated_at'],
+                );
+            }
+        }
+
+        $this->reset();
+    }
+
+    /**
+     * One UPDATE per chunk, with a CASE arm per row.
+     *
+     * The table name is a constant at every call site, never input; the ids and
+     * the figures are bound.
+     *
+     * @param  array<int, array{price: float|null, mrp: float|null}>  $writes
+     */
+    private function bulkPrices(string $table, array $writes): void
+    {
+        if ($writes === []) {
+            return;
+        }
+
+        foreach (array_chunk($writes, self::CHUNK, true) as $chunk) {
+            $ids = array_keys($chunk);
+            $priceArms = [];
+            $mrpArms = [];
+            $bindings = [];
+
+            foreach ($chunk as $id => $vals) {
+                $priceArms[] = 'WHEN ? THEN ?';
+                $bindings[] = $id;
+                $bindings[] = $vals['price'];
+            }
+
+            foreach ($chunk as $id => $vals) {
+                $mrpArms[] = 'WHEN ? THEN ?';
+                $bindings[] = $id;
+                $bindings[] = $vals['mrp'];
+            }
+
+            $sql = "update `{$table}` set "
+                .'`price` = case `id` '.implode(' ', $priceArms).' end, '
+                .'`mrp` = case `id` '.implode(' ', $mrpArms).' end '
+                .'where `id` in ('.implode(', ', array_fill(0, count($ids), '?')).')';
+
+            DB::update($sql, array_merge($bindings, $ids));
+        }
+    }
+
+    private function reset(): void
+    {
+        $this->productPrices = [];
+        $this->variantPrices = [];
+        $this->pivotRows = [];
+        $this->snapshotRows = [];
+        $this->snapshotDeletes = [];
+    }
+
+    /**
+     * One bump for a whole run rather than one per product.
+     *
+     * The derived filter rails are cached for six hours behind kk_filter_ver,
+     * and a sale that does not retire them goes on advertising yesterday's
+     * price bands on the home page.
+     */
+    private function bumpCaches(): void
+    {
+        ProductVariant::bumpFilterCache();
+        FestivalSale::forgetLive();
     }
 
     /** Money compared the way money should be: to the paisa, not by identity. */
