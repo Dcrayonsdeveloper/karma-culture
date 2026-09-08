@@ -104,7 +104,7 @@
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
                     </svg>
-                    New Arrivals
+                    New In
                 </a>
 
                 <a href="{{ route('bestsellers') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-neutral-700 hover:bg-neutral-50">
@@ -114,12 +114,40 @@
                     Bestsellers
                 </a>
 
+                {{-- "Introductory Offer" on the desktop and "Deals & Offers" here,
+                     both pointing at route('deals'). One promotion cannot have two
+                     names depending on the device it is read on, and the desktop's
+                     is the one the rest of the shop uses. --}}
                 <a href="{{ route('deals') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-error-600 hover:bg-error-50/50 font-medium">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
                     </svg>
-                    Deals & Offers
+                    Introductory Offer
                 </a>
+
+                {{-- The running festival sale, beside the introductory offer and
+                     never in place of it - the same pair, in the same order, that
+                     the desktop nav draws. The drawer had no link to it at all, so
+                     a live sale was unreachable from a phone except through the
+                     home page hero.
+
+                     Cached array rather than a query, and drawn only while a sale
+                     is live so the drawer is never a link to an empty page - see
+                     FestivalSale::liveSummary(). The colour is inline rather than a
+                     Tailwind utility: it is the one place in this file that needs
+                     the sale's orange, and a class used nowhere else would not be
+                     in any CSS build already made. --}}
+                @php $kkFestival = \App\Models\FestivalSale::liveSummary(); @endphp
+                @if($kkFestival)
+                    <a href="{{ route('festival-sale.show', $kkFestival['slug']) }}"
+                       class="flex items-center gap-3 px-4 py-3 text-sm font-semibold hover:bg-neutral-50"
+                       style="color: #B06D0F;">
+                        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
+                        </svg>
+                        {{ $kkFestival['name'] }}
+                    </a>
+                @endif
 
                 <!-- Categories Section -->
                 {{-- $navCategories is supplied by the view composer registered for this
