@@ -206,6 +206,64 @@ class GalleryFollowsColourTest extends TestCase
         );
     }
 
+    public function test_the_gallery_is_told_which_picker_moved(): void
+    {
+        // kkFollowSelection's three rules are all about the value that just
+        // changed - stay put if the frame already shows it, otherwise go to the
+        // first frame that does, otherwise leave the frame alone. A handler that
+        // only knows "something changed" can express none of them, and the one
+        // that did picked any tagged frame: tapping through the fabrics of a
+        // product tagged by shade snapped back to the first shade photo, and
+        // tapping a shade could settle on a fabric close-up.
+        $product = $this->product([
+            'Colours' => [['name' => 'Indigo', 'hex' => '#2b3a67']],
+            'Textures' => ['Linen'],
+        ]);
+
+        $this->image($product, 1, 'Indigo');
+
+        $html = $this->get(route('product.show', $product))->assertOk()->getContent();
+
+        $this->assertStringContainsString("this.kkFollowSelection('colour')", $html);
+        $this->assertStringContainsString("this.kkFollowSelection('texture')", $html);
+        $this->assertStringContainsString(
+            'this.mediaTags[i][key] === want',
+            $html,
+            'The frame it moves to must be one tagged on the dimension that changed, not merely one tagged with something.'
+        );
+    }
+
+    public function test_a_shade_whose_name_carries_an_apostrophe_can_still_be_picked(): void
+    {
+        // Blade escapes ' to &#039; and the HTML parser hands Alpine back a
+        // literal one, which closes a single-quoted JS string early and makes
+        // the whole expression a syntax error - a swatch that does nothing when
+        // pressed. Harmless when it only set a variable; now that the gallery
+        // follows that variable, a dead swatch is a gallery that cannot move.
+        $product = $this->product([
+            'Colours' => [['name' => "Sailor's Blue", 'hex' => '#2b3a67']],
+        ]);
+
+        $this->image($product, 1, "Sailor's Blue");
+
+        $html = $this->get(route('product.show', $product))->assertOk()->getContent();
+
+        // Blade's @js hex-escapes the apostrophe INSIDE a single-quoted JS
+        // string, which is what makes it safe in a double-quoted HTML
+        // attribute. @json would have emitted a bare " and ended the attribute
+        // itself - on every colour, not just this one.
+        $this->assertStringContainsString(
+            "selectedColor = 'Sailor",
+            $html,
+            'The swatch must still assign the name.'
+        );
+        $this->assertStringContainsString(
+            "selectedColor = 'Sailor\\u0027s Blue'",
+            $html,
+            'The apostrophe must reach the browser hex-escaped inside a single-quoted JS string. Bare @json would have emitted a double quote and ended the HTML attribute itself - on every colour, not just this one.'
+        );
+    }
+
     public function test_a_product_with_no_images_still_renders(): void
     {
         $product = $this->product([

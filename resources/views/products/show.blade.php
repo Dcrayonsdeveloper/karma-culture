@@ -981,8 +981,18 @@
                     <div class="kk-colorpick__row">
                         @foreach($kkColours as $kkC)
                             <button type="button" class="kk-colorpick__btn"
-                                    :class="selectedColor === '{{ $kkC }}' ? 'is-selected' : ''"
-                                    @click="selectedColor = '{{ $kkC }}'"
+                                    {{-- @json, not '{{ }}', because Blade escapes an
+                                         apostrophe to &#039; and the HTML parser hands
+                                         Alpine back a literal one - which closes the JS
+                                         string early and makes the whole expression a
+                                         syntax error. A shade called "Sailor's Blue" had
+                                         a swatch that did nothing when pressed, and now
+                                         that the gallery follows this value, a dead
+                                         swatch is a gallery that cannot be moved. The
+                                         component's own initial value at the bottom of
+                                         this file already uses @json for this reason. --}}
+                                    :class="selectedColor === @js($kkC) ? 'is-selected' : ''"
+                                    @click="selectedColor = @js($kkC)"
                                     aria-label="{{ $kkC }}">
                                 <span class="kk-colorpick__dot" style="background-color: {{ $kkColourHex[$kkC] ?? '#dddddd' }};"></span>
                                 <span>{{ $kkC }}</span>
@@ -1017,9 +1027,13 @@
                             @php $kkSwatch = $kkTextureSwatches[mb_strtolower($kkT)] ?? null; @endphp
                             @if($kkSwatch)
                                 <button type="button" class="kk-texture-swatch"
-                                        :class="selectedTexture === '{{ $kkT }}' ? 'is-selected' : ''"
-                                        :aria-pressed="selectedTexture === '{{ $kkT }}'"
-                                        @click="selectedTexture = '{{ $kkT }}'"
+                                        {{-- @json for the same reason the colour swatch above
+                                             uses it: Blade escapes an apostrophe and the HTML
+                                             parser hands Alpine a literal one, closing the JS
+                                             string early. --}}
+                                        :class="selectedTexture === @js($kkT) ? 'is-selected' : ''"
+                                        :aria-pressed="selectedTexture === @js($kkT)"
+                                        @click="selectedTexture = @js($kkT)"
                                         title="{{ $kkT }}">
                                     {{-- The name is underneath, not removed: it names the
                                          button for a screen reader, and it is what a shopper
@@ -1036,9 +1050,9 @@
                                      pickable, so the row is never half-built while the
                                      library is still being filled in. --}}
                                 <button type="button" class="kk-sizeguide__size"
-                                        :class="selectedTexture === '{{ $kkT }}' ? 'is-selected' : ''"
-                                        :aria-pressed="selectedTexture === '{{ $kkT }}'"
-                                        @click="selectedTexture = '{{ $kkT }}'">{{ $kkT }}</button>
+                                        :class="selectedTexture === @js($kkT) ? 'is-selected' : ''"
+                                        :aria-pressed="selectedTexture === @js($kkT)"
+                                        @click="selectedTexture = @js($kkT)">{{ $kkT }}</button>
                             @endif
                         @endforeach
                     </div>
@@ -2632,9 +2646,10 @@
                 // Pause any playing gallery/zoom video when the active item or zoom changes,
                 // so audio never keeps playing after the user navigates away.
                 this.$watch('currentImage', () => this.pauseVideos());
-                // The gallery answers the colour and texture pickers beside it.
-                this.$watch('selectedColor', () => this.kkFollowSelection());
-                this.$watch('selectedTexture', () => this.kkFollowSelection());
+                // The gallery answers the colour and texture pickers beside it,
+                // and is told which of the two moved - see kkFollowSelection.
+                this.$watch('selectedColor', () => this.kkFollowSelection('colour'));
+                this.$watch('selectedTexture', () => this.kkFollowSelection('texture'));
                 /* Arrows and thumbnails change the slide under a still pointer.
                    Keyed on zoomPt - the pointer being over the frame at all -
                    rather than on hoverZoom: stepping off a video slide onto a
@@ -2875,20 +2890,41 @@
 
             /* Follow the shopper's choice with the gallery.
 
-               A frame that actually SHOWS the new choice is preferred over one
-               that merely survives the filter: tapping Indigo while looking at
-               the shared size chart should show indigo, not leave the size chart
-               up on the grounds that it still technically matches. Only when the
-               new selection has no photograph of its own does the current frame
-               stand - and even then it is moved if it has been filtered out. */
-            kkFollowSelection() {
+               Told WHICH picker moved - 'colour' or 'texture' - because the
+               three rules below are all about the value that just changed, and
+               a handler that only knows "something changed" cannot express any
+               of them:
+
+                 - already looking at a photograph of the thing just chosen?
+                   Stay exactly where you are. Tapping Linen while on the second
+                   Indigo shot must not rewind to the first one.
+                 - otherwise go to the first frame that actually SHOWS the new
+                   choice. Tapping Indigo while on the shared size chart should
+                   show indigo, and tapping Amber must not settle for a cotton
+                   close-up merely because that frame is tagged with something.
+                 - and when nothing photographs the new choice, leave the frame
+                   alone - moving only if the filter has taken it off screen.
+
+               This asked "is this frame tagged at all" instead, which meant a
+               frame tagged on the OTHER dimension won, and won again on every
+               tap: tapping through the fabrics of a product whose photographs
+               are tagged by shade snapped back to the first shade photo every
+               time. */
+            kkFollowSelection(key) {
                 if (!this.galleryTagged) return;
+
+                const want = this.kkTag(key === 'colour' ? this.selectedColor : this.selectedTexture);
                 const shown = this.visibleImages;
-                const showing = shown.find((i) => {
-                    const tag = this.mediaTags[i];
-                    return tag && (tag.colour !== null || tag.texture !== null);
-                });
+                const here = this.mediaTags[this.currentImage];
+
+                if (want !== null && here && here[key] === want && shown.includes(this.currentImage)) return;
+
+                const showing = want === null
+                    ? undefined
+                    : shown.find((i) => this.mediaTags[i] && this.mediaTags[i][key] === want);
+
                 if (showing !== undefined) { this.currentImage = showing; return; }
+
                 if (!shown.includes(this.currentImage)) this.currentImage = shown[0] ?? 0;
             },
 
