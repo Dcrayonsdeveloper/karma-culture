@@ -76,7 +76,7 @@
         // behind: it carried only ?status, so typing in the search box wiped
         // the payment and date filters the controller had been honouring all
         // along.
-        $kkFilterKeys = ['search', 'status', 'payment_status', 'from', 'to', 'date_from', 'date_to'];
+        $kkFilterKeys = ['search', 'status', 'payment_status', 'from', 'to', 'date_from', 'date_to', 'customer'];
 
         // filled(), not hasAny(): the search box and the payment select post on
         // every submit whether or not they hold anything, so hasAny() said
@@ -114,7 +114,7 @@
                      for. payment_status is deliberately absent from the list:
                      it has a <select> below, and sending it twice would put two
                      values in the query string. --}}
-                @foreach(['status', 'from', 'to', 'date_from', 'date_to', 'per_page'] as $kkCarry)
+                @foreach(['status', 'from', 'to', 'date_from', 'date_to', 'per_page', 'customer'] as $kkCarry)
                     @if(request()->filled($kkCarry))<input type="hidden" name="{{ $kkCarry }}" value="{{ request($kkCarry) }}">@endif
                 @endforeach
                 <div style="position: relative; flex: 1; max-width: 24rem;">
@@ -151,6 +151,49 @@
             @endif
         </div>
 
+        {{-- Showing one customer.
+
+             The badge that opens this view drops every other filter, because the
+             number on it is a lifetime total - so this bar has to say plainly
+             that the tabs, the search box and the calendar above are no longer
+             what is deciding these rows. --}}
+        @if($customerKey)
+            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1rem; background: #f7f4fe; border-bottom: 1px solid #e3e3e3;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5c35c4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;">
+                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                </svg>
+                <span style="font-size: 13px; color: #303030;">
+                    Showing every order from <strong>{{ $customerLabel }}</strong>
+                </span>
+                <a href="{{ route('admin.orders.index') }}" style="font-size: 13px; color: #005bd3; font-weight: 500; text-decoration: none; margin-left: auto; white-space: nowrap;">Show all orders</a>
+            </div>
+
+            {{-- The other half of the same person's history.
+
+                 An account and a mobile number are separate customers here and
+                 are never merged, because a merged number is one the admin
+                 cannot check. But the same human is routinely both - they bought
+                 as a guest and registered later - so where that other history
+                 exists, say so and link to it rather than leave the count
+                 quietly short. --}}
+            @if($alsoKey && $alsoCount > 0)
+                @php
+                    // Built as one string rather than assembled across several
+                    // lines of markup, so the sentence reaches the page as a
+                    // sentence.
+                    $alsoSentence = $alsoCount . ' more '
+                        . \Illuminate\Support\Str::plural('order', $alsoCount) . ' '
+                        . (\App\Support\CustomerIdentity::isGuestKey($alsoKey)
+                            ? 'placed as a guest on ' . \App\Support\CustomerIdentity::phoneOf($alsoKey)
+                            : 'placed on their account') . '.';
+                @endphp
+                <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: #fdfaf3; border-bottom: 1px solid #e3e3e3;">
+                    <span style="font-size: 13px; color: #616161;">{{ $alsoSentence }}</span>
+                    <a href="{{ route('admin.orders.index', ['customer' => $alsoKey]) }}" style="font-size: 13px; color: #005bd3; font-weight: 500; text-decoration: none;">Show those instead</a>
+                </div>
+            @endif
+        @endif
+
         {{-- Table --}}
         <div style="overflow-x: auto;">
             <table style="width: 100%;">
@@ -179,7 +222,17 @@
                                      name it was placed with rather than the
                                      word "Guest" - and so does the order of a
                                      customer who has since been deleted. --}}
-                                <span style="font-size: 13px; color: #303030;">{{ $order->customer_name }}</span>
+                                @php
+                                    $kkCustomerKey = \App\Support\CustomerIdentity::ofOrder($order);
+                                @endphp
+                                <div style="display: flex; align-items: center; gap: 0.375rem;">
+                                    <span style="font-size: 13px; color: #303030;">{{ $order->customer_name }}</span>
+                                    <x-admin.customer-history-badge
+                                        :order="$order"
+                                        :count="$kkCustomerKey ? ($orderCounts[$kkCustomerKey] ?? 0) : 0"
+                                        list-route="admin.orders.index"
+                                        noun="order" />
+                                </div>
                             </td>
                             <td>
                                 @php

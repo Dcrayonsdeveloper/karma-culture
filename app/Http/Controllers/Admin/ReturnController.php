@@ -10,6 +10,8 @@ use App\Models\DeliveryPartner;
 use App\Models\OrderReturn;
 use App\Services\ReportExportService;
 use App\Services\StoreCreditService;
+use App\Support\CustomerHistory;
+use App\Support\CustomerIdentity;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -117,6 +119,13 @@ class ReturnController extends Controller
             view()->share('errors', view()->shared('errors', new ViewErrorBag)->put('default', $validator->errors()));
         }
 
+        $customerKey = CustomerIdentity::isKey($filters['customer'] ?? null) ? $filters['customer'] : null;
+
+        // The same disclosure the Orders list makes: this person may also have a
+        // history under their other identity, and merging the two silently would
+        // be worse than pointing at it.
+        $alsoKey = $customerKey ? CustomerHistory::counterpartOf($customerKey) : null;
+
         return view('admin.returns.index', [
             'returns' => $returns,
             // The screen prints and re-links these, so it gets the validated
@@ -129,6 +138,20 @@ class ReturnController extends Controller
             // contradict the table underneath it.
             'stats' => $this->statusCounts($filters),
             'xlsxNotice' => self::xlsxRowCapNotice(),
+            // Lifetime return figures for every customer on the page, in one
+            // query. Two numbers each: the request count the badge shows, and
+            // the number of distinct orders behind it, because one order can
+            // raise several returns and a bare "3" would read as three
+            // shopping trips gone wrong.
+            'returnCounts' => CustomerHistory::returnCounts(CustomerHistory::keysOfReturns($returns)),
+            'customerKey' => $customerKey,
+            'customerLabel' => $customerKey
+                ? CustomerIdentity::describe($customerKey, $returns->first()?->order)
+                : null,
+            'alsoKey' => $alsoKey,
+            'alsoCount' => $alsoKey
+                ? (CustomerHistory::returnCounts([$alsoKey])[$alsoKey]['requests'] ?? 0)
+                : 0,
         ]);
     }
 
@@ -361,6 +384,11 @@ class ReturnController extends Controller
             'status' => ['nullable', Rule::in(self::STATUSES)],
             'search' => ['nullable', 'string', 'max:120'],
             ...$this->dateWindowRules(),
+            // Deliberately loose. A malformed key is IGNORED by filtered()
+            // rather than refused here, because bouncing an admin off the list
+            // for a mistyped query string is the failure mode every other rule
+            // on this screen is written to avoid.
+            'customer' => ['nullable', 'string', 'max:32'],
             'per_page' => ['nullable', 'integer', 'min:5', 'max:100'],
             'format' => $this->exportFormatRule(),
         ];
@@ -416,6 +444,7 @@ class ReturnController extends Controller
             'search' => $valid['search'] ?? null,
             'from' => $valid['from'] ?? null,
             'to' => $valid['to'] ?? null,
+            'customer' => $valid['customer'] ?? null,
             'per_page' => $valid['per_page'] ?? null,
             'format' => $valid['format'] ?? null,
         ];
@@ -451,6 +480,13 @@ class ReturnController extends Controller
                         ->orWhere('last_name', 'like', $term)
                         ->orWhere('email', 'like', $term));
             });
+        }
+
+        // "Only this customer", as opened by the repeat-returner badge beside a
+        // name. The same identity the Orders list uses, read off the ORDER the
+        // return was raised against, so the two screens agree about who is who.
+        if (CustomerIdentity::isKey($filters['customer'] ?? null)) {
+            CustomerHistory::scopeReturns($query, $filters['customer']);
         }
 
         // created_at IS the request timestamp - there is no requested_at column,

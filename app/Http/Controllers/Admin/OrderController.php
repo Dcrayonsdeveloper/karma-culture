@@ -12,6 +12,8 @@ use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use App\Services\ReportExportService;
 use App\Services\ShiprocketService;
+use App\Support\CustomerHistory;
+use App\Support\CustomerIdentity;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -74,6 +76,28 @@ class OrderController extends Controller
 
         $stats = $this->stats($filters);
 
+        // How many orders each customer on this page has ever placed - one
+        // query for the whole page, and deliberately NOT narrowed by the
+        // filters above. The badge is a lifetime total, which is why the link
+        // it carries drops every other filter: a badge reading 5 has to open
+        // five rows.
+        $orderCounts = CustomerHistory::orderCounts(CustomerHistory::keysOfOrders($orders));
+
+        $customerKey = CustomerIdentity::isKey($filters['customer'] ?? null) ? $filters['customer'] : null;
+
+        // Named off the page's own first row, so putting a name to a filtered
+        // guest costs no lookup.
+        $customerLabel = $customerKey
+            ? CustomerIdentity::describe($customerKey, $orders->first())
+            : null;
+
+        // An account and a mobile number are separate customers here, and the
+        // same person is often both - they bought as a guest, then registered.
+        // Rather than merge the two into a number nobody can check, say that the
+        // other half exists and let the admin go and look.
+        $alsoKey = $customerKey ? CustomerHistory::counterpartOf($customerKey) : null;
+        $alsoCount = $alsoKey ? (CustomerHistory::orderCounts([$alsoKey])[$alsoKey] ?? 0) : 0;
+
         // The window that is actually in force, under its canonical names and
         // already order-corrected. The blade builds both export links from this
         // rather than from the query string, which is what keeps the file and
@@ -86,7 +110,10 @@ class OrderController extends Controller
             $this->windowEnd($filters, 'to', 'date_to'),
         );
 
-        return view('admin.orders.index', compact('orders', 'stats', 'filters', 'window'));
+        return view('admin.orders.index', compact(
+            'orders', 'stats', 'filters', 'window',
+            'orderCounts', 'customerKey', 'customerLabel', 'alsoKey', 'alsoCount',
+        ));
     }
 
     public function export(Request $request, ReportExportService $exporter): StreamedResponse
@@ -254,6 +281,11 @@ class OrderController extends Controller
             // min:5 is the fix, not the ceiling: the old clamp had a maximum
             // and no minimum, so ?per_page=0 reached paginate(0) and the
             // paginator divided the total by it.
+            // Deliberately loose. A malformed key is IGNORED by filtered()
+            // rather than refused here, because bouncing an admin off the list
+            // for a mistyped query string is the failure mode every other rule
+            // on this screen is written to avoid.
+            'customer' => ['nullable', 'string', 'max:32'],
             'per_page' => ['nullable', 'integer', 'min:5', 'max:100'],
             'format' => $this->exportFormatRule(),
         ];
@@ -290,6 +322,13 @@ class OrderController extends Controller
                 $q->where('orders.order_number', 'like', $term)
                     ->orWhereHas('user', fn (Builder $uq) => $uq->where('email', 'like', $term));
             });
+        }
+
+        // "Only this customer", as opened by the repeat-customer badge beside a
+        // name. It sits on the shared builder rather than in index() so the
+        // export narrows with the screen, the way every other filter here does.
+        if (CustomerIdentity::isKey($filters['customer'] ?? null)) {
+            CustomerHistory::scopeOrders($query, $filters['customer']);
         }
 
         // Qualified column: the search above can add a whereHas over users, and

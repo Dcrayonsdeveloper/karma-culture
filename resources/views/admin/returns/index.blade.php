@@ -13,6 +13,7 @@
             'search' => $filters['search'],
             'from' => $filters['from'],
             'to' => $filters['to'],
+            'customer' => $filters['customer'],
             'per_page' => $filters['per_page'],
         ], fn ($value) => $value !== null && $value !== '');
 
@@ -102,6 +103,9 @@
                 @if($filters['from'])<input type="hidden" name="from" value="{{ $filters['from'] }}">@endif
                 @if($filters['to'])<input type="hidden" name="to" value="{{ $filters['to'] }}">@endif
                 @if($filters['per_page'])<input type="hidden" name="per_page" value="{{ $filters['per_page'] }}">@endif
+                {{-- And the customer, or searching inside one person's returns
+                     would quietly widen back out to the whole queue. --}}
+                @if($filters['customer'])<input type="hidden" name="customer" value="{{ $filters['customer'] }}">@endif
                 <div style="position: relative; flex: 1; max-width: 24rem;">
                     <svg style="position: absolute; left: 0.625rem; top: 50%; transform: translateY(-50%); color: #999;" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -126,6 +130,49 @@
                 <a href="{{ route('admin.returns.index') }}" style="font-size: 13px; color: #005bd3; font-weight: 500; text-decoration: none; white-space: nowrap;">Clear all</a>
             @endif
         </div>
+
+        {{-- Showing one customer.
+
+             The badge that opens this view drops every other filter, because the
+             number on it is a lifetime total - so this bar has to say plainly
+             that the tabs, the search box and the calendar above are no longer
+             what is deciding these rows. --}}
+        @if($customerKey)
+            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1rem; background: #f7f4fe; border-bottom: 1px solid #e3e3e3;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5c35c4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;">
+                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                </svg>
+                <span style="font-size: 13px; color: #303030;">
+                    Showing every return from <strong>{{ $customerLabel }}</strong>
+                </span>
+                <a href="{{ route('admin.returns.index') }}" style="font-size: 13px; color: #005bd3; font-weight: 500; text-decoration: none; margin-left: auto; white-space: nowrap;">Show all returns</a>
+            </div>
+
+            {{-- The other half of the same person's history.
+
+                 An account and a mobile number are separate customers here and
+                 are never merged, because a merged number is one the admin
+                 cannot check. But the same human is routinely both - they bought
+                 as a guest and registered later - so where that other history
+                 exists, say so and link to it rather than leave the count
+                 quietly short. --}}
+            @if($alsoKey && $alsoCount > 0)
+                @php
+                    // Built as one string rather than assembled across several
+                    // lines of markup, so the sentence reaches the page as a
+                    // sentence.
+                    $alsoSentence = $alsoCount . ' more '
+                        . \Illuminate\Support\Str::plural('return', $alsoCount) . ' '
+                        . (\App\Support\CustomerIdentity::isGuestKey($alsoKey)
+                            ? 'placed as a guest on ' . \App\Support\CustomerIdentity::phoneOf($alsoKey)
+                            : 'placed on their account') . '.';
+                @endphp
+                <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: #fdfaf3; border-bottom: 1px solid #e3e3e3;">
+                    <span style="font-size: 13px; color: #616161;">{{ $alsoSentence }}</span>
+                    <a href="{{ route('admin.returns.index', ['customer' => $alsoKey]) }}" style="font-size: 13px; color: #005bd3; font-weight: 500; text-decoration: none;">Show those instead</a>
+                </div>
+            @endif
+        @endif
 
         {{-- Table --}}
         <div style="overflow-x: auto;">
@@ -152,13 +199,31 @@
                                 <p style="font-size: 12px; color: #616161; margin-top: 1px;">{{ $return->created_at->format('M d, Y h:i A') }}</p>
                             </td>
                             <td>
+                                @php
+                                    // Read off the ORDER, not off returns.user_id:
+                                    // that column is nullable and says nothing
+                                    // about a guest, and the name shown here has
+                                    // to be the same one the Orders list shows.
+                                    $kkCustomerKey = \App\Support\CustomerIdentity::ofOrder($return->order);
+                                    $kkReturnTally = $kkCustomerKey ? ($returnCounts[$kkCustomerKey] ?? null) : null;
+                                @endphp
                                 <div style="display: flex; align-items: center; gap: 0.625rem;">
                                     <div style="width: 2rem; height: 2rem; background: #f1f1f1; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                        <span style="font-size: 11px; font-weight: 600; color: #616161;">{{ strtoupper(substr($return->order->user->first_name ?? 'G', 0, 1)) }}</span>
+                                        <span style="font-size: 11px; font-weight: 600; color: #616161;">{{ strtoupper(substr($return->order?->customer_name ?: 'G', 0, 1)) }}</span>
                                     </div>
                                     <div>
-                                        <p style="font-size: 13px; font-weight: 500; color: #303030;">{{ $return->order->user->full_name ?? 'N/A' }}</p>
-                                        <p style="font-size: 12px; color: #616161;">{{ $return->order->user->email ?? '-' }}</p>
+                                        <div style="display: flex; align-items: center; gap: 0.375rem;">
+                                            <p style="font-size: 13px; font-weight: 500; color: #303030;">{{ $return->order?->customer_name ?? 'N/A' }}</p>
+                                            <x-admin.customer-history-badge
+                                                :order="$return->order"
+                                                :count="$kkReturnTally['requests'] ?? 0"
+                                                list-route="admin.returns.index"
+                                                noun="return"
+                                                :detail="$kkReturnTally && $kkReturnTally['orders'] !== $kkReturnTally['requests']
+                                                    ? 'across ' . $kkReturnTally['orders'] . ' ' . \Illuminate\Support\Str::plural('order', $kkReturnTally['orders'])
+                                                    : null" />
+                                        </div>
+                                        <p style="font-size: 12px; color: #616161;">{{ $return->order->user->email ?? $return->order?->customer_phone ?: '-' }}</p>
                                     </div>
                                 </div>
                             </td>
