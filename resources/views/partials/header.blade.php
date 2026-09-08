@@ -146,18 +146,36 @@
                     </div>
 
                     <a href="{{ route('bestsellers') }}" class="px-2 xl:px-2.5 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.12em] uppercase whitespace-nowrap">Bestsellers</a>
-                    {{-- Points at the running festival sale when there is one, and
-                         falls back to /deals when there is not, so the button is
-                         never a link to an empty page. The lookup is a cached
-                         array, not a query - see FestivalSale::liveSummary(). --}}
+                    <a href="{{ route('deals') }}" class="px-2.5 py-2 text-[12px] text-kk-tan-dark hover:text-kk-brown font-semibold transition-colors tracking-widest uppercase whitespace-nowrap">Introductory Offer</a>
+                    {{-- The running festival sale sits BESIDE the introductory
+                         offer rather than in place of it: they are two different
+                         promotions and a shopper who came looking for one should
+                         not find the other wearing its name. Drawn only while a
+                         sale is live, so the nav is never a link to an empty
+                         page. The lookup is a cached array, not a query - see
+                         FestivalSale::liveSummary(). --}}
                     @php $kkFestival = \App\Models\FestivalSale::liveSummary(); @endphp
-                    <a href="{{ $kkFestival ? route('festival-sale.show', $kkFestival['slug']) : route('deals') }}"
-                       class="px-2.5 py-2 text-[12px] text-kk-tan-dark hover:text-kk-brown font-semibold transition-colors tracking-widest uppercase whitespace-nowrap">
-                        {{ $kkFestival ? $kkFestival['name'] : 'Introductory Offer' }}
-                    </a>
+                    @if($kkFestival)
+                        <a href="{{ route('festival-sale.show', $kkFestival['slug']) }}"
+                           class="kk-festival-nav px-2.5 py-2 text-[12px] font-semibold transition-colors tracking-widest uppercase whitespace-nowrap">
+                            {{ $kkFestival['name'] }}
+                        </a>
+                    @endif
                 </nav>
 
                 <style>
+                    /* The festival link sits next to "Introductory Offer", so it
+                       needs to read as the louder of the two without becoming a
+                       button in a row of text links. A tinted pill in the sale's
+                       own orange does that at 12px where a colour change alone
+                       would not. */
+                    .kk-festival-nav {
+                        color: #B06D0F;
+                        background: #FDF1E0;
+                        border-radius: 999px;
+                    }
+                    .kk-festival-nav:hover { color: #fff; background: #F8931D; }
+
                     .kk-mega { position: relative; }
                     /* Normal compact dropdown - categories listed in sequence */
                     .kk-dd {
