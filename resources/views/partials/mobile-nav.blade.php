@@ -4,7 +4,11 @@
      @keydown.escape.window="open = false"
      x-show="open"
      x-cloak
-     class="lg:hidden fixed inset-0 z-50"
+     {{-- hdr, not lg: this drawer has to stop hiding at exactly the width the
+          header's hamburger starts showing. While the two disagreed there was
+          a band where the button was on screen and the panel it opens was
+          display:none, so the menu simply did not respond. --}}
+     class="hdr:hidden fixed inset-0 z-50"
      role="dialog"
      aria-modal="true"
      aria-label="Navigation menu">

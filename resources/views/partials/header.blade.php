@@ -58,19 +58,19 @@
         }
     </style>
     @endif
-    <div class="w-full px-3 lg:px-4">
-        {{-- Bar height matches the logo exactly (h-16 lg:h-20), so there is no
+    <div class="w-full px-3 hdr:px-4">
+        {{-- Bar height matches the logo exactly (h-16 hdr:h-20), so there is no
              dead space above or below it. Previously h-20/h-24, which left 8px
              of padding on each side of the logo. --}}
-        <div class="relative flex items-center justify-between h-16 lg:h-20">
+        <div class="relative flex items-center justify-between h-16 hdr:h-20">
 
             <!-- Left: Mobile menu + Desktop Nav -->
-            {{-- lg:min-w-fit + shrink-0 on the nav: Chrome miscomputes this nested
+            {{-- hdr:min-w-fit + shrink-0 on the nav: Chrome miscomputes this nested
                  flex row's automatic minimum (min-width:auto), so without explicit
                  floors the nav links slide under the search bar at lg-xl widths. --}}
-            <div class="flex items-center gap-3 lg:gap-0 flex-1 lg:min-w-fit">
+            <div class="flex items-center gap-3 hdr:gap-0 flex-1 hdr:min-w-fit">
                 <!-- Mobile menu button -->
-                <button @click="$dispatch('toggle-mobile-nav')" class="lg:hidden p-2.5 -ml-2.5 text-kk-brown hover:text-kk-tan-dark" aria-label="Open menu">
+                <button @click="$dispatch('toggle-mobile-nav')" class="hdr:hidden p-2.5 -ml-2.5 text-kk-brown hover:text-kk-tan-dark" aria-label="Open menu">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"/>
                     </svg>
@@ -79,19 +79,19 @@
                 {{-- Logo: centered (absolute) only below sm, where the search bar is
                      collapsed to an icon. From sm up it must sit in normal flow on the
                      left, otherwise the inline search bar overlaps it on tablets. --}}
-                <a href="{{ url('/') }}" class="absolute inset-0 flex items-center justify-center pointer-events-none sm:static sm:inset-auto sm:justify-start sm:pointer-events-auto shrink-0 sm:mr-3 lg:mr-4 xl:mr-8">
+                <a href="{{ url('/') }}" class="absolute inset-0 flex items-center justify-center pointer-events-none sm:static sm:inset-auto sm:justify-start sm:pointer-events-auto shrink-0 sm:mr-3 hdr:mr-4 xl:mr-8">
                     @php $siteLogo = \App\Models\Setting::get('site_logo', ''); @endphp
                     @if($siteLogo)
                         {{-- A custom logo whose file has gone missing used to leave a hole
                              where the brand mark should be; fall back to the bundled one. --}}
-                        <img id="site-logo" src="{{ asset_v('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-16 lg:h-20 max-w-[40vw] sm:max-w-none object-contain pointer-events-auto" data-fallback="{{ asset_v('images/karmaa-kulture-logo.png') }}">
+                        <img id="site-logo" src="{{ asset_v('storage/' . $siteLogo) }}" alt="{{ config('app.name', 'Karmaa Kulture') }}" class="h-16 hdr:h-20 max-w-[40vw] sm:max-w-none object-contain pointer-events-auto" data-fallback="{{ asset_v('images/karmaa-kulture-logo.png') }}">
                     @else
-                        <img id="site-logo" src="{{ asset_v('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-16 lg:h-20 max-w-[40vw] sm:max-w-none object-contain pointer-events-auto">
+                        <img id="site-logo" src="{{ asset_v('images/karmaa-kulture-logo.png') }}" alt="Karmaa Kulture" class="h-16 hdr:h-20 max-w-[40vw] sm:max-w-none object-contain pointer-events-auto">
                     @endif
                 </a>
 
                 <!-- Desktop Navigation (Left side) -->
-                <nav class="hidden lg:flex items-center gap-1 shrink-0">
+                <nav class="hidden hdr:flex items-center gap-1 shrink-0">
                     {{-- /shop is the whole catalogue with the filter sidebar on it,
                          and until now nothing in the header, the mobile drawer or the
                          footer pointed at it: a shopper reached it by failing a search
@@ -227,10 +227,10 @@
             </div>
 
             <!-- Right: Nav links + Icons -->
-            <div class="flex items-center gap-1 lg:gap-0 flex-1 justify-end">
+            <div class="flex items-center gap-1 hdr:gap-0 flex-1 justify-end">
 
                 <!-- Desktop Navigation (Right side) -->
-                <nav class="hidden lg:flex items-center gap-1 mr-2">
+                <nav class="hidden hdr:flex items-center gap-1 mr-2">
                     @if(config('app.wholesale_enabled'))
                         <a href="{{ route('wholesale') }}" class="px-2 xl:px-3 py-2 text-[12px] text-kk-brown hover:text-kk-tan-dark font-medium transition-colors tracking-[0.18em] uppercase">Wholesale</a>
                     @endif
@@ -356,7 +356,7 @@
                      is already sitting there in full. --}}
                 <button type="button"
                         @click="$dispatch('open-global-filters')"
-                        class="relative p-2 lg:p-1.5 xl:p-2 text-kk-brown hover:text-kk-tan-dark transition-colors kk-filters-btn"
+                        class="relative p-2 hdr:p-1.5 xl:p-2 text-kk-brown hover:text-kk-tan-dark transition-colors kk-filters-btn"
                         aria-label="Filters" title="Filters">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
@@ -364,7 +364,7 @@
                 </button>
 
                 <!-- Wishlist -->
-                <a href="{{ route('wishlist') }}" class="relative p-2.5 lg:p-2 text-kk-brown hover:text-kk-tan-dark transition-colors hidden sm:flex" aria-label="Wishlist">
+                <a href="{{ route('wishlist') }}" class="relative p-2.5 hdr:p-2 text-kk-brown hover:text-kk-tan-dark transition-colors hidden sm:flex" aria-label="Wishlist">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                     </svg>
@@ -396,7 +396,7 @@
                         $unreadNotificationCount = auth()->user()->notifications()->forCustomer()->unread()->count();
                     @endphp
                     <a href="{{ route('account.notifications') }}"
-                       class="relative p-2 lg:p-1.5 xl:p-2 text-kk-brown hover:text-kk-tan-dark transition-colors hidden sm:flex"
+                       class="relative p-2 hdr:p-1.5 xl:p-2 text-kk-brown hover:text-kk-tan-dark transition-colors hidden sm:flex"
                        aria-label="Notifications{{ $unreadNotificationCount > 0 ? ', ' . $unreadNotificationCount . ' unread' : '' }}">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
@@ -411,7 +411,7 @@
                 <!-- User account - desktop -->
                 @guest
                     <button type="button"
-                            class="hidden lg:block p-2 text-kk-brown hover:text-kk-tan-dark transition-colors"
+                            class="hidden hdr:block p-2 text-kk-brown hover:text-kk-tan-dark transition-colors"
                             aria-label="Login"
                             @click="$dispatch('open-login-modal')">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -419,8 +419,8 @@
                         </svg>
                     </button>
                 @else
-                <div class="relative hidden lg:block" x-data="dropdown()">
-                    <button @click="toggle()" class="p-2 lg:p-1.5 xl:p-2 text-kk-brown hover:text-kk-tan-dark transition-colors" aria-label="Account">
+                <div class="relative hidden hdr:block" x-data="dropdown()">
+                    <button @click="toggle()" class="p-2 hdr:p-1.5 xl:p-2 text-kk-brown hover:text-kk-tan-dark transition-colors" aria-label="Account">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                         </svg>
@@ -448,7 +448,7 @@
                 @endguest
 
                 <!-- Cart -->
-                <a href="{{ route('cart.index') }}" class="relative p-2 lg:p-1.5 xl:p-2 text-kk-brown hover:text-kk-tan-dark transition-colors" aria-label="Cart">
+                <a href="{{ route('cart.index') }}" class="relative p-2 hdr:p-1.5 xl:p-2 text-kk-brown hover:text-kk-tan-dark transition-colors" aria-label="Cart">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                     </svg>
