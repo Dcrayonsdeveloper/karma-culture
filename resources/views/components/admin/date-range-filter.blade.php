@@ -30,6 +30,16 @@
     // Only a window that came from the URL is worth offering to reset.
     $kkFiltered = request()->filled($fromName) || request()->filled($toName) || request()->filled('period');
 
+    // Reset clears this row and only this row - the same parameters the hidden
+    // inputs above carry, kept. On the report screens the range is the only
+    // filter, so this is the bare action URL exactly as before; on the four
+    // admin list screens the component now sits beside a status tab and a
+    // search box, and a bare $kkAction here quietly threw both away - while
+    // reading as "reset the dates" and sitting next to a "Clear all" link that
+    // already means everything.
+    $kkResetQuery = \Illuminate\Support\Arr::query($kkCarry);
+    $kkResetUrl = $kkResetQuery === '' ? $kkAction : $kkAction.'?'.$kkResetQuery;
+
     $kkError = $errors->first($fromName) ?: $errors->first($toName);
 @endphp
 
@@ -60,7 +70,7 @@
     <button type="submit" class="btn btn-secondary" style="font-size: 13px; padding: 0.375rem 0.75rem;">Apply</button>
 
     @if($kkFiltered)
-        <a href="{{ $kkAction }}" style="font-size: 12px; color: #6F9CA2; text-decoration: none;">Reset</a>
+        <a href="{{ $kkResetUrl }}" style="font-size: 12px; color: #6F9CA2; text-decoration: none;">Reset</a>
     @endif
 
     {{-- Full width so the message sits under the row rather than beside the

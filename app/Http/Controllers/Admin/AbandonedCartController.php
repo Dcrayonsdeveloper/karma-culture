@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\ExportsAdminList;
 use App\Http\Controllers\Controller;
 use App\Models\AbandonedCart;
 use App\Models\Order;
@@ -20,6 +21,12 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AbandonedCartController extends Controller
 {
+    // csvCell() used to live at the bottom of this file, and a near-copy of it
+    // at the bottom of NewsletterController. Four more list screens now need
+    // the same de-fanging, so it moved out rather than being pasted a third
+    // time; the trait carries the original docblock explaining the attack.
+    use ExportsAdminList;
+
     /** Columns a list can be ordered by. orderBy() cannot bind an identifier. */
     private const SORTABLE = [
         'abandoned_at' => 'abandoned_carts.abandoned_at',
@@ -457,26 +464,5 @@ class AbandonedCartController extends Controller
             ->count();
 
         return array_map('intval', $padded);
-    }
-
-    /**
-     * De-fang one CSV field.
-     *
-     * A value opening with =, +, - or @ is a formula to Excel and Google
-     * Sheets, so a customer who registers as `=HYPERLINK("http://evil","hi")`
-     * gets that executed in the spreadsheet of whoever opens the export. A
-     * leading tab makes it text and is invisible in the sheet. Quoting is left
-     * to fputcsv inside ReportExportService - doubling it here would put
-     * literal quotes in every cell.
-     */
-    private function csvCell(?string $value): string
-    {
-        $value = (string) $value;
-
-        if ($value !== '' && str_contains("=+-@\t\r", $value[0])) {
-            return "\t".$value;
-        }
-
-        return $value;
     }
 }

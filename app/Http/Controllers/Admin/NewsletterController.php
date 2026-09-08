@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\ExportsAdminList;
 use App\Http\Controllers\Controller;
 use App\Models\NewsletterSubscriber;
 use Illuminate\Database\Eloquent\Builder;
@@ -13,6 +14,11 @@ use Illuminate\View\View;
 
 class NewsletterController extends Controller
 {
+    // For csvCell(). The de-fanging half of what used to be this file's own
+    // private copy now lives in one place; the quoting half stays below,
+    // because this is the only export left that writes its CSV by hand.
+    use ExportsAdminList;
+
     /**
      * The filters the list and the export both understand.
      *
@@ -125,16 +131,17 @@ class NewsletterController extends Controller
      * a subscriber who signs up as `=HYPERLINK("http://evil","click")` gets
      * that executed in the spreadsheet of whoever opens the export. Prefixing a
      * tab makes the cell text, and the tab is invisible in the sheet.
+     *
+     * The tab is now ExportsAdminList::csvCell()'s job, shared with every other
+     * admin export. The quoting stays here and only here: export() below
+     * assembles its CSV string itself rather than going through
+     * ReportExportService, so nothing else is doing the quoting for it. The
+     * other screens must NOT copy this method - fputcsv already quotes, and a
+     * second pass puts literal quotes in every cell.
      */
-    private function csvCell(?string $value): string
+    private function quotedCsvCell(?string $value): string
     {
-        $value = (string) $value;
-
-        if ($value !== '' && str_contains("=+-@\t\r", $value[0])) {
-            $value = "\t".$value;
-        }
-
-        return '"'.str_replace('"', '""', $value).'"';
+        return '"'.str_replace('"', '""', $this->csvCell($value)).'"';
     }
 
     public function export(Request $request): Response
@@ -149,12 +156,12 @@ class NewsletterController extends Controller
         $csv = "Email,Name,Phone,Source,Status,Subscribed At\n";
         foreach ($subscribers as $sub) {
             $csv .= implode(',', [
-                $this->csvCell($sub->email),
-                $this->csvCell($sub->name),
-                $this->csvCell($sub->phone),
-                $this->csvCell($sub->source),
-                $this->csvCell($sub->is_active ? 'Active' : 'Inactive'),
-                $this->csvCell($sub->subscribed_at?->format('Y-m-d H:i') ?? $sub->created_at->format('Y-m-d H:i')),
+                $this->quotedCsvCell($sub->email),
+                $this->quotedCsvCell($sub->name),
+                $this->quotedCsvCell($sub->phone),
+                $this->quotedCsvCell($sub->source),
+                $this->quotedCsvCell($sub->is_active ? 'Active' : 'Inactive'),
+                $this->quotedCsvCell($sub->subscribed_at?->format('Y-m-d H:i') ?? $sub->created_at->format('Y-m-d H:i')),
             ])."\n";
         }
 
