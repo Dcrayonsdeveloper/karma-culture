@@ -69,13 +69,30 @@ class ReturnController extends Controller
             ->with('items.product:id,name,slug')
             ->get();
 
-        // Filter out items that already have return requests
+        // Filter out items that already have return requests.
+        //
+        // values() is load-bearing, not tidiness. reject() and filter() KEEP the
+        // original keys, and the form hands this straight to Js::from() - which
+        // serialises a collection whose keys are 0,1,2 as a JSON array, and one
+        // whose keys are 1,2 as a JSON OBJECT. So the moment the first order (or
+        // the first item) was dropped, the page shipped `{"2":{...}}` to Alpine,
+        // `orders.find(...)` threw "find is not a function", and every binding
+        // that reads currentOrder died with it: the refund cards lost their
+        // selected state, "Select Items to Return" never appeared, and Submit
+        // stayed disabled forever. Steps 1 and 2 kept working, because they only
+        // read selectedOrder and type - which is what made it look cosmetic.
+        //
+        // It only bites a customer who has already returned something, which is
+        // why it survived: a fresh account never sees it.
         $orders->each(function ($order) use ($returnedItemIds) {
-            $order->setRelation('items', $order->items->reject(fn ($item) => in_array($item->id, $returnedItemIds)));
+            $order->setRelation(
+                'items',
+                $order->items->reject(fn ($item) => in_array($item->id, $returnedItemIds))->values()
+            );
         });
 
         // Remove orders with no returnable items left
-        $orders = $orders->filter(fn ($order) => $order->items->isNotEmpty());
+        $orders = $orders->filter(fn ($order) => $order->items->isNotEmpty())->values();
 
         // Every Request Return button on the site links here with ?order=,
         // and the form has always ignored it - a customer who clicked from one
