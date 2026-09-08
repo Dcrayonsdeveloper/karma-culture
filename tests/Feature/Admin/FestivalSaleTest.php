@@ -86,7 +86,7 @@ class FestivalSaleTest extends TestCase
             'discount_percent' => '25',
             'is_active' => '1',
             'show_on_home' => '1',
-            'products' => [],
+            'product_ids' => '',
         ], $overrides);
     }
 
@@ -96,7 +96,7 @@ class FestivalSaleTest extends TestCase
 
         $this->admin()
             ->post(route('admin.festival-sales.store'), $this->payload([
-                'products' => [$product->id],
+                'product_ids' => (string) $product->id,
             ]))
             ->assertRedirect();
 
@@ -333,7 +333,7 @@ class FestivalSaleTest extends TestCase
             ->post(route('admin.festival-sales.store'), $this->payload([
                 'name' => 'Not live yet',
                 'is_active' => '0',
-                'products' => [$product->id],
+                'product_ids' => (string) $product->id,
             ]))
             ->assertRedirect();
 
@@ -417,7 +417,7 @@ class FestivalSaleTest extends TestCase
         $product = $this->makeProduct();
 
         $this->admin()->post(route('admin.festival-sales.store'), $this->payload([
-            'products' => [$product->id],
+            'product_ids' => (string) $product->id,
             'banner' => UploadedFile::fake()->image('diwali.jpg', 1600, 500),
         ]))->assertRedirect();
 
@@ -494,7 +494,7 @@ class FestivalSaleTest extends TestCase
 
         $this->admin()->post(route('admin.festival-sales.store'), $this->payload([
             'name' => 'Diwali Hero Sale',
-            'products' => [$product->id],
+            'product_ids' => (string) $product->id,
             'banner' => UploadedFile::fake()->image('diwali-hero.jpg', 1600, 500),
         ]))->assertRedirect();
 
@@ -521,6 +521,76 @@ class FestivalSaleTest extends TestCase
         $sale = FestivalSale::firstOrFail();
 
         $this->get('/')->assertOk()->assertDontSee($sale->bannerUrl(), false);
+    }
+
+    /**
+     * The selection must post as ONE field, never one input per product.
+     *
+     * PHP's max_input_vars is 1000 and a sale can hold the whole catalogue. With
+     * a `products[]` input per tick, a 995-product sale posted ~1010 fields and
+     * PHP silently dropped the tail - which is the Live switch, "Show banner on
+     * home page" and the banner upload, all of which sit after the picker in the
+     * DOM. The symptom was a checkbox that would not stay ticked; the cause was
+     * that the field never arrived at all, and $request->boolean() reads a
+     * missing key as false.
+     *
+     * PHPUnit does not go through PHP's input parser, so the truncation itself
+     * cannot be reproduced here - but the thing that caused it can be, and this
+     * is what stops it coming back.
+     */
+    public function test_the_selection_posts_as_a_single_field(): void
+    {
+        $this->makeProduct();
+        $this->makeProduct();
+
+        $html = $this->admin()
+            ->get(route('admin.festival-sales.create'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringNotContainsString(
+            'name="products[]"',
+            $html,
+            'One input per product overruns max_input_vars and silently drops every field after the picker.'
+        );
+        $this->assertSame(
+            1,
+            substr_count($html, 'name="product_ids"'),
+            'The whole selection should post as exactly one field.'
+        );
+    }
+
+    /** A big selection has to survive the round trip, ids and switches alike. */
+    public function test_a_large_selection_round_trips_with_the_switches_intact(): void
+    {
+        $ids = collect(range(1, 40))->map(fn () => $this->makeProduct()->id);
+
+        $this->admin()
+            ->post(route('admin.festival-sales.store'), $this->payload([
+                'name' => 'Big Selection',
+                'product_ids' => $ids->implode(','),
+            ]))
+            ->assertRedirect();
+
+        $sale = FestivalSale::firstOrFail();
+
+        $this->assertTrue($sale->is_active, 'The Live switch must survive a big selection.');
+        $this->assertTrue($sale->show_on_home, 'Show-on-home must survive a big selection.');
+        $this->assertSame(40, $sale->products()->count());
+    }
+
+    /** Junk and unknown ids are dropped, not fatal - and never double-counted. */
+    public function test_unknown_and_duplicate_ids_are_ignored(): void
+    {
+        $product = $this->makeProduct();
+
+        $this->admin()
+            ->post(route('admin.festival-sales.store'), $this->payload([
+                'product_ids' => $product->id.',,'.$product->id.',99999999,abc',
+            ]))
+            ->assertRedirect();
+
+        $this->assertSame(1, FestivalSale::firstOrFail()->products()->count());
     }
 
     /**
