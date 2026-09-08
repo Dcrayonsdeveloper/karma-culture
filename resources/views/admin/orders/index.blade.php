@@ -1,13 +1,47 @@
 <x-layouts.admin>
     <x-slot name="title">Orders</x-slot>
 
+    @php
+        // What the two download links carry. Every date name is stripped out of
+        // the raw query string and replaced by $window, the one the controller
+        // resolved: the file is then cut exactly where the table is.
+        //
+        // Building the links from request()->except('page', 'format') alone was
+        // not equivalent. http_build_query() drops a null, so on
+        // ?from=&to=&date_from=2026-03-01&date_to=2026-03-31 - which is what
+        // pressing Apply with an empty calendar on a legacy bookmark submits -
+        // the empty pair vanished from the href, the old aliases survived it,
+        // and the download came back cut to March while the page showed the
+        // whole table.
+        $kkExportParams = request()->except(['page', 'format', 'from', 'to', 'date_from', 'date_to']) + $window;
+    @endphp
+
     <x-slot name="header">
         <div class="page-header">
             <h1>Orders</h1>
+            {{-- The filters on screen ride along, minus ?page - an export is
+                 never one page of the table - and minus ?format, which each
+                 link sets for itself. --}}
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <a href="{{ route('admin.orders.export', $kkExportParams) }}"
+                   class="btn btn-secondary btn-sm">Export CSV</a>
+                <a href="{{ route('admin.orders.export', $kkExportParams + ['format' => 'xlsx']) }}"
+                   class="btn btn-secondary btn-sm"
+                   title="{{ \App\Http\Controllers\Admin\OrderController::xlsxRowCapNotice() }}">Export Excel</a>
+            </div>
         </div>
     </x-slot>
 
-    {{-- Stats row --}}
+    {{-- A filter this screen refuses - a status outside the enum, a page size
+         outside the clamp, a window that reads backwards - throws and redirects
+         back, and without this the page simply re-rendered unchanged with the
+         search box empty and no reason given. --}}
+    <x-admin.form-errors title="That filter could not be applied" />
+
+    {{-- Stats row. These count the same orders the table below does: the
+         filters apply, and only the status clause is left off, so a tile still
+         says how many orders are in a status while a tab narrows the list to
+         one of them. --}}
     <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 1px; background: #e3e3e3; border-radius: 0.75rem; overflow: hidden; margin-bottom: 1rem;">
         <div style="background: white; padding: 0.875rem 1rem;">
             <p style="font-size: 13px; color: #616161; margin-bottom: 2px;">Total</p>
@@ -35,6 +69,30 @@
         </div>
     </div>
 
+    @php
+        // Every parameter that narrows the table, named once. Three lists used
+        // to be kept by hand - the search form's hidden inputs, the "Clear all"
+        // test and the empty state's - and the first was already a filter
+        // behind: it carried only ?status, so typing in the search box wiped
+        // the payment and date filters the controller had been honouring all
+        // along.
+        $kkFilterKeys = ['search', 'status', 'payment_status', 'from', 'to', 'date_from', 'date_to'];
+
+        // filled(), not hasAny(): the search box and the payment select post on
+        // every submit whether or not they hold anything, so hasAny() said
+        // "filters are applied" - and offered to clear them - after a search for
+        // nothing at all.
+        $kkHasFilters = collect($kkFilterKeys)->contains(fn ($kkKey) => request()->filled($kkKey));
+
+        $kkPaymentStatuses = [
+            'pending' => 'Pending',
+            'paid' => 'Paid',
+            'failed' => 'Failed',
+            'refunded' => 'Refunded',
+            'partial_refund' => 'Partially refunded',
+        ];
+    @endphp
+
     {{-- Orders card --}}
     <div class="card">
         {{-- Tab filters --}}
@@ -47,21 +105,48 @@
             @endforeach
         </div>
 
-        {{-- Search + Filter bar --}}
-        <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;">
+        {{-- Search + Filter bar. Two forms and a link side by side, hence
+             flex-wrap: a narrow admin window drops the calendar onto its own
+             row rather than squashing the search box to nothing. --}}
+        <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3; flex-wrap: wrap;">
             <form action="{{ route('admin.orders.index') }}" method="GET" style="display: flex; align-items: center; gap: 0.5rem; flex: 1;">
-                @if(request('status'))<input type="hidden" name="status" value="{{ request('status') }}">@endif
+                {{-- Carry every filter this form does not own its own control
+                     for. payment_status is deliberately absent from the list:
+                     it has a <select> below, and sending it twice would put two
+                     values in the query string. --}}
+                @foreach(['status', 'from', 'to', 'date_from', 'date_to', 'per_page'] as $kkCarry)
+                    @if(request()->filled($kkCarry))<input type="hidden" name="{{ $kkCarry }}" value="{{ request($kkCarry) }}">@endif
+                @endforeach
                 <div style="position: relative; flex: 1; max-width: 24rem;">
                     <svg style="position: absolute; left: 0.625rem; top: 50%; transform: translateY(-50%); color: #999; width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
-                    <input type="text" name="search" value="{{ request('search') }}"
+                    {{-- maxlength matches the max:120 rule, so the common case
+                         is caught in the box rather than by a redirect that
+                         empties it. --}}
+                    <input type="text" name="search" value="{{ request('search') }}" maxlength="120"
                            placeholder="Search orders"
                            style="padding-left: 2rem; border: 1px solid #c9cccf; border-radius: 0.5rem; font-size: 13px; width: 100%; padding-top: 0.375rem; padding-bottom: 0.375rem; padding-right: 0.625rem;">
                 </div>
+                {{-- The controller has always honoured ?payment_status and the
+                     page has never had a way to set it, so "Clear all" was
+                     offering to clear a filter nothing could apply. --}}
+                <select name="payment_status" class="form-input" aria-label="Payment status"
+                        style="font-size: 13px; padding: 0.375rem 0.5rem; width: auto;">
+                    <option value="">All payments</option>
+                    @foreach($kkPaymentStatuses as $kkValue => $kkLabel)
+                        <option value="{{ $kkValue }}" @selected(request('payment_status') === $kkValue)>{{ $kkLabel }}</option>
+                    @endforeach
+                </select>
                 <button type="submit" class="btn btn-secondary btn-sm">Search</button>
             </form>
-            @if(request()->hasAny(['search', 'status', 'payment_status', 'date_from', 'date_to']))
+
+            {{-- A SIBLING of the search form, never a child: the component
+                 renders its own <form>, and a browser hoists a nested form's
+                 fields into the outer one. --}}
+            <x-admin.date-range-filter :action="route('admin.orders.index')" />
+
+            @if($kkHasFilters)
                 <a href="{{ route('admin.orders.index') }}" style="font-size: 13px; color: #005bd3; font-weight: 500; text-decoration: none; white-space: nowrap;">Clear all</a>
             @endif
         </div>
@@ -90,7 +175,11 @@
                                 <span style="font-size: 13px; color: #616161;">{{ $order->created_at->format('M d, Y') }}</span>
                             </td>
                             <td>
-                                <span style="font-size: 13px; color: #303030;">{{ $order->user->full_name ?? 'Guest' }}</span>
+                                {{-- The accessor, so a guest order shows the
+                                     name it was placed with rather than the
+                                     word "Guest" - and so does the order of a
+                                     customer who has since been deleted. --}}
+                                <span style="font-size: 13px; color: #303030;">{{ $order->customer_name }}</span>
                             </td>
                             <td>
                                 @php
@@ -98,11 +187,15 @@
                                         'paid' => 'badge-success',
                                         'pending' => 'badge-warning',
                                         'failed' => 'badge-error',
-                                        'refunded' => 'badge-neutral',
+                                        'refunded', 'partial_refund' => 'badge-neutral',
                                         default => 'badge-neutral',
                                     };
                                 @endphp
-                                <span class="badge {{ $paymentBadge }}">{{ ucfirst($order->payment_status) }}</span>
+                                {{-- str_replace as well as ucfirst, or the
+                                     partial_refund member reads
+                                     "Partial_refund" - the fulfilment column
+                                     below has always done it properly. --}}
+                                <span class="badge {{ $paymentBadge }}">{{ ucfirst(str_replace('_', ' ', $order->payment_status)) }}</span>
                             </td>
                             <td>
                                 @php
@@ -118,7 +211,10 @@
                                 <span class="badge {{ $statusBadge }}">{{ ucfirst(str_replace('_', ' ', $order->status)) }}</span>
                             </td>
                             <td style="text-align: right;">
-                                <span style="font-size: 13px; color: #616161;">{{ $order->items->count() }} items</span>
+                                {{-- withCount() on the query, so this number
+                                     costs one subquery rather than every
+                                     OrderItem on the page. --}}
+                                <span style="font-size: 13px; color: #616161;">{{ $order->items_count }} items</span>
                             </td>
                             <td style="text-align: right; padding: 0.625rem 1rem 0.625rem 0.75rem;">
                                 <span style="font-size: 13px; font-weight: 500; color: #303030;">@price($order->total)</span>
@@ -135,7 +231,7 @@
                                     </div>
                                     <h3 style="font-size: 15px; font-weight: 600; color: #303030; margin-bottom: 0.25rem;">No orders found</h3>
                                     <p style="font-size: 13px; color: #616161;">
-                                        @if(request()->hasAny(['search', 'status', 'payment_status', 'date_from', 'date_to']))
+                                        @if($kkHasFilters)
                                             Try adjusting your filters to find what you're looking for.
                                         @else
                                             Orders will appear here when customers place them.

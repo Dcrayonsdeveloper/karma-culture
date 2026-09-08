@@ -97,26 +97,36 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::middleware('admin.section:orders')->group(function () {
             Route::prefix('orders')->name('orders.')->group(function () {
                 Route::get('/', [OrderController::class, 'index'])->name('index');
-                Route::get('/{order}', [OrderController::class, 'show'])->name('show');
-                Route::put('/{order}/status', [OrderController::class, 'updateStatus'])->name('status');
-                Route::put('/{order}/payment', [OrderController::class, 'recordPayment'])->name('payment');
-                Route::post('/{order}/ship', [OrderController::class, 'ship'])->name('ship');
-                Route::get('/{order}/invoice', [OrderController::class, 'invoice'])->name('invoice');
-                Route::get('/{order}/packing-slip', [OrderController::class, 'packingSlip'])->name('packing-slip');
-                Route::post('/{order}/assign-partner', [OrderController::class, 'assignPartner'])->name('assign-partner');
-                Route::put('/{order}/expected-delivery', [OrderController::class, 'setExpectedDelivery'])->name('expected-delivery');
-                Route::post('/{order}/shiprocket/push', [OrderController::class, 'pushToShiprocket'])->name('shiprocket.push');
-                Route::post('/{order}/shiprocket/sync', [OrderController::class, 'syncShiprocketTracking'])->name('shiprocket.sync');
-                Route::post('/{order}/shiprocket/cancel', [OrderController::class, 'cancelShiprocket'])->name('shiprocket.cancel');
+                // Above /{order}, or the wildcard matches the literal "export"
+                // and route-model binding 404s the download - the same trap the
+                // abandoned-carts group below carries a note about. The digit
+                // pins on the wildcards make that belt and braces rather than
+                // luck about declaration order.
+                Route::get('/export', [OrderController::class, 'export'])->name('export');
+                Route::get('/{order}', [OrderController::class, 'show'])->whereNumber('order')->name('show');
+                Route::put('/{order}/status', [OrderController::class, 'updateStatus'])->whereNumber('order')->name('status');
+                Route::put('/{order}/payment', [OrderController::class, 'recordPayment'])->whereNumber('order')->name('payment');
+                Route::post('/{order}/ship', [OrderController::class, 'ship'])->whereNumber('order')->name('ship');
+                Route::get('/{order}/invoice', [OrderController::class, 'invoice'])->whereNumber('order')->name('invoice');
+                Route::get('/{order}/packing-slip', [OrderController::class, 'packingSlip'])->whereNumber('order')->name('packing-slip');
+                Route::post('/{order}/assign-partner', [OrderController::class, 'assignPartner'])->whereNumber('order')->name('assign-partner');
+                Route::put('/{order}/expected-delivery', [OrderController::class, 'setExpectedDelivery'])->whereNumber('order')->name('expected-delivery');
+                Route::post('/{order}/shiprocket/push', [OrderController::class, 'pushToShiprocket'])->whereNumber('order')->name('shiprocket.push');
+                Route::post('/{order}/shiprocket/sync', [OrderController::class, 'syncShiprocketTracking'])->whereNumber('order')->name('shiprocket.sync');
+                Route::post('/{order}/shiprocket/cancel', [OrderController::class, 'cancelShiprocket'])->whereNumber('order')->name('shiprocket.cancel');
             });
 
             // Returns
             Route::prefix('returns')->name('returns.')->group(function () {
                 Route::get('/', [ReturnController::class, 'index'])->name('index');
-                Route::get('/{return}', [ReturnController::class, 'show'])->name('show');
-                Route::put('/{return}/status', [ReturnController::class, 'updateStatus'])->name('status');
-                Route::post('/{return}/refund', [ReturnController::class, 'processRefund'])->name('refund');
-                Route::post('/{return}/assign-partner', [ReturnController::class, 'assignPartner'])->name('assign-partner');
+                // Same reasoning as orders above: /returns/export has to be
+                // declared before /returns/{return}, and the wildcard pinned to
+                // digits so a future reshuffle cannot quietly swallow it again.
+                Route::get('/export', [ReturnController::class, 'export'])->name('export');
+                Route::get('/{return}', [ReturnController::class, 'show'])->whereNumber('return')->name('show');
+                Route::put('/{return}/status', [ReturnController::class, 'updateStatus'])->whereNumber('return')->name('status');
+                Route::post('/{return}/refund', [ReturnController::class, 'processRefund'])->whereNumber('return')->name('refund');
+                Route::post('/{return}/assign-partner', [ReturnController::class, 'assignPartner'])->whereNumber('return')->name('assign-partner');
             });
 
             // Chat analytics
@@ -214,6 +224,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Customers
         Route::middleware('admin.section:customers')->group(function () {
+            // Before the resource, like products above. ->except() does not drop
+            // `show`, so GET /customers/{customer} is registered and would match
+            // /customers/export first - binding then looks for a User with the
+            // id "export" and 404s the download. Inside the section group, and
+            // not merely for tidiness: this file carries email, phone, home
+            // address and last-login IP, and the section check is what keeps it
+            // away from staff who only hold `orders`.
+            Route::get('/customers/export', [CustomerController::class, 'export'])->name('customers.export');
             Route::resource('customers', CustomerController::class)->except(['create', 'store', 'destroy']);
             Route::put('/customers/{customer}/toggle-status', [CustomerController::class, 'toggleStatus'])->name('customers.toggle-status');
             Route::get('/customers/{customer}/orders', [CustomerController::class, 'orders'])->name('customers.orders');
@@ -221,6 +239,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Staff (admin-only)
         Route::middleware('admin.section:staff')->group(function () {
+            // `show` is excluded, so there is no /staff/{staff} to swallow this
+            // today - declared first anyway, because restoring show() later
+            // would break the export silently and the 404 would read like a
+            // missing route rather than a shadowed one.
+            Route::get('/staff/export', [StaffController::class, 'export'])->name('staff.export');
             Route::resource('staff', StaffController::class)->except(['show']);
         });
 

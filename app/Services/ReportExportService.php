@@ -62,6 +62,16 @@ class ReportExportService
 
         return response()->streamDownload(function () use ($spreadsheet) {
             $writer = new Xlsx($spreadsheet);
+            // Nothing this app writes is a formula by design. Left at its
+            // default the writer calls getCalculatedValue() on any cell
+            // PhpSpreadsheet typed as one, so a "=SUM(" that reached a cell from
+            // customer input would be EVALUATED on the server - and an
+            // unparseable one throws from inside this callback, after the 200
+            // and the Content-Disposition have been flushed: a truncated
+            // spreadsheet delivered as a successful download. The de-fanging in
+            // ExportsAdminList::csvCell() is the first defence; this is the one
+            // that does not depend on every caller remembering it.
+            $writer->setPreCalculateFormulas(false);
             $writer->save('php://output');
             $spreadsheet->disconnectWorksheets();
         }, $filename, [

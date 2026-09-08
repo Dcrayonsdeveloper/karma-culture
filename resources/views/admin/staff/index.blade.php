@@ -1,29 +1,89 @@
 <x-layouts.admin>
     <x-slot name="title">Staff</x-slot>
 
+    @php
+        // The parameters this screen filters on, in one list, so "Clear all"
+        // and the empty-state copy can never fall out of step with the controls
+        // above them. filled() rather than has(): submitting the search form
+        // with every box empty puts ?search= in the URL, and that is not a
+        // filter to offer to clear.
+        $kkFilterKeys = ['search', 'from', 'to', 'role', 'status'];
+        $kkFiltered = collect($kkFilterKeys)->contains(fn ($kkKey) => request()->filled($kkKey));
+
+        // Everything currently narrowing the table, handed to the export so the
+        // download is the rows on screen. `page` goes because an export is not
+        // paginated; `format` goes because the two links below set their own.
+        $kkExportParams = request()->except(['page', 'format']);
+    @endphp
+
     <x-slot name="header">
         <div class="page-header">
             <h1>Staff</h1>
-            <a href="{{ route('admin.staff.create') }}" class="btn btn-primary" style="font-size: 13px;">Add staff</a>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <a href="{{ route('admin.staff.export', $kkExportParams) }}" class="btn btn-secondary btn-sm">Export CSV</a>
+                <a href="{{ route('admin.staff.export', array_merge($kkExportParams, ['format' => 'xlsx'])) }}"
+                   class="btn btn-secondary btn-sm"
+                   title="{{ $xlsxRowCapNotice }}">Export Excel</a>
+                <a href="{{ route('admin.staff.create') }}" class="btn btn-primary" style="font-size: 13px;">Add staff</a>
+            </div>
         </div>
     </x-slot>
 
+    {{-- The filters are validated, so a role, status, page size or window this
+         screen will not accept throws and redirects back. Without this the page
+         came back unchanged with the search box empty and nothing said. --}}
+    <x-admin.form-errors title="That filter could not be applied" />
+
     {{-- Staff card --}}
     <div class="card">
-        {{-- Search bar --}}
-        <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3;">
+        {{-- Search and filter bar. flex-wrap so the five controls drop onto a
+             second line on a narrow screen rather than squeezing the search box
+             to nothing. --}}
+        <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; border-bottom: 1px solid #e3e3e3; flex-wrap: wrap;">
             <form action="{{ route('admin.staff.index') }}" method="GET" style="display: flex; align-items: center; gap: 0.5rem; flex: 1;">
+                {{-- The calendar window is set by the sibling form below. Without
+                     these two, searching inside an open date range would drop
+                     the range and quietly widen the table. --}}
+                @if(request()->filled('from'))
+                    <input type="hidden" name="from" value="{{ request('from') }}">
+                @endif
+                @if(request()->filled('to'))
+                    <input type="hidden" name="to" value="{{ request('to') }}">
+                @endif
                 <div style="position: relative; flex: 1; max-width: 24rem;">
                     <svg style="position: absolute; left: 0.625rem; top: 50%; transform: translateY(-50%); color: #999;" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
-                    <input type="text" name="search" value="{{ request('search') }}"
-                           placeholder="Search staff"
+                    {{-- maxlength matches the max:120 rule, so a pasted blob is
+                         caught in the box rather than by a redirect that throws
+                         the term away. --}}
+                    <input type="text" name="search" value="{{ request('search') }}" maxlength="120"
+                           placeholder="Search name, email or employee ID"
                            style="padding-left: 2rem; border: 1px solid #c9cccf; border-radius: 0.5rem; font-size: 13px; width: 100%; padding-top: 0.375rem; padding-bottom: 0.375rem; padding-right: 0.625rem;">
                 </div>
+                <select name="role" class="form-input" aria-label="Role" style="font-size: 13px; padding: 0.375rem 0.5rem; width: auto;">
+                    <option value="">All roles</option>
+                    @foreach($roles as $kkRole)
+                        <option value="{{ $kkRole }}" @selected(request('role') === $kkRole)>{{ ucfirst($kkRole) }}</option>
+                    @endforeach
+                </select>
+                <select name="status" class="form-input" aria-label="Status" style="font-size: 13px; padding: 0.375rem 0.5rem; width: auto;">
+                    <option value="">All statuses</option>
+                    <option value="active" @selected(request('status') === 'active')>Active</option>
+                    <option value="inactive" @selected(request('status') === 'inactive')>Inactive</option>
+                </select>
                 <button type="submit" class="btn btn-secondary btn-sm">Search</button>
             </form>
-            @if(request('search'))
+
+            {{-- A sibling of the search form, never a child: the component
+                 renders its own form, and a form inside a form has its fields
+                 dropped by the browser. It re-emits search, role and status as
+                 hidden inputs itself, so applying a range keeps them. The dates
+                 cut on created_at, which is what the Joined column prints -
+                 staff.joined_at is never written and is NULL on every row. --}}
+            <x-admin.date-range-filter :action="route('admin.staff.index')" />
+
+            @if($kkFiltered)
                 <a href="{{ route('admin.staff.index') }}" style="font-size: 13px; color: #005bd3; font-weight: 500; text-decoration: none; white-space: nowrap;">Clear all</a>
             @endif
         </div>
@@ -88,8 +148,11 @@
                                     </div>
                                     <h3 style="font-size: 15px; font-weight: 600; color: #303030; margin-bottom: 0.25rem;">No staff members found</h3>
                                     <p style="font-size: 13px; color: #616161;">
-                                        @if(request('search'))
-                                            Try adjusting your search to find what you're looking for.
+                                        {{-- The same predicate the Clear all link uses. Tested on
+                                             the search term alone, a date-filtered empty table
+                                             told the admin to add their first staff member. --}}
+                                        @if($kkFiltered)
+                                            Try adjusting your filters to find what you're looking for.
                                         @else
                                             Staff members will appear here once added.
                                             <a href="{{ route('admin.staff.create') }}" style="color: #005bd3; text-decoration: none; font-weight: 500;">Add one now</a>
