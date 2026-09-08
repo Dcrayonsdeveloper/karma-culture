@@ -179,6 +179,126 @@ class BannerCrudTest extends TestCase
         $this->assertSame('banners/video/clip.mp4', $banner->fresh()->video_url);
     }
 
+    /**
+     * The mirror of the video checkbox, and the reason it had to exist.
+     *
+     * frameFor() gives a video priority over a still, so a banner carrying both
+     * plays the clip and the picture is never seen - but it was still on the
+     * disk and still in the column, and there was no way to be rid of it short
+     * of uploading another over it.
+     */
+    public function test_the_remove_image_checkbox_drops_the_desktop_still(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('banners/desktop.jpg', 'x');
+        Storage::disk('public')->put('banners/video/clip.mp4', 'x');
+
+        $banner = $this->banner(['video_url' => 'banners/video/clip.mp4']);
+
+        $this->admin()
+            ->put(route('admin.banners.update', $banner), [
+                'name' => 'Existing',
+                'position' => 'sidebar',
+                'remove_image' => '1',
+            ])
+            ->assertSessionHasNoErrors();
+
+        Storage::disk('public')->assertMissing('banners/desktop.jpg');
+        $this->assertNull($banner->fresh()->image_url);
+
+        // The video is what the banner now runs on; removing the still must not
+        // have gone anywhere near it.
+        Storage::disk('public')->assertExists('banners/video/clip.mp4');
+        $this->assertSame('banners/video/clip.mp4', $banner->fresh()->video_url);
+    }
+
+    public function test_removing_the_image_from_an_image_only_banner_is_refused(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('banners/desktop.jpg', 'x');
+
+        $banner = $this->banner();
+
+        $this->admin()
+            ->put(route('admin.banners.update', $banner), [
+                'name' => 'Existing',
+                'position' => 'sidebar',
+                'remove_image' => '1',
+            ])
+            ->assertSessionHasErrors('remove_image');
+
+        Storage::disk('public')->assertExists('banners/desktop.jpg');
+        $this->assertSame('banners/desktop.jpg', $banner->fresh()->image_url);
+    }
+
+    public function test_emptying_the_desktop_pair_in_one_save_is_refused(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('banners/desktop.jpg', 'x');
+        Storage::disk('public')->put('banners/video/clip.mp4', 'x');
+
+        $banner = $this->banner(['video_url' => 'banners/video/clip.mp4']);
+
+        $this->admin()
+            ->put(route('admin.banners.update', $banner), [
+                'name' => 'Existing',
+                'position' => 'sidebar',
+                'remove_image' => '1',
+                'remove_video' => '1',
+            ])
+            ->assertSessionHasErrors('remove_image');
+
+        Storage::disk('public')->assertExists('banners/desktop.jpg');
+        Storage::disk('public')->assertExists('banners/video/clip.mp4');
+    }
+
+    /** An upload in the same save is what the tick removes, so the pair survives. */
+    public function test_the_image_may_be_removed_when_a_video_arrives_with_it(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('banners/desktop.jpg', 'x');
+
+        $banner = $this->banner();
+
+        $this->admin()
+            ->put(route('admin.banners.update', $banner), [
+                'name' => 'Existing',
+                'position' => 'sidebar',
+                'remove_image' => '1',
+                'video' => UploadedFile::fake()->create('clip.mp4', 200, 'video/mp4'),
+            ])
+            ->assertSessionHasNoErrors();
+
+        $fresh = $banner->fresh();
+
+        $this->assertNull($fresh->image_url);
+        $this->assertNotNull($fresh->video_url);
+    }
+
+    /**
+     * A banner carrying nothing but phone artwork has neither desktop column
+     * filled, and the guard must not read that as an emptied pair - it would
+     * refuse every save, including one that only edits the caption.
+     */
+    public function test_a_phone_only_banner_can_still_be_edited(): void
+    {
+        Storage::fake('public');
+
+        $banner = $this->banner([
+            'image_url' => null,
+            'mobile_image_url' => 'banners/mobile/phone.jpg',
+        ]);
+
+        $this->admin()
+            ->put(route('admin.banners.update', $banner), [
+                'name' => 'Renamed',
+                'position' => 'sidebar',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('Renamed', $banner->fresh()->name);
+    }
+
     // Links and schedule
 
     public function test_a_site_relative_path_is_a_valid_link(): void

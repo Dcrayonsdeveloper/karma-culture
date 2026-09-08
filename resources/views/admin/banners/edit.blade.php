@@ -161,6 +161,20 @@
                                     JPG, PNG, WebP or GIF &middot; max {{ \App\Rules\ValidationRules::megabytes(\App\Support\BannerMedia::MAX_IMAGE_KB) }}MB.
                                     @if($banner->image_url) Leave empty to keep the current image. @endif
                                 </p>
+                                {{-- The mirror of the video's own checkbox. Offered
+                                     only when there is a video to fall back on: on a
+                                     banner carried by its still, ticking this would
+                                     leave nothing to draw, and the server refuses it
+                                     anyway. --}}
+                                @if($banner->image_url && $banner->video_url)
+                                    <label style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 12px; color: #616161; margin-top: 0.4rem; cursor: pointer;">
+                                        <input type="checkbox" name="remove_image" value="1" style="margin: 0;" @checked(old('remove_image'))>
+                                        Remove the image and show the video instead
+                                    </label>
+                                @endif
+                                @error('remove_image')
+                                    <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
+                                @enderror
                                 @error('image')
                                     <p style="font-size: 12px; color: #d72c0d; margin-top: 0.25rem;">{{ $message }}</p>
                                 @enderror

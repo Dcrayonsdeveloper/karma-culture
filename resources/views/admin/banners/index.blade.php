@@ -105,6 +105,143 @@
                     </tr>
                 </thead>
 
+                {{-- The running festival sales' own artwork.
+
+                     A festival sale keeps its banner in its own columns rather
+                     than as a banners row, and the home page draws it as slide
+                     0 of the same hero carousel the rows below fill. Without
+                     this group it was live on the shop and absent from the one
+                     screen that lists what the shop is showing.
+
+                     Shown, not copied into the table: a mirrored row would put
+                     the same picture in the hero twice. So there is no drag
+                     handle, no switch and no delete here - the sale owns all
+                     three, and Edit sale is the way to them. --}}
+                @if($festivalBanners->isNotEmpty())
+                    <tbody>
+                        <tr style="background: #fff4ec; border-bottom: 1px solid #e3e3e3;">
+                            <td colspan="{{ $kkColumns }}" style="padding: 0.45rem 1rem;">
+                                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem;">
+                                    <span style="font-size: 12px; font-weight: 700; color: #303030; text-transform: uppercase; letter-spacing: 0.04em;">
+                                        Festival sales &mdash; hero, ahead of the banners below
+                                    </span>
+                                    <span style="font-size: 12px; color: #616161;">{{ $festivalBanners->count() }} {{ \Illuminate\Support\Str::plural('banner', $festivalBanners->count()) }}</span>
+                                    <span style="font-size: 12px; color: #8a8a8a;">Uploaded with the sale, so they are edited there rather than here.</span>
+                                </div>
+                            </td>
+                        </tr>
+
+                        @foreach($festivalBanners as $kkSale)
+                            @php
+                                // Exactly the test HomeController runs before it
+                                // hands the hero a festival slide, so this column
+                                // cannot promise a banner the home page is not
+                                // actually drawing. A sale given only phone
+                                // artwork fails it, because bannerUrl() is the
+                                // desktop file and that is what the check reads.
+                                $kkOnHome = (int) $festivalHeroId === (int) $kkSale->id
+                                    && $kkSale->show_on_home
+                                    && $kkSale->bannerUrl();
+
+                                $kkPercent = rtrim(rtrim(number_format((float) $kkSale->discount_percent, 2, '.', ''), '0'), '.');
+                            @endphp
+                            <tr style="border-bottom: 1px solid #e3e3e3; background: #fffcfa;"
+                                data-searchable="{{ $kkSale->name }} festival sale hero">
+
+                                {{-- Order. A festival slide always leads the hero,
+                                     so there is nothing to number it against - and
+                                     a second "#1" beside the hero banners' own
+                                     would read as a tie rather than as the two
+                                     different orderings they are. --}}
+                                <td style="padding: 0.625rem 1rem; white-space: nowrap;">
+                                    <span title="A running sale always leads the hero; the banners below follow it."
+                                          style="font-size: 12px; color: #8a8a8a;">&mdash;</span>
+                                </td>
+
+                                {{-- Desktop artwork + the sale it belongs to. --}}
+                                <td style="padding: 0.625rem 1rem;">
+                                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                        <div class="kk-media{{ $kkSale->bannerUrl() ? '' : ' is-broken' }}"
+                                             style="width: 80px; height: 48px; border-radius: 0.375rem; border: 1px solid #e3e3e3; flex-shrink: 0;">
+                                            @if($kkSale->bannerUrl())
+                                                <img src="{{ $kkSale->bannerUrl() }}" alt="{{ $kkSale->name }}" onerror="this.closest('.kk-media').classList.add('is-broken')">
+                                            @endif
+                                            <span class="kk-media__fallback" aria-hidden="true">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                                    <rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5L5 20"/>
+                                                </svg>
+                                            </span>
+                                        </div>
+                                        <div style="min-width: 0;">
+                                            <div style="font-weight: 500; color: #303030;">
+                                                {{ $kkSale->name }}
+                                                <span style="display: inline-block; margin-left: 0.35rem; padding: 0.05rem 0.4rem; border-radius: 0.75rem; font-size: 11px; font-weight: 600; background: #ffe6d4; color: #8a4b00;">Festival sale</span>
+                                            </div>
+                                            <div style="font-size: 12px; color: #616161;">{{ $kkPercent }}% off</div>
+                                            <div style="font-size: 12px; color: #616161; max-width: 16rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">/festival-sale/{{ $kkSale->slug }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                {{-- Mobile artwork --}}
+                                <td style="padding: 0.625rem 1rem;">
+                                    @if($kkSale->banner_mobile_path)
+                                        <img src="{{ $kkSale->bannerMobileUrl() }}" alt="{{ $kkSale->name }} on phones"
+                                             style="width: 36px; height: 48px; object-fit: cover; border-radius: 0.375rem; border: 1px solid #e3e3e3;">
+                                    @else
+                                        <span style="font-size: 12px; color: #8a8a8a;">Uses desktop</span>
+                                    @endif
+                                </td>
+
+                                {{-- Video. A festival sale has no clip to carry. --}}
+                                <td style="padding: 0.625rem 1rem; white-space: nowrap;">
+                                    <span style="font-size: 12px; color: #8a8a8a;">None</span>
+                                </td>
+
+                                {{-- State. The sale is switched on - that is the
+                                     only kind this list holds - but being on and
+                                     being in the hero are different questions, and
+                                     only one sale wins the hero. --}}
+                                <td style="padding: 0.625rem 1rem;">
+                                    <span style="display: inline-block; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 12px; font-weight: 500; {{ $kkStateStyles['live'] }}">Live</span>
+                                    <div style="font-size: 12px; color: #616161; margin-top: 0.15rem;">
+                                        @if($kkOnHome)
+                                            Leads the home hero
+                                        @elseif(! $kkSale->show_on_home)
+                                            Sale page only &mdash; &ldquo;Show on home&rdquo; is off
+                                        @elseif(! $kkSale->bannerUrl())
+                                            Sale page only &mdash; no desktop banner
+                                        @else
+                                            Sale page only &mdash; another sale leads the hero
+                                        @endif
+                                    </div>
+                                </td>
+
+                                {{-- Schedule. Festival sales have no window; they
+                                     run until an admin switches them off. --}}
+                                <td style="padding: 0.625rem 1rem; font-size: 12px; color: #616161; white-space: nowrap;">
+                                    <span style="color: #8a8a8a;">Until switched off</span>
+                                </td>
+
+                                {{-- Created --}}
+                                <td style="padding: 0.625rem 1rem; font-size: 12px; color: #616161; white-space: nowrap;">
+                                    {{ $kkSale->created_at?->format('j M Y') ?? '--' }}
+                                </td>
+
+                                {{-- Actions --}}
+                                <td style="padding: 0.625rem 1rem; text-align: right;">
+                                    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem;">
+                                        <a href="{{ route('admin.festival-sales.edit', $kkSale) }}" style="display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 0.25rem; color: #005bd3; font-size: 12px; font-weight: 500; text-decoration: none;"
+                                           onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Edit sale</a>
+                                        <a href="{{ route('festival-sale.show', $kkSale) }}" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 0.25rem; color: #005bd3; font-size: 12px; font-weight: 500; text-decoration: none;"
+                                           onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">View</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                @endif
+
                 @forelse($kkGroups as $kkPosition => $kkRows)
                     @php
                         // Dragging rewrites the whole placement, and the server
@@ -298,6 +435,7 @@
                         @endforeach
                     </tbody>
                 @empty
+                    @if($festivalBanners->isEmpty())
                     <tbody>
                         <tr>
                             <td colspan="{{ $kkColumns }}" style="padding: 3rem 1rem; text-align: center;">
@@ -316,6 +454,7 @@
                             </td>
                         </tr>
                     </tbody>
+                    @endif
                 @endforelse
             </table>
         </div>

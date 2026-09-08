@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Banner;
+use App\Models\FestivalSale;
 use App\Rules\NoHtml;
 use App\Rules\ValidationRules as V;
 use App\Support\BannerMedia;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -92,7 +94,54 @@ class BannerController extends Controller
             ->groupBy('position')
             ->pluck('aggregate', 'position');
 
-        return view('admin.banners.index', compact('banners', 'trashed', 'positionTotals'));
+        $festivalBanners = $this->festivalBanners($trashed, $filters['position'] ?? null, $banners->currentPage());
+
+        // Which of them the home page is actually leading with. More than one
+        // sale may be switched on, but only the most recently updated one wins
+        // the hero, so the rest are reachable from their sale page alone and
+        // the list has to be able to say which is which.
+        $festivalHeroId = $festivalBanners->isEmpty() ? null : (FestivalSale::liveSummary()['id'] ?? null);
+
+        return view('admin.banners.index', compact('banners', 'trashed', 'positionTotals', 'festivalBanners', 'festivalHeroId'));
+    }
+
+    /**
+     * The artwork belonging to the festival sales that are running right now.
+     *
+     * A festival sale carries its banner in its own two columns rather than as
+     * a banners row, and the home page draws it as slide 0 of the very hero
+     * carousel this table fills. So an admin who uploaded one saw it on the
+     * shop and not on the screen whose whole job is to list the banners the
+     * shop is showing, and the only way back to it was remembering which sale
+     * owned it.
+     *
+     * Listed, not copied. Mirroring each one into a banners row would put a
+     * second copy of the same picture in the hero behind the first, and leave
+     * two records of one image free to drift apart - so these rows are
+     * read-only and send an admin to the sale that owns them.
+     *
+     * Three things suppress them, all for the same reason: they would be
+     * answering a question the page is not asking. The bin holds deleted
+     * banners and a sale cannot be in it; filtering to any placement but the
+     * hero is asking about somewhere these do not appear; and page two of a
+     * paginated list would otherwise repeat them under every page.
+     *
+     * @return Collection<int, FestivalSale>
+     */
+    private function festivalBanners(bool $trashed, ?string $position, int $page): Collection
+    {
+        if ($trashed || ($position !== null && $position !== 'hero') || $page > 1) {
+            return collect();
+        }
+
+        return FestivalSale::query()
+            ->active()
+            // Either column counts. A sale given only phone artwork still shows
+            // it to every phone, and leaving it off this list would hide the
+            // one banner a mobile-first shop is most likely to have uploaded.
+            ->where(fn ($query) => $query->whereNotNull('banner_path')->orWhereNotNull('banner_mobile_path'))
+            ->latest('updated_at')
+            ->get();
     }
 
     public function create(): View
@@ -155,6 +204,7 @@ class BannerController extends Controller
             // campaign can still have its caption edited.
             'starts_at' => V::scheduleStart(required: false, current: $banner?->starts_at),
             'ends_at' => V::scheduleEnd('starts_at', required: false, current: $banner?->ends_at),
+            'remove_image' => V::boolean(),
             'remove_video' => V::boolean(),
             'remove_mobile_image' => V::boolean(),
             'remove_mobile_video' => V::boolean(),
@@ -253,21 +303,35 @@ class BannerController extends Controller
     {
         $request->validate($this->rules(mediaRequired: false, banner: $banner), $this->messages());
 
-        // A video-only banner is legitimate, so ticking "remove the video and
-        // show the image instead" on one of those would leave a row with no
-        // artwork at all, which the storefront then draws as a placeholder box.
-        // Refuse it and say what is missing.
-        $removingVideo = $request->boolean('remove_video') && ! $request->hasFile('video');
-        $willHaveImage = $request->hasFile('image') || $banner->image_url;
+        // Either half of the desktop pair may be removed - a banner led by a
+        // video and one led by a still are the same row with the other file
+        // taken off it - but not both, because a row with no artwork is drawn
+        // on the storefront as a placeholder box.
+        //
+        // Only a removal that would actually take something away is checked. A
+        // banner carrying nothing but phone artwork has neither of these
+        // columns filled already, and a stricter test would refuse to let its
+        // caption be edited.
+        $removingImage = $request->boolean('remove_image') && $banner->image_url;
+        $removingVideo = $request->boolean('remove_video') && $banner->video_url;
 
-        if ($removingVideo && ! $willHaveImage) {
-            $error = 'Upload an image first - removing the video would leave this banner with nothing to show.';
+        // An upload in the same request replaces what the tick removes, so it
+        // counts as keeping that side.
+        $keepsImage = $request->hasFile('image') || ($banner->image_url && ! $request->boolean('remove_image'));
+        $keepsVideo = $request->hasFile('video') || ($banner->video_url && ! $request->boolean('remove_video'));
+
+        if (($removingImage || $removingVideo) && ! $keepsImage && ! $keepsVideo) {
+            [$field, $error] = match (true) {
+                $removingImage && $removingVideo => ['remove_image', 'A banner has to keep an image or a video. Untick one of the two, or upload a replacement for it.'],
+                $removingImage => ['remove_image', 'Upload a video first - removing the image would leave this banner with nothing to show.'],
+                default => ['remove_video', 'Upload an image first - removing the video would leave this banner with nothing to show.'],
+            };
 
             if ($request->wantsJson()) {
-                return response()->json(['message' => $error, 'errors' => ['remove_video' => [$error]]], 422);
+                return response()->json(['message' => $error, 'errors' => [$field => [$error]]], 422);
             }
 
-            return back()->withInput()->withErrors(['remove_video' => $error]);
+            return back()->withInput()->withErrors([$field => $error]);
         }
 
         $data = $this->attributes($request);
@@ -278,10 +342,14 @@ class BannerController extends Controller
                 // it. Uploading a new picture used to leave the old one on the
                 // disk forever, so a banner edited weekly kept a year of them.
                 $data[$column] = BannerMedia::replace($request->file($field), $column, $banner->{$column});
-            } elseif ($field !== 'image' && $request->boolean("remove_{$field}") && $banner->{$column}) {
-                // The desktop still has no removal checkbox on purpose: it is
-                // the last link in both fallback chains, so the way to be rid of
-                // one is to upload another over it.
+            } elseif ($request->boolean("remove_{$field}") && $banner->{$column}) {
+                // All four columns can be emptied from here now. The desktop
+                // still used to be the exception - it is the last link in both
+                // fallback chains, so the only way to be rid of one was to
+                // upload another over it, which left a video-led banner stuck
+                // with a still it no longer wanted. The guard above is what
+                // makes removing it safe: it refuses the tick that would empty
+                // the pair.
                 BannerMedia::delete($banner->{$column});
                 $data[$column] = null;
             }
