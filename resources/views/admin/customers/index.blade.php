@@ -50,7 +50,7 @@
                     <tr>
                         <th style="text-align: left; padding-left: 1rem;">Customer name</th>
                         <th style="text-align: left;">Email</th>
-                        <th style="text-align: left;">Location</th>
+                        <th style="text-align: left;">Phone no</th>
                         <th style="text-align: right;">Orders</th>
                         <th style="text-align: right; padding-right: 1rem;">Amount spent</th>
                     </tr>
